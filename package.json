@@ -5,6 +5,7 @@
   "main": "execute.ts",
   "scripts": {
     "start": "ts-node src/execute.ts --port 3000",
+    "build": "npx webpack",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Idris Bowman",
@@ -21,7 +22,10 @@
     "@types/express": "4.17.17",
     "@types/helmet": "4.0.0",
     "@types/node": "18.16.3",
+    "ts-loader": "9.4.2",
     "ts-node": "10.9.1",
-    "typescript": "5.0.4"
+    "typescript": "5.0.4",
+    "webpack": "5.82.0",
+    "webpack-cli": "5.0.2"
   }
 }
