@@ -6,7 +6,9 @@
   "scripts": {
     "start": "ts-node src/execute.ts --port 3000",
     "build": "npx webpack",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "author": "Idris Bowman",
   "license": "GNU",
@@ -22,6 +24,9 @@
     "@types/express": "4.17.17",
     "@types/helmet": "4.0.0",
     "@types/node": "18.16.3",
+    "@typescript-eslint/eslint-plugin": "5.59.2",
+    "@typescript-eslint/parser": "5.59.2",
+    "eslint": "^8.39.0",
     "ts-loader": "9.4.2",
     "ts-node": "10.9.1",
     "typescript": "5.0.4",
