@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="285px" preserveAspectRatio="none" style="width:472px;height:285px;" version="1.1" viewBox="0 0 472 285" width="472px" zoomAndPan="magnify"><defs/><g><!--MD5=[a6f11bb19cee6b13000111f5ad685e8b]
+cluster Dependencies--><path d="M46,191 L148,191 A4.5,4.5 0 0 1 151,194 L158,210.9688 L457,210.9688 A3,3 0 0 1 460,213.9688 L460,270 A3,3 0 0 1 457,273 L46,273 A3,3 0 0 1 43,270 L43,194 A3,3 0 0 1 46,191 " fill="#FFFFFF" style="stroke: #000000; stroke-width: 1.5;"/><line style="stroke: #000000; stroke-width: 1.5;" x1="43" x2="158" y1="210.9688" y2="210.9688"/><text fill="#000000" font-family="Tahoma, sans-serif" font-size="12" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="102" x="47" y="204.1387">Dependencies</text><!--MD5=[247c11c248b6a71ee5eacb9cd05e1b38]
+entity commander--><rect fill="#F8F8F8" height="33.9688" rx="3" ry="3" style="stroke: #383838; stroke-width: 1.0;" width="93" x="275.5" y="223"/><rect fill="#F8F8F8" height="5" style="stroke: #383838; stroke-width: 1.0;" width="10" x="270.5" y="228"/><rect fill="#F8F8F8" height="5" style="stroke: #383838; stroke-width: 1.0;" width="10" x="270.5" y="246.9688"/><text fill="#000000" font-family="Tahoma, sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="73" x="285.5" y="244.1387">commander</text><!--MD5=[564a394d57ce3e0a92ac6699042b9ef1]
+entity cors--><rect fill="#F8F8F8" height="33.9688" rx="3" ry="3" style="stroke: #383838; stroke-width: 1.0;" width="47" x="59.5" y="223"/><rect fill="#F8F8F8" height="5" style="stroke: #383838; stroke-width: 1.0;" width="10" x="54.5" y="228"/><rect fill="#F8F8F8" height="5" style="stroke: #383838; stroke-width: 1.0;" width="10" x="54.5" y="246.9688"/><text fill="#000000" font-family="Tahoma, sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="27" x="69.5" y="244.1387">cors</text><!--MD5=[b84d8dbe3cf51322a9824c71d57d534f]
+entity dotenv--><rect fill="#F8F8F8" height="33.9688" rx="3" ry="3" style="stroke: #383838; stroke-width: 1.0;" width="63" x="380.5" y="223"/><rect fill="#F8F8F8" height="5" style="stroke: #383838; stroke-width: 1.0;" width="10" x="375.5" y="228"/><rect fill="#F8F8F8" height="5" style="stroke: #383838; stroke-width: 1.0;" width="10" x="375.5" y="246.9688"/><text fill="#000000" font-family="Tahoma, sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="43" x="390.5" y="244.1387">dotenv</text><!--MD5=[6d151e53a42aadf92577082572a20d90]
+entity express--><rect fill="#F8F8F8" height="33.9688" rx="3" ry="3" style="stroke: #383838; stroke-width: 1.0;" width="70" x="119" y="223"/><rect fill="#F8F8F8" height="5" style="stroke: #383838; stroke-width: 1.0;" width="10" x="114" y="228"/><rect fill="#F8F8F8" height="5" style="stroke: #383838; stroke-width: 1.0;" width="10" x="114" y="246.9688"/><text fill="#000000" font-family="Tahoma, sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="50" x="129" y="244.1387">express</text><!--MD5=[380c1750e2aa5aeed8d38b1a8d057635]
+entity helmet--><rect fill="#F8F8F8" height="33.9688" rx="3" ry="3" style="stroke: #383838; stroke-width: 1.0;" width="62" x="201" y="223"/><rect fill="#F8F8F8" height="5" style="stroke: #383838; stroke-width: 1.0;" width="10" x="196" y="228"/><rect fill="#F8F8F8" height="5" style="stroke: #383838; stroke-width: 1.0;" width="10" x="196" y="246.9688"/><text fill="#000000" font-family="Tahoma, sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="42" x="211" y="244.1387">helmet</text><ellipse cx="322.2193" cy="20.8774" fill="#F8F8F8" rx="44.7193" ry="12.8774" style="stroke: #383838; stroke-width: 0.5;"/><text fill="#000000" font-family="Tahoma, sans-serif" font-size="12" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="59" x="292.7193" y="24.3618">execute</text><!--MD5=[bfbdfac5fa9726ec406701361bc51456]
+entity _JsonRpcHttpServer--><rect fill="#F8F8F8" height="33.9688" rx="3" ry="3" style="stroke: #000000; stroke-width: 0.5;" width="137" x="98.5" y="58"/><text fill="#000000" font-family="Tahoma, sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="117" x="108.5" y="79.1387">JsonRpcHttpServer</text><!--MD5=[96591971a5cff5fd6868169849024861]
+entity _requestHandler--><rect fill="#F8F8F8" height="33.9688" rx="3" ry="3" style="stroke: #000000; stroke-width: 0.5;" width="116" x="6" y="116"/><text fill="#000000" font-family="Tahoma, sans-serif" font-size="12" lengthAdjust="spacingAndGlyphs" textLength="96" x="16" y="137.1387">requestHandler</text><!--MD5=[eae32f6aa14f5271fff3f72a78be3cc3]
+link <b>execute</b> to commander--><path d="M322,34.289 C322,69.785 322,172.787 322,217.6731 " fill="none" id="&lt;b&gt;execute&lt;/b&gt;-&gt;commander" style="stroke: #000000; stroke-width: 1.0;"/><polygon fill="#000000" points="322,222.8504,326,213.8504,322,217.8504,318,213.8504,322,222.8504" style="stroke: #000000; stroke-width: 1.0;"/><!--MD5=[259d20b878ea2d2fdafc8874a6232cf9]
+link <b>execute</b> to dotenv--><path d="M326.967,33.976 C341.616,69.296 384.775,173.358 403.344,218.1296 " fill="none" id="&lt;b&gt;execute&lt;/b&gt;-&gt;dotenv" style="stroke: #000000; stroke-width: 1.0;"/><polygon fill="#000000" points="405.273,222.7812,405.5198,212.9354,403.3575,218.1627,398.1302,216.0003,405.273,222.7812" style="stroke: #000000; stroke-width: 1.0;"/><!--MD5=[99211a0848547cdfe74c601bba89b6b2]
+link <b>execute</b> to _JsonRpcHttpServer--><path d="M294.289,31.297 C273.635,38.226 244.801,47.899 219.797,56.287 " fill="none" id="&lt;b&gt;execute&lt;/b&gt;-&gt;_JsonRpcHttpServer" style="stroke: #000000; stroke-width: 1.0;"/><polygon fill="#000000" points="214.851,57.947,224.6558,58.878,219.5916,56.3573,222.1122,51.2931,214.851,57.947" style="stroke: #000000; stroke-width: 1.0;"/><!--MD5=[874e5c9d1ef39f877d69e6c7af67d374]
+link _JsonRpcHttpServer to cors--><path d="M158.639,92.225 C143.292,122.004 110.654,185.338 93.7097,218.2181 " fill="none" id="_JsonRpcHttpServer-&gt;cors" style="stroke: #000000; stroke-width: 0.5;"/><polygon fill="#000000" points="91.3275,222.8406,99.006,216.6729,93.618,218.3961,91.8949,213.0081,91.3275,222.8406" style="stroke: #000000; stroke-width: 0.5;"/><!--MD5=[3db1f688a9aa1bed2435ee749bdee33a]
+link _JsonRpcHttpServer to express--><path d="M165.706,92.225 C163.341,121.882 158.321,184.819 155.69,217.8123 " fill="none" id="_JsonRpcHttpServer-&gt;express" style="stroke: #000000; stroke-width: 0.5;"/><polygon fill="#000000" points="155.289,222.8406,159.9919,214.1871,155.6866,217.8564,152.0173,213.551,155.289,222.8406" style="stroke: #000000; stroke-width: 0.5;"/><!--MD5=[bcc210547358cbdef60168860a1aa5c1]
+link _JsonRpcHttpServer to helmet--><path d="M173.47,92.225 C185.297,121.882 210.394,184.819 223.551,217.8123 " fill="none" id="_JsonRpcHttpServer-&gt;helmet" style="stroke: #000000; stroke-width: 0.5;"/><polygon fill="#000000" points="225.556,222.8406,225.9386,212.9992,223.7043,218.1961,218.5074,215.9618,225.556,222.8406" style="stroke: #000000; stroke-width: 0.5;"/><!--MD5=[a1a00a4974013113ce4a11477b25e71a]
+link _JsonRpcHttpServer to _requestHandler--><path d="M137.484,92.047 C125.201,98.725 110.864,106.52 98.1316,113.443 " fill="none" id="_JsonRpcHttpServer-&gt;_requestHandler" style="stroke: #000000; stroke-width: 0.5;"/><polygon fill="#000000" points="93.52,115.95,103.3374,115.164,97.9124,113.5612,99.5153,108.1362,93.52,115.95" style="stroke: #000000; stroke-width: 0.5;"/><script type="text/plantuml"><![CDATA[MD5=[b2368b1f0874de8d818e0fae9c01de39]
+@startuml
+
+scale max 1920 width
+top to bottom direction
+
+skinparam nodesep 12
+skinparam ranksep 24
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Tahoma
+skinparam defaultFontSize 12
+skinparam roundCorner 6
+skinparam dpi 150
+skinparam arrowColor black
+skinparam arrowThickness 0.5
+skinparam packageTitleAlignment left
+
+skinparam usecase {
+  borderThickness 0.5
+}
+
+skinparam rectangle {
+  borderThickness 0.5
+}
+
+skinparam component {
+  borderThickness 1
+}
+
+
+(<b>execute</b>)
+rectangle "JsonRpcHttpServer" as _JsonRpcHttpServer
+rectangle "requestHandler" as _requestHandler
+
+package "Dependencies" {
+  [commander]
+  [cors]
+  [dotenv]
+  [express]
+  [helmet]
+}
+
+(<b>execute</b>) ---[thickness=1]> [commander]
+(<b>execute</b>) ---[thickness=1]> [dotenv]
+(<b>execute</b>) --[thickness=1]> _JsonRpcHttpServer
+_JsonRpcHttpServer ----> [cors]
+_JsonRpcHttpServer ----> [express]
+_JsonRpcHttpServer ----> [helmet]
+_JsonRpcHttpServer --> _requestHandler
+
+@enduml
+
+
+' View and edit on https://arkit.pro
+]]></script></g></svg>
