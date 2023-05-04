@@ -13,7 +13,8 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'off',
     'no-console': 'warn',
     'no-debugger': 'warn',
-    'no-unused-vars': ['error', { argsIgnorePattern: '^_' }]
+    'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    'semi': ["error", "never"]
   },
   ignorePatterns: ['node_modules', 'dist', '**/*.js'],
   overrides: [

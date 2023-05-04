@@ -1,8 +1,8 @@
-import { Command } from 'commander';
-import dotenv from 'dotenv';
-import { JsonrpcHttpServer } from './modules/json-rpc/JsonRpcHttpServer';
+import { Command } from 'commander'
+import dotenv from 'dotenv'
+import { JsonrpcHttpServer } from './modules/json-rpc/JsonRpcHttpServer'
 
-dotenv.config();
+dotenv.config()
 
 async function runBundler() {
 

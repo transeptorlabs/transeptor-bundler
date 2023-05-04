@@ -31,7 +31,7 @@ function createSuccessResponse(
     jsonrpc: "2.0",
     id,
     result,
-  };
+  }
 }
 
 function createErrorResponse(
@@ -47,35 +47,35 @@ function createErrorResponse(
       code,
       message,
     },
-  };
-
-  if (data) {
-    errorResponse.error.data = data;
   }
 
-  return errorResponse;
+  if (data) {
+    errorResponse.error.data = data
+  }
+
+  return errorResponse
 }
 
 export function handleRequest(request: JsonRpcRequest): JsonRpcResponse {
   if (!request.jsonrpc || request.jsonrpc !== "2.0") {
-    return createErrorResponse(null, -32600, "Invalid Request");
+    return createErrorResponse(null, -32600, "Invalid Request")
   }
 
-  const method = request.method;
-  const params = request.params;
+  const method = request.method
+  const params = request.params
 
   switch (method) {
     case "add":
       if (!params || params.length !== 2) {
-        return createErrorResponse(request.id, -32602, "Invalid params");
+        return createErrorResponse(request.id, -32602, "Invalid params")
       }
-      return createSuccessResponse(request.id, params[0] + params[1]);
+      return createSuccessResponse(request.id, params[0] + params[1])
     case "subtract":
       if (!params || params.length !== 2) {
-        return createErrorResponse(request.id, -32602, "Invalid params");
+        return createErrorResponse(request.id, -32602, "Invalid params")
       }
-      return createSuccessResponse(request.id, params[0] - params[1]);
+      return createSuccessResponse(request.id, params[0] - params[1])
     default:
-      return createErrorResponse(request.id, -32601, "Method not found");
+      return createErrorResponse(request.id, -32601, "Method not found")
   }
 }
