@@ -10,7 +10,9 @@ async function runBundler() {
     program
     .version('0.8.0')
     .option('--port <number>', 'server listening port', '3000')
-
+    .option('--mnemonic <file>', 'mnemonic/private-key file of signer account')
+    .option('--config <string>', 'path to config file', 'workdir/bundler.config.json')
+    
     const programOpts = program.parse(process.argv).opts()
     console.log('command-line arguments: ', programOpts)
 
