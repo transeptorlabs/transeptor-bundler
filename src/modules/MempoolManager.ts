@@ -17,6 +17,7 @@ export interface MempoolEntry {
     - createNextUserOpBundle(): Removes items from the MempoolEntry in bundles of the specified bundleSize. It acquires the mutex to ensure thread-safety during modification. Returns an array of key-value pairs ([string, MempoolEntry]) representing the removed MempoolEntrys.
     - size: return current size of mempool for debugging
     - dump: print all items in mempool for debugging
+    - resetInstance: reset the singleton instance for testing
     */
 export class MempoolManager {
   private static instance: MempoolManager
@@ -29,15 +30,15 @@ export class MempoolManager {
   // count entities in mempool.
   private entryCount: { [addr: string]: number | undefined } = {}
 
-  constructor(bundleSize = 5) {
+  private constructor(bundleSize: number) {
     this.mempool = new Map<string, MempoolEntry>()
     this.mutex = new Mutex()
     this.bundleSize = bundleSize
   }
 
-  public static getInstance(bundleSize = 5): MempoolManager {
+  public static getInstance(bundleSize?: number): MempoolManager {
     if (!this.instance) {
-      this.instance = new MempoolManager(bundleSize)
+      this.instance = new MempoolManager(bundleSize? bundleSize : 5)
     }
     return this.instance
   }
@@ -93,10 +94,20 @@ export class MempoolManager {
     return this.mempool.size
   }
 
+  /**
+   * debug: dump mempool content
+   */
   public dump(): void {
     for (const [key, value] of this.mempool.entries()) {
       console.log(`Key: ${key}, Value: ${value}`)
     }
+  }
+
+  /**
+    * for debugging/testing: clear current in-memory instance of MempoolManager
+   */
+  public resetInstance(): void {
+    MempoolManager.instance = null;
   }
 }
 

@@ -5,10 +5,11 @@ import {
 } from "../utils/test-helpers"
 
 describe("MempoolManager", () => {
-  let mempoolManager: MempoolManager
+  let mempoolManager: MempoolManager = MempoolManager.getInstance(3)
 
   beforeEach(() => {
-    mempoolManager = new MempoolManager(3)
+    mempoolManager.resetInstance()
+    mempoolManager = MempoolManager.getInstance(3)
   })
 
   test("should addUserOp and findByHash correctly", async () => {
