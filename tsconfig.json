@@ -3,13 +3,16 @@
     "target": "es6",
     "module": "commonjs",
     "outDir": "./dist",
-    "rootDir": "./src",
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "moduleResolution": "node",
   },
   "exclude": [
     "node_modules",
     "**/*.test.ts"
-  ]
+  ],
+  "include": [
+    "src/**/*", "scripts/mempool-simulate-clients.ts",
+  ],
 }
