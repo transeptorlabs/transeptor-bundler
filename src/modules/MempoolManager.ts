@@ -20,8 +20,6 @@ export interface MempoolEntry {
     - resetInstance: reset the singleton instance for testing
     */
 export class MempoolManager {
-  private static instance: MempoolManager
-
   private readonly mempool: Map<string, MempoolEntry>
   private readonly mutex: Mutex
   private readonly bundleSize: number
@@ -30,17 +28,10 @@ export class MempoolManager {
   // count entities in mempool.
   private entryCount: { [addr: string]: number | undefined } = {}
 
-  private constructor(bundleSize: number) {
+  constructor(bundleSize: number) {
     this.mempool = new Map<string, MempoolEntry>()
     this.mutex = new Mutex()
     this.bundleSize = bundleSize
-  }
-
-  public static getInstance(bundleSize?: number): MempoolManager {
-    if (!this.instance) {
-      this.instance = new MempoolManager(bundleSize? bundleSize : 5)
-    }
-    return this.instance
   }
 
   public async findByHash(userOpHash: string): Promise<MempoolEntry | undefined> {
@@ -101,13 +92,6 @@ export class MempoolManager {
     for (const [key, value] of this.mempool.entries()) {
       console.log(`Key: ${key}, Value: ${value}`)
     }
-  }
-
-  /**
-    * for debugging/testing: clear current in-memory instance of MempoolManager
-   */
-  public resetInstance(): void {
-    MempoolManager.instance = null;
   }
 }
 

@@ -6,7 +6,7 @@ import {mockUserOperationFactory, mockEntryPointGetUserOpHash} from '../utils/te
   The removed items are then passed to the processItems function for simulation. The processItems function simulates a processing job with a 2-second delay before logging and processing the items.
   The script continues processing items until the mempool becomes empty, and then it stops the interval and logs a message indicating that all items have been processed.
 */
-const mempoolManager = MempoolManager.getInstance(5)
+const mempoolManager = new MempoolManager(5)
 const clientCount = 6 // Number of concurrent clients
 
 // Simulated processing job function
