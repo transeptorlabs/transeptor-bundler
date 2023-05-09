@@ -17,9 +17,9 @@ npm start
 3. To test the API, you can use a tool like curl to send a JSON-RPC request:
 
 ```curl
-curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0", "method": "add", "params": [2, 3], "id": 1}' http://localhost:3000/rpc
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0", "method": "eth_sendUserOperation", "params": [], "id": 1}' http://localhost:3000/v1
 ```
 
 ```curl
-curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0", "method": "subtract", "params": [2, 3], "id": 1}' http://localhost:3000/rpc
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc": "2.0", "method": "subtract", "params": [2, 3], "id": 1}' http://localhost:3000/v1
 ```

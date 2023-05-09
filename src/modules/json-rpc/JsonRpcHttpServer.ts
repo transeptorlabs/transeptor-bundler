@@ -2,14 +2,14 @@ import express, { Request, Response } from "express"
 import { createServer, Server } from "http"
 import helmet from "helmet"
 import cors from "cors"
-import { handleRequest, JsonRpcRequest } from "./requestHandler"
+import { RpcRequestHandler, JsonRpcRequest } from "./RpcRequestHandler"
 
 export class JsonrpcHttpServer {
   private app: express.Application
   private readonly httpServer: Server
   private readonly PORT
 
-  constructor(readonly port: number) {
+  constructor(readonly port: number, readonly rpcRequestHandler: RpcRequestHandler) {
     this.app = express()
     this.app.use(
       helmet({
@@ -19,9 +19,9 @@ export class JsonrpcHttpServer {
     this.app.use(cors())
     this.app.use(express.json())
 
-    this.app.post("/rpc", (req: Request, res: Response) => {
+    this.app.post("/v1", async (req: Request, res: Response) => {
       const request = req.body as JsonRpcRequest
-      const response = handleRequest(request)
+      const response = await this.rpcRequestHandler.doHandleRequest(request)
       res.json(response)
     })
 
