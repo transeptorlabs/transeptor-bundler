@@ -13,6 +13,6 @@
     "**/*.test.ts"
   ],
   "include": [
-    "src/**/*", "scripts/mempool-simulate-clients.ts",
+    "src/**/*",
   ],
 }

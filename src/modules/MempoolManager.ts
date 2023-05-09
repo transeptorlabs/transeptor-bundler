@@ -1,10 +1,6 @@
 import { Mutex } from 'async-mutex'
-import { UserOperation } from './Types'
-
-export interface MempoolEntry {
-  userOp: UserOperation;
-  userOpHash: string;
-}
+import { MempoolEntry, UserOperation } from './Types'
+import { Config } from './Config'
 
 /* In-memory mempool with used to manage UserOperations.
   The MempoolManager Singleton class is a Hash Table data structure that provides efficient insertion, removal, and retrieval of items based on a hash string key. 
@@ -17,9 +13,12 @@ export interface MempoolEntry {
     - createNextUserOpBundle(): Removes items from the MempoolEntry in bundles of the specified bundleSize. It acquires the mutex to ensure thread-safety during modification. Returns an array of key-value pairs ([string, MempoolEntry]) representing the removed MempoolEntrys.
     - size: return current size of mempool for debugging
     - dump: print all items in mempool for debugging
+    - clearState: clear all items in mempool for debugging
     - resetInstance: reset the singleton instance for testing
     */
 export class MempoolManager {
+  private static instance: MempoolManager
+
   private readonly mempool: Map<string, MempoolEntry>
   private readonly mutex: Mutex
   private readonly bundleSize: number
@@ -28,10 +27,17 @@ export class MempoolManager {
   // count entities in mempool.
   private entryCount: { [addr: string]: number | undefined } = {}
 
-  constructor(bundleSize: number) {
+  private constructor(bundleSize: number) {
     this.mempool = new Map<string, MempoolEntry>()
     this.mutex = new Mutex()
     this.bundleSize = bundleSize
+  }
+
+  public static getInstance(): MempoolManager {
+    if (!this.instance) {
+      this.instance = new MempoolManager(Config.getInstance().getBundleSize())
+    }
+    return this.instance
   }
 
   public async findByHash(userOpHash: string): Promise<MempoolEntry | undefined> {
@@ -43,11 +49,15 @@ export class MempoolManager {
     }
   }
 
-  public async addUserOp(userOpHash: string, value: MempoolEntry): Promise<void> {
+  public async addUserOp(userOpHash: string, userOp:UserOperation): Promise<void> {
     const release = await this.mutex.acquire()
     try {
-      this.entryCount[value.userOp.sender] = (this.entryCount[value.userOp.sender] ?? 0) + 1
-      this.mempool.set(userOpHash, value)
+      const entry: MempoolEntry = {
+        userOp,
+        userOpHash
+      }
+      this.entryCount[entry.userOp.sender] = (this.entryCount[entry.userOp.sender] ?? 0) + 1
+      this.mempool.set(userOpHash, entry)
     } finally {
       release()
     }
@@ -56,7 +66,14 @@ export class MempoolManager {
   public async removeUserOp(userOpHash: string): Promise<boolean> {
     const release = await this.mutex.acquire()
     try {
-      return this.mempool.delete(userOpHash)
+      const entry = this.mempool.get(userOpHash)
+      const result = this.mempool.delete(userOpHash)
+      if (result) {
+        const count = (this.entryCount[entry.userOp.sender] ?? 0) - 1
+        count <= 0 ? delete this.entryCount[entry.userOp.sender] : this.entryCount[entry.userOp.sender] = count
+      }
+
+      return result
     } finally {
       release()
     }
@@ -71,9 +88,14 @@ export class MempoolManager {
         if (count >= this.bundleSize) {
           break
         }
-        this.mempool.delete(key)
-        removedItems.push([key, value])
-        count++
+        const result = this.mempool.delete(key)
+        if (result) {
+          const entryCount = (this.entryCount[value.userOp.sender] ?? 0) - 1
+          entryCount <= 0 ? delete this.entryCount[value.userOp.sender] : this.entryCount[value.userOp.sender] = entryCount
+
+          removedItems.push([key, value])
+          count++
+        }
       }
       return removedItems
     } finally {
@@ -85,13 +107,27 @@ export class MempoolManager {
     return this.mempool.size
   }
 
-  /**
-   * debug: dump mempool content
-   */
-  public dump(): void {
+  public async clearState(): Promise<void> {
+    const release = await this.mutex.acquire()
+    try {
+      this.mempool.clear()
+      this.entryCount = {}
+    } finally {
+      release()
+    }
+  }
+
+  public dump(): Array<UserOperation> {
+    console.log(`Mempool size: ${this.mempool.size}`)
+    console.log(`Mempool entryCount:`, this.entryCount)
     for (const [key, value] of this.mempool.entries()) {
       console.log(`Key: ${key}, Value: ${value}`)
     }
+    return Array.from(this.mempool.values()).map((mempoolEntry) => mempoolEntry.userOp)
+  }
+
+  public resetInstance(): void {
+    MempoolManager.instance = null
   }
 }
 

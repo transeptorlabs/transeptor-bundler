@@ -2,14 +2,15 @@ import express, { Request, Response } from "express"
 import { createServer, Server } from "http"
 import helmet from "helmet"
 import cors from "cors"
-import { handleRequest, JsonRpcRequest } from "./requestHandler"
+import { RpcRequestHandler, JsonRpcRequest } from "./RpcRequestHandler"
 
 export class JsonrpcHttpServer {
   private app: express.Application
   private readonly httpServer: Server
   private readonly PORT
+  private readonly rpc: RpcRequestHandler = new RpcRequestHandler()
 
-  constructor(readonly port: number) {
+  constructor(readonly port: number, ) {
     this.app = express()
     this.app.use(
       helmet({
@@ -19,11 +20,7 @@ export class JsonrpcHttpServer {
     this.app.use(cors())
     this.app.use(express.json())
 
-    this.app.post("/rpc", (req: Request, res: Response) => {
-      const request = req.body as JsonRpcRequest
-      const response = handleRequest(request)
-      res.json(response)
-    })
+    this.app.post("/v1", this.handleRequest.bind(this))
 
     this.PORT = port
     this.httpServer = createServer(this.app)
@@ -45,6 +42,12 @@ export class JsonrpcHttpServer {
 
   async stop(): Promise<void> {
     this.httpServer.close()
+  }
+
+  async handleRequest(req: Request, res: Response): Promise<void> {
+    const request = req.body as JsonRpcRequest
+    const response = await this.rpc.doHandleRequest(request)
+    res.json(response)
   }
 
   private fatalError(err: Error): void {
