@@ -5,10 +5,11 @@ import {
 } from "../utils/test-helpers"
 
 describe("MempoolManager", () => {
-  let mempoolManager: MempoolManager = new MempoolManager(5)
+  let mempoolManager: MempoolManager = MempoolManager.getInstance()
 
   beforeEach(() => {
-    mempoolManager = new MempoolManager(3)
+    MempoolManager.getInstance().resetInstance()
+    mempoolManager = MempoolManager.getInstance()
   })
 
   test("should addUserOp and findByHash correctly", async () => {
@@ -33,17 +34,17 @@ describe("MempoolManager", () => {
       userOpHash: userOpHash3,
     }
 
-    await mempoolManager.addUserOp(userOpHash1 ,mempoolEntry1)
-    await mempoolManager.addUserOp(userOpHash2 ,mempoolEntry2)
-    await mempoolManager.addUserOp(userOpHash3 ,mempoolEntry3)
+    await mempoolManager.addUserOp(userOpHash1 ,userOp1)
+    await mempoolManager.addUserOp(userOpHash2 ,userOp2)
+    await mempoolManager.addUserOp(userOpHash3 ,userOp3)
 
     const value1 = await mempoolManager.findByHash(userOpHash1)
     const value2 = await mempoolManager.findByHash(userOpHash2)
     const value3 = await mempoolManager.findByHash(userOpHash3)
 
-    expect(value1).toBe(mempoolEntry1)
-    expect(value2).toBe(mempoolEntry2)
-    expect(value3).toBe(mempoolEntry3)
+    expect(value1).toStrictEqual(mempoolEntry1)
+    expect(value2).toStrictEqual(mempoolEntry2)
+    expect(value3).toStrictEqual(mempoolEntry3)
   })
 
   test("should remove removeUserOp correctly", async () => {
@@ -55,22 +56,9 @@ describe("MempoolManager", () => {
     const userOpHash2 =  mockEntryPointGetUserOpHash(userOp2)
     const userOpHash3 =  mockEntryPointGetUserOpHash(userOp3)
 
-    const mempoolEntry1 = {
-      userOp: userOp1,
-      userOpHash: userOpHash1,
-    }
-    const mempoolEntry2 = {
-      userOp: userOp2,
-      userOpHash: userOpHash2,
-    }
-    const mempoolEntry3 = {
-      userOp: userOp3,
-      userOpHash: userOpHash3,
-    }
-
-    await mempoolManager.addUserOp(userOpHash1 ,mempoolEntry1)
-    await mempoolManager.addUserOp(userOpHash2 ,mempoolEntry2)
-    await mempoolManager.addUserOp(userOpHash3 ,mempoolEntry3)
+    await mempoolManager.addUserOp(userOpHash1 ,userOp1)
+    await mempoolManager.addUserOp(userOpHash2 ,userOp2)
+    await mempoolManager.addUserOp(userOpHash3 ,userOp3)
 
     const removed1 = await mempoolManager.removeUserOp(userOpHash1)
     const removed2 = await mempoolManager.removeUserOp(userOpHash2)
@@ -118,24 +106,22 @@ describe("MempoolManager", () => {
       userOp: userOp5,
       userOpHash: userOpHash5,
     }
-    const mempoolEntry6 = {
-      userOp: userOp6,
-      userOpHash: userOpHash6,
-    }
 
-    await mempoolManager.addUserOp(userOpHash1 ,mempoolEntry1)
-    await mempoolManager.addUserOp(userOpHash2 ,mempoolEntry2)
-    await mempoolManager.addUserOp(userOpHash3 ,mempoolEntry3)
-    await mempoolManager.addUserOp(userOpHash4 ,mempoolEntry4)
-    await mempoolManager.addUserOp(userOpHash5 ,mempoolEntry5)
-    await mempoolManager.addUserOp(userOpHash6 ,mempoolEntry6)
+    await mempoolManager.addUserOp(userOpHash1 ,userOp1)
+    await mempoolManager.addUserOp(userOpHash2 ,userOp2)
+    await mempoolManager.addUserOp(userOpHash3 ,userOp3)
+    await mempoolManager.addUserOp(userOpHash4 ,userOp4)
+    await mempoolManager.addUserOp(userOpHash5 ,userOp5)
+    await mempoolManager.addUserOp(userOpHash6 ,userOp6)
 
     const removedItems = await mempoolManager.createNextUserOpBundle()
 
-    expect(removedItems.length).toBe(3)
+    expect(removedItems.length).toBe(5)
     expect(removedItems).toContainEqual([userOpHash1, mempoolEntry1])
     expect(removedItems).toContainEqual([userOpHash2, mempoolEntry2])
     expect(removedItems).toContainEqual([userOpHash3, mempoolEntry3])
+    expect(removedItems).toContainEqual([userOpHash4, mempoolEntry4])
+    expect(removedItems).toContainEqual([userOpHash5, mempoolEntry5])
   })
 
   test("should return correct size of the mempool", async () => {
@@ -147,22 +133,9 @@ describe("MempoolManager", () => {
     const userOpHash2 =  mockEntryPointGetUserOpHash(userOp2)
     const userOpHash3 =  mockEntryPointGetUserOpHash(userOp3)
 
-    const mempoolEntry1 = {
-      userOp: userOp1,
-      userOpHash: userOpHash1,
-    }
-    const mempoolEntry2 = {
-      userOp: userOp2,
-      userOpHash: userOpHash2,
-    }
-    const mempoolEntry3 = {
-      userOp: userOp3,
-      userOpHash: userOpHash3,
-    }
-
-    await mempoolManager.addUserOp(userOpHash1 ,mempoolEntry1)
-    await mempoolManager.addUserOp(userOpHash2 ,mempoolEntry2)
-    await mempoolManager.addUserOp(userOpHash3 ,mempoolEntry3)
+    await mempoolManager.addUserOp(userOpHash1 ,userOp1)
+    await mempoolManager.addUserOp(userOpHash2 ,userOp2)
+    await mempoolManager.addUserOp(userOpHash3 ,userOp3)
 
     const size1 = mempoolManager.size()
 

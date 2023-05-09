@@ -1,11 +1,11 @@
-import { DebugMethodHandler } from "./DebugMethodHandler";
-import { UserOpMethodHandler } from "./UserOpMethodHandler";
+import { DebugMethodService } from "./DebugMethodService"
+import { UserOpMethodService } from "./UserOpMethodService"
 
 export interface JsonRpcRequest {
   jsonrpc: "2.0";
   method: string;
-  params?: any[];
-  id?: number | string;
+  params: any[];
+  id: number | string;
 }
 
  interface JsonRpcSuccessResponse {
@@ -27,42 +27,84 @@ interface JsonRpcErrorResponse {
 type JsonRpcResponse = JsonRpcSuccessResponse | JsonRpcErrorResponse;
 
 export class RpcRequestHandler {
-
-  constructor(
-    readonly userOpMethodHandler: UserOpMethodHandler,
-    readonly debugMethodHandler: DebugMethodHandler,
-  ) {
+  private readonly userOpHandler: UserOpMethodService = new UserOpMethodService()
+  private readonly debugHandler: DebugMethodService = new DebugMethodService()
+  
+  constructor() {
+    // 
   }
 
   public async doHandleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
-    if (!request.jsonrpc || request.jsonrpc !== "2.0") {
-      return this.createErrorResponse(null, -32600, "Invalid Request")
-    }
-  
-    const method = request.method
-    const params = request.params
-  
-    switch (method) {
-      case "eth_chainId":
-        if (!params || params.length !== 2) {
-          return this.createErrorResponse(request.id, -32602, "Invalid params")
-        }
-        return this.createSuccessResponse(request.id, params[0] + params[1])
-      case "eth_supportedEntryPoints":
-        return await this.createSuccessResponse(request.id, true)
-      case "eth_sendUserOperation":
-        const result = await this.userOpMethodHandler.sendUserOperation()
-        return this.createSuccessResponse(request.id, result)
-      case "eth_estimateUserOperationGas":
-        return this.createSuccessResponse(request.id, true)
-      case "eth_getUserOperationReceipt":
-        return this.createSuccessResponse(request.id, true)
-      case "eth_getUserOperationByHash":
-        return this.createSuccessResponse(request.id, true)
-      case "web3_clientVersion":
-        return this.createSuccessResponse(request.id, true)
-      default:
-        return this.createErrorResponse(request.id, -32601, `Method ${method} is not supported`)
+    try {
+      if (!request.jsonrpc || request.jsonrpc !== "2.0") {
+        return this.createErrorResponse(null, -32600, "Invalid Request")
+      }
+
+      if (!request.method || typeof request.method !== "string") {
+        return this.createErrorResponse(request.id, -32600, "Invalid Request")
+      }
+
+      if (!request.id || typeof request.id !== "number" && typeof request.id !== "string") {
+        return this.createErrorResponse(request.id, -32600, "Invalid Request")
+      }
+
+      if (!request.params || !Array.isArray(request.params)) {
+        return this.createErrorResponse(request.id, -32600, "Invalid Request")
+      }
+    
+      const method = request.method
+      const params = request.params
+      let result: any
+      let isErrorResult: {code: number, message: string} = null
+
+      switch (method) {
+        case "eth_chainId":
+          if (!params || params.length !== 2) {
+            isErrorResult = {
+              code: -32602,
+              message: "Invalid params",
+            }
+            break
+          }
+          result = true
+          break
+        case "eth_supportedEntryPoints":
+          result = true
+          break
+        case "eth_sendUserOperation":
+          result = await this.userOpHandler.sendUserOperation(params[0], params[1])
+          break
+        case "eth_estimateUserOperationGas":
+          result = true
+          break
+        case "eth_getUserOperationReceipt":
+          result = true
+          break
+        case "eth_getUserOperationByHash":
+          result = true
+          break
+        case 'debug_bundler_dumpMempool':
+          result = this.debugHandler.dumpMempool()
+          break
+        case 'debug_bundler_clearState':
+          await this.debugHandler.clearState()
+          result = 'ok'
+          break
+        default:
+          isErrorResult = {
+            code: -32601,
+            message: `Method ${method} is not supported`,
+          }
+          break
+      }
+
+      if (isErrorResult) {
+        return this.createErrorResponse(request.id, isErrorResult.code, isErrorResult.message)
+      }
+
+      return this.createSuccessResponse(request.id, result)
+    } catch (error) {
+      return this.createErrorResponse(request.id, -32000, error.message)
     }
   }
 
@@ -99,5 +141,3 @@ export class RpcRequestHandler {
     return errorResponse
   }
 }
-
-

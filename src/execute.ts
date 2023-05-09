@@ -1,10 +1,8 @@
 import { Command } from 'commander'
-import dotenv from 'dotenv'
 import { JsonrpcHttpServer } from './modules/json-rpc/JsonRpcHttpServer'
-import { RpcRequestHandler } from './modules/json-rpc/RpcRequestHandler'
-import { DebugMethodHandler } from './modules/json-rpc/DebugMethodHandler'
-import { UserOpMethodHandler } from './modules/json-rpc/UserOpMethodHandler'
 import { Config } from './modules/Config'
+import dotenv from 'dotenv'
+import { ExecutionManager } from './modules/ExecutionManager'
 
 dotenv.config()
 
@@ -21,13 +19,11 @@ async function runBundler() {
     console.log('command-line arguments: ', programOpts)
     Config.getInstance(programOpts)
 
-    // start the bundler server
-    const handeler = new RpcRequestHandler(
-        new UserOpMethodHandler(),
-        new DebugMethodHandler()
-    )
+    // Register bundler components
+    ExecutionManager.getInstance()
 
-    const bundlerServer = new JsonrpcHttpServer(programOpts.port, handeler)
+    // start the bundler server
+    const bundlerServer = new JsonrpcHttpServer(programOpts.port)
     await bundlerServer.start()
 }
 

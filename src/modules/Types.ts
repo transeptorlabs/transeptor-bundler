@@ -18,7 +18,10 @@ export type UserOperation = {
     signature: BytesLike;
 }
 
-
+export interface MempoolEntry {
+    userOp: UserOperation;
+    userOpHash: string;
+}
 
 
 
