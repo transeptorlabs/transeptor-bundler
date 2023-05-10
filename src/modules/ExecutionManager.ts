@@ -7,7 +7,7 @@ import { MempoolManager } from "./MempoolManager"
   execution of doBundlerUserOps() is complete, the lock is released using release() in the finally block.
 */
 export class ExecutionManager {
-  private static instance: ExecutionManager
+  private static instance: ExecutionManager | null
 
   private interval: NodeJS.Timeout | null = null
   private mutex: Mutex = new Mutex()

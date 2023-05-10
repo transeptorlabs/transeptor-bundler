@@ -37,7 +37,7 @@ export class RpcRequestHandler {
   public async doHandleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
     try {
       if (!request.jsonrpc || request.jsonrpc !== "2.0") {
-        return this.createErrorResponse(null, -32600, "Invalid Request")
+        return this.createErrorResponse(request.id, -32600, "Invalid Request")
       }
 
       if (!request.method || typeof request.method !== "string") {
@@ -55,7 +55,7 @@ export class RpcRequestHandler {
       const method = request.method
       const params = request.params
       let result: any
-      let isErrorResult: {code: number, message: string} = null
+      let isErrorResult: {code: number, message: string} = {code: 0, message: ''}
 
       switch (method) {
         case "eth_chainId":
@@ -98,12 +98,12 @@ export class RpcRequestHandler {
           break
       }
 
-      if (isErrorResult) {
+      if (isErrorResult.code !== 0) {
         return this.createErrorResponse(request.id, isErrorResult.code, isErrorResult.message)
       }
 
       return this.createSuccessResponse(request.id, result)
-    } catch (error) {
+    } catch (error: any) {
       return this.createErrorResponse(request.id, -32000, error.message)
     }
   }
