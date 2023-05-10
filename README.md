@@ -3,6 +3,10 @@ A simple modular Typescript implementation of an ERC-4337 Bundler.
 
 See proposal here: https://hackmd.io/@V00D00-child/SyXKL6Kmn
 
+## Requirments
+- node v18.16.0 +
+- Docker v20.10.17 +
+  
 ## Running Bundler Locally
 Storage access rules and opcode banning are two mechanisms implemented in Ethereum clients to enforce security and prevent certain malicious or unsafe behaviors on the network. The Bundler has multiple configrations to ensure it can implement the full spec storage access rules and opcode banning. Specifically, the Bundler will need to use `debug_traceCall` method to enforce the full spec storage access rules and opcode banning.
 
@@ -12,6 +16,7 @@ Alternivley, if a node does NOT support `debug_traceCall` a hack of mine the tra
 
 - **debug_traceTransaction**: This method traces the execution of a specific transaction from start to finish. It provides a detailed log of the execution steps, including the initial transaction call, any internal calls made within the transaction, and the final state changes caused by the transaction's execution.
 
+
 ### GETH client
 **Follow the set below to run Bundler server using a GETH client**
 
@@ -19,21 +24,11 @@ GETH node supports `debug_traceCall` with javascript "tracer"
 
 1. Install dependencies `npm install`
 2. Add and configuration files `bundler.config.json` and `.env`
-3. Start GETH client
-```
-docker run --rm -ti --name geth -p 8545:8545 ethereum/client-go:v1.10.26 \
-  --miner.gaslimit 12000000 \
-  --http --http.api personal,eth,net,web3,debug \
-  --http.vhosts '*,localhost,host.docker.internal' --http.addr "0.0.0.0" \
-  --ignore-legacy-receipts --allow-insecure-unlock --rpc.allow-unprotected-txs \
-  --dev \
-  --verbosity 2 \
-  --nodiscover --maxpeers 0 --mine --miner.threads 1 \
-  --networkid 1337
-```
-
+3. Start local GETH client `npm run geth:start` (will start at http://localhost:8545/)
 4. Deploy entry point contract and fund the bundler signer account `npm run deploy:local`
 5. Start up Bundler server `npm start`
+
+Use `npm run geth:stop` to stop GETH client
 
 **note: if GETH is terminated, the `npm run deploy:local` script will need to be run again to re-deploy entry point contract and re-fund the bundler signer account.
 

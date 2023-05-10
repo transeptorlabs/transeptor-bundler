@@ -33,15 +33,11 @@ const fundsigner: DeployFunction = async function (
   const bal = await provider.getBalance(account)
 
   // fund the default "hardhat node" account
-  console.log("Bundler signer account account:", account)
-  console.log("Bundler default signer balance:", hre.ethers.utils.formatEther(bal))
-  console.log("Hardhat signer account:", hre.ethers.utils.formatEther(signerBalance))
-
-  if (bal.lte(parseEther("1")) && signerBalance.gte(parseEther("10000"))) {
-    console.log("Funding Bundler signer with 1 ETH:", account)
+  if ((bal.gte(parseEther("0")) && bal.lte(parseEther("1000")))&& signerBalance.gte(parseEther("10000"))) {
+    console.log("Funding Bundler signer with 10 ETH:", account)
     await signer.sendTransaction({
       to: account,
-      value: parseEther("1"),
+      value: parseEther("10"),
     })
   }
 }
