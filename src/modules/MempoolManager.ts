@@ -17,7 +17,7 @@ import { Config } from './Config'
     - resetInstance: reset the singleton instance for testing
     */
 export class MempoolManager {
-  private static instance: MempoolManager
+  private static instance: MempoolManager | null
 
   private readonly mempool: Map<string, MempoolEntry>
   private readonly mutex: Mutex
@@ -68,7 +68,7 @@ export class MempoolManager {
     try {
       const entry = this.mempool.get(userOpHash)
       const result = this.mempool.delete(userOpHash)
-      if (result) {
+      if (result && entry) {
         const count = (this.entryCount[entry.userOp.sender] ?? 0) - 1
         count <= 0 ? delete this.entryCount[entry.userOp.sender] : this.entryCount[entry.userOp.sender] = count
       }

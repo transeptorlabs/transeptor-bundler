@@ -1,6 +1,20 @@
 # Dependencies
 /node_modules
 
+# test
+coverage
+coverage.json
+
+# secrets
+.env
+
+# Hardhat files
+cache
+artifacts
+typechain
+typechain-types
+
+
 # Production
 /build
 /dist

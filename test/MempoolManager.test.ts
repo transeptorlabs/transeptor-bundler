@@ -1,8 +1,10 @@
+import { Config } from "../src/modules/Config"
 import { MempoolManager } from "../src/modules/MempoolManager"
 import {
   mockUserOperationFactory,
   mockEntryPointGetUserOpHash,
 } from "../utils/test-helpers"
+Config.getInstance({})
 
 describe("MempoolManager", () => {
   let mempoolManager: MempoolManager = MempoolManager.getInstance()
