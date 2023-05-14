@@ -1,4 +1,4 @@
-<p align="center"><a href="https://transeptor.io/docs/category/bundler"><img width="500" title="Transeptor" src='https://transeptor.io/img/brand/transeptor.png' /></a></p>
+<p align="center"><a href="https://transeptor.io/docs/category/bundler"><img width="500" title="Transeptor" src='https://transeptorlabs.io/img/brand/transeptor.png' /></a></p>
 
 ![Node Version](https://img.shields.io/badge/node-18.x-green)
 
