@@ -63,7 +63,7 @@ We appreciate your contributions and thank you for helping make the ERC-4337 Bun
 
 We would like to express our gratitude to the following individuals and organizations for their contributions and support in making this project possible:
 
-- [Infinitism]([link_to_repository](https://github.com/eth-infinitism/bundler)) - for inspiring our project and serving as a reference for implementation techniques.
+- [Infinitism](https://github.com/eth-infinitism/bundler) - for inspiring our project and serving as a reference for implementation techniques.
 
 We are grateful to the open-source community and the countless developers who have shared their knowledge and resources, enabling us to build upon their work.
 
