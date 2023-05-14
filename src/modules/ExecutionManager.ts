@@ -1,5 +1,6 @@
-import { Mutex } from "async-mutex"
-import { MempoolManager } from "./MempoolManager"
+import { Mutex } from 'async-mutex'
+import { MempoolManager } from './MempoolManager'
+import { Config } from './Config'
 
 /*
   Within the start() method, we've added await this.mutex.acquire() to acquire the mutex lock before executing doBundlerUserOps(). 
@@ -13,39 +14,41 @@ export class ExecutionManager {
   private mutex: Mutex = new Mutex()
   private intervalTimer: number
 
-  private constructor() {
-    this.intervalTimer = 2 * 60 * 1000 // 2 minutes in milliseconds
+  private constructor(intervalTimer: number) {
+    this.intervalTimer = intervalTimer
     this.startAutoBundler()
   }
 
   public static getInstance(): ExecutionManager {
     if (!this.instance) {
-      this.instance = new ExecutionManager()
+      this.instance = new ExecutionManager(Config.getInstance().getBundleInterval())
     }
     return this.instance
   }
 
-  startAutoBundler() {
+  public startAutoBundler() {
     // Make sure the interval is not already running
     this.stopAutoBundler()
+    
+    console.log('Set auto bundler with interval: ', this.intervalTimer, 'ms')
 
     this.interval = setInterval(async () => {
       const release = await this.mutex.acquire()
       try {
         await this.doSendNextBundle()
       } catch (error) {
-        console.error("Error running doBundlerUserOps(auto):", error)
+        console.error('Error running doBundlerUserOps(auto):', error)
       } finally {
         release()
       }
     }, this.intervalTimer)
   }
 
-  stopAutoBundler() {
+  public stopAutoBundler() {
     if (this.interval) {
       clearInterval(this.interval)
       this.interval = null
-      console.log("Stopped auto bundler interval")
+      console.log('Stopped auto bundler interval')
     }
   }
 
@@ -54,7 +57,7 @@ export class ExecutionManager {
     try {
       await this.doSendNextBundle()
     } catch (error) {
-      console.error("Error running doBundlerUserOps(force):", error)
+      console.error('Error running doBundlerUserOps(force):', error)
     } finally {
       release()
     }
@@ -62,12 +65,12 @@ export class ExecutionManager {
 
   private async doSendNextBundle() {
     if (MempoolManager.getInstance().size() === 0) {
-      console.log("No user ops to bundle")
+      console.log('No user ops to bundle')
       return
     }
 
     const uops = await MempoolManager.getInstance().createNextUserOpBundle()
-    console.log("Sending bundle tranasction to flashbots...", uops)
+    console.log('Sending bundle tranasction to flashbots...', uops)
 
     // Simulating an asynchronous operation
     await new Promise((resolve) => setTimeout(resolve, 2000))

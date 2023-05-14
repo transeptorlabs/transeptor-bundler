@@ -1,6 +1,6 @@
-import { MempoolManager } from "../MempoolManager"
+import { MempoolManager } from '../../MempoolManager'
 
-export class DebugMethodService {
+export class DebugAPI {
   constructor () {
     // 
   }

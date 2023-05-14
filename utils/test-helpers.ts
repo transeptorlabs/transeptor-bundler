@@ -1,4 +1,4 @@
-import { UserOperation } from "../src/modules/Types"
+import { UserOperation } from '../src/modules/Types'
 
 export function mockUserOperationFactory(
   sender: string,
@@ -7,15 +7,15 @@ export function mockUserOperationFactory(
   const mockUserOperation: UserOperation = {
     sender: sender,
     nonce: nonce,
-    initCode: "0x0000000",
-    callData: "0x0000000",
+    initCode: '0x0000000',
+    callData: '0x0000000',
     callGasLimit: 0,
     verificationGasLimit: 0,
     preVerificationGas: 0,
     maxFeePerGas: 0,
     maxPriorityFeePerGas: 0,
-    paymasterAndData: "0x0000000",
-    signature: "0x0000000",
+    paymasterAndData: '0x0000000',
+    signature: '0x0000000',
   }
   return mockUserOperation
 }
