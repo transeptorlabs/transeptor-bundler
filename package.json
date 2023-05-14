@@ -1,5 +1,5 @@
 {
-  "name": "opnode-bundle",
+  "name": "transeptor-bundle",
   "version": "0.0.0",
   "description": "A standalone erc4337 bundler",
   "main": "execute.ts",
@@ -14,10 +14,14 @@
     "test": "jest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "arch-diagram": "npx arkit -f src/execute.ts -o opnode-architecture.svg ",
+    "arch-diagram": "npx arkit -f src/execute.ts -o transeptor-architecture.svg ",
     "run-mempool-sim": "ts-node scripts/mempool-simulate-clients.ts"
   },
-  "author": "Idris Bowman",
+  "author": {
+    "name": "Transeptor Labs",
+    "email": "bowmanidris95@gmail.com",
+    "url": "https://transeptor"
+  },
   "license": "GNU",
   "dependencies": {
     "async-mutex": "0.4.0",

@@ -1,7 +1,7 @@
-# Contributing to OpNode
+# Contributing to transeptor
 
 ## Why Contribute
-OpNode is an open source project that welcomes contributions from anyone in the community. By contributing to this project, you can:
+Transeptor is an open source project that welcomes contributions from anyone in the community. By contributing to this project, you can:
 
 - Help improve the quality of the software for everyone who uses it.
 - Learn new skills and gain experience working on a real-world project.
@@ -12,7 +12,7 @@ OpNode is an open source project that welcomes contributions from anyone in the 
 **We appreciate any contributions, big or small, and thank you for taking the time to help make our project better.**
 
 ## How to Contribute
-1. Clone the repo to your local machine. `git clone https://github.com/OpNode/opnode-bundler.git`
+1. Clone the repo to your local machine. `git clone https://github.com/Transeptor/transeptor-bundler.git`
 2. Install dependencies with `npm install`.
 3. Create a new branch for your changes with `git checkout -b my-branch-name`.
 4. Make your changes and commit them with descriptive commit messages.
@@ -38,4 +38,4 @@ When you submit a pull request, please make sure to include a description of you
 - Squash multiple commits into a single commit with a descriptive commit message, if necessary.
 
 ## Thank You
-Thank you for considering contributing to OpNode! Your contributions help make our project better, and we appreciate your time and effort.
+Thank you for considering contributing to Transeptor! Your contributions help make our project better, and we appreciate your time and effort.

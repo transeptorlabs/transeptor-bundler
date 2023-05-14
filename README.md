@@ -1,11 +1,18 @@
-# OpNode-bundler
-A simple modular Typescript implementation of an ERC-4337 Bundler.
+<p align="center"><a href="https://transeptor.io/docs/category/bundler"><img width="500" title="Transeptor" src='https://transeptor.io/img/brand/transeptor.png' /></a></p>
 
-See proposal here: https://hackmd.io/@V00D00-child/SyXKL6Kmn
+![Node Version](https://img.shields.io/badge/node-18.x-green)
 
-## Requirments
-- node v18.16.0 +
-- Docker v20.10.17 +
+This is the core repository for Transeptor, a simple modular Typescript implementation of an ERC-4337 Bundler developed by Transeptor Labs.
+
+We provide you with a smooth, developer-friendly experience. Our modular approach ensures flexibility and extensibility, allowing you to tailor the bundler to your specific needs.
+
+- See our roadmap [here](https://hackmd.io/@V00D00-child/SyXKL6Kmn#Project-StatusRoadmap-)
+
+> :warning: **This repository is currently under active development.**
+
+## Contributing
+We welcome contributions to enhance the functionality, usability, and performance of the ERC-4337 Bundler project. If you would like to contribute, please follow these guidelines [here](https://github.com/transeptorlabs/transeptor-bundler/blob/main/CONTRIBUTING.md)
+
   
 ## Running Bundler Locally
 Storage access rules and opcode banning are two mechanisms implemented in Ethereum clients to enforce security and prevent certain malicious or unsafe behaviors on the network. The Bundler has multiple configrations to ensure it can implement the full spec storage access rules and opcode banning. Specifically, the Bundler will need to use `debug_traceCall` method to enforce the full spec storage access rules and opcode banning.
@@ -45,3 +52,34 @@ This Bundler uses [Infinitism](https://github.com/eth-infinitism/account-abstrac
 
 ## Test
 `npm run test`
+
+## License
+
+By contributing to this repository, you agree that your contributions will be licensed under the GPL-3.0 License. Please see the [`LICENSE`](https://github.com/transeptorlabs/transeptor-bundler/blob/main/LICENSE)file for more details.
+
+We appreciate your contributions and thank you for helping make the ERC-4337 Bundler project even better!
+
+## Acknowledgements
+
+We would like to express our gratitude to the following individuals and organizations for their contributions and support in making this project possible:
+
+- [Infinitism](https://github.com/eth-infinitism/bundler) - for inspiring our project and serving as a reference for implementation techniques.
+
+We are grateful to the open-source community and the countless developers who have shared their knowledge and resources, enabling us to build upon their work.
+
+If we have inadvertently missed acknowledging anyone who has made a significant contribution, please accept our sincere apologies, and kindly bring it to our attention so that we can rectify it.
+
+Thank you all for your support!
+
+## Contact
+
+If you have any questions, suggestions, or feedback regarding the ERC-4337 Bundler project, please feel free to reach out to us. We would be more than happy to assist you or hear your thoughts.
+
+You can contact us through the following channels:
+
+- **Twitter**: [@transeptorlabs](https://twitter.com/transeptorlabs)
+- **Telgram**: [Telegram channel](https://t.me/+eUGda3KIND4zMjRh)
+
+We also encourage you to join our community on Discord, where you can engage in discussions, ask questions, and interact with other contributors and users of the ERC-4337 Bundler project.
+
+Your feedback and involvement are highly valued and play a crucial role in the project's growth and success. We look forward to hearing from you!
