@@ -78,7 +78,7 @@ If you have any questions, suggestions, or feedback regarding the ERC-4337 Bundl
 You can contact us through the following channels:
 
 - **Twitter**: [@transeptorlabs](https://twitter.com/transeptorlabs)
-- **Telgram**: [Link to Telegram channel](hhttps://t.me/+eUGda3KIND4zMjRh)
+- **Telgram**: [Telegram channel](https://t.me/+eUGda3KIND4zMjRh)
 
 We also encourage you to join our community on Discord, where you can engage in discussions, ask questions, and interact with other contributors and users of the ERC-4337 Bundler project.
 
