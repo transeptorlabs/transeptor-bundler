@@ -1,7 +1,7 @@
-import { MempoolManager } from "../MempoolManager"
-import { UserOperation } from "../Types"
+import { MempoolManager } from '../../MempoolManager'
+import { UserOperation } from '../../Types'
 
-export class UserOpMethodService {
+export class EthAPI {
   constructor () {
     // 
   }

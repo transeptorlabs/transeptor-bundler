@@ -5,7 +5,7 @@
 
 export default {
   clearMocks: true,
-  coverageProvider: "v8",
+  coverageProvider: 'v8',
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/test'],

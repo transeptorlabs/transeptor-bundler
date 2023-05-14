@@ -119,7 +119,7 @@ export class MempoolManager {
 
   public dump(): Array<UserOperation> {
     console.log(`Mempool size: ${this.mempool.size}`)
-    console.log(`Mempool entryCount:`, this.entryCount)
+    console.log('Mempool entryCount:', this.entryCount)
     for (const [key, value] of this.mempool.entries()) {
       console.log(`Key: ${key}, Value: ${value}`)
     }
@@ -130,4 +130,3 @@ export class MempoolManager {
     MempoolManager.instance = null
   }
 }
-
