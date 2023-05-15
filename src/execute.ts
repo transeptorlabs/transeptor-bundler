@@ -1,17 +1,16 @@
 import { JsonrpcHttpServer } from './modules/json-rpc/JsonRpcHttpServer'
-import { Config } from './modules/Config'
+import Config from './modules/Config'
 import dotenv from 'dotenv'
 import { ExecutionManager } from './modules/ExecutionManager'
 
 dotenv.config()
 
 async function runBundler() {
-
-    // Register bundler components
-    Config.getInstance()
-    ExecutionManager.getInstance()
+    // init config global
+    Config
 
     // start the bundler server
+    ExecutionManager.getInstance()
     const bundlerServer = new JsonrpcHttpServer()
     await bundlerServer.start()
 }

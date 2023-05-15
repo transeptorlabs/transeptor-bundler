@@ -1,6 +1,6 @@
 import { Mutex } from 'async-mutex'
 import { MempoolEntry, UserOperation } from './Types'
-import { Config } from './Config'
+import Config from './Config'
 
 /* In-memory mempool with used to manage UserOperations.
   The MempoolManager Singleton class is a Hash Table data structure that provides efficient insertion, removal, and retrieval of items based on a hash string key. 
@@ -35,7 +35,7 @@ export class MempoolManager {
 
   public static getInstance(): MempoolManager {
     if (!this.instance) {
-      this.instance = new MempoolManager(Config.getInstance().getBundleSize())
+      this.instance = new MempoolManager(Config.autoBundleMempoolSize)
     }
     return this.instance
   }

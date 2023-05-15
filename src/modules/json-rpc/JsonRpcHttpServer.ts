@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express'
 import { createServer, Server } from 'http'
 import helmet from 'helmet'
 import cors from 'cors'
-import { Config } from '../Config'
+import Config from '../Config'
 import { JsonRpcRequest, RpcMethodHandler } from './RpcMethodHandler.ts'
 import { ProviderService } from '../ProviderService'
 
@@ -33,24 +33,23 @@ export class JsonrpcHttpServer {
         this.fatalError(new Error('httpServer is undefined'))
       }
 
-      const config = Config.getInstance()
       const { name, chainId } = await this.providerService.getNetwork()
     
       if (chainId === 31337 || chainId === 1337) {
-        const isDeployed = await this.providerService.checkContractDeployment(Config.getInstance().getEntryPointAddr())
+        const isDeployed = await this.providerService.checkContractDeployment(Config.entryPointAddr)
         if (!isDeployed) {
           this.fatalError(new Error('Entry point contract is not deployed to the network run - `npm run deploy:local` to deploy it locally.'))
         }
       }
       
-      const bal = await config.getConnectedWallet().getBalance()
+      const bal = await Config.connectedWallet.getBalance()
       if (bal.eq(0)) {
         this.fatalError(new Error('Bundler signer account is not funded'))
       }
 
       // TODO: Check if the node supports eth_sendRawTransactionConditional
-      if (config.isConditionalRpcMode()) {
-        this.fatalError(new Error(`${config.getMode()} requires a node that support eth_sendRawTransactionConditional`))
+      if (Config.isConditionalRpcMode()) {
+        this.fatalError(new Error(`${Config.mode} requires connection to a node that support eth_sendRawTransactionConditional`))
       }
 
       console.log('Bundler signer account balance:', bal.toString())
@@ -62,8 +61,8 @@ export class JsonrpcHttpServer {
 
   async start(): Promise<void> {
     await this.preflightCheck()
-    this.httpServer.listen(Config.getInstance().getPort(), () => {
-      console.log(`running on http://localhost:${Config.getInstance().getPort()}/v1`)
+    this.httpServer.listen(Config.port, () => {
+      console.log(`running on http://localhost:${Config.port}/v1`)
     })
   }
 

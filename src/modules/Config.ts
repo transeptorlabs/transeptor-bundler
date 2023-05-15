@@ -4,25 +4,25 @@ import { Wallet, ethers, providers } from 'ethers'
 import packageJson from '../../package.json'
 import { isValidAddress } from '../utils'
 
-export class Config {
+class Config {
   private static instance: Config | null
-
-  private readonly port: number
-  private readonly provider: providers.JsonRpcProvider
-  private readonly connectedWallet: Wallet
-
-  private readonly autoBundleInterval: number
-  private readonly autoBundleMempoolSize: number
-  private readonly mode: string
-
-  private readonly entryPointAddr: string
-  private readonly beneficiaryAddr: string
-  private readonly entryPointContract: ethers.Contract
-
   private DEFAULT_NETWORK = 'http://localhost:8545'
   private DEFAULT_ENTRY_POINT = '0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789'
   private SUPPORTED_MODES = ['private-conditional', 'public-conditional', 'private-searcher', 'public-searcher', 'test']
 
+  public readonly port: number
+  public readonly provider: providers.JsonRpcProvider
+  public readonly connectedWallet: Wallet
+
+  public readonly autoBundleInterval: number
+  public readonly autoBundleMempoolSize: number
+  public readonly mode: string
+
+  public readonly entryPointAddr: string
+  public readonly beneficiaryAddr: string
+  public readonly entryPointContract: ethers.Contract
+
+ 
   private constructor() {
     try {
       const program = new Command()
@@ -77,6 +77,8 @@ export class Config {
       this.beneficiaryAddr = programOpts.beneficiary as string
       this.connectedWallet = walletMnemonic.connect(this.provider)
       this.entryPointContract = new ethers.Contract(this.entryPointAddr, [], this.connectedWallet)
+
+      console.log('Done init Config global')
     } catch (error: any) {
       throw new Error(`Unable to set up config gobal: ${error.message as string}`)
     }
@@ -102,44 +104,8 @@ export class Config {
     return pattern.test(url)
   }
 
-  getProvider(): providers.JsonRpcProvider {
-    return this.provider
-  }
-
-  getMode(): string {
-    return this.mode
-  }
-
   isConditionalRpcMode(): boolean {
     return this.mode === 'public-conditional' || this.mode === 'private-conditional'
-  }
-
-  getBundleSize(): number {
-    return this.autoBundleMempoolSize
-  }
-
-  getBundleInterval(): number {
-    return this.autoBundleInterval
-  }
-
-  getPort(): number {
-    return this.port
-  }
-
-  getEntryPointAddr(): string {
-    return this.entryPointAddr
-  }
-
-  getConnectedWallet(): Wallet {
-    return this.connectedWallet
-  }
-
-  getEntryPointContract(): ethers.Contract {
-    return this.entryPointContract
-  }
-
-  getBeneficiaryAddr(): string {
-    return this.beneficiaryAddr
   }
 
   /**
@@ -149,3 +115,5 @@ export class Config {
     Config.instance = null
   }
 }
+
+export default Config.getInstance()

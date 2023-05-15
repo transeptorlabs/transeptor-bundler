@@ -1,6 +1,6 @@
 import { Mutex } from 'async-mutex'
 import { MempoolManager } from './MempoolManager'
-import { Config } from './Config'
+import Config from './Config'
 
 /*
   Within the start() method, we've added await this.mutex.acquire() to acquire the mutex lock before executing doBundlerUserOps(). 
@@ -21,7 +21,7 @@ export class ExecutionManager {
 
   public static getInstance(): ExecutionManager {
     if (!this.instance) {
-      this.instance = new ExecutionManager(Config.getInstance().getBundleInterval())
+      this.instance = new ExecutionManager(Config.autoBundleInterval)
     }
     return this.instance
   }
