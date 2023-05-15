@@ -1,5 +1,5 @@
 import { Mutex } from 'async-mutex'
-import { MempoolManager } from './MempoolManager'
+import MempoolManager  from './MempoolManager'
 import Config from './Config'
 
 /*
@@ -8,72 +8,81 @@ import Config from './Config'
   execution of doBundlerUserOps() is complete, the lock is released using release() in the finally block.
 */
 export class ExecutionManager {
-  private static instance: ExecutionManager | null
+  private static instance: ExecutionManager | undefined = undefined
 
   private interval: NodeJS.Timeout | null = null
   private mutex: Mutex = new Mutex()
-  private intervalTimer: number
+  private bundleMode: 'auto' | 'manual'
 
-  private constructor(intervalTimer: number) {
-    this.intervalTimer = intervalTimer
-    this.startAutoBundler()
+  private constructor() {
+    this.bundleMode = Config.isAutoBundle ? 'auto' : 'manual'
+    if (this.bundleMode === 'auto') {
+      this.startAutoBundler()
+    }
+    console.log('Done init ExecutionManager global with bundleMode:', this.bundleMode)
   }
 
   public static getInstance(): ExecutionManager {
     if (!this.instance) {
-      this.instance = new ExecutionManager(Config.autoBundleInterval)
+      this.instance = new ExecutionManager()
     }
     return this.instance
+  }
+
+  public setBundlingMode(mode: 'auto' | 'manual') {
+    this.bundleMode = mode
+    
+    if (mode === 'auto') {
+      this.startAutoBundler()
+    } else {
+      this.stopAutoBundler()
+    }
   }
 
   public startAutoBundler() {
     // Make sure the interval is not already running
     this.stopAutoBundler()
     
-    console.log('Set auto bundler with interval: ', this.intervalTimer, 'ms')
+    console.log('Set auto bundler with interval: ', Config.autoBundleInterval, 'ms')
 
     this.interval = setInterval(async () => {
       const release = await this.mutex.acquire()
       try {
-        await this.doSendNextBundle()
+        await this.doAttemptBundle()
       } catch (error) {
-        console.error('Error running doBundlerUserOps(auto):', error)
+        console.error('Error running auto bundle:', error)
       } finally {
         release()
       }
-    }, this.intervalTimer)
+    }, Config.autoBundleInterval)
   }
 
   public stopAutoBundler() {
     if (this.interval) {
       clearInterval(this.interval)
       this.interval = null
-      console.log('Stopped auto bundler interval')
+      console.log('Stopping auto bundler interval')
     }
   }
 
-  public async forceSendNextBundle() {
+  public async forceSendBundle(): Promise<string> {
     const release = await this.mutex.acquire()
-    try {
-      await this.doSendNextBundle()
-    } catch (error) {
-      console.error('Error running doBundlerUserOps(force):', error)
-    } finally {
-      release()
-    }
+    const result =  await this.doAttemptBundle()
+
+    release()
+    return result
   }
 
-  private async doSendNextBundle() {
-    if (MempoolManager.getInstance().size() === 0) {
+  private async doAttemptBundle(): Promise<string> {
+    if (MempoolManager.size() === 0) {
       console.log('No user ops to bundle')
-      return
+      return ''
     }
 
-    const uops = await MempoolManager.getInstance().createNextUserOpBundle()
-    console.log('Sending bundle tranasction to flashbots...', uops)
-  }
-
-  public resetInstance(): void {
-    ExecutionManager.instance = null
+    const uops = await MempoolManager.createNextUserOpBundle()
+    console.log('Sending bundle tranasction to ...', uops)
+    return ''
   }
 }
+
+export default ExecutionManager.getInstance()

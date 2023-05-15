@@ -1,15 +1,23 @@
-import { MempoolManager } from '../src/modules/MempoolManager'
+import MempoolManager from '../src/modules/MempoolManager'
 import {
   mockUserOperationFactory,
   mockEntryPointGetUserOpHash,
 } from '../utils/test-helpers'
 
 describe('MempoolManager', () => {
-  let mempoolManager: MempoolManager = MempoolManager.getInstance()
+  const originalEnv = process.env
+  process.env = {
+    ...originalEnv,
+    MNEMONIC: 'test '.repeat(11) + 'junk',
+  }
+  const mempoolManager = MempoolManager
 
   beforeEach(() => {
-    MempoolManager.getInstance().resetInstance()
-    mempoolManager = MempoolManager.getInstance()
+    mempoolManager.clearState()
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
   })
 
   test('should addUserOp and findByHash correctly', async () => {

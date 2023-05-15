@@ -1,3 +1,4 @@
+import '@nomiclabs/hardhat-ethers'
 import hre from 'hardhat'
 import { Wallet } from 'ethers'
 import dotenv from 'dotenv'

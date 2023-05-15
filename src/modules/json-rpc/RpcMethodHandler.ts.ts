@@ -1,3 +1,4 @@
+import Config from '../Config'
 import { DebugAPI } from './services/Debug'
 import { EthAPI } from './services/Eth'
 
@@ -31,7 +32,7 @@ export class RpcMethodHandler {
   private readonly debug: DebugAPI = new DebugAPI()
   
   constructor() {
-    // 
+    //
   }
 
   private createSuccessResponse(
@@ -116,11 +117,21 @@ export class RpcMethodHandler {
         case 'eth_getUserOperationByHash':
           result = true
           break
-        case 'debug_bundler_dumpMempool':
-          result = this.debug.dumpMempool()
+        case 'web3_clientVersion':
+          result = 'aa-bundler/' + Config.clientVersion
           break
         case 'debug_bundler_clearState':
           await this.debug.clearState()
+          result = 'ok'
+          break
+        case 'debug_bundler_dumpMempool':
+          result = this.debug.dumpMempool()
+          break
+        case 'debug_bundler_sendBundleNow':
+          result = await this.debug.sendBundleNow()
+          break
+        case 'debug_bundler_setBundlingMode':
+          this.debug.setBundlingMode(params[0])
           result = 'ok'
           break
         default:

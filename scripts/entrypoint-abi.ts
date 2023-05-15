@@ -1,6 +1,6 @@
 import { EntryPoint__factory } from '@account-abstraction/contracts'
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
 
 async function main() {
   console.log('<<<<<--Running script to fetch entry point abi-->>>>>')

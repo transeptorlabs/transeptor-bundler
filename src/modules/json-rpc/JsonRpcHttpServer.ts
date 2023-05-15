@@ -47,13 +47,18 @@ export class JsonrpcHttpServer {
         this.fatalError(new Error('Bundler signer account is not funded'))
       }
 
-      // TODO: Check if the node supports eth_sendRawTransactionConditional
-      if (Config.isConditionalRpcMode()) {
-        this.fatalError(new Error(`${Config.mode} requires connection to a node that support eth_sendRawTransactionConditional`))
-      }
+      // TODO: Check if the node supports eth_sendRawTransactionConditional if conditional mode is enabled
+      // if (Config.isConditionalRpcMode()) {
+      //   this.fatalError(new Error(`${Config.mode} requires connection to a node that support eth_sendRawTransactionConditional`))
+      // }
 
-      console.log('Bundler signer account balance:', bal.toString())
-      console.log('Connected to eth-client network:', {chainId, name})
+      // TODO: full validation requires (debug_traceCall) method on eth node geth or alchemy debug_traceCall API (for local UNSAFE mode: use --unsafe)
+
+      console.log('Bundler passed preflight check', {
+        accountBalance: bal.toString(),
+        network: {chainId, name},
+        mode: Config.mode,
+      })
     } catch (err: any) {
       this.fatalError(err)
     }

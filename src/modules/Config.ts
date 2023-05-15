@@ -3,85 +3,84 @@ import { OptionValues } from 'commander'
 import { Wallet, ethers, providers } from 'ethers'
 import packageJson from '../../package.json'
 import { isValidAddress } from '../utils'
+import dotenv from 'dotenv'
+dotenv.config()
 
 class Config {
-  private static instance: Config | null
+  private static instance: Config | undefined = undefined
   private DEFAULT_NETWORK = 'http://localhost:8545'
   private DEFAULT_ENTRY_POINT = '0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789'
-  private SUPPORTED_MODES = ['private-conditional', 'public-conditional', 'private-searcher', 'public-searcher', 'test']
+  private SUPPORTED_MODES = ['private-conditional', 'public-conditional', 'private-searcher', 'public-searcher']
 
-  public readonly port: number
   public readonly provider: providers.JsonRpcProvider
   public readonly connectedWallet: Wallet
-
-  public readonly autoBundleInterval: number
-  public readonly autoBundleMempoolSize: number
-  public readonly mode: string
-
   public readonly entryPointAddr: string
   public readonly beneficiaryAddr: string
   public readonly entryPointContract: ethers.Contract
 
- 
+  public readonly autoBundleInterval: number
+  public readonly bundleSize: number
+  public readonly isAutoBundle: boolean
+  public readonly maxMempoolSize: number = 100
+
+  public readonly port: number
+  public readonly mode: string
+  public readonly clientVersion: string
+  public readonly isUnsafeMode: boolean
+
   private constructor() {
-    try {
-      const program = new Command()
-      program
-      .version(`${packageJson.version}`)
-      .option('--beneficiary <string>', 'address to receive funds')
-      .option('--port <number>', 'server listening port', '3000')
-      .option('--network <string>', 'eth client url', `${this.DEFAULT_NETWORK}`)
-      .option('--entryPoint <string>', 'supported entry point address', this.DEFAULT_ENTRY_POINT)
-      .option('--auto', 'automatic bundling', true)
-      .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '120000')
-      .option('--autoBundleMempoolSize <number>', 'mempool bundle size', '5')
-      .option('--mode <string>', 'bundler mode (public-conditional, public-conditional, private-searcher, public-searcher)', 'private-conditional')
+    const program = new Command()
+    program
+    .version(`${packageJson.version}`)
+    .option('--beneficiary <string>', 'address to receive funds')
+    .option('--network <string>', 'eth client url', `${this.DEFAULT_NETWORK}`)
+    .option('--entryPoint <string>', 'supported entry point address', this.DEFAULT_ENTRY_POINT)
+    .option('--auto', 'automatic bundling', false)
+    .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '120000')
+    .option('--bundleSize <number>', 'mempool bundle size', '5')
+    .option('--port <number>', 'server listening port', '3000')
+    .option('--mode <string>', 'bundler mode (public-conditional, public-conditional, private-searcher, public-searcher)', 'private-conditional')
+    .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node)', false)
 
-      const programOpts: OptionValues = program.parse(process.argv).opts()
-      let walletMnemonic
+    const programOpts: OptionValues = program.parse(process.argv).opts()
 
-      console.log('command-line arguments: ', programOpts)
-     
-      if (this.SUPPORTED_MODES.indexOf(programOpts.mode as string) === -1) {        
-        throw new Error('Invalid bundler mode')
-      }
-
-      if (isValidAddress(programOpts.entryPoint as string) && isValidAddress(programOpts.beneficiary as string)) {
-        throw new Error('Invalid entry point or beneficiary address')
-      }
-
-      if (programOpts.network as string !== this.DEFAULT_NETWORK) {
-        if (!process.env.MNEMONIC ) {
-          throw new Error('MNEMONIC env var not set')
-        }
-
-        if (!process.env.ALCHEMY_API_KEY ) {
-          throw new Error('ALCHEMY_API_KEY env var not set')
-        }
-
-        walletMnemonic = Wallet.fromMnemonic(process.env.MNEMONIC)
-        this.provider = this.getNetworkProvider(programOpts.network as string, process.env.ALCHEMY_API_KEY)
-      } else {
-        // use default network with default hardhat mnemonic
-        walletMnemonic = Wallet.fromMnemonic('test '.repeat(11) + 'junk')
-        this.provider = this.getNetworkProvider(programOpts.network as string)
-      }
-
-      this.port = parseInt(programOpts.port as string)
-      this.mode = programOpts.mode as string
-
-      this.autoBundleInterval = parseInt(programOpts.autoBundleInterval as string)
-      this.autoBundleMempoolSize = parseInt(programOpts.autoBundleMempoolSize as string)
-
-      this.entryPointAddr = programOpts.entryPoint as string
-      this.beneficiaryAddr = programOpts.beneficiary as string
-      this.connectedWallet = walletMnemonic.connect(this.provider)
-      this.entryPointContract = new ethers.Contract(this.entryPointAddr, [], this.connectedWallet)
-
-      console.log('Done init Config global')
-    } catch (error: any) {
-      throw new Error(`Unable to set up config gobal: ${error.message as string}`)
+    console.log('command-line arguments: ', programOpts)
+    
+    if (this.SUPPORTED_MODES.indexOf(programOpts.mode as string) === -1) {        
+      throw new Error('Invalid bundler mode')
     }
+
+    if (!isValidAddress(programOpts.entryPoint as string)) {
+      throw new Error('Invalid entry point address')
+    }
+
+    if (programOpts.mode as string === 'private-searcher' || programOpts.mode as string === 'public-searcher') {
+      if (!process.env.ALCHEMY_API_KEY ) {
+        throw new Error('ALCHEMY_API_KEY env var not set')
+      }
+      this.provider = this.getNetworkProvider(programOpts.network as string, process.env.ALCHEMY_API_KEY)
+    } else {
+      this.provider = this.getNetworkProvider(programOpts.network as string)
+    } 
+
+    if (!process.env.MNEMONIC) {
+      throw new Error('MNEMONIC env var not set')
+    }
+    this.connectedWallet = Wallet.fromMnemonic(process.env.MNEMONIC).connect(this.provider)
+    this.entryPointAddr = programOpts.entryPoint as string
+    this.beneficiaryAddr = programOpts.beneficiary as string
+    this.entryPointContract = new ethers.Contract(this.entryPointAddr, [], this.connectedWallet)
+
+    this.autoBundleInterval = parseInt(programOpts.autoBundleInterval as string)
+    this.bundleSize = parseInt(programOpts.bundleSize as string)
+    this.isAutoBundle = programOpts.auto as boolean
+
+    this.port = parseInt(programOpts.port as string)
+    this.mode = programOpts.mode as string
+    this.clientVersion = packageJson.version as string
+    this.isUnsafeMode = programOpts.unsafe as boolean
+
+    console.log('Done init Config global')
   }
 
   public static getInstance(): Config {
@@ -106,13 +105,6 @@ class Config {
 
   isConditionalRpcMode(): boolean {
     return this.mode === 'public-conditional' || this.mode === 'private-conditional'
-  }
-
-  /**
-   * for debugging/testing: clear current in-memory instance of MempoolManager
-   */
-  public resetInstance(): void {
-    Config.instance = null
   }
 }
 
