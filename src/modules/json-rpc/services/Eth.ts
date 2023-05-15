@@ -1,4 +1,4 @@
-import { MempoolManager } from '../../MempoolManager'
+import MempoolManager from '../../MempoolManager'
 import { UserOperation } from '../../Types'
 
 export class EthAPI {
@@ -7,7 +7,7 @@ export class EthAPI {
   }
 
   async sendUserOperation(userOp: UserOperation, supportedEntryPoints: string) {
-    return await MempoolManager.getInstance().addUserOp('userOpHash', userOp)
+    return await MempoolManager.addUserOp('userOpHash', userOp)
   }
 }
 

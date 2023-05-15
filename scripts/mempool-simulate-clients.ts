@@ -1,4 +1,4 @@
-import {MempoolManager} from '../src/modules/MempoolManager'
+import MempoolManager from '../src/modules/MempoolManager'
 import { MempoolEntry } from '../src/modules/Types'
 import {mockUserOperationFactory, mockEntryPointGetUserOpHash} from '../utils/test-helpers'
 /*
@@ -22,19 +22,19 @@ async function simulateClients(): Promise<void> {
     for (let i = 1; i <= clientCount / 2; i++) {
       const userOp = mockUserOperationFactory(`x000${index + 1}`, i)
       const key = mockEntryPointGetUserOpHash(userOp)
-      await MempoolManager.getInstance().addUserOp(key, userOp)
+      await MempoolManager.addUserOp(key, userOp)
       console.log(`Client ${index + 1} added UserOps: ${key}`)
     }
   })
 
   await Promise.all(addPromises)
-  console.log('All items added to mempool:', MempoolManager.getInstance().size())
+  console.log('All items added to mempool:', MempoolManager.size())
 
   const removeInterval = setInterval(async () => {
-    const removedItems = await MempoolManager.getInstance().createNextUserOpBundle()
+    const removedItems = await MempoolManager.createNextUserOpBundle()
     await processItems(removedItems)
 
-    if (MempoolManager.getInstance().size() === 0) {
+    if (MempoolManager.size() === 0) {
       clearInterval(removeInterval)
       console.log('All UserOps in mempool processed')
     }

@@ -1,3 +1,4 @@
+import '@nomiclabs/hardhat-ethers'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
 import { parseEther } from 'ethers/lib/utils'

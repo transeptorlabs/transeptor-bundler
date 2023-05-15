@@ -1,6 +1,6 @@
 import { Mutex } from 'async-mutex'
 import { MempoolEntry, UserOperation } from './Types'
-import { Config } from './Config'
+import Config from './Config'
 
 /* In-memory mempool with used to manage UserOperations.
   The MempoolManager Singleton class is a Hash Table data structure that provides efficient insertion, removal, and retrieval of items based on a hash string key. 
@@ -16,26 +16,24 @@ import { Config } from './Config'
     - clearState: clear all items in mempool for debugging
     - resetInstance: reset the singleton instance for testing
     */
-export class MempoolManager {
-  private static instance: MempoolManager | null
+class MempoolManager {
+  private static instance: MempoolManager | undefined = undefined
 
   private readonly mempool: Map<string, MempoolEntry>
   private readonly mutex: Mutex
-  private readonly bundleSize: number
   private readonly MAX_MEMPOOL_USEROPS_PER_SENDER = 4
 
   // count entities in mempool.
   private entryCount: { [addr: string]: number | undefined } = {}
 
-  private constructor(bundleSize: number) {
+  private constructor() {
     this.mempool = new Map<string, MempoolEntry>()
     this.mutex = new Mutex()
-    this.bundleSize = bundleSize
   }
 
-  public static getInstance(): MempoolManager {
+  public static getInstance(): MempoolManager  {
     if (!this.instance) {
-      this.instance = new MempoolManager(Config.getInstance().getBundleSize())
+      this.instance = new MempoolManager()
     }
     return this.instance
   }
@@ -85,7 +83,7 @@ export class MempoolManager {
       const removedItems: Array<[string, MempoolEntry]> = []
       let count = 0
       for (const [key, value] of this.mempool.entries()) {
-        if (count >= this.bundleSize) {
+        if (count >= Config.bundleSize) {
           break
         }
         const result = this.mempool.delete(key)
@@ -125,8 +123,6 @@ export class MempoolManager {
     }
     return Array.from(this.mempool.values()).map((mempoolEntry) => mempoolEntry.userOp)
   }
-
-  public resetInstance(): void {
-    MempoolManager.instance = null
-  }
 }
+
+export default MempoolManager.getInstance()
