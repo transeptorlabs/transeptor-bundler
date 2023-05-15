@@ -23,7 +23,6 @@ Alternivley, if a node does NOT support `debug_traceCall` a hack of mine the tra
 
 - **debug_traceTransaction**: This method traces the execution of a specific transaction from start to finish. It provides a detailed log of the execution steps, including the initial transaction call, any internal calls made within the transaction, and the final state changes caused by the transaction's execution.
 
-
 ### GETH client
 **Follow the set below to run Bundler server using a GETH client**
 
@@ -45,7 +44,6 @@ Alchemy nodes support both `debug_traceCall` and `debug_traceTransaction` API, t
 2. Update `.env` value `ALCHEMY_API_KEY=<your-api-key>`
 3. Add your url `https://eth-goerli.g.alchemy.com/v2` to network in `bundler.config.json`
 4. Start up Bundler `npm start`
-
 
 ## ERC-4337 Entrypoint contract
 This Bundler uses [Infinitism](https://github.com/eth-infinitism/account-abstraction) `@account-abstraction/contracts`(version 0.6.0) entry point contract for local development. The `npm fetch:abi` script fetched abi for the contract and saves it locally at `./abi/entrypoint.js`.

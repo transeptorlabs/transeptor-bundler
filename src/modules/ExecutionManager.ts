@@ -71,9 +71,6 @@ export class ExecutionManager {
 
     const uops = await MempoolManager.getInstance().createNextUserOpBundle()
     console.log('Sending bundle tranasction to flashbots...', uops)
-
-    // Simulating an asynchronous operation
-    await new Promise((resolve) => setTimeout(resolve, 2000))
   }
 
   public resetInstance(): void {
