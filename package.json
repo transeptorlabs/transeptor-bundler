@@ -4,7 +4,8 @@
   "description": "A standalone erc4337 bundler",
   "main": "execute.ts",
   "scripts": {
-    "start": "ts-node src/execute.ts --mode private-conditional",
+    "start": "ts-node src/execute.ts",
+    "start:searcher": "ts-node src/execute.ts --network https://eth-goerli.g.alchemy.com/v2 --txMode private-searcher",
     "build": "npx webpack",
     "geth:start": "docker-compose up geth",
     "geth:stop": "docker-compose stop geth",
@@ -58,6 +59,7 @@
     "ts-node": "10.9.1",
     "typescript": "5.0.4",
     "webpack": "5.82.0",
+    "webpack-bundle-analyzer": "^4.8.0",
     "webpack-cli": "5.0.2"
   }
 }

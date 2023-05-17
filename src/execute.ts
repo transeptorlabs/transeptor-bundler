@@ -1,13 +1,12 @@
-import { JsonrpcHttpServer } from './modules/json-rpc/JsonRpcHttpServer'
-import Config from './modules/Config'
-import ExecutionManager  from './modules/ExecutionManager'
+import { BundleManager, JsonrpcHttpServer, Config, MempoolManager } from './modules'
 
 async function runBundler() {
     // init globals
     Config
-    ExecutionManager
+    MempoolManager
+    BundleManager
 
-    // // start the bundler server
+    // start the bundler server
     const bundlerServer = new JsonrpcHttpServer()
     await bundlerServer.start()
 }

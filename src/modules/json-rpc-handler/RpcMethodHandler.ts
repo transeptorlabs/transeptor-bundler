@@ -1,13 +1,6 @@
-import Config from '../Config'
-import { DebugAPI } from './services/Debug'
-import { EthAPI } from './services/Eth'
-
-export interface JsonRpcRequest {
-  jsonrpc: '2.0';
-  method: string;
-  params: any[];
-  id: number | string;
-}
+import { EthAPI, Web3API, DebugAPI} from './services'
+import { ProviderService } from '../provider'
+import { JsonRpcRequest } from '../types'
 
  interface JsonRpcSuccessResponse {
   jsonrpc: '2.0';
@@ -30,6 +23,8 @@ type JsonRpcResponse = JsonRpcSuccessResponse | JsonRpcErrorResponse;
 export class RpcMethodHandler {
   private readonly eth: EthAPI = new EthAPI()
   private readonly debug: DebugAPI = new DebugAPI()
+  private readonly web3: Web3API = new Web3API()
+  private readonly providerService: ProviderService = new ProviderService()
   
   constructor() {
     //
@@ -93,6 +88,12 @@ export class RpcMethodHandler {
 
       switch (method) {
         case 'eth_chainId':
+          result = await this.providerService.getChainId()
+          break
+        case 'eth_supportedEntryPoints':
+          result = this.eth.getSupportedEntryPoints()
+          break
+        case 'eth_sendUserOperation':
           if (!params || params.length !== 2) {
             isErrorResult = {
               code: -32602,
@@ -100,12 +101,6 @@ export class RpcMethodHandler {
             }
             break
           }
-          result = true
-          break
-        case 'eth_supportedEntryPoints':
-          result = true
-          break
-        case 'eth_sendUserOperation':
           result = await this.eth.sendUserOperation(params[0], params[1])
           break
         case 'eth_estimateUserOperationGas':
@@ -118,7 +113,7 @@ export class RpcMethodHandler {
           result = true
           break
         case 'web3_clientVersion':
-          result = 'aa-bundler/' + Config.clientVersion
+          result = this.web3.clientVersion()
           break
         case 'debug_bundler_clearState':
           await this.debug.clearState()
