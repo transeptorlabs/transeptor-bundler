@@ -1,4 +1,4 @@
-import type {BigNumberish, BytesLike } from 'ethers'
+import type { BigNumberish, BytesLike } from 'ethers'
 
 /* 
     types: https://docs.ethers.org/v5/api/utils/bignumber/
@@ -17,11 +17,6 @@ export type UserOperation = {
     paymasterAndData: BytesLike;
     signature: BytesLike;
 }
-
-export interface MempoolEntry {
-    userOp: UserOperation;
-    userOpHash: string;
-}
-
+  
 
 

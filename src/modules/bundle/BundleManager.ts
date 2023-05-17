@@ -1,13 +1,13 @@
 import { Mutex } from 'async-mutex'
-import MempoolManager  from './MempoolManager'
-import Config from './Config'
+import { MempoolManager }  from '../mempool'
+import { Config } from '../config'
 
 /*
   Within the start() method, we've added await this.mutex.acquire() to acquire the mutex lock before executing doBundlerUserOps(). 
   If another doBundlerUserOps() execution is already in progress, the current execution will wait until the lock is released. After the 
   execution of doBundlerUserOps() is complete, the lock is released using release() in the finally block.
 */
-export class BundleManager {
+class BundleManager {
   private static instance: BundleManager | undefined = undefined
 
   private interval: NodeJS.Timeout | null = null
@@ -86,3 +86,6 @@ export class BundleManager {
 }
 
 export default BundleManager.getInstance()
+
+const bundleManagerInstance = BundleManager.getInstance()
+export { bundleManagerInstance as BundleManager }

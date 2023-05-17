@@ -1,14 +1,6 @@
-import { ProviderService } from '../ProviderService'
-import { DebugAPI } from './services/Debug'
-import { EthAPI } from './services/Eth'
-import { Web3API } from './services/Web3'
-
-export interface JsonRpcRequest {
-  jsonrpc: '2.0';
-  method: string;
-  params: any[];
-  id: number | string;
-}
+import { EthAPI, Web3API, DebugAPI} from './services'
+import { ProviderService } from '../provider'
+import { JsonRpcRequest } from '../types'
 
  interface JsonRpcSuccessResponse {
   jsonrpc: '2.0';

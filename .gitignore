@@ -18,6 +18,7 @@ typechain-types
 # Production
 /build
 /dist
+/reports
 
 # Misc
 .DS_Store

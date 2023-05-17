@@ -1,7 +1,7 @@
 import { Command } from 'commander'
 import { OptionValues } from 'commander'
 import { Wallet, ethers, providers } from 'ethers'
-import packageJson from '../../package.json'
+import packageJson from '../../../package.json'
 import { isValidAddress } from '../utils'
 import dotenv from 'dotenv'
 dotenv.config()
@@ -193,4 +193,5 @@ class Config {
   }
 }
 
-export default Config.getInstance()
+const configInstance = Config.getInstance()
+export { configInstance as Config }

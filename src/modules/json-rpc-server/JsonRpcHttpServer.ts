@@ -2,9 +2,10 @@ import express, { Request, Response } from 'express'
 import { createServer, Server } from 'http'
 import helmet from 'helmet'
 import cors from 'cors'
-import Config from '../Config'
-import { JsonRpcRequest, RpcMethodHandler } from './RpcMethodHandler.ts'
-import { ProviderService } from '../ProviderService'
+import { ProviderService } from '../provider'
+import { RpcMethodHandler } from '../json-rpc-handler'
+import { JsonRpcRequest } from '../types'
+import { Config } from '../config'
 
 export class JsonrpcHttpServer {
   private app: express.Application

@@ -1,8 +1,8 @@
-import MempoolManager from '../src/modules/MempoolManager'
+import { MempoolManager } from '../src/modules/mempool'
 import {
   mockUserOperationFactory,
   mockEntryPointGetUserOpHash,
-} from '../utils/test-helpers'
+} from './utils/test-helpers'
 
 describe('MempoolManager', () => {
   const originalEnv = process.env

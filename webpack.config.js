@@ -1,4 +1,5 @@
 const path = require('path');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 module.exports = {
   entry: './src/execute.ts',
@@ -21,4 +22,14 @@ module.exports = {
     ]
   },
   stats: 'errors-only',
+    plugins: [
+      new BundleAnalyzerPlugin({
+        analyzerMode: 'static',
+        openAnalyzer: false,
+        generateStatsFile: true,
+        statsFilename: path.resolve(__dirname, 'reports/bundle-stats.json'),
+        reportFilename: path.resolve(__dirname, 'reports/bundle-report.html'),
+        excludeAssets: [/node_modules/],
+      }),
+  ]
 };

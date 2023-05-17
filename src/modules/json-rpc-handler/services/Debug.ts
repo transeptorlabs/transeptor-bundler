@@ -1,5 +1,5 @@
-import BundleManager from '../../BundleManager'
-import MempoolManager from '../../MempoolManager'
+import BundleManager from '../../bundle/BundleManager'
+import MempoolManager from '../../mempool/MempoolManager'
 
 export class DebugAPI {
   constructor () {
