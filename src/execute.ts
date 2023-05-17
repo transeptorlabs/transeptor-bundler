@@ -1,6 +1,6 @@
 import { JsonrpcHttpServer } from './modules/json-rpc/JsonRpcHttpServer'
 import Config from './modules/Config'
-import ExecutionManager  from './modules/ExecutionManager'
+import ExecutionManager  from './modules/BundleManager'
 
 async function runBundler() {
     // init globals

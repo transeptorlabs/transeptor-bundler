@@ -1,4 +1,4 @@
-import ExecutionManager from '../../ExecutionManager'
+import BundleManager from '../../BundleManager'
 import MempoolManager from '../../MempoolManager'
 
 export class DebugAPI {
@@ -14,12 +14,12 @@ export class DebugAPI {
     if (mode !== 'auto' && mode !== 'manual') {
       throw new Error('Invalid bundling mode')
     }
-    ExecutionManager.setBundlingMode(mode)
+    BundleManager.setBundlingMode(mode)
     return true
   }
 
   async sendBundleNow(): Promise<string> {
-    return await ExecutionManager.forceSendBundle()
+    return await BundleManager.forceSendBundle()
   }
     
 

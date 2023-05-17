@@ -47,8 +47,8 @@ export class JsonrpcHttpServer {
         this.fatalError(new Error('Bundler signer account is not funded:'))
       }
 
-      if (!Config.isbaseTxMode() && Config.isConditionalTxMode() && !await this.providerService.supportsRpcMethod('eth_sendRawTransactionConditional')) {
-        this.fatalError(new Error('mode requires connection to a node that support eth_sendRawTransactionConditional'))
+      if (Config.isConditionalTxMode() && !await this.providerService.supportsRpcMethod('eth_sendRawTransactionConditional')) {
+        this.fatalError(new Error(`(${Config.txMode}) mode requires connection to a node that support eth_sendRawTransactionConditional`))
       }
 
       // full validation requires (debug_traceCall) method on eth node geth or alchemy debug_traceCall API (for local UNSAFE mode: use --unsafe)
@@ -62,6 +62,7 @@ export class JsonrpcHttpServer {
         bundleInterval: `${Config.autoBundleInterval}(ms)`,
         entrypoint: Config.entryPointAddr,
         mode: Config.txMode,
+        rpcProviderSupportsDebugTraceCall: true
       })
     } catch (err: any) {
       this.fatalError(err)

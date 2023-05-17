@@ -1,6 +1,7 @@
+import { ProviderService } from '../ProviderService'
 import { DebugAPI } from './services/Debug'
 import { EthAPI } from './services/Eth'
-import { Web3API } from './services/Web3';
+import { Web3API } from './services/Web3'
 
 export interface JsonRpcRequest {
   jsonrpc: '2.0';
@@ -31,6 +32,7 @@ export class RpcMethodHandler {
   private readonly eth: EthAPI = new EthAPI()
   private readonly debug: DebugAPI = new DebugAPI()
   private readonly web3: Web3API = new Web3API()
+  private readonly providerService: ProviderService = new ProviderService()
   
   constructor() {
     //
@@ -94,6 +96,12 @@ export class RpcMethodHandler {
 
       switch (method) {
         case 'eth_chainId':
+          result = await this.providerService.getChainId()
+          break
+        case 'eth_supportedEntryPoints':
+          result = this.eth.getSupportedEntryPoints()
+          break
+        case 'eth_sendUserOperation':
           if (!params || params.length !== 2) {
             isErrorResult = {
               code: -32602,
@@ -101,12 +109,6 @@ export class RpcMethodHandler {
             }
             break
           }
-          result = true
-          break
-        case 'eth_supportedEntryPoints':
-          result = true
-          break
-        case 'eth_sendUserOperation':
           result = await this.eth.sendUserOperation(params[0], params[1])
           break
         case 'eth_estimateUserOperationGas':

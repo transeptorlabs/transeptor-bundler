@@ -11,6 +11,83 @@ class Config {
   private DEFAULT_NETWORK = 'http://localhost:8545'
   private DEFAULT_ENTRY_POINT = '0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789'
   private SUPPORTED_MODES = ['private', 'private-conditional', 'public-conditional', 'private-searcher', 'public-searcher']
+  private ENTRY_POINT_ABI = [  
+    {
+      'inputs': [
+        {
+          'components': [
+            {
+              'internalType': 'address',
+              'name': 'sender',
+              'type': 'address'
+            },
+            {
+              'internalType': 'uint256',
+              'name': 'nonce',
+              'type': 'uint256'
+            },
+            {
+              'internalType': 'bytes',
+              'name': 'initCode',
+              'type': 'bytes'
+            },
+            {
+              'internalType': 'bytes',
+              'name': 'callData',
+              'type': 'bytes'
+            },
+            {
+              'internalType': 'uint256',
+              'name': 'callGasLimit',
+              'type': 'uint256'
+            },
+            {
+              'internalType': 'uint256',
+              'name': 'verificationGasLimit',
+              'type': 'uint256'
+            },
+            {
+              'internalType': 'uint256',
+              'name': 'preVerificationGas',
+              'type': 'uint256'
+            },
+            {
+              'internalType': 'uint256',
+              'name': 'maxFeePerGas',
+              'type': 'uint256'
+            },
+            {
+              'internalType': 'uint256',
+              'name': 'maxPriorityFeePerGas',
+              'type': 'uint256'
+            },
+            {
+              'internalType': 'bytes',
+              'name': 'paymasterAndData',
+              'type': 'bytes'
+            },
+            {
+              'internalType': 'bytes',
+              'name': 'signature',
+              'type': 'bytes'
+            }
+          ],
+          'internalType': 'struct UserOperation[]',
+          'name': 'ops',
+          'type': 'tuple[]'
+        },
+        {
+          'internalType': 'address payable',
+          'name': 'beneficiary',
+          'type': 'address'
+        }
+      ],
+      'name': 'handleOps',
+      'outputs': [],
+      'stateMutability': 'nonpayable',
+      'type': 'function'
+    }
+  ]
 
   public readonly provider: providers.JsonRpcProvider
   public readonly connectedWallet: Wallet
@@ -69,7 +146,7 @@ class Config {
     this.connectedWallet = Wallet.fromMnemonic(process.env.MNEMONIC).connect(this.provider)
     this.entryPointAddr = programOpts.entryPoint as string
     this.beneficiaryAddr = programOpts.beneficiary as string
-    this.entryPointContract = new ethers.Contract(this.entryPointAddr, [], this.connectedWallet)
+    this.entryPointContract = new ethers.Contract(this.entryPointAddr, this.ENTRY_POINT_ABI, this.connectedWallet)
 
     this.autoBundleInterval = parseInt(programOpts.autoBundleInterval as string)
     this.bundleSize = parseInt(programOpts.bundleSize as string)
