@@ -1,6 +1,6 @@
-import Config from '../Config'
 import { DebugAPI } from './services/Debug'
 import { EthAPI } from './services/Eth'
+import { Web3API } from './services/Web3';
 
 export interface JsonRpcRequest {
   jsonrpc: '2.0';
@@ -30,6 +30,7 @@ type JsonRpcResponse = JsonRpcSuccessResponse | JsonRpcErrorResponse;
 export class RpcMethodHandler {
   private readonly eth: EthAPI = new EthAPI()
   private readonly debug: DebugAPI = new DebugAPI()
+  private readonly web3: Web3API = new Web3API()
   
   constructor() {
     //
@@ -118,7 +119,7 @@ export class RpcMethodHandler {
           result = true
           break
         case 'web3_clientVersion':
-          result = 'aa-bundler/' + Config.clientVersion
+          result = this.web3.clientVersion()
           break
         case 'debug_bundler_clearState':
           await this.debug.clearState()

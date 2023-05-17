@@ -10,7 +10,7 @@ class Config {
   private static instance: Config | undefined = undefined
   private DEFAULT_NETWORK = 'http://localhost:8545'
   private DEFAULT_ENTRY_POINT = '0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789'
-  private SUPPORTED_MODES = ['private-conditional', 'public-conditional', 'private-searcher', 'public-searcher']
+  private SUPPORTED_MODES = ['private', 'private-conditional', 'public-conditional', 'private-searcher', 'public-searcher']
 
   public readonly provider: providers.JsonRpcProvider
   public readonly connectedWallet: Wallet
@@ -24,7 +24,7 @@ class Config {
   public readonly maxMempoolSize: number = 100
 
   public readonly port: number
-  public readonly mode: string
+  public readonly txMode: string
   public readonly clientVersion: string
   public readonly isUnsafeMode: boolean
 
@@ -39,14 +39,14 @@ class Config {
     .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '120000')
     .option('--bundleSize <number>', 'mempool bundle size', '5')
     .option('--port <number>', 'server listening port', '3000')
-    .option('--mode <string>', 'bundler mode (public-conditional, public-conditional, private-searcher, public-searcher)', 'private-conditional')
+    .option('--txMode <string>', 'bundler transaction mode (private, private-conditional, public-conditional, private-searcher, public-searcher)', 'private')
     .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node)', false)
 
     const programOpts: OptionValues = program.parse(process.argv).opts()
-
+    
     console.log('command-line arguments: ', programOpts)
     
-    if (this.SUPPORTED_MODES.indexOf(programOpts.mode as string) === -1) {        
+    if (this.SUPPORTED_MODES.indexOf(programOpts.txMode as string) === -1) {      
       throw new Error('Invalid bundler mode')
     }
 
@@ -54,8 +54,8 @@ class Config {
       throw new Error('Invalid entry point address')
     }
 
-    if (programOpts.mode as string === 'private-searcher' || programOpts.mode as string === 'public-searcher') {
-      if (!process.env.ALCHEMY_API_KEY ) {
+    if (programOpts.txMode as string === 'private-searcher' || programOpts.txMode as string === 'public-searcher') {
+      if (!process.env.ALCHEMY_API_KEY) {
         throw new Error('ALCHEMY_API_KEY env var not set')
       }
       this.provider = this.getNetworkProvider(programOpts.network as string, process.env.ALCHEMY_API_KEY)
@@ -76,7 +76,7 @@ class Config {
     this.isAutoBundle = programOpts.auto as boolean
 
     this.port = parseInt(programOpts.port as string)
-    this.mode = programOpts.mode as string
+    this.txMode = programOpts.txMode as string
     this.clientVersion = packageJson.version as string
     this.isUnsafeMode = programOpts.unsafe as boolean
 
@@ -95,7 +95,7 @@ class Config {
     if (!isValid) {
       throw new Error('Invalid network url')
     }
-    return apiKey ? new providers.JsonRpcProvider(url, apiKey) : new providers.JsonRpcProvider(url)
+    return apiKey ? new providers.JsonRpcProvider(`${url.replace(/\/+$/, '')}/${apiKey}`) : new providers.JsonRpcProvider(url)
   }
 
   private isValidUrl(url: string): boolean {
@@ -103,8 +103,16 @@ class Config {
     return pattern.test(url)
   }
 
-  isConditionalRpcMode(): boolean {
-    return this.mode === 'public-conditional' || this.mode === 'private-conditional'
+  isbaseTxMode(): boolean {
+    return this.txMode === 'private'
+  }
+
+  isConditionalTxMode(): boolean {
+    return this.txMode === 'public-conditional' || this.txMode === 'private-conditional'
+  }
+
+  isSearcherTxMode(): boolean {
+    return this.txMode === 'public-searcher' || this.txMode === 'private-searcher'
   }
 }
 

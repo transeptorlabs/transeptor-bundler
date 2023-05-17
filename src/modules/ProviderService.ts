@@ -18,4 +18,16 @@ export class ProviderService {
             return false
         }
     }
+
+    async supportsRpcMethod(method: string): Promise<boolean> {
+        // TODO: fix alchemy 400 error
+        const ret = await Config.provider.send(method, []).catch(e => e)
+        const code = ret.error?.code ?? ret.code
+        return code === -32602 // wrong params (meaning, method exists)
+    }
+
+    async clientVerion(): Promise<string> {
+        const ret = await Config.provider.send('web3_clientVersion', [])
+        return ret.result
+    }
 }

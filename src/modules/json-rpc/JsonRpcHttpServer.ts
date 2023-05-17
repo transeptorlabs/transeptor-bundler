@@ -44,20 +44,24 @@ export class JsonrpcHttpServer {
       
       const bal = await Config.connectedWallet.getBalance()
       if (bal.eq(0)) {
-        this.fatalError(new Error('Bundler signer account is not funded'))
+        this.fatalError(new Error('Bundler signer account is not funded:'))
       }
 
-      // TODO: Check if the node supports eth_sendRawTransactionConditional if conditional mode is enabled
-      // if (Config.isConditionalRpcMode()) {
-      //   this.fatalError(new Error(`${Config.mode} requires connection to a node that support eth_sendRawTransactionConditional`))
-      // }
+      if (!Config.isbaseTxMode() && Config.isConditionalTxMode() && !await this.providerService.supportsRpcMethod('eth_sendRawTransactionConditional')) {
+        this.fatalError(new Error('mode requires connection to a node that support eth_sendRawTransactionConditional'))
+      }
 
-      // TODO: full validation requires (debug_traceCall) method on eth node geth or alchemy debug_traceCall API (for local UNSAFE mode: use --unsafe)
+      // full validation requires (debug_traceCall) method on eth node geth or alchemy debug_traceCall API (for local UNSAFE mode: use --unsafe)
+      if (!Config.isUnsafeMode && !await this.providerService.supportsRpcMethod('debug_traceCall')) {
+        this.fatalError(new Error('Full validation requires (debug_traceCall) method on eth node geth or alchemy debug_traceCall API. For local UNSAFE mode: use --unsafe'))
+      }
 
       console.log('Bundler passed preflight check', {
         accountBalance: bal.toString(),
         network: {chainId, name},
-        mode: Config.mode,
+        bundleInterval: `${Config.autoBundleInterval}(ms)`,
+        entrypoint: Config.entryPointAddr,
+        mode: Config.txMode,
       })
     } catch (err: any) {
       this.fatalError(err)
