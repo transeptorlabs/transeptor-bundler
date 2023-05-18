@@ -109,7 +109,6 @@ class Config {
     const program = new Command()
     program
     .version(`${packageJson.version}`)
-    .option('--beneficiary <string>', 'address to receive funds')
     .option('--network <string>', 'eth client url', `${this.DEFAULT_NETWORK}`)
     .option('--entryPoint <string>', 'supported entry point address', this.DEFAULT_ENTRY_POINT)
     .option('--auto', 'automatic bundling', false)
@@ -120,15 +119,13 @@ class Config {
     .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node)', false)
 
     const programOpts: OptionValues = program.parse(process.argv).opts()
-    
-    console.log('command-line arguments: ', programOpts)
-    
+        
     if (this.SUPPORTED_MODES.indexOf(programOpts.txMode as string) === -1) {      
       throw new Error('Invalid bundler mode')
     }
 
     if (!isValidAddress(programOpts.entryPoint as string)) {
-      throw new Error('Invalid entry point address')
+      throw new Error('Entry point not a valid address')
     }
 
     if (programOpts.txMode as string === 'private-searcher' || programOpts.txMode as string === 'public-searcher') {
@@ -143,9 +140,18 @@ class Config {
     if (!process.env.MNEMONIC) {
       throw new Error('MNEMONIC env var not set')
     }
+
+    if (!process.env.BENEFICIARY) {
+      throw new Error('BENEFICIARY env var not set')
+    }
+
+    if (!isValidAddress(process.env.BENEFICIARY as string)) {
+      throw new Error('Beneficiary not a valid address')
+    }
+
     this.connectedWallet = Wallet.fromMnemonic(process.env.MNEMONIC).connect(this.provider)
     this.entryPointAddr = programOpts.entryPoint as string
-    this.beneficiaryAddr = programOpts.beneficiary as string
+    this.beneficiaryAddr = process.env.BENEFICIARY as string
     this.entryPointContract = new ethers.Contract(this.entryPointAddr, this.ENTRY_POINT_ABI, this.connectedWallet)
 
     this.autoBundleInterval = parseInt(programOpts.autoBundleInterval as string)

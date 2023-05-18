@@ -63,7 +63,8 @@ export class JsonrpcHttpServer {
         bundleInterval: `${Config.autoBundleInterval}(ms)`,
         entrypoint: Config.entryPointAddr,
         mode: Config.txMode,
-        rpcProviderSupportsDebugTraceCall: true
+        rpcProviderSupportsDebugTraceCall: true,
+        unsafe: Config.isUnsafeMode,
       })
     } catch (err: any) {
       this.fatalError(err)

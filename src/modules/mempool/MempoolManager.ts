@@ -53,7 +53,8 @@ class MempoolManager {
     try {
       const entry: MempoolEntry = {
         userOp,
-        userOpHash
+        userOpHash,
+        status: 'idle',
       }
       this.entryCount[entry.userOp.sender] = (this.entryCount[entry.userOp.sender] ?? 0) + 1
       this.mempool.set(userOpHash, entry)
@@ -78,25 +79,25 @@ class MempoolManager {
     }
   }
 
-  public async createNextUserOpBundle(): Promise<Array<[string, MempoolEntry]>> {
+  public async createNextBundle(): Promise< MempoolEntry[]> {
     const release = await this.mutex.acquire()
     try {
-      const removedItems: Array<[string, MempoolEntry]> = []
+      const entries: MempoolEntry[] = []
       let count = 0
       for (const [key, value] of this.mempool.entries()) {
         if (count >= Config.bundleSize) {
           break
         }
-        const result = this.mempool.delete(key)
-        if (result) {
-          const entryCount = (this.entryCount[value.userOp.sender] ?? 0) - 1
-          entryCount <= 0 ? delete this.entryCount[value.userOp.sender] : this.entryCount[value.userOp.sender] = entryCount
 
-          removedItems.push([key, value])
-          count++
+        if (value.status === 'bundling') {
+          continue
         }
+
+        value.status = 'bundling'
+        entries.push(value)
+        count++
       }
-      return removedItems
+      return entries
     } finally {
       release()
     }

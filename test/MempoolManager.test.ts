@@ -6,9 +6,11 @@ import {
 
 describe('MempoolManager', () => {
   const originalEnv = process.env
+
   process.env = {
     ...originalEnv,
     MNEMONIC: 'test '.repeat(11) + 'junk',
+    BENEFICIARY: '0x0000000'
   }
   const mempoolManager = MempoolManager
 
@@ -32,14 +34,17 @@ describe('MempoolManager', () => {
     const mempoolEntry1 = {
       userOp: userOp1,
       userOpHash: userOpHash1,
+      status: 'idle',
     }
     const mempoolEntry2 = {
       userOp: userOp2,
       userOpHash: userOpHash2,
+      status: 'idle',
     }
     const mempoolEntry3 = {
       userOp: userOp3,
       userOpHash: userOpHash3,
+      status: 'idle',
     }
 
     await mempoolManager.addUserOp(userOpHash1 ,userOp1)
@@ -94,27 +99,6 @@ describe('MempoolManager', () => {
     const userOpHash5 =  mockEntryPointGetUserOpHash(userOp5)
     const userOpHash6 =  mockEntryPointGetUserOpHash(userOp6)
 
-    const mempoolEntry1 = {
-      userOp: userOp1,
-      userOpHash: userOpHash1,
-    }
-    const mempoolEntry2 = {
-      userOp: userOp2,
-      userOpHash: userOpHash2,
-    }
-    const mempoolEntry3 = {
-      userOp: userOp3,
-      userOpHash: userOpHash3,
-    }
-    const mempoolEntry4 = {
-      userOp: userOp4,
-      userOpHash: userOpHash4,
-    }
-    const mempoolEntry5 = {
-      userOp: userOp5,
-      userOpHash: userOpHash5,
-    }
-
     await mempoolManager.addUserOp(userOpHash1 ,userOp1)
     await mempoolManager.addUserOp(userOpHash2 ,userOp2)
     await mempoolManager.addUserOp(userOpHash3 ,userOp3)
@@ -122,14 +106,14 @@ describe('MempoolManager', () => {
     await mempoolManager.addUserOp(userOpHash5 ,userOp5)
     await mempoolManager.addUserOp(userOpHash6 ,userOp6)
 
-    const removedItems = await mempoolManager.createNextUserOpBundle()
+    const nextBundle = await mempoolManager.createNextBundle()
 
-    expect(removedItems.length).toBe(5)
-    expect(removedItems).toContainEqual([userOpHash1, mempoolEntry1])
-    expect(removedItems).toContainEqual([userOpHash2, mempoolEntry2])
-    expect(removedItems).toContainEqual([userOpHash3, mempoolEntry3])
-    expect(removedItems).toContainEqual([userOpHash4, mempoolEntry4])
-    expect(removedItems).toContainEqual([userOpHash5, mempoolEntry5])
+    expect(nextBundle.length).toBe(5)
+    expect(nextBundle[0].status).toBe('bundling')
+    expect(nextBundle[1].status).toBe('bundling')
+    expect(nextBundle[2].status).toBe('bundling')
+    expect(nextBundle[3].status).toBe('bundling')
+    expect(nextBundle[4].status).toBe('bundling')
   })
 
   test('should return correct size of the mempool', async () => {
