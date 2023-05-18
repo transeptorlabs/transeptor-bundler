@@ -1,12 +1,12 @@
-import { BundleManager, JsonrpcHttpServer, Config, MempoolManager } from './modules'
+import { BundleManager, JsonrpcHttpServer, Config, MempoolManager, ReputationManager } from './modules'
 
 async function runBundler() {
-    // init globals
+    // init singleton globals
     Config
     MempoolManager
     BundleManager
+    ReputationManager
 
-    // start the bundler server
     const bundlerServer = new JsonrpcHttpServer()
     await bundlerServer.start()
 }

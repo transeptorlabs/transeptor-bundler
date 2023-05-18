@@ -100,6 +100,12 @@ class Config {
   public readonly isAutoBundle: boolean
   public readonly maxMempoolSize: number = 100
 
+  public readonly minStake: number
+  public readonly minUnstakeDelay: number
+
+  public readonly gasFactor: number
+  public readonly minBalance: number
+
   public readonly port: number
   public readonly txMode: string
   public readonly clientVersion: string
@@ -111,10 +117,14 @@ class Config {
     .version(`${packageJson.version}`)
     .option('--network <string>', 'eth client url', `${this.DEFAULT_NETWORK}`)
     .option('--entryPoint <string>', 'supported entry point address', this.DEFAULT_ENTRY_POINT)
+    .option('--gasFactor <number>', '1')
+    .option('--minBalance <number>', 'below this signer balance, keep fee for itself, ignoring "beneficiary" address', '1')
     .option('--auto', 'automatic bundling', false)
     .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '120000')
     .option('--bundleSize <number>', 'mempool bundle size', '5')
     .option('--port <number>', 'server listening port', '3000')
+    .option('--minStake <number>\', \'minunm stake a entity has to have to pass reputation system(When staked, an entity is also allowed to use its own associated storage, in addition to sender\'s associated storage)', '1') // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
+    .option('--minUnstakeDelay <number>', 'mempool bundle size', '84600') // One day
     .option('--txMode <string>', 'bundler transaction mode (private, private-conditional, public-conditional, private-searcher, public-searcher)', 'private')
     .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node)', false)
 
@@ -157,6 +167,12 @@ class Config {
     this.autoBundleInterval = parseInt(programOpts.autoBundleInterval as string)
     this.bundleSize = parseInt(programOpts.bundleSize as string)
     this.isAutoBundle = programOpts.auto as boolean
+
+    this.minStake = parseInt(programOpts.minStake as string)
+    this.minUnstakeDelay = parseInt(programOpts.minUnstakeDelay as string)
+
+    this.gasFactor = parseInt(programOpts.gasFactor as string)
+    this.minBalance = parseInt(programOpts.minBalance as string)
 
     this.port = parseInt(programOpts.port as string)
     this.txMode = programOpts.txMode as string
