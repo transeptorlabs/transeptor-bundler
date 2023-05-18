@@ -29,7 +29,7 @@ Alternivley, if a node does NOT support `debug_traceCall` a hack of mining the t
 GETH node supports `debug_traceCall` with javascript "tracer"
 
 1. Install dependencies `npm install`
-2. Add environment variables to `.env`-  `MNEMONIC=<your_seed_phrase>`
+2. Add environment variables to `.env`-  `MNEMONIC=<your_seed_phrase>` and `BENEFICIARY=<address_to_receive_funds>`
 3. Start local GETH client `npm run geth:start` (will start at http://localhost:8545/)
 4. Deploy entry point contract and fund the bundler signer account `npm run deploy:local`
 5. Start up Bundler server `npm run start`
@@ -44,7 +44,7 @@ Use `npm run geth:stop` to stop GETH client
 
 Alchemy nodes support both `debug_traceCall` and `debug_traceTransaction` API, the Bundler with use the former.
 1. Need to sign up for an [Alchemy account](https://auth.alchemy.com/signup)
-2. Add environment variables to `.env` - `ALCHEMY_API_KEY=<your-api-key>`, `MNEMONIC=<your_seed_phrase_for_bundler_signer_account>`
+2. Add environment variables to `.env` - `ALCHEMY_API_KEY=<your-api-key>`, `MNEMONIC=<your_seed_phrase_for_bundler_signer_account>` and `BENEFICIARY=<address_to_receive_funds>`
 3. Start up Bundler in searcher mode `npm run start:searcher`
 4. Bundler will start up in `private-searcher` mode
 

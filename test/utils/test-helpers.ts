@@ -1,4 +1,4 @@
-import { UserOperation } from "../../src/modules/types"
+import { UserOperation } from '../../src/modules/types'
 
 export function mockUserOperationFactory(
   sender: string,

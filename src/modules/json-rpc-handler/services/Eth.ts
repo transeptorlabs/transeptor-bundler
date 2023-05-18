@@ -1,5 +1,5 @@
 import { Config } from '../../config'
-import MempoolManager from '../../mempool/MempoolManager'
+import { MempoolManager } from '../../mempool'
 import { UserOperation } from '../../types'
 
 export class EthAPI {

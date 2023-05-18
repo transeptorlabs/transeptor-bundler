@@ -1,18 +1,19 @@
 import { Mutex } from 'async-mutex'
 import { MempoolManager }  from '../mempool'
 import { Config } from '../config'
+import { BundleProcessor } from './BundleProcessor'
 
 /*
-  Within the start() method, we've added await this.mutex.acquire() to acquire the mutex lock before executing doBundlerUserOps(). 
-  If another doBundlerUserOps() execution is already in progress, the current execution will wait until the lock is released. After the 
-  execution of doBundlerUserOps() is complete, the lock is released using release() in the finally block.
+  This signleton class act as a top-level interface to bundle UserOperations.
+  It executes the bundling process periodically(using a javascript interval) or on demand. 
 */
 class BundleManager {
   private static instance: BundleManager | undefined = undefined
 
-  private interval: NodeJS.Timeout | null = null
+  private interval: any| null = null
   private mutex: Mutex = new Mutex()
   private bundleMode: 'auto' | 'manual'
+  private bundleProcessor: BundleProcessor = new BundleProcessor()
 
   private constructor() {
     this.bundleMode = Config.isAutoBundle ? 'auto' : 'manual'
@@ -39,6 +40,11 @@ class BundleManager {
     }
   }
 
+  /*
+    We've added await this.mutex.acquire() to acquire the mutex lock before executing doAttemptBundle(). 
+    If another doAttemptBundle() execution is already in progress, the current execution will wait until the lock is released. After the 
+    execution of doAttemptBundle() is complete, the lock is released using release() in the finally block.
+  */
   public startAutoBundler() {
     // Make sure the interval is not already running
     this.stopAutoBundler()
@@ -79,8 +85,8 @@ class BundleManager {
       return ''
     }
 
-    const uops = await MempoolManager.createNextUserOpBundle()
-    console.log('Sending bundle tranasction to ...', uops)
+    const entities = await MempoolManager.createNextBundle()
+    this.bundleProcessor.sendNextBundle(entities)
     return ''
   }
 }

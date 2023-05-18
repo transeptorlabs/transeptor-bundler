@@ -30,39 +30,6 @@ export class RpcMethodHandler {
     //
   }
 
-  private createSuccessResponse(
-    id: number | string,
-    result: any
-  ): JsonRpcSuccessResponse {
-    return {
-      jsonrpc: '2.0',
-      id,
-      result,
-    }
-  }
-  
-  private createErrorResponse(
-    id: number | string,
-    code: number,
-    message: string,
-    data?: any
-  ): JsonRpcErrorResponse {
-    const errorResponse: JsonRpcErrorResponse = {
-      jsonrpc: '2.0',
-      id,
-      error: {
-        code,
-        message,
-      },
-    }
-  
-    if (data) {
-      errorResponse.error.data = data
-    }
-  
-    return errorResponse
-  }
-
   public async doHandleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
     try {
       if (!request.jsonrpc || request.jsonrpc !== '2.0') {
@@ -145,5 +112,42 @@ export class RpcMethodHandler {
     } catch (error: any) {
       return this.createErrorResponse(request.id, -32000, error.message)
     }
+  }
+
+  private async requestParmsValidator(request: JsonRpcRequest): Promise<boolean> {
+    return true
+  }
+
+  private createSuccessResponse(
+    id: number | string,
+    result: any
+  ): JsonRpcSuccessResponse {
+    return {
+      jsonrpc: '2.0',
+      id,
+      result,
+    }
+  }
+  
+  private createErrorResponse(
+    id: number | string,
+    code: number,
+    message: string,
+    data?: any
+  ): JsonRpcErrorResponse {
+    const errorResponse: JsonRpcErrorResponse = {
+      jsonrpc: '2.0',
+      id,
+      error: {
+        code,
+        message,
+      },
+    }
+  
+    if (data) {
+      errorResponse.error.data = data
+    }
+  
+    return errorResponse
   }
 }
