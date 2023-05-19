@@ -73,10 +73,16 @@ class BundleManager {
 
   public async forceSendBundle(): Promise<string> {
     const release = await this.mutex.acquire()
-    const result =  await this.doAttemptBundle()
 
-    release()
-    return result
+    try {
+      const result =  await this.doAttemptBundle()
+      return result
+    } catch (error) {
+      console.log('Error running force bundle:', error)
+      throw error
+    } finally {
+      release()
+    }
   }
 
   private async doAttemptBundle(): Promise<string> {
@@ -86,8 +92,7 @@ class BundleManager {
     }
 
     const entities = await MempoolManager.createNextBundle()
-    this.bundleProcessor.sendNextBundle(entities)
-    return ''
+    return this.bundleProcessor.sendNextBundle(entities)
   }
 }
 

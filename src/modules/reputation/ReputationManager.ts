@@ -1,5 +1,5 @@
 import { BigNumber } from 'ethers'
-import { ReputationDump, ReputationEntry, ReputationParams, ReputationStatus } from '../types'
+import { ReputationEntry, ReputationParams, ReputationStatus } from '../types'
 import { StakeInfo, ValidationErrors, requireCond, tostr } from '../utils'
 import { Config } from '../config'
 
@@ -38,7 +38,7 @@ class ReputationManager {
   /**
    * debug: dump reputation map (with updated "status" for each entry)
    */
-  dump (): ReputationDump {
+  dump (): ReputationEntry[] {
     return Object.values(this.entries)
   }
 
@@ -170,7 +170,7 @@ class ReputationManager {
    * for debugging: put in the given reputation entries
    * @param entries
    */
-  public setReputation (reputations: ReputationDump): ReputationDump {
+  public setReputation (reputations: ReputationEntry[]):  ReputationEntry[] {
     reputations.forEach(rep => {
       this.entries[rep.address] = {
         address: rep.address,

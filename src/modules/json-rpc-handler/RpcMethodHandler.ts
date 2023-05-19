@@ -96,6 +96,13 @@ export class RpcMethodHandler {
           this.debug.setBundlingMode(params[0])
           result = 'ok'
           break
+        case 'debug_bundler_setReputation':
+          await this.debug.setReputation(params[0])
+          result = 'ok'
+          break
+        case 'debug_bundler_dumpReputation':
+          result = this.debug.dumpReputation()
+          break
         default:
           isErrorResult = {
             code: -32601,

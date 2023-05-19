@@ -1,5 +1,4 @@
-import { Command } from 'commander'
-import { OptionValues } from 'commander'
+import { Command, OptionValues } from 'commander'
 import { Wallet, ethers, providers } from 'ethers'
 import packageJson from '../../../package.json'
 import { isValidAddress } from '../utils'

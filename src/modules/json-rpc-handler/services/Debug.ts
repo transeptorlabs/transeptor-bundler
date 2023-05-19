@@ -1,11 +1,18 @@
 import { BundleManager } from '../../bundle'
 import { MempoolManager } from '../../mempool'
+import { ReputationManager } from '../../reputation'
+import { ReputationEntry } from '../../types'
 
 export class DebugAPI {
   constructor () {
     // 
   }
 
+  async clearState(): Promise<void> {
+    await MempoolManager.clearState()
+    ReputationManager.clearState()
+  }
+  
   dumpMempool() {
     return MempoolManager.dump()
   }
@@ -21,9 +28,12 @@ export class DebugAPI {
   async sendBundleNow(): Promise<string> {
     return await BundleManager.forceSendBundle()
   }
-    
 
-  async clearState(): Promise<void> {
-    return await MempoolManager.clearState()
+  async setReputation(param: any[]): Promise<ReputationEntry[]> {
+    return ReputationManager.setReputation(param)
+  }
+
+  dumpReputation (): ReputationEntry[] {
+    return ReputationManager.dump()
   }
 }
