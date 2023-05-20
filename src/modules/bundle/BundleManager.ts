@@ -91,6 +91,8 @@ class BundleManager {
       return ''
     }
 
+    // first flush mempool from already-included UserOps
+    
     const entities = await MempoolManager.createNextBundle()
     return this.bundleProcessor.sendNextBundle(entities)
   }

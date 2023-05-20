@@ -40,4 +40,8 @@ export class ProviderService {
         const { chainId } = await Config.provider.getNetwork()
         return chainId.toString()
     }
+
+    async getBlockNumber(): Promise<number> {
+        return await Config.provider.getBlockNumber()
+    }
 }
