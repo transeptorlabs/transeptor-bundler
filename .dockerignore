@@ -1,0 +1,51 @@
+node_modules
+docker-compose*
+Dockerfile*
+.nvmrc
+
+# Production
+/reports
+/test
+/scripts
+/cache
+
+# secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.sample
+
+#Ignore the logs directory
+logs/
+
+#Ignoring git and cache folders
+.git
+.cache
+
+#Ignoring all the markdown and class files
+*.md
+
+# Hardhat files
+artifacts
+typechain
+typechain-types
+
+# Misc
+.DS_Store
+.vscode
+LICENCE
+npm-debug.log
+tags.json
+.vscode
+.github
+.gitignore
+.eslintcache
+transeptor-architecture.svg
+*svg
+
+# config
+hardhat.config.ts
+jest.config.js
+bundler.config.ts

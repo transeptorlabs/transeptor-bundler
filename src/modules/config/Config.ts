@@ -129,6 +129,7 @@ class Config {
     .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node)', false)
 
     const programOpts: OptionValues = program.parse(process.argv).opts()
+    console.log('programOpts', programOpts)
         
     if (this.SUPPORTED_MODES.indexOf(programOpts.txMode as string) === -1) {      
       throw new Error('Invalid bundler mode')
@@ -142,7 +143,7 @@ class Config {
       if (!process.env.ALCHEMY_API_KEY) {
         throw new Error('ALCHEMY_API_KEY env var not set')
       }
-      this.provider = this.getNetworkProvider(programOpts.network as string, process.env.ALCHEMY_API_KEY)
+      this.provider = this.getNetworkProvider(programOpts.network as string, process.env.ALCHEMY_API_KEY as string)
     } else {
       this.provider = this.getNetworkProvider(programOpts.network as string)
     } 
@@ -159,7 +160,7 @@ class Config {
       throw new Error('Beneficiary not a valid address')
     }
 
-    this.connectedWallet = Wallet.fromMnemonic(process.env.MNEMONIC).connect(this.provider)
+    this.connectedWallet = Wallet.fromMnemonic(process.env.MNEMONIC as string).connect(this.provider)
     this.entryPointAddr = programOpts.entryPoint as string
     this.beneficiaryAddr = process.env.BENEFICIARY as string
     this.entryPointContract = new ethers.Contract(this.entryPointAddr, this.ENTRY_POINT_ABI, this.connectedWallet)
