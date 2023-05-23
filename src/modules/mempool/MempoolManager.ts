@@ -79,7 +79,7 @@ class MempoolManager {
     }
   }
 
-  public async createNextBundle(): Promise< MempoolEntry[]> {
+  public async getNextEntriesToBundle(): Promise< MempoolEntry[]> {
     const release = await this.mutex.acquire()
     try {
       const entries: MempoolEntry[] = []

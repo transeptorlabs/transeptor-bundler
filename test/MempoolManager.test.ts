@@ -106,7 +106,7 @@ describe('MempoolManager', () => {
     await mempoolManager.addUserOp(userOpHash5 ,userOp5)
     await mempoolManager.addUserOp(userOpHash6 ,userOp6)
 
-    const nextBundle = await mempoolManager.createNextBundle()
+    const nextBundle = await mempoolManager.getNextEntriesToBundle()
 
     expect(nextBundle.length).toBe(5)
     expect(nextBundle[0].status).toBe('bundling')

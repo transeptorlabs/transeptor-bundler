@@ -44,4 +44,8 @@ export class ProviderService {
     async getBlockNumber(): Promise<number> {
         return await Config.provider.getBlockNumber()
     }
+
+    async send(method: string, params: any[]): Promise<any> {
+        return await Config.provider.send(method, params)
+    }
 }
