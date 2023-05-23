@@ -13,3 +13,15 @@ services:
       --verbosity 2
       --nodiscover --maxpeers 0 --mine --miner.threads 1
       --networkid 1337
+
+  bundler:
+    image: bundler-typescript
+    ports:
+      - "3001:3001"
+    environment:
+      - BENEFICIARY=0x3c812AFCf93C73338fC31d1769AD1071Ea982E7d
+      - MNEMONIC=test test test test test test test test test test test junk
+    command: >
+      --port 3001
+      --network http://localhost:8545
+      --txMode private
