@@ -1,16 +1,18 @@
 import { BigNumber } from 'ethers'
-import { MempoolEntry, ReputationStatus, StorageMap, UserOperation } from '../types'
+import { MempoolEntry, ReputationStatus, StorageMap, UserOperation, ValidateUserOpResult } from '../types'
 import { MempoolManager } from '../mempool'
 import { getAddr, mergeStorageMap } from '../utils'
 import { Config } from '../config'
 import { ReputationManager } from '../reputation'
 import { ProviderService } from '../provider'
+import { ValidationService } from '../validation'
 
 /*
-    BundleProcessor: This class will attempt to process(send) userOperations as bundles
+  BundleProcessor: This class will attempt to process(send) userOperations as bundles
 */
 export class BundleProcessor {
     private readonly providerService: ProviderService = new ProviderService()
+    private readonly validationService: ValidationService = new ValidationService()
 
     constructor() {
         //
@@ -70,7 +72,7 @@ export class BundleProcessor {
             let validationResult: ValidateUserOpResult
             try {
               // re-validate UserOp. no need to check stake, since it cannot be reduced between first and 2nd validation
-              validationResult = await ValidationManager.validateUserOp(entry.userOp, entry.referencedContracts, false)
+              validationResult = await this.validationService.validateUserOp(entry.userOp, entry.referencedContracts, false)
             } catch (e: any) {
               console.log('failed 2nd validation:', e.message)
               // failed validation. don't try anymore

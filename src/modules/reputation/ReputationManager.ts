@@ -1,6 +1,6 @@
 import { BigNumber } from 'ethers'
-import { ReputationEntry, ReputationParams, ReputationStatus } from '../types'
-import { StakeInfo, ValidationErrors, requireCond, tostr } from '../utils'
+import { ReputationEntry, ReputationParams, ReputationStatus, StakeInfo, ValidationErrors } from '../types'
+import { requireCond, tostr } from '../utils'
 import { Config } from '../config'
 
 class ReputationManager {
