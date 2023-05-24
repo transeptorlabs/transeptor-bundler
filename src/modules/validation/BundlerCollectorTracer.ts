@@ -1,8 +1,4 @@
-// javascript code of tracer function
-// NOTE: we process this locally for hardhat, but send to geth for remote tracing.
-// should NOT "require" anything, or use logs.
-// see LogTrace for valid types (but alas, this one must be javascript, not typescript..
-
+// This is the same BundlerCollectorTracer from github.com/eth-infinitism/bundler
 import { LogCallFrame, LogContext, LogDb, LogFrameResult, LogStep, LogTracer } from './GethTracer'
 
 // functions available in a context of geth tracer
@@ -78,10 +74,10 @@ interface BundlerCollectorTracer extends LogTracer, BundlerCollectorReturn {
   countSlot: (list: { [key: string]: number | undefined }, key: any) => void
 }
 
-/**
+/**  javascript code of tracer function
  * tracer to collect data for opcode banning.
  * this method is passed as the "tracer" for eth_traceCall (note, the function itself)
- *
+ * 
  * returned data:
  *  numberLevels: opcodes and memory access, split on execution of "number" opcode.
  *  keccak: input data of keccak opcode.

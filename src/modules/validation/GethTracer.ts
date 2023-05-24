@@ -1,9 +1,5 @@
-import { JsonRpcProvider, TransactionRequest } from '@ethersproject/providers'
 import { BigNumber } from 'ethers'
-import { Deferrable } from '@ethersproject/properties'
-import { resolveProperties } from 'ethers/lib/utils'
-// from:https://geth.ethereum.org/docs/rpc/ns-debug#javascript-based-tracing
-//
+import utils from 'ethers/lib/utils'
 
 /**
  * a function returning a LogTracer.
@@ -13,33 +9,6 @@ import { resolveProperties } from 'ethers/lib/utils'
  * (its OK if original function was in typescript: we extract its value as javascript
  */
 type LogTracerFunc = () => LogTracer
-
-// eslint-disable-next-line @typescript-eslint/naming-convention
-export async function debug_traceCall (provider: JsonRpcProvider, tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any> {
-  const tx1 = await resolveProperties(tx)
-  const traceOptions = tracer2string(options)
-  const ret = await provider.send('debug_traceCall', [tx1, 'latest', traceOptions]).catch(e => {
-    console.log('ex=', e.message)
-    console.log('tracer=', traceOptions.tracer?.toString().split('\n').map((line, index) => `${index + 1}: ${line}`).join('\n'))
-    throw e
-  })
-  // return applyTracer(ret, options)
-  return ret
-}
-
-// a hack for network that doesn't have traceCall: mine the transaction, and use debug_traceTransaction
-export async function execAndTrace (provider: JsonRpcProvider, tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any> {
-  const hash = await provider.getSigner().sendUncheckedTransaction(tx)
-  return await debug_traceTransaction(provider, hash, options)
-}
-
-// eslint-disable-next-line @typescript-eslint/naming-convention
-export async function debug_traceTransaction (provider: JsonRpcProvider, hash: string, options: TraceOptions): Promise<TraceResult | any> {
-  const ret = await provider.send('debug_traceTransaction', [hash, tracer2string(options)])
-  // const tx = await provider.getTransaction(hash)
-  // return applyTracer(tx, ret, options)
-  return ret
-}
 
 /**
  * extract the body of "LogTracerFunc".
@@ -72,6 +41,24 @@ export function tracer2string (options: TraceOptions): TraceOptions {
     }
   } else {
     return options
+  }
+}
+
+export function decodeErrorReason(error: string) {
+  const ErrorSig = (0, utils.keccak256)(Buffer.from('Error(string)')).slice(0, 10); // 0x08c379a0
+  const FailedOpSig = (0, utils.keccak256)(Buffer.from('FailedOp(uint256,string)')).slice(0, 10); // 0x220266b6
+
+  if (error.startsWith(ErrorSig)) {
+      const [message] = utils.defaultAbiCoder.decode(['string'], '0x' + error.substring(10));
+      return { message };
+  }
+  else if (error.startsWith(FailedOpSig)) {
+      let [opIndex, message] = utils.defaultAbiCoder.decode(['uint256', 'string'], '0x' + error.substring(10));
+      message = `FailedOp: ${message}`;
+      return {
+          message,
+          opIndex
+      };
   }
 }
 

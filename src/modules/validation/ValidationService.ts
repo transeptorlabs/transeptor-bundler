@@ -1,9 +1,12 @@
 import { BigNumber, BytesLike, ethers } from 'ethers'
-import { ReferencedCodeHashes, StakeInfo, StorageMap, UserOperation, ValidationErrors, ValidationResult } from "../types"
+import { ReferencedCodeHashes, StakeInfo, StorageMap, UserOperation, ValidateUserOpResult, ValidationErrors, ValidationResult } from "../types"
 import { RpcError, getAddr, requireCond } from "../utils"
 import { ProviderService } from '../provider'
 import { BundlerCollectorReturn, ExitInfo, bundlerCollectorTracer } from './BundlerCollectorTracer'
+import { decodeErrorReason } from './GethTracer'
 import { Config } from "../config"
+import { ReputationManager } from '../reputation'
+import { parseScannerResult } from './parseScannerResult'
 
 export class ValidationService {
     private readonly providerService: ProviderService = new ProviderService()
@@ -118,8 +121,10 @@ export class ValidationService {
         if (e.code != null) {
           throw e
         }
-        // TODO: handle error correctly
-        throw new RpcError('unknown error', 111)
+
+        // not a known error of EntryPoint (probably, only Error(string), since FailedOp is handled above)
+        const err = decodeErrorReason(data)
+        throw new RpcError(err != null ? err.message : data, 111)
       }
     }
   
@@ -130,56 +135,51 @@ export class ValidationService {
      * @param userOp
      */
     async validateUserOp (userOp: UserOperation, previousCodeHashes?: ReferencedCodeHashes, checkStakes = true): Promise<ValidateUserOpResult> {
-      if (previousCodeHashes != null && previousCodeHashes.addresses.length > 0) {
-        const { hash: codeHashes } = await this.getCodeHashes(previousCodeHashes.addresses)
-        requireCond(codeHashes === previousCodeHashes.hash,
-          'modified code after first validation',
-          ValidationErrors.OpcodeValidation)
-      }
-      let res: ValidationResult
-      let codeHashes: ReferencedCodeHashes = {
-        addresses: [],
-        hash: ''
-      }
-      let storageMap: StorageMap = {}
-      if (!this.unsafe) {
-        let tracerResult: BundlerCollectorReturn
-        [res, tracerResult] = await this._geth_traceCall_SimulateValidation(userOp)
-        let contractAddresses: string[]
-        [contractAddresses, storageMap] = parseScannerResult(userOp, tracerResult, res, this.entryPoint)
-        // if no previous contract hashes, then calculate hashes of contracts
-        if (previousCodeHashes == null) {
-          codeHashes = await this.getCodeHashes(contractAddresses)
+        if (previousCodeHashes != null && previousCodeHashes.addresses.length > 0) {
+            const { hash: codeHashes } = await this.getCodeHashes(previousCodeHashes.addresses)
+            requireCond(codeHashes === previousCodeHashes.hash, 'modified code after first validation', ValidationErrors.OpcodeValidation)
         }
-        if (res as any === '0x') {
-          throw new Error('simulateValidation reverted with no revert string!')
+
+        let res: ValidationResult
+        let codeHashes: ReferencedCodeHashes = {
+            addresses: [],
+            hash: ''
         }
-      } else {
-        // NOTE: this mode doesn't do any opcode checking and no stake checking!
-        res = await this._callSimulateValidation(userOp)
-      }
-  
-      requireCond(!res.returnInfo.sigFailed,
-        'Invalid UserOp signature or paymaster signature',
-        ValidationErrors.InvalidSignature)
-  
-      requireCond(res.returnInfo.deadline == null || res.returnInfo.deadline + 30 < Date.now() / 1000,
-        'expires too soon',
-        ValidationErrors.ExpiresShortly)
-  
-      if (res.aggregatorInfo != null) {
-        this.reputationManager.checkStake('aggregator', res.aggregatorInfo)
-      }
-  
-      requireCond(res.aggregatorInfo == null,
-        'Currently not supporting aggregator',
-        ValidationErrors.UnsupportedSignatureAggregator)
-  
-      return {
-        ...res,
-        referencedContracts: codeHashes,
-        storageMap
-      }
+        let storageMap: StorageMap = {}
+
+        if (!Config.isUnsafeMode) {
+            let tracerResult: BundlerCollectorReturn
+            [res, tracerResult] = await this._geth_traceCall_SimulateValidation(userOp)
+            let contractAddresses: string[]
+            [contractAddresses, storageMap] = parseScannerResult(userOp, tracerResult, res, this.entryPoint)
+            
+            // if no previous contract hashes, then calculate hashes of contracts
+            if (previousCodeHashes == null) {
+                codeHashes = await this.getCodeHashes(contractAddresses)
+            }
+
+            if (res as any === '0x') {
+                throw new Error('simulateValidation reverted with no revert string!')
+            }
+        } else {
+            // NOTE: this mode doesn't do any opcode checking and no stake checking!
+            res = await this._callSimulateValidation(userOp)
+        }
+
+        requireCond(!res.returnInfo.sigFailed, 'Invalid UserOp signature or paymaster signature', ValidationErrors.InvalidSignature)
+        requireCond(res.returnInfo.deadline == null || res.returnInfo.deadline + 30 < Date.now() / 1000, 'expires too soon', ValidationErrors.ExpiresShortly)
+
+        if (res.aggregatorInfo != null) {
+            ReputationManager.checkStake('aggregator', res.aggregatorInfo)
+        }
+
+        requireCond(res.aggregatorInfo == null, 'Currently not supporting aggregator', ValidationErrors.UnsupportedSignatureAggregator)
+
+        return {
+            ...res,
+            referencedContracts: codeHashes,
+            storageMap
+        }
     }
   
     async getCodeHashes (addresses: string[]): Promise<ReferencedCodeHashes> {
