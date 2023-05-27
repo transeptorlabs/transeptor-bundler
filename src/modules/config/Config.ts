@@ -75,8 +75,8 @@ class Config {
       if (!process.env.ALCHEMY_API_KEY) {
         throw new Error('ALCHEMY_API_KEY env var not set')
       }
-      this.provider = 
-      this.getNetworkProvider(programOpts.network as string, process.env.ALCHEMY_API_KEY as string)
+      
+      this.provider = this.getNetworkProvider(programOpts.network as string, process.env.ALCHEMY_API_KEY as string)
     } else {
       this.provider = programOpts.network as string === 'hardhat' ? require('hardhat').ethers.provider
       : this.getNetworkProvider(programOpts.network as string)
