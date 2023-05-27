@@ -46,7 +46,6 @@ class BundleManager {
     execution of doAttemptBundle() is complete, the lock is released using release() in the finally block.
   */
   public startAutoBundler() {
-    // Make sure the interval is not already running
     this.stopAutoBundler()
     
     console.log('Set auto bundler with interval: ', Config.autoBundleInterval, 'ms')
@@ -88,7 +87,7 @@ class BundleManager {
   private async doAttemptBundle(): Promise<string> {
     if (MempoolManager.size() === 0) {
       console.log('No user ops to bundle')
-      return ''
+      return 'empty_txHash'
     }
     
     const entities = await MempoolManager.getNextEntriesToBundle()

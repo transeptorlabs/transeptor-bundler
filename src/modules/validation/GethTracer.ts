@@ -1,3 +1,4 @@
+// This is the same BundlerCollectorTracer from github.com/eth-infinitism/bundler
 import { BigNumber } from 'ethers'
 import utils from 'ethers/lib/utils'
 
@@ -45,20 +46,19 @@ export function tracer2string (options: TraceOptions): TraceOptions {
 }
 
 export function decodeErrorReason(error: string) {
-  const ErrorSig = (0, utils.keccak256)(Buffer.from('Error(string)')).slice(0, 10); // 0x08c379a0
-  const FailedOpSig = (0, utils.keccak256)(Buffer.from('FailedOp(uint256,string)')).slice(0, 10); // 0x220266b6
+  const ErrorSig = (0, utils.keccak256)(Buffer.from('Error(string)')).slice(0, 10) // 0x08c379a0
+  const FailedOpSig = (0, utils.keccak256)(Buffer.from('FailedOp(uint256,string)')).slice(0, 10) // 0x220266b6
 
   if (error.startsWith(ErrorSig)) {
-      const [message] = utils.defaultAbiCoder.decode(['string'], '0x' + error.substring(10));
-      return { message };
-  }
-  else if (error.startsWith(FailedOpSig)) {
-      let [opIndex, message] = utils.defaultAbiCoder.decode(['uint256', 'string'], '0x' + error.substring(10));
-      message = `FailedOp: ${message}`;
-      return {
-          message,
-          opIndex
-      };
+    const [message] = utils.defaultAbiCoder.decode(['string'], '0x' + error.substring(10))
+    return { message }
+  } else if (error.startsWith(FailedOpSig)) {
+    let [opIndex, message] = utils.defaultAbiCoder.decode(['uint256', 'string'], '0x' + error.substring(10))
+    message = `FailedOp: ${message}`
+    return {
+        message,
+        opIndex
+    }
   }
 }
 

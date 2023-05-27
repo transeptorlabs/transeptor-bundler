@@ -1,5 +1,5 @@
 import { Mutex } from 'async-mutex'
-import { MempoolEntry, UserOperation } from '../types'
+import { MempoolEntry, ReferencedCodeHashes, UserOperation } from '../types'
 import { Config } from '../config'
 
 /* In-memory mempool with used to manage UserOperations.
@@ -48,12 +48,13 @@ class MempoolManager {
     }
   }
 
-  public async addUserOp(userOpHash: string, userOp:UserOperation): Promise<void> {
+  public async addUserOp(userOpHash: string, userOp:UserOperation, referencedContracts: ReferencedCodeHashes): Promise<void> {
     const release = await this.mutex.acquire()
     try {
       const entry: MempoolEntry = {
         userOp,
         userOpHash,
+        referencedContracts,
         status: 'idle',
       }
       this.entryCount[entry.userOp.sender] = (this.entryCount[entry.userOp.sender] ?? 0) + 1

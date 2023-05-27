@@ -1,7 +1,7 @@
 import { EthAPI, Web3API, DebugAPI} from './services'
 import { ProviderService } from '../provider'
 import { JsonRpcRequest } from '../types'
-import { Config } from '../config';
+import { Config } from '../config'
 
  interface JsonRpcSuccessResponse {
   jsonrpc: '2.0';

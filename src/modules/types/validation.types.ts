@@ -1,5 +1,5 @@
-import { BigNumberish } from "ethers"
-import { StorageMap } from "./bundle.types"
+import { BigNumberish } from 'ethers'
+import { StorageMap } from './bundle.types'
 
 /**
  * result from successful simulateValidation

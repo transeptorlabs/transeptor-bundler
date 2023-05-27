@@ -1,8 +1,9 @@
 import { Config } from '../config'
 import { TransactionRequest } from '@ethersproject/providers'
 import { Deferrable } from '@ethersproject/properties'
-import { resolveProperties } from 'ethers/lib/utils'
+import { Result, resolveProperties } from 'ethers/lib/utils'
 import { TraceOptions, TraceResult, tracer2string } from '../validation'
+import { ContractFactory, providers } from 'ethers'
 
 export class ProviderService {
     async getNetwork() {
@@ -50,13 +51,13 @@ export class ProviderService {
     }
 
     public async send(method: string, params: any[]): Promise<any> {
-        return await Config.provider.send(method, params)
+        return await (Config.connectedWallet.provider as providers.JsonRpcProvider).send(method, params)
     }
 
     public async debug_traceCall (tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any> {
         const tx1 = await resolveProperties(tx)
         const traceOptions = tracer2string(options)
-        const ret = await Config.provider.send('debug_traceCall', [tx1, 'latest', traceOptions]).catch(e => {
+        const ret = await (Config.connectedWallet.provider as providers.JsonRpcProvider).send('debug_traceCall', [tx1, 'latest', traceOptions]).catch(e => {
           console.log('ex=', e.message)
           console.log('tracer=', traceOptions.tracer?.toString().split('\n').map((line, index) => `${index + 1}: ${line}`).join('\n'))
           throw e
@@ -74,5 +75,22 @@ export class ProviderService {
     public async debug_traceTransaction (hash: string, options: TraceOptions): Promise<TraceResult | any> {
         const ret = await Config.provider.send('debug_traceTransaction', [hash, tracer2string(options)])
         return ret
+    }
+
+    /** Note that the contract deployment will cost gas, so it is not free to run this function
+     * run the constructor of the given type as a script: it is expected to revert with the script's return values.
+     * @param provider provider to use for the call
+     * @param c - contract factory of the script class
+     * @param ctrParams constructor parameters
+     * @return an array of arguments of the error
+     * example usasge:
+     *     hashes = await runContractScript(provider, new GetUserOpHashes__factory(), [entryPoint.address, userOps]).then(ret => ret.userOpHashes)
+     */
+    async runContractScript<T extends ContractFactory> (c: T, ctrParams: Parameters<T['getDeployTransaction']>): Promise<Result> {
+        const tx = c.getDeployTransaction(...ctrParams)
+        const ret = await Config.provider.call(tx)
+        const parsed = ContractFactory.getInterface(c.interface).parseError(ret)
+        if (parsed == null) throw new Error('unable to parse script (error) response: ' + ret)
+        return parsed.args
     }
 }

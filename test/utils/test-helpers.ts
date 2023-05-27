@@ -81,3 +81,12 @@ export const MOCK_USER_OPERATION_EVENT = [
     ]
   }
 ]
+
+export function setTestConfig() {
+  process.argv = [...process.argv, '--network', 'hardhat']
+  process.env = {
+    ...process.env,
+    MNEMONIC: 'test '.repeat(11) + 'junk',
+    BENEFICIARY: '0xd21934eD8eAf27a67f0A70042Af50A1D6d195E81'
+  }
+}

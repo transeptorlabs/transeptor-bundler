@@ -20,7 +20,6 @@ WORKDIR /app
 
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/ecosystem.config.js ./
 
 RUN npm ci --only=production
 

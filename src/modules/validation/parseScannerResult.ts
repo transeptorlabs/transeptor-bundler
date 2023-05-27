@@ -1,17 +1,10 @@
-
+// This is the same BundlerCollectorTracer from github.com/eth-infinitism/bundler
 import { hexZeroPad, Interface, keccak256 } from 'ethers/lib/utils'
 import { BundlerCollectorReturn } from './BundlerCollectorTracer'
-import { mapOf, requireCond } from './utils'
 import { inspect } from 'util'
-
-import Debug from 'debug'
-import { toBytes32 } from './modules/moduleUtils'
-import { ValidationResult } from './modules/ValidationManager'
-import { BigNumber, BigNumberish } from 'ethers'
-import { TestOpcodesAccountFactory__factory, TestOpcodesAccount__factory, TestStorageAccount__factory } from './types'
-import { StakeInfo, StorageMap, UserOperation, ValidationErrors } from './modules/Types'
-
-const debug = Debug('aa.handler.opcodes')
+import { BigNumber, BigNumberish, ethers } from 'ethers'
+import { ENTRY_POINT_ABI, mapOf, PAYMASTER_ABI, requireCond, SENDER_CREATOR_ABI, TEST_OPCODE_ACCOUNT_API, TEST_OPCODE_ACCOUNT_FACTORY_API, TEST_STORAGE_ACCOUNT, toBytes32 } from '../utils'
+import { StakeInfo, StorageMap, UserOperation, ValidationErrors, ValidationResult } from '../types'
 
 interface CallEntry {
   to: string
@@ -32,14 +25,14 @@ interface CallEntry {
  */
 function parseCallStack (tracerResults: BundlerCollectorReturn): CallEntry[] {
   const abi = Object.values([
-    ...TestOpcodesAccount__factory.abi,
-    ...TestOpcodesAccountFactory__factory.abi,
-    ...TestStorageAccount__factory.abi,
-    ...SenderCreator__factory.abi,
-    ...IEntryPoint__factory.abi,
-    ...IPaymaster__factory.abi
+    ...TEST_OPCODE_ACCOUNT_API,
+    ...TEST_OPCODE_ACCOUNT_FACTORY_API,
+    ...TEST_STORAGE_ACCOUNT,
+    ...SENDER_CREATOR_ABI,
+    ...ENTRY_POINT_ABI,
+    ...PAYMASTER_ABI
   ].reduce((set, entry) => {
-    const key = `${entry.name}(${entry.inputs.map(i => i.type).join(',')})`
+    const key = `${entry.name}(${entry.inputs?.map(i => i.type).join(',')})`
     // console.log('key=', key, keccak256(Buffer.from(key)).slice(0,10))
     return {
       ...set,
@@ -157,8 +150,8 @@ function parseEntitySlots (stakeInfoEntities: { [addr: string]: StakeInfo | unde
  * @param entryPoint the entryPoint that hosted the "simulatedValidation" traced call.
  * @return list of contract addresses referenced by this UserOp
  */
-export function parseScannerResult (userOp: UserOperation, tracerResults: BundlerCollectorReturn, validationResult: ValidationResult, entryPoint: EntryPoint): [string[], StorageMap] {
-  debug('=== simulation result:', inspect(tracerResults, true, 10, true))
+export function parseScannerResult (userOp: UserOperation, tracerResults: BundlerCollectorReturn, validationResult: ValidationResult, entryPoint: ethers.Contract): [string[], StorageMap] {
+  console.log('=== simulation result:', inspect(tracerResults, true, 10, true))
   // todo: block access to no-code addresses (might need update to tracer)
 
   const entryPointAddress = entryPoint.address.toLowerCase()
@@ -255,7 +248,7 @@ export function parseScannerResult (userOp: UserOperation, tracerResults: Bundle
         return false
       }
 
-      debug('dump keccak calculations and reads', {
+      console.log('dump keccak calculations and reads', {
         entityTitle,
         entityAddr,
         k: mapOf(tracerResults.keccak, k => keccak256(k)),

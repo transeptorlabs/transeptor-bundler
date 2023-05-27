@@ -1,17 +1,15 @@
-import { MempoolManager } from '../src/modules/mempool'
 import {
   mockUserOperationFactory,
   mockEntryPointGetUserOpHash,
+  setTestConfig,
 } from './utils/test-helpers'
+setTestConfig()
+import { MempoolManager } from '../src/modules/mempool'
+import { expect } from 'chai'
 
 describe('MempoolManager', () => {
   const originalEnv = process.env
-
-  process.env = {
-    ...originalEnv,
-    MNEMONIC: 'test '.repeat(11) + 'junk',
-    BENEFICIARY: '0x0000000'
-  }
+  const originalargs = process.argv
   const mempoolManager = MempoolManager
 
   beforeEach(() => {
@@ -20,9 +18,10 @@ describe('MempoolManager', () => {
 
   afterEach(() => {
     process.env = originalEnv
+    process.argv = originalargs
   })
 
-  test('should addUserOp and findByHash correctly', async () => {
+  it('should addUserOp and findByHash correctly', async () => {
     const userOp1 = mockUserOperationFactory('x0001', 1)
     const userOp2 = mockUserOperationFactory('x0002', 1)
     const userOp3 = mockUserOperationFactory('x0003', 1)
@@ -34,33 +33,54 @@ describe('MempoolManager', () => {
     const mempoolEntry1 = {
       userOp: userOp1,
       userOpHash: userOpHash1,
+      referencedContracts: {
+        addresses: [],
+        hash: ''
+      },
       status: 'idle',
     }
     const mempoolEntry2 = {
       userOp: userOp2,
       userOpHash: userOpHash2,
+      referencedContracts: {
+        addresses: [],
+        hash: ''
+      },
       status: 'idle',
     }
     const mempoolEntry3 = {
       userOp: userOp3,
       userOpHash: userOpHash3,
+      referencedContracts: {
+        addresses: [],
+        hash: ''
+      },
       status: 'idle',
     }
 
-    await mempoolManager.addUserOp(userOpHash1 ,userOp1)
-    await mempoolManager.addUserOp(userOpHash2 ,userOp2)
-    await mempoolManager.addUserOp(userOpHash3 ,userOp3)
+    await mempoolManager.addUserOp(userOpHash1 ,userOp1, {
+      addresses: [],
+      hash: ''
+    })
+    await mempoolManager.addUserOp(userOpHash2 ,userOp2, {
+      addresses: [],
+      hash: ''
+    })
+    await mempoolManager.addUserOp(userOpHash3 ,userOp3, {
+      addresses: [],
+      hash: ''
+    })
 
     const value1 = await mempoolManager.findByHash(userOpHash1)
     const value2 = await mempoolManager.findByHash(userOpHash2)
     const value3 = await mempoolManager.findByHash(userOpHash3)
 
-    expect(value1).toStrictEqual(mempoolEntry1)
-    expect(value2).toStrictEqual(mempoolEntry2)
-    expect(value3).toStrictEqual(mempoolEntry3)
+    expect(value1?.userOpHash).to.equal(mempoolEntry1.userOpHash)
+    expect(value2?.userOpHash).to.equal(mempoolEntry2.userOpHash)
+    expect(value3?.userOpHash).to.equal(mempoolEntry3.userOpHash)
   })
 
-  test('should remove removeUserOp correctly', async () => {
+  it('should remove removeUserOp correctly', async () => {
     const userOp1 = mockUserOperationFactory('x0001', 1)
     const userOp2 = mockUserOperationFactory('x0002', 1)
     const userOp3 = mockUserOperationFactory('x0003', 1)
@@ -69,22 +89,31 @@ describe('MempoolManager', () => {
     const userOpHash2 =  mockEntryPointGetUserOpHash(userOp2)
     const userOpHash3 =  mockEntryPointGetUserOpHash(userOp3)
 
-    await mempoolManager.addUserOp(userOpHash1 ,userOp1)
-    await mempoolManager.addUserOp(userOpHash2 ,userOp2)
-    await mempoolManager.addUserOp(userOpHash3 ,userOp3)
+    await mempoolManager.addUserOp(userOpHash1 ,userOp1, {
+      addresses: [],
+      hash: ''
+    })
+    await mempoolManager.addUserOp(userOpHash2 ,userOp2, {
+      addresses: [],
+      hash: ''
+    })
+    await mempoolManager.addUserOp(userOpHash3 ,userOp3, {
+      addresses: [],
+      hash: ''
+    })
 
     const removed1 = await mempoolManager.removeUserOp(userOpHash1)
     const removed2 = await mempoolManager.removeUserOp(userOpHash2)
     const removed3 = await mempoolManager.removeUserOp(userOpHash3)
     const notRemoved = await mempoolManager.removeUserOp('key4')
 
-    expect(removed1).toBe(true)
-    expect(removed2).toBe(true)
-    expect(removed3).toBe(true)
-    expect(notRemoved).toBe(false)
+    expect(removed1).to.equal(true)
+    expect(removed2).to.equal(true)
+    expect(removed3).to.equal(true)
+    expect(notRemoved).to.equal(false)
   })
 
-  test('should createNextUserOpBundle(FIFO) correctly', async () => {
+  it('should createNextUserOpBundle(FIFO) correctly', async () => {
     const userOp1 = mockUserOperationFactory('x0001', 1)
     const userOp2 = mockUserOperationFactory('x0002', 1)
     const userOp3 = mockUserOperationFactory('x0003', 1)
@@ -99,24 +128,42 @@ describe('MempoolManager', () => {
     const userOpHash5 =  mockEntryPointGetUserOpHash(userOp5)
     const userOpHash6 =  mockEntryPointGetUserOpHash(userOp6)
 
-    await mempoolManager.addUserOp(userOpHash1 ,userOp1)
-    await mempoolManager.addUserOp(userOpHash2 ,userOp2)
-    await mempoolManager.addUserOp(userOpHash3 ,userOp3)
-    await mempoolManager.addUserOp(userOpHash4 ,userOp4)
-    await mempoolManager.addUserOp(userOpHash5 ,userOp5)
-    await mempoolManager.addUserOp(userOpHash6 ,userOp6)
+    await mempoolManager.addUserOp(userOpHash1 ,userOp1, {
+      addresses: [],
+      hash: ''
+    })
+    await mempoolManager.addUserOp(userOpHash2 ,userOp2, {
+      addresses: [],
+      hash: ''
+    })
+    await mempoolManager.addUserOp(userOpHash3 ,userOp3, {
+      addresses: [],
+      hash: ''
+    })
+    await mempoolManager.addUserOp(userOpHash4 ,userOp4, {
+      addresses: [],
+      hash: ''
+    })
+    await mempoolManager.addUserOp(userOpHash5 ,userOp5, {
+      addresses: [],
+      hash: ''
+    })
+    await mempoolManager.addUserOp(userOpHash6 ,userOp6, {
+      addresses: [],
+      hash: ''
+    })
 
     const nextBundle = await mempoolManager.getNextEntriesToBundle()
 
-    expect(nextBundle.length).toBe(5)
-    expect(nextBundle[0].status).toBe('bundling')
-    expect(nextBundle[1].status).toBe('bundling')
-    expect(nextBundle[2].status).toBe('bundling')
-    expect(nextBundle[3].status).toBe('bundling')
-    expect(nextBundle[4].status).toBe('bundling')
+    expect(nextBundle.length).to.equal(5)
+    expect(nextBundle[0].status).to.equal('bundling')
+    expect(nextBundle[1].status).to.equal('bundling')
+    expect(nextBundle[2].status).to.equal('bundling')
+    expect(nextBundle[3].status).to.equal('bundling')
+    expect(nextBundle[4].status).to.equal('bundling')
   })
 
-  test('should return correct size of the mempool', async () => {
+  it('should return correct size of the mempool', async () => {
     const userOp1 = mockUserOperationFactory('x0001', 1)
     const userOp2 = mockUserOperationFactory('x0002', 1)
     const userOp3 = mockUserOperationFactory('x0003', 1)
@@ -125,9 +172,18 @@ describe('MempoolManager', () => {
     const userOpHash2 =  mockEntryPointGetUserOpHash(userOp2)
     const userOpHash3 =  mockEntryPointGetUserOpHash(userOp3)
 
-    await mempoolManager.addUserOp(userOpHash1 ,userOp1)
-    await mempoolManager.addUserOp(userOpHash2 ,userOp2)
-    await mempoolManager.addUserOp(userOpHash3 ,userOp3)
+    await mempoolManager.addUserOp(userOpHash1 ,userOp1, {
+      addresses: [],
+      hash: ''
+    })
+    await mempoolManager.addUserOp(userOpHash2 ,userOp2, {
+      addresses: [],
+      hash: ''
+    })
+    await mempoolManager.addUserOp(userOpHash3 ,userOp3, {
+      addresses: [],
+      hash: ''
+    })
 
     const size1 = mempoolManager.size()
 
@@ -135,7 +191,7 @@ describe('MempoolManager', () => {
 
     const size2 = mempoolManager.size()
 
-    expect(size1).toBe(3)
-    expect(size2).toBe(2)
+    expect(size1).to.equal(3)
+    expect(size2).to.equal(2)
   })
 })

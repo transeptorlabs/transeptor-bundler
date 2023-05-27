@@ -1,10 +1,10 @@
-import { BigNumber, BytesLike, ethers } from 'ethers'
-import { ReferencedCodeHashes, StakeInfo, StorageMap, UserOperation, ValidateUserOpResult, ValidationErrors, ValidationResult } from "../types"
-import { RpcError, getAddr, requireCond } from "../utils"
+import { BigNumber, BytesLike, ContractFactory, ethers } from 'ethers'
+import { ReferencedCodeHashes, StakeInfo, StorageMap, UserOperation, ValidateUserOpResult, ValidationErrors, ValidationResult } from '../types'
+import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE, RpcError, getAddr, requireCond } from '../utils'
 import { ProviderService } from '../provider'
 import { BundlerCollectorReturn, ExitInfo, bundlerCollectorTracer } from './BundlerCollectorTracer'
 import { decodeErrorReason } from './GethTracer'
-import { Config } from "../config"
+import { Config } from '../config'
 import { ReputationManager } from '../reputation'
 import { parseScannerResult } from './parseScannerResult'
 
@@ -151,7 +151,8 @@ export class ValidationService {
             let tracerResult: BundlerCollectorReturn
             [res, tracerResult] = await this._geth_traceCall_SimulateValidation(userOp)
             let contractAddresses: string[]
-            [contractAddresses, storageMap] = parseScannerResult(userOp, tracerResult, res, this.entryPoint)
+            
+            [contractAddresses, storageMap] = parseScannerResult(userOp, tracerResult, res, Config.entryPointContract)
             
             // if no previous contract hashes, then calculate hashes of contracts
             if (previousCodeHashes == null) {
@@ -183,63 +184,19 @@ export class ValidationService {
     }
   
     async getCodeHashes (addresses: string[]): Promise<ReferencedCodeHashes> {
-      const { hash } = await runContractScript(
-        this.entryPoint.provider,
-        new GetCodeHashes__factory(),
+      const getCodeHashesFactory = new ethers.ContractFactory(
+        GET_CODE_HASH_ABI,
+        GET_CODE_HASH_BYTECODE,
+      ) as ContractFactory
+
+      const { hash } = await this.providerService.runContractScript(
+        getCodeHashesFactory,
         [addresses]
       )
-  
+
       return {
         hash,
         addresses
       }
-    }
-  
-    /**
-     * perform static checking on input parameters.
-     * @param userOp
-     * @param entryPointInput
-     * @param requireSignature
-     * @param requireGasParams
-     */
-    validateInputParameters (userOp: UserOperation, entryPointInput: string, requireSignature = true, requireGasParams = true): void {
-      requireCond(entryPointInput != null, 'No entryPoint param', ValidationErrors.InvalidFields)
-      requireCond(entryPointInput.toLowerCase() === this.entryPoint.address.toLowerCase(),
-        `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${this.entryPoint.address}`,
-        ValidationErrors.InvalidFields)
-  
-      // minimal sanity check: userOp exists, and all members are hex
-      requireCond(userOp != null, 'No UserOperation param', ValidationErrors.InvalidFields)
-  
-      const fields = ['sender', 'nonce', 'initCode', 'callData', 'paymasterAndData']
-      if (requireSignature) {
-        fields.push('signature')
-      }
-      if (requireGasParams) {
-        fields.push('preVerificationGas', 'verificationGasLimit', 'callGasLimit', 'maxFeePerGas', 'maxPriorityFeePerGas')
-      }
-      fields.forEach(key => {
-        const value: string = (userOp as any)[key]?.toString()
-        requireCond(value != null,
-          'Missing userOp field: ' + key + ' ' + JSON.stringify(userOp),
-          ValidationErrors.InvalidFields)
-        requireCond(value.match(HEX_REGEX) != null,
-          `Invalid hex value for property ${key}:${value} in UserOp`,
-          ValidationErrors.InvalidFields)
-      })
-  
-      requireCond(userOp.paymasterAndData.length === 2 || userOp.paymasterAndData.length >= 42,
-        'paymasterAndData: must contain at least an address',
-        ValidationErrors.InvalidFields)
-  
-      // syntactically, initCode can be only the deployer address. but in reality, it must have calldata to uniquely identify the account
-      requireCond(userOp.initCode.length === 2 || userOp.initCode.length >= 42,
-        'initCode: must contain at least an address',
-        ValidationErrors.InvalidFields)
-  
-      const calcPreVerificationGas1 = calcPreVerificationGas(userOp)
-      requireCond(userOp.preVerificationGas >= calcPreVerificationGas1,
-        `preVerificationGas too low: expected at least ${calcPreVerificationGas1}`,
-        ValidationErrors.InvalidFields)
     }
   }
