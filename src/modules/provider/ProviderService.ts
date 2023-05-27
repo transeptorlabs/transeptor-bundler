@@ -1,4 +1,9 @@
 import { Config } from '../config'
+import { TransactionRequest } from '@ethersproject/providers'
+import { Deferrable } from '@ethersproject/properties'
+import { Result, resolveProperties } from 'ethers/lib/utils'
+import { TraceOptions, TraceResult, tracer2string } from '../validation'
+import { ContractFactory, providers } from 'ethers'
 
 export class ProviderService {
     async getNetwork() {
@@ -6,7 +11,7 @@ export class ProviderService {
         return await provider.getNetwork()
     }
 
-    async checkContractDeployment(contractAddress: string): Promise<boolean> {
+    public async checkContractDeployment(contractAddress: string): Promise<boolean> {
         // Get the bytecode of the deployed contract
         const provider = Config.provider
         const bytecode = await provider.getCode(contractAddress)
@@ -19,7 +24,7 @@ export class ProviderService {
         }
     }
 
-    async supportsRpcMethod(method: string): Promise<boolean> {
+    public async supportsRpcMethod(method: string): Promise<boolean> {
         const ret = await Config.provider.send(method, []).catch(e => e)
         let code
         if (ret.url && ret.body && ret.url.includes('alchemy.com')) {
@@ -31,13 +36,61 @@ export class ProviderService {
         return code === -32602 // wrong params (meaning, method exists)
     }
 
-    async clientVerion(): Promise<string> {
+    public async clientVerion(): Promise<string> {
         const ret = await Config.provider.send('web3_clientVersion', [])
         return ret.result
     }
 
-    async getChainId(): Promise<string> {
+    public async getChainId(): Promise<string> {
         const { chainId } = await Config.provider.getNetwork()
         return chainId.toString()
+    }
+
+    public async getBlockNumber(): Promise<number> {
+        return await Config.provider.getBlockNumber()
+    }
+
+    public async send(method: string, params: any[]): Promise<any> {
+        return await (Config.connectedWallet.provider as providers.JsonRpcProvider).send(method, params)
+    }
+
+    public async debug_traceCall (tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any> {
+        const tx1 = await resolveProperties(tx)
+        const traceOptions = tracer2string(options)
+        const ret = await (Config.connectedWallet.provider as providers.JsonRpcProvider).send('debug_traceCall', [tx1, 'latest', traceOptions]).catch(e => {
+          console.log('ex=', e.message)
+          console.log('tracer=', traceOptions.tracer?.toString().split('\n').map((line, index) => `${index + 1}: ${line}`).join('\n'))
+          throw e
+        })
+        // return applyTracer(ret, options)
+        return ret
+    }
+
+    // a hack for network that doesn't have traceCall: mine the transaction, and use debug_traceTransaction
+    public async execAndTrace (tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any> {
+        const hash = await Config.provider.getSigner().sendUncheckedTransaction(tx)
+        return await this.debug_traceTransaction(hash, options)
+    }
+
+    public async debug_traceTransaction (hash: string, options: TraceOptions): Promise<TraceResult | any> {
+        const ret = await Config.provider.send('debug_traceTransaction', [hash, tracer2string(options)])
+        return ret
+    }
+
+    /** Note that the contract deployment will cost gas, so it is not free to run this function
+     * run the constructor of the given type as a script: it is expected to revert with the script's return values.
+     * @param provider provider to use for the call
+     * @param c - contract factory of the script class
+     * @param ctrParams constructor parameters
+     * @return an array of arguments of the error
+     * example usasge:
+     *     hashes = await runContractScript(provider, new GetUserOpHashes__factory(), [entryPoint.address, userOps]).then(ret => ret.userOpHashes)
+     */
+    async runContractScript<T extends ContractFactory> (c: T, ctrParams: Parameters<T['getDeployTransaction']>): Promise<Result> {
+        const tx = c.getDeployTransaction(...ctrParams)
+        const ret = await Config.provider.call(tx)
+        const parsed = ContractFactory.getInterface(c.interface).parseError(ret)
+        if (parsed == null) throw new Error('unable to parse script (error) response: ' + ret)
+        return parsed.args
     }
 }

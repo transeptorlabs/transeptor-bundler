@@ -5,6 +5,7 @@ import cors from 'cors'
 import { ProviderService } from '../provider'
 import { RpcMethodHandler } from '../json-rpc-handler'
 import { JsonRpcRequest } from '../types'
+import { parseEther } from 'ethers/lib/utils'
 import { Config } from '../config'
 
 export class JsonrpcHttpServer {
@@ -58,13 +59,19 @@ export class JsonrpcHttpServer {
       }
 
       console.log('Bundler passed preflight check', {
-        accountBalance: bal.toString(),
+        signerBalanceWei: bal.toString(),
+        minSignerBalance: Config.minSignerBalance.toString(),
         network: {chainId, name},
         bundleInterval: `${Config.autoBundleInterval}(ms)`,
+        bundleSize: Config.bundleSize,
+        maxBundleGas: Config.maxBundleGas,
         entrypoint: Config.entryPointAddr,
-        mode: Config.txMode,
+        txMode: Config.txMode,
         rpcProviderSupportsDebugTraceCall: true,
         unsafe: Config.isUnsafeMode,
+        entryPoint: Config.entryPointAddr,
+        minStake: Config.minStake.toString(),
+        httpApi: Config.httpApi,
       })
     } catch (err: any) {
       this.fatalError(err)

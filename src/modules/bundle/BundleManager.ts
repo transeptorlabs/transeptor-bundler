@@ -46,7 +46,6 @@ class BundleManager {
     execution of doAttemptBundle() is complete, the lock is released using release() in the finally block.
   */
   public startAutoBundler() {
-    // Make sure the interval is not already running
     this.stopAutoBundler()
     
     console.log('Set auto bundler with interval: ', Config.autoBundleInterval, 'ms')
@@ -73,21 +72,26 @@ class BundleManager {
 
   public async forceSendBundle(): Promise<string> {
     const release = await this.mutex.acquire()
-    const result =  await this.doAttemptBundle()
 
-    release()
-    return result
+    try {
+      const result =  await this.doAttemptBundle()
+      return result
+    } catch (error) {
+      console.log('Error running force bundle:', error)
+      throw error
+    } finally {
+      release()
+    }
   }
 
   private async doAttemptBundle(): Promise<string> {
     if (MempoolManager.size() === 0) {
       console.log('No user ops to bundle')
-      return ''
+      return 'empty_txHash'
     }
-
-    const entities = await MempoolManager.createNextBundle()
-    this.bundleProcessor.sendNextBundle(entities)
-    return ''
+    
+    const entities = await MempoolManager.getNextEntriesToBundle()
+    return this.bundleProcessor.sendNextBundle(entities)
   }
 }
 

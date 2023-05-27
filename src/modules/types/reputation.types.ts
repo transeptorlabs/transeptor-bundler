@@ -18,5 +18,3 @@ export interface ReputationEntry {
     opsIncluded: number
     status?: ReputationStatus
 }
-  
-export type ReputationDump = ReputationEntry[]

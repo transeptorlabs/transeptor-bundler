@@ -1,6 +1,7 @@
 import { EthAPI, Web3API, DebugAPI} from './services'
 import { ProviderService } from '../provider'
 import { JsonRpcRequest } from '../types'
+import { Config } from '../config'
 
  interface JsonRpcSuccessResponse {
   jsonrpc: '2.0';
@@ -53,6 +54,10 @@ export class RpcMethodHandler {
       let result: any
       let isErrorResult: {code: number, message: string} = {code: 0, message: ''}
 
+      if (Config.httpApi.indexOf(method.split('_')[0]) === -1) {
+        return this.createErrorResponse(request.id, -32601, `Method ${method} is not supported`)
+      }
+
       switch (method) {
         case 'eth_chainId':
           result = await this.providerService.getChainId()
@@ -96,6 +101,13 @@ export class RpcMethodHandler {
           this.debug.setBundlingMode(params[0])
           result = 'ok'
           break
+        case 'debug_bundler_setReputation':
+          await this.debug.setReputation(params[0])
+          result = 'ok'
+          break
+        case 'debug_bundler_dumpReputation':
+          result = this.debug.dumpReputation()
+          break
         default:
           isErrorResult = {
             code: -32601,
@@ -114,7 +126,7 @@ export class RpcMethodHandler {
     }
   }
 
-  private async requestParmsValidator(request: JsonRpcRequest): Promise<boolean> {
+  private async requestValidator(request: JsonRpcRequest): Promise<boolean> {
     return true
   }
 

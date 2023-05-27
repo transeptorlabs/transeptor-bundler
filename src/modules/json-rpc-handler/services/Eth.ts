@@ -8,7 +8,11 @@ export class EthAPI {
   }
 
   async sendUserOperation(userOp: UserOperation, supportedEntryPoints: string) {
-    return await MempoolManager.addUserOp('userOpHash', userOp)
+    await MempoolManager.addUserOp('userOpHash', userOp, {
+      addresses: [],
+      hash: ''
+    })
+    return 'userOpHash'
   }
 
   getSupportedEntryPoints (): string[] {

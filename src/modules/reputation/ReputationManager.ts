@@ -1,6 +1,6 @@
 import { BigNumber } from 'ethers'
-import { ReputationDump, ReputationEntry, ReputationParams, ReputationStatus } from '../types'
-import { StakeInfo, ValidationErrors, requireCond, tostr } from '../utils'
+import { ReputationEntry, ReputationParams, ReputationStatus, StakeInfo, ValidationErrors } from '../types'
+import { requireCond, tostr } from '../utils'
 import { Config } from '../config'
 
 class ReputationManager {
@@ -38,7 +38,7 @@ class ReputationManager {
   /**
    * debug: dump reputation map (with updated "status" for each entry)
    */
-  dump (): ReputationDump {
+  dump (): ReputationEntry[] {
     return Object.values(this.entries)
   }
 
@@ -46,6 +46,10 @@ class ReputationManager {
    * exponential backoff of opsSeen and opsIncluded values
    */
   private hourlyCron (): void {
+    if(this.entries === undefined || this.entries === null) {
+      return
+    }
+
     Object.keys(this.entries).forEach(addr => {
       const entry = this.entries[addr]
       entry.opsSeen = Math.floor(entry.opsSeen * 23 / 24)
@@ -60,7 +64,7 @@ class ReputationManager {
   public startHourlyCron(interval: number) {
     this.stopHourlyCron()
     
-    console.log('set reputation interval to', interval, '(ms)')
+    console.log('Set reputation interval to', interval, '(ms)')
 
     this.interval = setInterval(this.hourlyCron, Config.autoBundleInterval)
   }
@@ -73,11 +77,17 @@ class ReputationManager {
     }
   }
 
-  public addWhitelist (...params: string[]): void {
+  public addWhitelist (params: string[]): void {
+    if (params.length === 0) {
+      return
+    }
     params.forEach(item => this.whitelist.add(item))
   }
 
-  public addBlacklist (...params: string[]): void {
+  public addBlacklist (params: string[]): void {
+    if (params.length === 0) {
+      return
+    }
     params.forEach(item => this.blackList.add(item))
   }
 
@@ -170,7 +180,7 @@ class ReputationManager {
    * for debugging: put in the given reputation entries
    * @param entries
    */
-  public setReputation (reputations: ReputationDump): ReputationDump {
+  public setReputation (reputations: ReputationEntry[]):  ReputationEntry[] {
     reputations.forEach(rep => {
       this.entries[rep.address] = {
         address: rep.address,
@@ -198,8 +208,8 @@ class ReputationManager {
     requireCond(BigNumber.from(info.stake).gte(Config.minStake),
       `${title} ${info.addr} stake ${tostr(info.stake)} is too low (min=${tostr(Config.minStake)})`,
       ValidationErrors.InsufficientStake)
-    requireCond(BigNumber.from(info.unstakeDelaySec).gte(Config.minUnstakeDelay),
-      `${title} ${info.addr} unstake delay ${tostr(info.unstakeDelaySec)} is too low (min=${tostr(Config.minUnstakeDelay)})`,
+    requireCond(BigNumber.from(info.unstakeDelaySec).gte(BigNumber.from(Config.minUnstakeDelay)),
+      `${title} ${info.addr} unstake delay ${tostr(info.unstakeDelaySec)} is too low (min=${Config.minUnstakeDelay})`,
       ValidationErrors.InsufficientStake)
   }
 }
