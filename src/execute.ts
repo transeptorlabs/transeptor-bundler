@@ -72,7 +72,7 @@ async function runBundler() {
     config.isUnsafeMode,
     config.port
   )
-  await bundlerServer.start(
+  await bundlerServer.start()
 }
 
 runBundler().catch(async (error) => {
