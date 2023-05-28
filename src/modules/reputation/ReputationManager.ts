@@ -1,6 +1,7 @@
 import { BigNumber } from 'ethers'
 import { ReputationEntry, ReputationParams, ReputationStatus, StakeInfo, ValidationErrors } from '../types'
 import { requireCond, tostr } from '../utils'
+import { Logger } from '../logger'
 
 export class ReputationManager {
   private entries: { [address: string]: ReputationEntry } = {}
@@ -27,7 +28,7 @@ export class ReputationManager {
     this.minUnstakeDelay = minUnstakeDelay
 
     this.startHourlyCron()
-    console.log('ReputationManager initialized')
+    Logger.debug('ReputationManager initialized')
   }
 
   /**
@@ -59,7 +60,7 @@ export class ReputationManager {
   public startHourlyCron() {
     this.stopHourlyCron()
     
-    console.log('Set reputation interval to', 60 * 60 * 1000, '(ms)')
+    Logger.info('Set reputation interval to', 60 * 60 * 1000, '(ms)')
 
     this.interval = setInterval(this.hourlyCron, 60 * 60 * 1000) // 60 minutes * 60 seconds * 1000 milliseconds
   }
@@ -68,7 +69,7 @@ export class ReputationManager {
     if (this.interval) {
       clearInterval(this.interval)
       this.interval = null
-      console.log('Stopping reputation interval')
+      Logger.info('Stopping reputation interval')
     }
   }
 
@@ -108,7 +109,7 @@ export class ReputationManager {
     }
     const entry = this.getOrCreate(addr)
     entry.opsSeen++
-    console.log('after seen++', addr, entry)
+    Logger.debug('after seen++', addr, entry)
   }
 
   /**
@@ -119,7 +120,7 @@ export class ReputationManager {
   public updateIncludedStatus (addr: string): void {
     const entry = this.getOrCreate(addr)
     entry.opsIncluded++
-    console.log('after Included++', addr, entry)
+    Logger.debug('after Included++', addr, entry)
   }
 
   public isWhitelisted (addr: string): boolean {
@@ -161,7 +162,7 @@ export class ReputationManager {
     const entry = this.getOrCreate(addr)
     entry.opsSeen = 100
     entry.opsIncluded = 0
-    console.log('crashedHandleOps', addr, entry)
+    Logger.debug('crashedHandleOps', addr, entry)
   }
 
   /**

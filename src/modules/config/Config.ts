@@ -4,6 +4,7 @@ import { Command, OptionValues } from 'commander'
 import { BigNumber, Wallet, ethers, providers } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import { ENTRY_POINT_ABI, isValidAddress } from '../utils'
+import { Logger } from '../logger'
 dotenv.config()
 
 export class Config {
@@ -61,7 +62,7 @@ export class Config {
     .option('--p2p', 'p2p mode enabled)', false)
 
     const programOpts: OptionValues = program.parse(args).opts()
-    console.log('programOpts', programOpts)
+    Logger.debug('programOpts', programOpts)
         
     if (this.SUPPORTED_MODES.indexOf(programOpts.txMode as string) === -1) {      
       throw new Error('Invalid bundler mode')
@@ -133,7 +134,7 @@ export class Config {
       }
     }
 
-    console.log('Done init Config global')
+    Logger.debug('Done init Config global')
   }
 
   private getNetworkProvider(url: string, apiKey?: string): providers.JsonRpcProvider {

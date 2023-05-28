@@ -11,6 +11,7 @@ import { ValidationService } from '../src/modules/validation'
 import { ReputationManager } from '../src/modules/reputation'
 import { testWallet } from './utils/test-helpers'
 import { ENTRY_POINT_ABI } from '../src/modules/utils'
+import { Logger } from '../src/modules/logger'
 
 describe('ValidationService', () => {
   const provider = hardhatEthers.provider
@@ -27,13 +28,13 @@ describe('ValidationService', () => {
     const epAddr = DeterministicDeployer.getAddress(EntryPoint__factory.bytecode)
 
     if (await dep.isContractDeployed(epAddr)) {
-      console.log(`EntryPoint already deployed at ${epAddr}`)
+      Logger.debug(`EntryPoint already deployed at ${epAddr}`)
     } else {
       const net = await provider.getNetwork()
       if (net.chainId !== 1337 && net.chainId !== 31337) {
-        console.log('NOT deploying EntryPoint. use pre-deployed entrypoint')
+        Logger.debug('NOT deploying EntryPoint. use pre-deployed entrypoint')
       } else {
-        console.log('deploying entrypoint on local network:', net.chainId)
+        Logger.debug('deploying entrypoint on local network:', net.chainId)
         await dep.deterministicDeploy(EntryPoint__factory.bytecode)
       }
     }

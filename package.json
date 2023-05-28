@@ -31,7 +31,8 @@
     "dotenv": "16.0.3",
     "ethers": "^5.7.1",
     "express": "4.18.2",
-    "helmet": "6.1.5"
+    "helmet": "6.1.5",
+    "pino": "^8.14.1"
   },
   "devDependencies": {
     "@account-abstraction/contracts": "^0.6.0",

@@ -6,6 +6,7 @@ import { BundlerCollectorReturn, ExitInfo, bundlerCollectorTracer } from './Bund
 import { decodeErrorReason } from './GethTracer'
 import { ReputationManager } from '../reputation'
 import { parseScannerResult } from './parseScannerResult'
+import { Logger } from '../logger'
 
 export class ValidationService {
   private readonly providerService: ProviderService
@@ -148,7 +149,7 @@ export class ValidationService {
         // a real error, not a result.
         throw new Error(errFullName)
       }
-      console.log(
+      Logger.debug(
         '==dump tree=',
         JSON.stringify(tracerResult, null, 2)
           .replace(new RegExp(userOp.sender.toLowerCase()), '{sender}')

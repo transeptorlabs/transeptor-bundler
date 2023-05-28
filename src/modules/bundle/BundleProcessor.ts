@@ -5,6 +5,7 @@ import { getAddr, mergeStorageMap } from '../utils'
 import { ReputationManager } from '../reputation'
 import { ProviderService } from '../provider'
 import { ValidationService } from '../validation'
+import { Logger } from '../logger'
 
 /*
   BundleProcessor: This class will attempt to process(send) userOperations as bundles
@@ -42,16 +43,16 @@ export class BundleProcessor {
   */
   async sendNextBundle(): Promise<string> {
     if (this.mempoolManager.size() === 0) {
-      console.log('No user ops to bundle')
+      Logger.debug('No user ops to bundle')
       return 'empty_txHash'
     }
     const entries: MempoolEntry[] =
       await this.mempoolManager.getNextEntriesToBundle()
 
-    console.log('attepting to sendNextBundle:', entries.length, entries)
+    Logger.debug('attepting to sendNextBundle:', entries.length, entries)
 
     const [bundle, storageMap] = await this.createBundle(entries)
-    console.log('bundle created:', bundle.length, bundle)
+    Logger.debug('bundle created:', bundle.length, bundle)
 
     return 'sendingNextBundle_txHash'
   }
@@ -90,7 +91,7 @@ export class BundleProcessor {
         (paymasterStatus === ReputationStatus.THROTTLED ??
           (stakedEntityCount[paymaster] ?? 0) > 1)
       ) {
-        console.log(
+        Logger.debug(
           'skipping throttled paymaster',
           entry.userOp.sender,
           entry.userOp.nonce
@@ -103,7 +104,7 @@ export class BundleProcessor {
         (deployerStatus === ReputationStatus.THROTTLED ??
           (stakedEntityCount[factory] ?? 0) > 1)
       ) {
-        console.log(
+        Logger.debug(
           'skipping throttled factory',
           entry.userOp.sender,
           entry.userOp.nonce
@@ -112,7 +113,7 @@ export class BundleProcessor {
       }
 
       if (senders.has(entry.userOp.sender)) {
-        console.log(
+        Logger.debug(
           'skipping already included sender',
           entry.userOp.sender,
           entry.userOp.nonce
@@ -131,7 +132,7 @@ export class BundleProcessor {
           false
         )
       } catch (e: any) {
-        console.log('failed 2nd validation:', e.message)
+        Logger.debug('failed 2nd validation:', e.message)
         // failed validation. don't try anymore
         this.mempoolManager.removeUserOp(entry.userOpHash)
         continue

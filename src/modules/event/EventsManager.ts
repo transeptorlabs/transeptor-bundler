@@ -2,6 +2,7 @@ import { ethers } from 'ethers'
 import { MempoolManager } from '../mempool'
 import { ProviderService } from '../provider'
 import { ReputationManager } from '../reputation'
+import { Logger } from '../logger'
 
 /**
  * listen to events. trigger ReputationManager's Included
@@ -34,11 +35,11 @@ export class EventsManager {
    */
   initEventListener(): void {
     this.entryPointContract.on('UserOperationEvent', (...args) => {
-      console.log('UserOperationEvent:', args)
+      Logger.debug('UserOperationEvent:', args)
       const ev = args.slice(-1)[0]
       void this.handleEvent(ev as any)
     })
-    console.log('Init Entrypoint contract EventListener')
+    Logger.debug('Init Entrypoint contract EventListener')
   }
 
   /**
@@ -89,7 +90,7 @@ export class EventsManager {
   }
 
   private handleAggregatorChangedEvent(ev: any): void {
-    console.log('handle ', ev.event, ev.args.aggregator)
+    Logger.debug('handle ', ev.event, ev.args.aggregator)
     this.eventAggregator = ev.args.aggregator
     this.eventAggregatorTxHash = ev.transactionHash
   }
