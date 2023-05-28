@@ -18,9 +18,8 @@ services:
     image: bundler-typescript
     ports:
       - "3000:3000"
-    environment:
-      - BENEFICIARY=0x3c812AFCf93C73338fC31d1769AD1071Ea982E7d
-      - MNEMONIC=test test test test test test test test test test test junk
+    env_file:
+      - .env
     command: >
       --port 3000
       --network http://localhost:8545
