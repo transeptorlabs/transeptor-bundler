@@ -112,7 +112,7 @@ export class MempoolManager {
 
   public dump(): Array<UserOperation> {
     Logger.debug(`Mempool size: ${this.mempool.size}`)
-    Logger.debug('Mempool entryCount:', this.entryCount)
+    Logger.debug(`Mempool entryCount: ${this.entryCount}`)
     for (const [key, value] of this.mempool.entries()) {
       Logger.debug(`Key: ${key}, Value: ${value}`)
     }

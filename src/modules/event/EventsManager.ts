@@ -35,7 +35,7 @@ export class EventsManager {
    */
   initEventListener(): void {
     this.entryPointContract.on('UserOperationEvent', (...args) => {
-      Logger.debug('UserOperationEvent:', args)
+      Logger.debug({args},'UserOperationEvent:')
       const ev = args.slice(-1)[0]
       void this.handleEvent(ev as any)
     })
@@ -90,7 +90,7 @@ export class EventsManager {
   }
 
   private handleAggregatorChangedEvent(ev: any): void {
-    Logger.debug('handle ', ev.event, ev.args.aggregator)
+    Logger.debug({event: ev.event, aggregator: ev.args.aggregator}, 'handle aggregator changed event')
     this.eventAggregator = ev.args.aggregator
     this.eventAggregatorTxHash = ev.transactionHash
   }

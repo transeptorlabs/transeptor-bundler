@@ -62,7 +62,7 @@ export class Config {
     .option('--p2p', 'p2p mode enabled)', false)
 
     const programOpts: OptionValues = program.parse(args).opts()
-    Logger.debug('programOpts', programOpts)
+    Logger.debug({programOpts}, 'programOpts')
         
     if (this.SUPPORTED_MODES.indexOf(programOpts.txMode as string) === -1) {      
       throw new Error('Invalid bundler mode')

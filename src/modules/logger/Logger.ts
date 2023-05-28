@@ -13,7 +13,17 @@ class Logger {
   public static getInstance(): pino.Logger {
     if (!Logger.instance) {
       const options: LoggerOptions = {
-        level: process.env.PINO_LOG_LEVEL || 'info',
+        level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+        formatters: {
+          level: (label) => {
+            return { level: label.toUpperCase() }
+          },
+        },
+        redact: [
+          // Specify the field(s) to redact(client's IP address information will be redacted from the log output)
+          'req.headers.authorization',
+          'req.remoteAddress',
+        ],
       }
 
       Logger.instance = pino(options)

@@ -60,7 +60,7 @@ export class ReputationManager {
   public startHourlyCron() {
     this.stopHourlyCron()
     
-    Logger.info('Set reputation interval to', 60 * 60 * 1000, '(ms)')
+    Logger.info(`Set reputation interval to ${60 * 60 * 1000} (ms)`)
 
     this.interval = setInterval(this.hourlyCron, 60 * 60 * 1000) // 60 minutes * 60 seconds * 1000 milliseconds
   }
@@ -109,7 +109,7 @@ export class ReputationManager {
     }
     const entry = this.getOrCreate(addr)
     entry.opsSeen++
-    Logger.debug('after seen++', addr, entry)
+    Logger.debug({addr, entry}, 'after seen++')
   }
 
   /**
@@ -120,7 +120,7 @@ export class ReputationManager {
   public updateIncludedStatus (addr: string): void {
     const entry = this.getOrCreate(addr)
     entry.opsIncluded++
-    Logger.debug('after Included++', addr, entry)
+    Logger.debug({addr, entry}, 'after Included++')
   }
 
   public isWhitelisted (addr: string): boolean {
@@ -162,7 +162,7 @@ export class ReputationManager {
     const entry = this.getOrCreate(addr)
     entry.opsSeen = 100
     entry.opsIncluded = 0
-    Logger.debug('crashedHandleOps', addr, entry)
+    Logger.debug({addr, entry}, 'crashedHandleOps')
   }
 
   /**

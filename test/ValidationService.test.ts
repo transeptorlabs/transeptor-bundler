@@ -34,7 +34,7 @@ describe('ValidationService', () => {
       if (net.chainId !== 1337 && net.chainId !== 31337) {
         Logger.debug('NOT deploying EntryPoint. use pre-deployed entrypoint')
       } else {
-        Logger.debug('deploying entrypoint on local network:', net.chainId)
+        Logger.debug(`deploying entrypoint on local network: ${net.chainId}`)
         await dep.deterministicDeploy(EntryPoint__factory.bytecode)
       }
     }

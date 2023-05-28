@@ -49,10 +49,10 @@ export class BundleProcessor {
     const entries: MempoolEntry[] =
       await this.mempoolManager.getNextEntriesToBundle()
 
-    Logger.debug('attepting to sendNextBundle:', entries.length, entries)
+    Logger.debug({length: entries.length, entries }, 'attepting to sendNextBundle:')
 
     const [bundle, storageMap] = await this.createBundle(entries)
-    Logger.debug('bundle created:', bundle.length, bundle)
+    Logger.debug({length: bundle.length, bundle}, 'bundle created:')
 
     return 'sendingNextBundle_txHash'
   }
@@ -92,9 +92,11 @@ export class BundleProcessor {
           (stakedEntityCount[paymaster] ?? 0) > 1)
       ) {
         Logger.debug(
-          'skipping throttled paymaster',
-          entry.userOp.sender,
-          entry.userOp.nonce
+          {   
+            sender: entry.userOp.sender,
+            nonce: entry.userOp.nonce
+          },
+          'skipping throttled paymaster'
         )
         continue
       }
@@ -105,18 +107,22 @@ export class BundleProcessor {
           (stakedEntityCount[factory] ?? 0) > 1)
       ) {
         Logger.debug(
-          'skipping throttled factory',
-          entry.userOp.sender,
-          entry.userOp.nonce
+          {
+            sender: entry.userOp.sender,
+            nonce: entry.userOp.nonce
+          },
+          'skipping throttled factory'
         )
         continue
       }
 
       if (senders.has(entry.userOp.sender)) {
         Logger.debug(
-          'skipping already included sender',
-          entry.userOp.sender,
-          entry.userOp.nonce
+          {
+            semder: entry.userOp.sender,
+            nonce: entry.userOp.nonce
+          },
+          'skipping already included sender'
         )
         // allow only a single UserOp per sender per bundle
         continue
@@ -132,7 +138,7 @@ export class BundleProcessor {
           false
         )
       } catch (e: any) {
-        Logger.debug('failed 2nd validation:', e.message)
+        Logger.error({error: e.message}, 'failed 2nd validation:')
         // failed validation. don't try anymore
         this.mempoolManager.removeUserOp(entry.userOpHash)
         continue

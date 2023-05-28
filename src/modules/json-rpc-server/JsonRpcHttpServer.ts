@@ -7,6 +7,7 @@ import { ProviderService } from '../provider'
 import { RpcMethodHandler } from '../json-rpc-handler'
 import { JsonRpcRequest } from '../types'
 import { Logger } from '../logger'
+import pinoHTTP from 'pino-http'
 
 
 export class JsonrpcHttpServer {
@@ -41,6 +42,11 @@ export class JsonrpcHttpServer {
     this.app.use(
       helmet({
         referrerPolicy: { policy: 'no-referrer-when-downgrade' },
+      })
+    )
+    this.app.use(
+      pinoHTTP({
+        logger: Logger,
       })
     )
     this.app.use(cors())
@@ -80,12 +86,13 @@ export class JsonrpcHttpServer {
         throw new Error('Full validation requires (debug_traceCall) method on eth node geth or alchemy debug_traceCall API. For local UNSAFE mode: use --unsafe')
       }
 
-      Logger.info('Bundler passed preflight check', 
+      Logger.info( 
         {
           signerBalanceWei: bal.toString(),
           network: {chainId, name},
           rpcProviderSupportsDebugTraceCall: true,
         },
+        'Bundler passed preflight check'
       )
     } catch (err: any) {
       throw err

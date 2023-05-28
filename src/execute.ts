@@ -76,6 +76,6 @@ async function runBundler() {
 }
 
 runBundler().catch(async (error) => {
-  Logger.fatal('Aborted', error)
+  Logger.fatal({error: error.message}, 'Aborted')
   process.exit(1)
 })

@@ -150,8 +150,8 @@ export class ValidationService {
         throw new Error(errFullName)
       }
       Logger.debug(
-        '==dump tree=',
-        JSON.stringify(tracerResult, null, 2)
+        {
+          dumpTree: JSON.stringify(tracerResult, null, 2)
           .replace(new RegExp(userOp.sender.toLowerCase()), '{sender}')
           .replace(
             new RegExp(getAddr(userOp.paymasterAndData) ?? '--no-paymaster--'),
@@ -161,6 +161,8 @@ export class ValidationService {
             new RegExp(getAddr(userOp.initCode) ?? '--no-initcode--'),
             '{factory}'
           )
+        }, 
+        '==dump tree='
       )
       // console.log('==debug=', ...tracerResult.numberLevels.forEach(x=>x.access), 'sender=', userOp.sender, 'paymaster=', hexlify(userOp.paymasterAndData)?.slice(0, 42))
       // errorResult is "ValidationResult"

@@ -152,7 +152,7 @@ function parseEntitySlots (stakeInfoEntities: { [addr: string]: StakeInfo | unde
  * @return list of contract addresses referenced by this UserOp
  */
 export function parseScannerResult (userOp: UserOperation, tracerResults: BundlerCollectorReturn, validationResult: ValidationResult, entryPoint: ethers.Contract): [string[], StorageMap] {
-  Logger.debug('=== simulation result:', inspect(tracerResults, true, 10, true))
+  Logger.debug({tracerResults: inspect(tracerResults, true, 10, true)}, '=== simulation')
   // todo: block access to no-code addresses (might need update to tracer)
 
   const entryPointAddress = entryPoint.address.toLowerCase()
@@ -249,12 +249,13 @@ export function parseScannerResult (userOp: UserOperation, tracerResults: Bundle
         return false
       }
 
-      Logger.debug('dump keccak calculations and reads', {
+      Logger.debug({
         entityTitle,
         entityAddr,
         k: mapOf(tracerResults.keccak, k => keccak256(k)),
         reads
-      })
+      },
+      'dump keccak calculations and reads')
 
       // scan all slots. find a referenced slot
       // at the end of the scan, we will check if the entity has stake, and report that slot if not.

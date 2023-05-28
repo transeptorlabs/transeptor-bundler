@@ -66,9 +66,9 @@ export class ProviderService {
         const tx1 = await resolveProperties(tx)
         const traceOptions = tracer2string(options)
         const ret = await (this.connectedWallet.provider as providers.JsonRpcProvider).send('debug_traceCall', [tx1, 'latest', traceOptions]).catch(e => {
-            Logger.debug('ex=', e.message)
-            Logger.debug('tracer=', traceOptions.tracer?.toString().split('\n').map((line, index) => `${index + 1}: ${line}`).join('\n'))
-          throw e
+            Logger.error({error: e.message}, 'ex=')
+            Logger.debug({traceOptions: traceOptions.tracer?.toString().split('\n').map((line, index) => `${index + 1}: ${line}`).join('\n')}, 'tracer=')
+            throw e
         })
         // return applyTracer(ret, options)
         return ret
