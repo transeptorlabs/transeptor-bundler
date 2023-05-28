@@ -1,14 +1,18 @@
-import { Config } from '../../config'
+import { ethers } from 'ethers'
 import { MempoolManager } from '../../mempool'
 import { UserOperation } from '../../types'
 
 export class EthAPI {
-  constructor () {
-    // 
+  private readonly mempoolManager: MempoolManager
+  private readonly entryPointContract: ethers.Contract
+  
+  constructor (mempoolManager: MempoolManager, entryPointContract: ethers.Contract) {
+    this.mempoolManager = mempoolManager
+    this.entryPointContract = entryPointContract
   }
 
   async sendUserOperation(userOp: UserOperation, supportedEntryPoints: string) {
-    await MempoolManager.addUserOp('userOpHash', userOp, {
+    await this.mempoolManager.addUserOp('userOpHash', userOp, {
       addresses: [],
       hash: ''
     })
@@ -16,7 +20,7 @@ export class EthAPI {
   }
 
   getSupportedEntryPoints (): string[] {
-    return [Config.entryPointAddr]
+    return [this.entryPointContract.address]
   }
 }
 

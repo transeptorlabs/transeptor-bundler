@@ -1,6 +1,6 @@
-import MempoolManager from '../src/modules/MempoolManager'
-import { MempoolEntry } from '../src/modules/Types'
-import {mockUserOperationFactory, mockEntryPointGetUserOpHash} from '../utils/test-helpers'
+import { MempoolManager } from '../src/modules/mempool'
+import { MempoolEntry } from '../src/modules/types'
+import {mockUserOperationFactory, mockEntryPointGetUserOpHash} from '../test//utils/test-helpers'
 /*
   In this script, we have a simulateClients function that represents the concurrent clients. Each client adds x items to the MempoolManager using the addUserOp method. The addPromises array is used to track the promises of concurrent add operations.
   After the items are added, the script sets up an interval using setInterval to call the createNextUserOpBundle() method every 10 seconds. 
@@ -10,7 +10,7 @@ import {mockUserOperationFactory, mockEntryPointGetUserOpHash} from '../utils/te
 const clientCount = 6 // Number of concurrent clients
 
 // Simulated processing job function
-async function processItems(items: Array<[string, MempoolEntry]>): Promise<void> {
+async function processItems(items: MempoolEntry[]): Promise<void> {
   // Simulated processing time (2 seconds)
   await new Promise((resolve) => setTimeout(resolve, 2000))
   console.log('Bundling UserOps:', items)
@@ -22,7 +22,10 @@ async function simulateClients(): Promise<void> {
     for (let i = 1; i <= clientCount / 2; i++) {
       const userOp = mockUserOperationFactory(`x000${index + 1}`, i)
       const key = mockEntryPointGetUserOpHash(userOp)
-      await MempoolManager.addUserOp(key, userOp)
+      await MempoolManager.addUserOp(key, userOp, {
+        addresses: [],
+        hash: ''
+      })
       console.log(`Client ${index + 1} added UserOps: ${key}`)
     }
   })
@@ -31,7 +34,7 @@ async function simulateClients(): Promise<void> {
   console.log('All items added to mempool:', MempoolManager.size())
 
   const removeInterval = setInterval(async () => {
-    const removedItems = await MempoolManager.createNextUserOpBundle()
+    const removedItems = await MempoolManager.getNextEntriesToBundle()
     await processItems(removedItems)
 
     if (MempoolManager.size() === 0) {

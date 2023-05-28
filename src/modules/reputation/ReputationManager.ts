@@ -1,15 +1,14 @@
 import { BigNumber } from 'ethers'
 import { ReputationEntry, ReputationParams, ReputationStatus, StakeInfo, ValidationErrors } from '../types'
 import { requireCond, tostr } from '../utils'
-import { Config } from '../config'
 
-class ReputationManager {
-  private static instance: ReputationManager | undefined = undefined
-
+export class ReputationManager {
   private entries: { [address: string]: ReputationEntry } = {}
   private readonly blackList = new Set<string>() // black-listed entities - always banned
   private readonly whitelist = new Set<string>() // white-listed entities - always OK.
   private interval: any| null = null
+  private readonly minStake: BigNumber
+  private readonly minUnstakeDelay: number
 
   private bundlerReputationParams: ReputationParams = {
     minInclusionDenominator: 10,
@@ -23,16 +22,12 @@ class ReputationManager {
     banSlack: 10
   }
 
-  private constructor() {
-    this.startHourlyCron(60 * 60 * 1000) // hourly cron
-    console.log('ReputationManager initialized')
-  }
+  constructor(minStake: BigNumber, minUnstakeDelay: number) {
+    this.minStake = minStake
+    this.minUnstakeDelay = minUnstakeDelay
 
-  public static getInstance(): ReputationManager {
-    if (!this.instance) {
-      this.instance = new ReputationManager()
-    }
-    return this.instance
+    this.startHourlyCron()
+    console.log('ReputationManager initialized')
   }
 
   /**
@@ -61,12 +56,12 @@ class ReputationManager {
     })
   }
 
-  public startHourlyCron(interval: number) {
+  public startHourlyCron() {
     this.stopHourlyCron()
     
-    console.log('Set reputation interval to', interval, '(ms)')
+    console.log('Set reputation interval to', 60 * 60 * 1000, '(ms)')
 
-    this.interval = setInterval(this.hourlyCron, Config.autoBundleInterval)
+    this.interval = setInterval(this.hourlyCron, 60 * 60 * 1000) // 60 minutes * 60 seconds * 1000 milliseconds
   }
 
   public stopHourlyCron() {
@@ -117,7 +112,7 @@ class ReputationManager {
   }
 
   /**
-   * found paymaster/deployer/agregator on-chain.
+   * found paymaster/deployer/aggregator on-chain.
    * triggered by the EventsManager.
    * @param addr
    */
@@ -205,14 +200,11 @@ class ReputationManager {
       `${title} ${info.addr} is banned`,
       ValidationErrors.Reputation, { [title]: info.addr })
 
-    requireCond(BigNumber.from(info.stake).gte(Config.minStake),
-      `${title} ${info.addr} stake ${tostr(info.stake)} is too low (min=${tostr(Config.minStake)})`,
+    requireCond(BigNumber.from(info.stake).gte(this.minStake),
+      `${title} ${info.addr} stake ${tostr(info.stake)} is too low (min=${tostr(this.minStake)})`,
       ValidationErrors.InsufficientStake)
-    requireCond(BigNumber.from(info.unstakeDelaySec).gte(BigNumber.from(Config.minUnstakeDelay)),
-      `${title} ${info.addr} unstake delay ${tostr(info.unstakeDelaySec)} is too low (min=${Config.minUnstakeDelay})`,
+    requireCond(BigNumber.from(info.unstakeDelaySec).gte(BigNumber.from(this.minUnstakeDelay)),
+      `${title} ${info.addr} unstake delay ${tostr(info.unstakeDelaySec)} is too low (min=${this.minUnstakeDelay})`,
       ValidationErrors.InsufficientStake)
   }
 }
-
-const reputationManagerInstance = ReputationManager.getInstance()
-export { reputationManagerInstance as ReputationManager }

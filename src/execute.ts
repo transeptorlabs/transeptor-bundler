@@ -1,21 +1,80 @@
-import { BundleManager, JsonrpcHttpServer, Config, MempoolManager, ReputationManager, EventsManager } from './modules'
+import { BundleManager, BundleProcessor } from './modules/bundle'
+import { Config } from './modules/config'
+import { EventsManager } from './modules/event'
+import { RpcMethodHandler } from './modules/json-rpc-handler'
+import { EthAPI, DebugAPI, Web3API } from './modules/json-rpc-handler/services'
+import { JsonrpcHttpServer } from './modules/json-rpc-server'
+import { MempoolManager } from './modules/mempool'
+import { ProviderService } from './modules/provider'
+import { ReputationManager } from './modules/reputation'
+import { ValidationService } from './modules/validation'
 
 async function runBundler() {
-    // init singleton globals
-    Config
-    MempoolManager
-    BundleManager
-    EventsManager
+  const config = new Config(process.argv)
+  const providerService = new ProviderService(config.provider, config.connectedWallet)
 
-    ReputationManager
-    ReputationManager.addWhitelist(Config.whitelist)
-    ReputationManager.addBlacklist(Config.blacklist)
+  // erc-4337 in-memory mempool
+  const mempoolManager = new MempoolManager(config.bundleSize)
 
-    const bundlerServer = new JsonrpcHttpServer()
-    await bundlerServer.start()
+  // erc-4337 entity reputation components
+  const reputationManager = new ReputationManager(config.minStake, config.minUnstakeDelay)
+  reputationManager.addWhitelist(config.whitelist)
+  reputationManager.addBlacklist(config.blacklist)
+
+  // erc-4337 user operation bundle components
+  const validationService = new ValidationService(
+    providerService,
+    reputationManager,
+    config.entryPointContract,
+    config.isUnsafeMode
+  )
+  const bundleProcessor = new BundleProcessor(
+    providerService,
+    validationService,
+    reputationManager,
+    mempoolManager,
+    config.maxBundleGas,
+    config.entryPointContract,
+    config.isConditionalTxMode()
+  )
+  const bundleManager = new BundleManager(
+    bundleProcessor,
+    config.isAutoBundle,
+    config.autoBundleInterval
+  )
+  const eventsManager = new EventsManager(
+    providerService,
+    reputationManager,
+    mempoolManager,
+    config.entryPointContract,
+  )
+
+  // get rpc server components
+  const eth = new EthAPI(mempoolManager, config.entryPointContract)
+  const debug = new DebugAPI(bundleManager, reputationManager, mempoolManager)
+  const web3 = new Web3API(config.clientVersion, config.isUnsafeMode)
+  const rpcHandler = new RpcMethodHandler(
+    eth,
+    debug,
+    web3,
+    providerService,
+    config.httpApi
+  )
+
+  // start rpc server
+  const bundlerServer = new JsonrpcHttpServer(
+    rpcHandler,
+    providerService,
+    config.entryPointContract,
+    config.connectedWallet,
+    config.isConditionalTxMode(),
+    config.isUnsafeMode,
+    config.port
+  )
+  await bundlerServer.start()
 }
 
 runBundler().catch(async (error) => {
-    console.error('Aborted', error)
-    process.exit(1)
+  console.error('Aborted', error)
+  process.exit(1)
 })

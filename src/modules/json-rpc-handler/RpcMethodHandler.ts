@@ -1,7 +1,6 @@
 import { EthAPI, Web3API, DebugAPI} from './services'
 import { ProviderService } from '../provider'
 import { JsonRpcRequest } from '../types'
-import { Config } from '../config'
 
  interface JsonRpcSuccessResponse {
   jsonrpc: '2.0';
@@ -22,16 +21,29 @@ interface JsonRpcErrorResponse {
 type JsonRpcResponse = JsonRpcSuccessResponse | JsonRpcErrorResponse;
 
 export class RpcMethodHandler {
-  private readonly eth: EthAPI = new EthAPI()
-  private readonly debug: DebugAPI = new DebugAPI()
-  private readonly web3: Web3API = new Web3API()
-  private readonly providerService: ProviderService = new ProviderService()
-  
-  constructor() {
-    //
+  private readonly eth: EthAPI
+  private readonly debug: DebugAPI
+  private readonly web3: Web3API
+  private readonly providerService: ProviderService
+  private readonly httpApi: string[]
+
+  constructor(
+    eth: EthAPI,
+    debug: DebugAPI,
+    web3: Web3API,
+    providerService: ProviderService,
+    httpApi: string[]
+  ) {
+    this.eth = eth
+    this.debug = debug
+    this.web3 = web3
+    this.providerService = providerService
+    this.httpApi = httpApi
   }
 
-  public async doHandleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
+  public async doHandleRequest(
+    request: JsonRpcRequest
+  ): Promise<JsonRpcResponse> {
     try {
       if (!request.jsonrpc || request.jsonrpc !== '2.0') {
         return this.createErrorResponse(request.id, -32600, 'Invalid Request')
@@ -41,21 +53,31 @@ export class RpcMethodHandler {
         return this.createErrorResponse(request.id, -32600, 'Invalid Request')
       }
 
-      if (!request.id || typeof request.id !== 'number' && typeof request.id !== 'string') {
+      if (
+        !request.id ||
+        (typeof request.id !== 'number' && typeof request.id !== 'string')
+      ) {
         return this.createErrorResponse(request.id, -32600, 'Invalid Request')
       }
 
       if (!request.params || !Array.isArray(request.params)) {
         return this.createErrorResponse(request.id, -32600, 'Invalid Request')
       }
-    
+
       const method = request.method
       const params = request.params
       let result: any
-      let isErrorResult: {code: number, message: string} = {code: 0, message: ''}
+      let isErrorResult: { code: number; message: string } = {
+        code: 0,
+        message: '',
+      }
 
-      if (Config.httpApi.indexOf(method.split('_')[0]) === -1) {
-        return this.createErrorResponse(request.id, -32601, `Method ${method} is not supported`)
+      if (this.httpApi.indexOf(method.split('_')[0]) === -1) {
+        return this.createErrorResponse(
+          request.id,
+          -32601,
+          `Method ${method} is not supported`
+        )
       }
 
       switch (method) {
@@ -117,7 +139,11 @@ export class RpcMethodHandler {
       }
 
       if (isErrorResult.code !== 0) {
-        return this.createErrorResponse(request.id, isErrorResult.code, isErrorResult.message)
+        return this.createErrorResponse(
+          request.id,
+          isErrorResult.code,
+          isErrorResult.message
+        )
       }
 
       return this.createSuccessResponse(request.id, result)
@@ -140,7 +166,7 @@ export class RpcMethodHandler {
       result,
     }
   }
-  
+
   private createErrorResponse(
     id: number | string,
     code: number,
@@ -155,11 +181,11 @@ export class RpcMethodHandler {
         message,
       },
     }
-  
+
     if (data) {
       errorResponse.error.data = data
     }
-  
+
     return errorResponse
   }
 }
