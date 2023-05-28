@@ -8,6 +8,7 @@ import { MempoolManager } from './modules/mempool'
 import { ProviderService } from './modules/provider'
 import { ReputationManager } from './modules/reputation'
 import { ValidationService } from './modules/validation'
+import { Logger } from './modules/logger'
 
 async function runBundler() {
   const config = new Config(process.argv)
@@ -75,6 +76,6 @@ async function runBundler() {
 }
 
 runBundler().catch(async (error) => {
-  console.error('Aborted', error)
+  Logger.fatal({error: error.message}, 'Aborted')
   process.exit(1)
 })

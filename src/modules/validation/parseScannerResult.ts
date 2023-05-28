@@ -5,6 +5,7 @@ import { inspect } from 'util'
 import { BigNumber, BigNumberish, ethers } from 'ethers'
 import { ENTRY_POINT_ABI, mapOf, PAYMASTER_ABI, requireCond, SENDER_CREATOR_ABI, TEST_OPCODE_ACCOUNT_API, TEST_OPCODE_ACCOUNT_FACTORY_API, TEST_STORAGE_ACCOUNT, toBytes32 } from '../utils'
 import { StakeInfo, StorageMap, UserOperation, ValidationErrors, ValidationResult } from '../types'
+import { Logger } from '../logger'
 
 interface CallEntry {
   to: string
@@ -151,7 +152,7 @@ function parseEntitySlots (stakeInfoEntities: { [addr: string]: StakeInfo | unde
  * @return list of contract addresses referenced by this UserOp
  */
 export function parseScannerResult (userOp: UserOperation, tracerResults: BundlerCollectorReturn, validationResult: ValidationResult, entryPoint: ethers.Contract): [string[], StorageMap] {
-  console.log('=== simulation result:', inspect(tracerResults, true, 10, true))
+  Logger.debug({tracerResults: inspect(tracerResults, true, 10, true)}, '=== simulation')
   // todo: block access to no-code addresses (might need update to tracer)
 
   const entryPointAddress = entryPoint.address.toLowerCase()
@@ -248,12 +249,13 @@ export function parseScannerResult (userOp: UserOperation, tracerResults: Bundle
         return false
       }
 
-      console.log('dump keccak calculations and reads', {
+      Logger.debug({
         entityTitle,
         entityAddr,
         k: mapOf(tracerResults.keccak, k => keccak256(k)),
         reads
-      })
+      },
+      'dump keccak calculations and reads')
 
       // scan all slots. find a referenced slot
       // at the end of the scan, we will check if the entity has stake, and report that slot if not.

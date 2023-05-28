@@ -1,5 +1,6 @@
 import { Mutex } from 'async-mutex'
 import { MempoolEntry, ReferencedCodeHashes, UserOperation } from '../types'
+import { Logger } from '../logger'
 
 /* In-memory mempool with used to manage UserOperations.
   The MempoolManager class is a Hash Table data structure that provides efficient insertion, removal, and retrieval of items based on a hash string key. 
@@ -27,7 +28,7 @@ export class MempoolManager {
     this.mempool = new Map<string, MempoolEntry>()
     this.mutex = new Mutex()
     this.bundleSize = bundleSize
-    console.log('MempoolManager initialized')
+    Logger.debug('MempoolManager initialized')
   }
 
   public async findByHash(userOpHash: string): Promise<MempoolEntry | undefined> {
@@ -110,10 +111,10 @@ export class MempoolManager {
   }
 
   public dump(): Array<UserOperation> {
-    console.log(`Mempool size: ${this.mempool.size}`)
-    console.log('Mempool entryCount:', this.entryCount)
+    Logger.debug(`Mempool size: ${this.mempool.size}`)
+    Logger.debug(`Mempool entryCount: ${this.entryCount}`)
     for (const [key, value] of this.mempool.entries()) {
-      console.log(`Key: ${key}, Value: ${value}`)
+      Logger.debug(`Key: ${key}, Value: ${value}`)
     }
     return Array.from(this.mempool.values()).map((mempoolEntry) => mempoolEntry.userOp)
   }

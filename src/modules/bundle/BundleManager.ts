@@ -1,5 +1,6 @@
 import { Mutex } from 'async-mutex'
 import { BundleProcessor } from './BundleProcessor'
+import { Logger } from '../logger'
 
 /*
   This class act as a top-level interface to bundle UserOperations.
@@ -21,7 +22,7 @@ export class BundleManager {
     if (this.bundleMode === 'auto') {
       this.startAutoBundler()
     }
-    console.log('Init BundleManager with bundleMode:', this.bundleMode)
+    Logger.debug({ bundleMode: this.bundleMode}, 'Init BundleManager with bundleMode:')
   }
 
   public setBundlingMode(mode: 'auto' | 'manual') {
@@ -42,14 +43,14 @@ export class BundleManager {
   public startAutoBundler() {
     this.stopAutoBundler()
     
-    console.log('Set auto bundler with interval: ', this.autoBundleInterval, 'ms')
+    Logger.info(`Set auto bundler with interval: ${this.autoBundleInterval} ms`)
 
     this.interval = setInterval(async () => {
       const release = await this.mutex.acquire()
       try {
         await this.doAttemptBundle()
-      } catch (error) {
-        console.error('Error running auto bundle:', error)
+      } catch (error: any) {
+        Logger.error({error: error.mesage }, 'Error running auto bundle:')
       } finally {
         release()
       }
@@ -60,7 +61,7 @@ export class BundleManager {
     if (this.interval) {
       clearInterval(this.interval)
       this.interval = null
-      console.log('Stopping auto bundler interval')
+      Logger.info('Stopping auto bundler interval')
     }
   }
 
@@ -70,8 +71,8 @@ export class BundleManager {
     try {
       const result =  await this.doAttemptBundle()
       return result
-    } catch (error) {
-      console.log('Error running force bundle:', error)
+    } catch (error: any) {
+      Logger.error({error: error.message}, 'Error running force bundle:')
       throw error
     } finally {
       release()

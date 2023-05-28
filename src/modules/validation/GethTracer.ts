@@ -53,11 +53,11 @@ export function decodeErrorReason(error: string) {
     const [message] = utils.defaultAbiCoder.decode(['string'], '0x' + error.substring(10))
     return { message }
   } else if (error.startsWith(FailedOpSig)) {
-    let [opIndex, message] = utils.defaultAbiCoder.decode(['uint256', 'string'], '0x' + error.substring(10))
-    message = `FailedOp: ${message}`
+    const [opIndex, message] = utils.defaultAbiCoder.decode(['uint256', 'string'], '0x' + error.substring(10))
+    const errorMessage = `FailedOp: ${message}`
     return {
-        message,
-        opIndex
+      message: errorMessage,
+      opIndex
     }
   }
 }

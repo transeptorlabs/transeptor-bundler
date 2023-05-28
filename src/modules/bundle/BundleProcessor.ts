@@ -5,6 +5,7 @@ import { getAddr, mergeStorageMap } from '../utils'
 import { ReputationManager } from '../reputation'
 import { ProviderService } from '../provider'
 import { ValidationService } from '../validation'
+import { Logger } from '../logger'
 
 /*
   BundleProcessor: This class will attempt to process(send) userOperations as bundles
@@ -42,16 +43,16 @@ export class BundleProcessor {
   */
   async sendNextBundle(): Promise<string> {
     if (this.mempoolManager.size() === 0) {
-      console.log('No user ops to bundle')
+      Logger.debug('No user ops to bundle')
       return 'empty_txHash'
     }
     const entries: MempoolEntry[] =
       await this.mempoolManager.getNextEntriesToBundle()
 
-    console.log('attepting to sendNextBundle:', entries.length, entries)
+    Logger.debug({length: entries.length, entries }, 'attepting to sendNextBundle:')
 
     const [bundle, storageMap] = await this.createBundle(entries)
-    console.log('bundle created:', bundle.length, bundle)
+    Logger.debug({length: bundle.length, bundle}, 'bundle created:')
 
     return 'sendingNextBundle_txHash'
   }
@@ -90,10 +91,12 @@ export class BundleProcessor {
         (paymasterStatus === ReputationStatus.THROTTLED ??
           (stakedEntityCount[paymaster] ?? 0) > 1)
       ) {
-        console.log(
-          'skipping throttled paymaster',
-          entry.userOp.sender,
-          entry.userOp.nonce
+        Logger.debug(
+          {   
+            sender: entry.userOp.sender,
+            nonce: entry.userOp.nonce
+          },
+          'skipping throttled paymaster'
         )
         continue
       }
@@ -103,19 +106,23 @@ export class BundleProcessor {
         (deployerStatus === ReputationStatus.THROTTLED ??
           (stakedEntityCount[factory] ?? 0) > 1)
       ) {
-        console.log(
-          'skipping throttled factory',
-          entry.userOp.sender,
-          entry.userOp.nonce
+        Logger.debug(
+          {
+            sender: entry.userOp.sender,
+            nonce: entry.userOp.nonce
+          },
+          'skipping throttled factory'
         )
         continue
       }
 
       if (senders.has(entry.userOp.sender)) {
-        console.log(
-          'skipping already included sender',
-          entry.userOp.sender,
-          entry.userOp.nonce
+        Logger.debug(
+          {
+            semder: entry.userOp.sender,
+            nonce: entry.userOp.nonce
+          },
+          'skipping already included sender'
         )
         // allow only a single UserOp per sender per bundle
         continue
@@ -131,7 +138,7 @@ export class BundleProcessor {
           false
         )
       } catch (e: any) {
-        console.log('failed 2nd validation:', e.message)
+        Logger.error({error: e.message}, 'failed 2nd validation:')
         // failed validation. don't try anymore
         this.mempoolManager.removeUserOp(entry.userOpHash)
         continue
