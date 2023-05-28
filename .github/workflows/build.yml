@@ -7,8 +7,6 @@ name: build
 on:
   push:
     branches: [ "*" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
   build:
@@ -30,7 +28,5 @@ jobs:
     - run: npm run build
     - name: Test
       run: npm run test
-      if: ${{ failure() }}
     - name: Lint
       run: npm run lint
-      if: ${{ failure() }}
