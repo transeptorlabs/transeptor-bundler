@@ -9,6 +9,11 @@ Dockerfile*
 /scripts
 /cache
 /contracts
+/deploy
+/abi
+/artifacts
+/dist
+/typechain
 
 # secrets
 .env
@@ -48,5 +53,4 @@ transeptor-architecture.svg
 
 # config
 hardhat.config.ts
-jest.config.js
-bundler.config.ts
+.eslint.js

@@ -1,31 +1,59 @@
 import '@nomiclabs/hardhat-ethers'
-import { EntryPoint, EntryPoint__factory } from '@account-abstraction/contracts'
-import { ValidationService } from '../src/modules/validation'
+import { ethers as hardhatEthers } from 'hardhat'
+import { BigNumber, ethers } from 'ethers'
+import { DeterministicDeployer } from '@account-abstraction/sdk'
+import { EntryPoint__factory } from '@account-abstraction/contracts'
 import { defaultAbiCoder, keccak256 } from 'ethers/lib/utils'
-import { ethers as hardhatEthers } from 'hardhat';
 import { expect } from 'chai'
 
-describe('ValidationService', () => {
-  let vs: ValidationService
-  const provider = hardhatEthers.provider
-  const ethersSigner = provider.getSigner()
-  let entryPoint: EntryPoint
+import { ProviderService } from '../src/modules/provider'
+import { ValidationService } from '../src/modules/validation'
+import { ReputationManager } from '../src/modules/reputation'
+import { testWallet } from './utils/test-helpers'
+import { ENTRY_POINT_ABI } from '../src/modules/utils'
 
-  beforeEach(async () => {
-    entryPoint = await new EntryPoint__factory(ethersSigner).deploy()
-    vs = new ValidationService()
+describe('ValidationService', () => {
+  const provider = hardhatEthers.provider
+  const connectedWallet = testWallet.connect(provider)
+
+  let vs: ValidationService
+  let ps: ProviderService
+  let rm: ReputationManager
+  let entryPointContract: ethers.Contract
+
+  before(async () => {
+    // deploy entry point
+    const dep = new DeterministicDeployer(provider)
+    const epAddr = DeterministicDeployer.getAddress(EntryPoint__factory.bytecode)
+
+    if (await dep.isContractDeployed(epAddr)) {
+      console.log(`EntryPoint already deployed at ${epAddr}`)
+    } else {
+      const net = await provider.getNetwork()
+      if (net.chainId !== 1337 && net.chainId !== 31337) {
+        console.log('NOT deploying EntryPoint. use pre-deployed entrypoint')
+      } else {
+        console.log('deploying entrypoint on local network:', net.chainId)
+        await dep.deterministicDeploy(EntryPoint__factory.bytecode)
+      }
+    }
+    
+    // ValidationService dependencies
+    ps = new ProviderService(provider, connectedWallet)
+    rm = new ReputationManager(BigNumber.from('1'), 84600)
+    entryPointContract = new ethers.Contract(epAddr, ENTRY_POINT_ABI, connectedWallet)
+  
+    vs = new ValidationService(ps, rm, entryPointContract, true)
   })
   
-  afterEach(() => {
-  })
 
   it('#getCodeHashes', async () => {
-      const epHash = keccak256(await provider.getCode(entryPoint.address.toLowerCase()))
-      const addresses = [entryPoint.address]
-      const packed = defaultAbiCoder.encode(['bytes32[]'], [[epHash]])
-      const packedHash = keccak256(packed)
-      const result = await vs.getCodeHashes(addresses)
-      expect(result.addresses).to.equal(addresses)
-      expect(result.hash).to.equal(packedHash)
-    })
+    const epHash = keccak256(await provider.getCode(entryPointContract.address.toLowerCase()))
+    const addresses = [entryPointContract.address]
+    const packed = defaultAbiCoder.encode(['bytes32[]'], [[epHash]])
+    const packedHash = keccak256(packed)
+    const result = await vs.getCodeHashes(addresses)
+    expect(result.addresses).to.eq(addresses)
+    expect(result.hash).to.eq(packedHash)
+  })
 })

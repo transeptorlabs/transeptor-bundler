@@ -1,19 +1,26 @@
-import { Config } from '../config'
+import { ContractFactory, Wallet, providers } from 'ethers'
 import { TransactionRequest } from '@ethersproject/providers'
 import { Deferrable } from '@ethersproject/properties'
 import { Result, resolveProperties } from 'ethers/lib/utils'
 import { TraceOptions, TraceResult, tracer2string } from '../validation'
-import { ContractFactory, providers } from 'ethers'
 
 export class ProviderService {
+    private readonly provider: providers.JsonRpcProvider
+    private readonly connectedWallet: Wallet 
+
+    constructor(provider: providers.JsonRpcProvider, connectedWallet: Wallet) {
+        this.provider = provider
+        this.connectedWallet = connectedWallet
+    }
+
     async getNetwork() {
-        const provider = Config.provider
+        const provider = this.provider
         return await provider.getNetwork()
     }
 
     public async checkContractDeployment(contractAddress: string): Promise<boolean> {
         // Get the bytecode of the deployed contract
-        const provider = Config.provider
+        const provider = this.provider
         const bytecode = await provider.getCode(contractAddress)
     
         // Compare the bytecode to determine if the contract is deployed
@@ -25,7 +32,7 @@ export class ProviderService {
     }
 
     public async supportsRpcMethod(method: string): Promise<boolean> {
-        const ret = await Config.provider.send(method, []).catch(e => e)
+        const ret = await this.provider.send(method, []).catch(e => e)
         let code
         if (ret.url && ret.body && ret.url.includes('alchemy.com')) {
             const alchemyRet = JSON.parse(ret.body)
@@ -37,27 +44,27 @@ export class ProviderService {
     }
 
     public async clientVerion(): Promise<string> {
-        const ret = await Config.provider.send('web3_clientVersion', [])
+        const ret = await this.provider.send('web3_clientVersion', [])
         return ret.result
     }
 
     public async getChainId(): Promise<string> {
-        const { chainId } = await Config.provider.getNetwork()
+        const { chainId } = await this.provider.getNetwork()
         return chainId.toString()
     }
 
     public async getBlockNumber(): Promise<number> {
-        return await Config.provider.getBlockNumber()
+        return await this.provider.getBlockNumber()
     }
 
     public async send(method: string, params: any[]): Promise<any> {
-        return await (Config.connectedWallet.provider as providers.JsonRpcProvider).send(method, params)
+        return await (this.connectedWallet.provider as providers.JsonRpcProvider).send(method, params)
     }
 
     public async debug_traceCall (tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any> {
         const tx1 = await resolveProperties(tx)
         const traceOptions = tracer2string(options)
-        const ret = await (Config.connectedWallet.provider as providers.JsonRpcProvider).send('debug_traceCall', [tx1, 'latest', traceOptions]).catch(e => {
+        const ret = await (this.connectedWallet.provider as providers.JsonRpcProvider).send('debug_traceCall', [tx1, 'latest', traceOptions]).catch(e => {
           console.log('ex=', e.message)
           console.log('tracer=', traceOptions.tracer?.toString().split('\n').map((line, index) => `${index + 1}: ${line}`).join('\n'))
           throw e
@@ -68,12 +75,12 @@ export class ProviderService {
 
     // a hack for network that doesn't have traceCall: mine the transaction, and use debug_traceTransaction
     public async execAndTrace (tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any> {
-        const hash = await Config.provider.getSigner().sendUncheckedTransaction(tx)
+        const hash = await this.provider.getSigner().sendUncheckedTransaction(tx)
         return await this.debug_traceTransaction(hash, options)
     }
 
     public async debug_traceTransaction (hash: string, options: TraceOptions): Promise<TraceResult | any> {
-        const ret = await Config.provider.send('debug_traceTransaction', [hash, tracer2string(options)])
+        const ret = await this.provider.send('debug_traceTransaction', [hash, tracer2string(options)])
         return ret
     }
 
@@ -88,7 +95,7 @@ export class ProviderService {
      */
     async runContractScript<T extends ContractFactory> (c: T, ctrParams: Parameters<T['getDeployTransaction']>): Promise<Result> {
         const tx = c.getDeployTransaction(...ctrParams)
-        const ret = await Config.provider.call(tx)
+        const ret = await this.provider.call(tx)
         const parsed = ContractFactory.getInterface(c.interface).parseError(ret)
         if (parsed == null) throw new Error('unable to parse script (error) response: ' + ret)
         return parsed.args

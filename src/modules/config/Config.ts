@@ -1,21 +1,19 @@
+import packageJson from '../../../package.json'
+import dotenv from 'dotenv'
 import { Command, OptionValues } from 'commander'
 import { BigNumber, Wallet, ethers, providers } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
-import packageJson from '../../../package.json'
 import { ENTRY_POINT_ABI, isValidAddress } from '../utils'
-import dotenv from 'dotenv'
 dotenv.config()
 
-class Config {
-  private static instance: Config | undefined = undefined
+export class Config {
   private DEFAULT_NETWORK = 'http://localhost:8545'
   private DEFAULT_ENTRY_POINT = '0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789'
-  private SUPPORTED_MODES = ['private', 'private-conditional', 'public-conditional', 'private-searcher', 'public-searcher']
+  private SUPPORTED_MODES = ['base', 'conditional', 'searcher']
   private SUPPORTED_NAMESPACES = ['web3', 'eth', 'debug']
 
   public readonly provider: providers.JsonRpcProvider
   public readonly connectedWallet: Wallet
-  public readonly entryPointAddr: string
   public readonly beneficiaryAddr: string
   public readonly entryPointContract: ethers.Contract
 
@@ -35,13 +33,14 @@ class Config {
   public readonly txMode: string
   public readonly clientVersion: string
   public readonly isUnsafeMode: boolean
+  public readonly isP2PMode: boolean
 
   public readonly whitelist: string[]
   public readonly blacklist: string[]
 
   public readonly httpApi: string[]
 
-  private constructor() {
+  constructor(args: readonly string[]) {
     const program = new Command()
     program
     .version(`${packageJson.version}`)
@@ -55,12 +54,13 @@ class Config {
     .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '120000')
     .option('--bundleSize <number>', 'mempool bundle size', '5')
     .option('--port <number>', 'server listening port', '3000')
-    .option('--minStake <string>', 'minunm stake a entity has to have to pass reputation system(When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH)', '1') // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
+    .option('--minStake <string>', 'minimum stake a entity has to have to pass reputation system(When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH)', '1') // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
     .option('--minUnstakeDelay <number>', 'mempool bundle size', '84600') // One day
-    .option('--txMode <string>', 'bundler transaction mode (private, private-conditional, public-conditional, private-searcher, public-searcher)', 'private')
+    .option('--txMode <string>', 'bundler transaction mode (base, conditional, searcher)', 'base')
     .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node)', false)
+    .option('--p2p', 'p2p mode enabled)', false)
 
-    const programOpts: OptionValues = program.parse(process.argv).opts()
+    const programOpts: OptionValues = program.parse(args).opts()
     console.log('programOpts', programOpts)
         
     if (this.SUPPORTED_MODES.indexOf(programOpts.txMode as string) === -1) {      
@@ -78,8 +78,7 @@ class Config {
       
       this.provider = this.getNetworkProvider(programOpts.network as string, process.env.ALCHEMY_API_KEY as string)
     } else {
-      this.provider = programOpts.network as string === 'hardhat' ? require('hardhat').ethers.provider
-      : this.getNetworkProvider(programOpts.network as string)
+      this.provider = this.getNetworkProvider(programOpts.network as string)
     } 
 
     if (!process.env.MNEMONIC) {
@@ -107,9 +106,8 @@ class Config {
     }
 
     this.connectedWallet = Wallet.fromMnemonic(process.env.MNEMONIC as string).connect(this.provider)
-    this.entryPointAddr = programOpts.entryPoint as string
     this.beneficiaryAddr = process.env.BENEFICIARY as string
-    this.entryPointContract = new ethers.Contract(this.entryPointAddr, ENTRY_POINT_ABI, this.connectedWallet)
+    this.entryPointContract = new ethers.Contract(programOpts.entryPoint as string, ENTRY_POINT_ABI, this.connectedWallet)
 
     this.autoBundleInterval = parseInt(programOpts.autoBundleInterval as string)
     this.bundleSize = parseInt(programOpts.bundleSize as string)
@@ -126,6 +124,7 @@ class Config {
     this.txMode = programOpts.txMode as string
     this.clientVersion = packageJson.version as string
     this.isUnsafeMode = programOpts.unsafe as boolean
+    this.isP2PMode = programOpts.p2p as boolean
 
     this.httpApi = (programOpts.httpApi as string).split(',')
     for (let i = 0; i < this.httpApi.length; i++) {
@@ -135,13 +134,6 @@ class Config {
     }
 
     console.log('Done init Config global')
-  }
-
-  public static getInstance(): Config {
-    if (!this.instance) {
-      this.instance = new Config()
-    }
-    return this.instance
   }
 
   private getNetworkProvider(url: string, apiKey?: string): providers.JsonRpcProvider {
@@ -158,17 +150,14 @@ class Config {
   }
 
   public isbaseTxMode(): boolean {
-    return this.txMode === 'private'
+    return this.txMode === 'base'
   }
 
   public isConditionalTxMode(): boolean {
-    return this.txMode === 'public-conditional' || this.txMode === 'private-conditional'
+    return this.txMode === 'conditional'
   }
 
   public isSearcherTxMode(): boolean {
-    return this.txMode === 'public-searcher' || this.txMode === 'private-searcher'
+    return this.txMode === 'searcher'
   }
 }
-
-const configInstance = Config.getInstance()
-export { configInstance as Config }

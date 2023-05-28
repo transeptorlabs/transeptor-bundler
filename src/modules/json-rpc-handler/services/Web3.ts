@@ -1,8 +1,13 @@
-import { Config } from '../../config'
-
 export class Web3API {
+    private readonly version: string
+    private readonly isUnsafeMode: boolean
+
+    constructor(version: string, isUnsafeMode: boolean) {
+        this.version = version
+        this.isUnsafeMode = isUnsafeMode
+    }
   
     clientVersion(): string {
-        return 'aa-bundler/' + Config.clientVersion + (Config.isUnsafeMode ? '/unsafe' : '')
+        return 'aa-bundler/' + this.version + (this.isUnsafeMode ? '/unsafe' : '')
     }
 }

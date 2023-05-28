@@ -1,33 +1,27 @@
 import { Mutex } from 'async-mutex'
-import { MempoolManager }  from '../mempool'
-import { Config } from '../config'
 import { BundleProcessor } from './BundleProcessor'
 
 /*
-  This signleton class act as a top-level interface to bundle UserOperations.
+  This class act as a top-level interface to bundle UserOperations.
   It executes the bundling process periodically(using a javascript interval) or on demand. 
 */
-class BundleManager {
-  private static instance: BundleManager | undefined = undefined
+export class BundleManager {
+  private readonly bundleProcessor: BundleProcessor
 
   private interval: any| null = null
   private mutex: Mutex = new Mutex()
   private bundleMode: 'auto' | 'manual'
-  private bundleProcessor: BundleProcessor = new BundleProcessor()
+  private autoBundleInterval: number
 
-  private constructor() {
-    this.bundleMode = Config.isAutoBundle ? 'auto' : 'manual'
+  constructor(bundleProcessor: BundleProcessor, isAutoBundle: boolean, autoBundleInterval: number) {
+    this.bundleProcessor = bundleProcessor
+    this.bundleMode = isAutoBundle ? 'auto' : 'manual'
+    this.autoBundleInterval = autoBundleInterval
+
     if (this.bundleMode === 'auto') {
       this.startAutoBundler()
     }
-    console.log('Done init BundleManager global with bundleMode:', this.bundleMode)
-  }
-
-  public static getInstance(): BundleManager {
-    if (!this.instance) {
-      this.instance = new BundleManager()
-    }
-    return this.instance
+    console.log('Init BundleManager with bundleMode:', this.bundleMode)
   }
 
   public setBundlingMode(mode: 'auto' | 'manual') {
@@ -48,7 +42,7 @@ class BundleManager {
   public startAutoBundler() {
     this.stopAutoBundler()
     
-    console.log('Set auto bundler with interval: ', Config.autoBundleInterval, 'ms')
+    console.log('Set auto bundler with interval: ', this.autoBundleInterval, 'ms')
 
     this.interval = setInterval(async () => {
       const release = await this.mutex.acquire()
@@ -59,7 +53,7 @@ class BundleManager {
       } finally {
         release()
       }
-    }, Config.autoBundleInterval)
+    }, this.autoBundleInterval)
   }
 
   public stopAutoBundler() {
@@ -85,17 +79,6 @@ class BundleManager {
   }
 
   private async doAttemptBundle(): Promise<string> {
-    if (MempoolManager.size() === 0) {
-      console.log('No user ops to bundle')
-      return 'empty_txHash'
-    }
-    
-    const entities = await MempoolManager.getNextEntriesToBundle()
-    return this.bundleProcessor.sendNextBundle(entities)
+    return await this.bundleProcessor.sendNextBundle()
   }
 }
-
-export default BundleManager.getInstance()
-
-const bundleManagerInstance = BundleManager.getInstance()
-export { bundleManagerInstance as BundleManager }

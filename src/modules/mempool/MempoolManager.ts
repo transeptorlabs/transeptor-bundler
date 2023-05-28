@@ -1,9 +1,8 @@
 import { Mutex } from 'async-mutex'
 import { MempoolEntry, ReferencedCodeHashes, UserOperation } from '../types'
-import { Config } from '../config'
 
 /* In-memory mempool with used to manage UserOperations.
-  The MempoolManager Singleton class is a Hash Table data structure that provides efficient insertion, removal, and retrieval of items based on a hash string key. 
+  The MempoolManager class is a Hash Table data structure that provides efficient insertion, removal, and retrieval of items based on a hash string key. 
   It utilizes the async-mutex package to prevent race conditions when modifying or accessing the hash table state.
 
   Key methods and their functionality:
@@ -14,29 +13,21 @@ import { Config } from '../config'
     - size: return current size of mempool for debugging
     - dump: print all items in mempool for debugging
     - clearState: clear all items in mempool for debugging
-    - resetInstance: reset the singleton instance for testing
     */
-class MempoolManager {
-  private static instance: MempoolManager | undefined = undefined
-
+export class MempoolManager {
   private readonly mempool: Map<string, MempoolEntry>
   private readonly mutex: Mutex
   private readonly MAX_MEMPOOL_USEROPS_PER_SENDER = 4
+  private readonly bundleSize: number
 
   // count entities in mempool.
   private entryCount: { [addr: string]: number | undefined } = {}
 
-  private constructor() {
+  constructor(bundleSize: number) {
     this.mempool = new Map<string, MempoolEntry>()
     this.mutex = new Mutex()
+    this.bundleSize = bundleSize
     console.log('MempoolManager initialized')
-  }
-
-  public static getInstance(): MempoolManager  {
-    if (!this.instance) {
-      this.instance = new MempoolManager()
-    }
-    return this.instance
   }
 
   public async findByHash(userOpHash: string): Promise<MempoolEntry | undefined> {
@@ -86,7 +77,7 @@ class MempoolManager {
       const entries: MempoolEntry[] = []
       let count = 0
       for (const [key, value] of this.mempool.entries()) {
-        if (count >= Config.bundleSize) {
+        if (count >= this.bundleSize) {
           break
         }
 
@@ -127,8 +118,3 @@ class MempoolManager {
     return Array.from(this.mempool.values()).map((mempoolEntry) => mempoolEntry.userOp)
   }
 }
-
-export default MempoolManager.getInstance()
-
-const mempoolManagerInstance = MempoolManager.getInstance()
-export { mempoolManagerInstance as MempoolManager }
