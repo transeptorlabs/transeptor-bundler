@@ -72,6 +72,7 @@ async function runBundler() {
     config.isUnsafeMode,
     config.port
   )
+  Logger.info('Test github action does not trigger on push to * branch')
   await bundlerServer.start()
 }
 
