@@ -1,4 +1,3 @@
-import '@nomiclabs/hardhat-ethers'
 import { ethers as hardhatEthers } from 'hardhat'
 import { BigNumber, ethers } from 'ethers'
 import { DeterministicDeployer } from '@account-abstraction/sdk'
