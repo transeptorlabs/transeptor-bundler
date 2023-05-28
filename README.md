@@ -1,6 +1,7 @@
 <p align="center"><a href="https://transeptorlabs.io/docs/category/bundler"><img width="500" title="Transeptor" src='https://transeptorlabs.io/img/brand/transeptor.png' /></a></p>
 
 ![Node Version](https://img.shields.io/badge/node-18.x-green)
+![Github workflow build status(main)](https://img.shields.io/github/actions/workflow/status/transeptorlabs/transeptor-bundler/build.yml?branch=main)
 
 This is the core repository for Transeptor, a simple modular Typescript implementation of an ERC-4337 Bundler developed by Transeptor Labs.
 
