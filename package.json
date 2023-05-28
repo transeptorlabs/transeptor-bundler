@@ -12,7 +12,7 @@
     "deploy:local": "hardhat deploy --network localhost",
     "signer:balance": "hardhat run ./scripts/check-signer-balance.ts --network localhost",
     "fetch:abi": "ts-node scripts/entrypoint-abi.ts",
-    "test": "hardhat test | pino-pretty",
+    "test": "hardhat test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "arch-diagram": "npx arkit -f src/execute.ts -o transeptor-architecture.svg ",
