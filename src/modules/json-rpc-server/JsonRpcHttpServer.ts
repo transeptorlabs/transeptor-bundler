@@ -7,7 +7,6 @@ import { ProviderService } from '../provider'
 import { RpcMethodHandler } from '../json-rpc-handler'
 import { JsonRpcRequest } from '../types'
 import { Logger } from '../logger'
-import pinoHTTP from 'pino-http'
 
 
 export class JsonrpcHttpServer {
@@ -42,11 +41,6 @@ export class JsonrpcHttpServer {
     this.app.use(
       helmet({
         referrerPolicy: { policy: 'no-referrer-when-downgrade' },
-      })
-    )
-    this.app.use(
-      pinoHTTP({
-        logger: Logger,
       })
     )
     this.app.use(cors())
