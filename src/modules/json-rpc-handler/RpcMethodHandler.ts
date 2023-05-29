@@ -1,8 +1,8 @@
 import { EthAPI, Web3API, DebugAPI} from './services'
 import { ProviderService } from '../provider'
 import { JsonRpcRequest } from '../types'
-import { ethers } from 'ethers';
-import { Logger } from '../logger';
+import { ethers } from 'ethers'
+import { Logger } from '../logger'
 
  interface JsonRpcSuccessResponse {
   jsonrpc: '2.0';
@@ -210,18 +210,18 @@ export class RpcMethodHandler {
   */
   private deepHexlify(obj: any): any {
     if (typeof obj === 'function') {
-      return undefined;
+      return undefined
     }
     if (obj == null || typeof obj === 'string' || typeof obj === 'boolean') {
-      return obj;
+      return obj
     }
     else if (obj._isBigNumber != null || typeof obj !== 'object') {
       return ethers.utils.hexlify(obj).replace(/^0x0/, '0x')
     }
     if (Array.isArray(obj)) {
-      return obj.map(member => this.deepHexlify(member));
+      return obj.map(member => this.deepHexlify(member))
     }
     return Object.keys(obj)
-      .reduce((set, key) => (Object.assign(Object.assign({}, set), { [key]: this.deepHexlify(obj[key]) })), {});
+      .reduce((set, key) => (Object.assign(Object.assign({}, set), { [key]: this.deepHexlify(obj[key]) })), {})
  }
 }
