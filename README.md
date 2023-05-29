@@ -14,7 +14,6 @@ We provide you with a smooth, developer-friendly experience. Our modular approac
 ## Contributing
 We welcome contributions to enhance the functionality, usability, and performance of the ERC-4337 Bundler project. If you would like to contribute, please follow these guidelines [here](https://github.com/transeptorlabs/transeptor-bundler/blob/main/CONTRIBUTING.md)
 
-  
 ## Running Bundler Locally
 Storage access rules and opcode banning are two mechanisms implemented in Ethereum clients to enforce security and prevent certain malicious or unsafe behaviors on the network. The Bundler has multiple configrations to ensure it can implement the full spec storage access rules and opcode banning. Specifically, the Bundler will need to use `debug_traceCall` method to enforce the full spec storage access rules and opcode banning.
 
