@@ -9,7 +9,7 @@ dotenv.config()
 
 export class Config {
   private DEFAULT_NETWORK = 'http://localhost:8545'
-  private DEFAULT_ENTRY_POINT = '0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789'
+  private DEFAULT_ENTRY_POINT = '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789'
   private SUPPORTED_MODES = ['base', 'conditional', 'searcher']
   private SUPPORTED_NAMESPACES = ['web3', 'eth', 'debug']
 
