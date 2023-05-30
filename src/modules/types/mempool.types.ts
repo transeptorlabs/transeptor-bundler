@@ -1,4 +1,4 @@
-import { BigNumberish } from 'ethers';
+import { BigNumberish } from 'ethers'
 import { UserOperation } from './userop.types'
 import { ReferencedCodeHashes } from './validation.types'
 

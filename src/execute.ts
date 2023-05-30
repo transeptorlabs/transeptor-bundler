@@ -42,8 +42,6 @@ async function runBundler() {
     bundleProcessor,
     config.isAutoBundle,
     config.autoBundleInterval,
-    validationService,
-    mempoolManager
   )
   const eventsManager = new EventsManager(
     providerService,
@@ -56,7 +54,9 @@ async function runBundler() {
   const eth = new EthAPI(
     config.entryPointContract,
     providerService,
-    bundleManager
+    bundleManager,
+    validationService,
+    mempoolManager
   )
   const debug = new DebugAPI(bundleManager, reputationManager, mempoolManager)
   const web3 = new Web3API(config.clientVersion, config.isUnsafeMode)

@@ -41,7 +41,7 @@ export class BundleProcessor {
   /*
     submit a bundle. After submitting the bundle, remove the remove UserOps from the mempool 
   */
-  async sendNextBundle(isAuto: boolean = false): Promise<string> {
+  async sendNextBundle(isAuto = false): Promise<string> {
     if (this.mempoolManager.size() === 0) {
       Logger.debug('No user ops to bundle')
       return 'ok'

@@ -7,7 +7,6 @@ import { decodeErrorReason } from './GethTracer'
 import { ReputationManager } from '../reputation'
 import { parseScannerResult } from './parseScannerResult'
 import { Logger } from '../logger'
-import { JsonRpcProvider } from '@ethersproject/providers'
 
 export class ValidationService {
   private readonly providerService: ProviderService
@@ -118,7 +117,6 @@ export class ValidationService {
       userOp.verificationGasLimit
     )
 
-    // TODO: fix failing call to debug_traceCall
     const tracerResult: BundlerCollectorReturn =
       await this.providerService.debug_traceCall(
         {

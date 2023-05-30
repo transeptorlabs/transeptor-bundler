@@ -5,21 +5,29 @@ import { getAddr, requireCond, tostr } from '../../utils'
 import { ProviderService } from '../../provider'
 import { resolveProperties } from 'ethers/lib/utils'
 import { BundleManager } from '../../bundle'
+import { MempoolManager } from '../../mempool'
+import { ValidationService } from '../../validation'
 
 export class EthAPI {
   private readonly entryPointContract: ethers.Contract
   private readonly providerService: ProviderService
   private readonly bundleManager: BundleManager
+  private readonly validationService: ValidationService
+  private readonly mempoolManager: MempoolManager
   private readonly HEX_REGEX = /^0x[a-fA-F\d]*$/i
 
   constructor(
     entryPointContract: ethers.Contract,
     providerService: ProviderService,
     bundleManager: BundleManager,
+    validationService: ValidationService,
+    mempoolManager: MempoolManager
   ) {
     this.entryPointContract = entryPointContract
     this.providerService = providerService
     this.bundleManager = bundleManager
+    this.validationService = validationService
+    this.mempoolManager = mempoolManager
   }
 
   public async sendUserOperation(userOp: UserOperation, supportedEntryPoints: string) {
@@ -33,7 +41,7 @@ export class EthAPI {
         entryPoint: supportedEntryPoints,
         paymaster: getAddr(userOpReady.paymasterAndData),
       },
-      "send UserOperation"
+      'send UserOperation'
     )
 
     const callData = this.entryPointContract.interface.encodeFunctionData(
@@ -49,20 +57,37 @@ export class EthAPI {
       result
     )[0] as string
 
-    await this.bundleManager.sendUserOperation(userOpReady, userOpHash, userOpHash)
+    Logger.debug('first validation and sendUserOperation to mempool')
+    const validationResult = await this.validationService.validateUserOp(
+      userOp,
+      undefined
+    )
+
+    await this.mempoolManager.addUserOp(
+      userOp,
+      userOpHash,
+      validationResult.returnInfo.prefund,
+      validationResult.senderInfo,
+      validationResult.referencedContracts,
+      validationResult.aggregatorInfo?.addr
+    )
+
+    if (this.mempoolManager.isMempoolOverloaded()) {
+      await this.bundleManager.doAttemptAutoBundle(true)
+    }
 
     return userOpHash
   }
 
   public getSupportedEntryPoints(): string[] {
-    return [this.entryPointContract.address];
+    return [this.entryPointContract.address]
   }
 
   private async validateParameters(
     userOp1: UserOperation,
     entryPointInput: string
   ): Promise<void> {
-    requireCond(entryPointInput != null, "No entryPoint param", -32602);
+    requireCond(entryPointInput != null, 'No entryPoint param', -32602)
 
     if (
       entryPointInput?.toString().toLowerCase() !==
@@ -70,39 +95,39 @@ export class EthAPI {
     ) {
       throw new Error(
         `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${this.entryPointContract.address}`
-      );
+      )
     }
     // minimal sanity check: userOp exists, and all members are hex
-    requireCond(userOp1 != null, "No UserOperation param");
-    const userOp = (await resolveProperties(userOp1)) as any;
+    requireCond(userOp1 != null, 'No UserOperation param')
+    const userOp = (await resolveProperties(userOp1)) as any
 
     const fields = [
-      "sender",
-      "nonce",
-      "initCode",
-      "callData",
-      "paymasterAndData",
-      "signature",
-      "preVerificationGas",
-      "verificationGasLimit",
-      "callGasLimit",
-      "maxFeePerGas",
-      "maxPriorityFeePerGas",
-    ];
+      'sender',
+      'nonce',
+      'initCode',
+      'callData',
+      'paymasterAndData',
+      'signature',
+      'preVerificationGas',
+      'verificationGasLimit',
+      'callGasLimit',
+      'maxFeePerGas',
+      'maxPriorityFeePerGas',
+    ]
 
     fields.forEach((key) => {
       requireCond(
         userOp[key] != null,
-        "Missing userOp field: " + key + JSON.stringify(userOp),
+        'Missing userOp field: ' + key + JSON.stringify(userOp),
         -32602
-      );
-      const value: string = userOp[key].toString();
+      )
+      const value: string = userOp[key].toString()
       requireCond(
         value.match(this.HEX_REGEX) != null,
         `Invalid hex value for property ${key}:${value} in UserOp`,
         -32602
-      );
-    });
+      )
+    })
   }
 }
 
