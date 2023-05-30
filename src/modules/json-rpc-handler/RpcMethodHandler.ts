@@ -1,26 +1,9 @@
+import { ethers } from 'ethers'
 import { EthAPI, Web3API, DebugAPI} from './services'
 import { ProviderService } from '../provider'
-import { JsonRpcRequest } from '../types'
-import { ethers } from 'ethers'
+import { JsonRpcErrorResponse, JsonRpcRequest, JsonRpcResponse, JsonRpcSuccessResponse } from '../types'
 import { Logger } from '../logger'
-
- interface JsonRpcSuccessResponse {
-  jsonrpc: '2.0';
-  result: any;
-  id: number | string;
-}
-
-interface JsonRpcErrorResponse {
-  jsonrpc: '2.0';
-  error: {
-    code: number;
-    message: string;
-    data?: any;
-  };
-  id: number | string;
-}
-
-type JsonRpcResponse = JsonRpcSuccessResponse | JsonRpcErrorResponse;
+import { RpcError } from '../utils'
 
 export class RpcMethodHandler {
   private readonly eth: EthAPI
@@ -43,44 +26,16 @@ export class RpcMethodHandler {
     this.httpApi = httpApi
   }
 
-  public async doHandleRequest(
-    request: JsonRpcRequest
-  ): Promise<JsonRpcResponse> {
+  public async doHandleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
     try {
-      if (!request.jsonrpc || request.jsonrpc !== '2.0') {
-        return this.createErrorResponse(request.id, -32600, 'Invalid Request')
+      const isValidRpc: boolean | JsonRpcErrorResponse = this.jsonRpcRequestValidator(request)
+      if (typeof isValidRpc !== 'boolean') {
+        return isValidRpc
       }
-
-      if (!request.method || typeof request.method !== 'string') {
-        return this.createErrorResponse(request.id, -32600, 'Invalid Request')
-      }
-
-      if (
-        !request.id ||
-        (typeof request.id !== 'number' && typeof request.id !== 'string')
-      ) {
-        return this.createErrorResponse(request.id, -32600, 'Invalid Request')
-      }
-
-      if (!request.params || !Array.isArray(request.params)) {
-        return this.createErrorResponse(request.id, -32600, 'Invalid Request')
-      }
-
+    
       const method = request.method
       const params = request.params
       let result: any
-      let isErrorResult: { code: number; message: string } = {
-        code: 0,
-        message: '',
-      }
-
-      if (this.httpApi.indexOf(method.split('_')[0]) === -1) {
-        return this.createErrorResponse(
-          request.id,
-          -32601,
-          `Method ${method} is not supported`
-        )
-      }
 
       Logger.debug({method: method, param: params}, '>> Handling request')
       switch (method) {
@@ -91,13 +46,6 @@ export class RpcMethodHandler {
           result = this.eth.getSupportedEntryPoints()
           break
         case 'eth_sendUserOperation':
-          if (!params || params.length !== 2) {
-            isErrorResult = {
-              code: -32602,
-              message: 'Invalid params',
-            }
-            break
-          }
           result = await this.eth.sendUserOperation(params[0], params[1])
           break
         case 'eth_estimateUserOperationGas':
@@ -134,28 +82,43 @@ export class RpcMethodHandler {
           result = this.debug.dumpReputation()
           break
         default:
-          isErrorResult = {
-            code: -32601,
-            message: `Method ${method} is not supported`,
-          }
-          break
-      }
-
-      if (isErrorResult.code !== 0) {
-        return this.createErrorResponse(
-          request.id,
-          isErrorResult.code,
-          isErrorResult.message
-        )
+          throw new RpcError( `Method ${method} is not supported`, -32601)
       }
 
       return this.createSuccessResponse(request.id, result)
     } catch (error: any) {
-      return this.createErrorResponse(request.id, -32000, error.message)
+      Logger.error({error: error.message}, `Error calling method ${request.method}`)
+      return this.createErrorResponse(request.id, error.code ? error.code : -32000, error.message)
     }
   }
 
-  private async requestValidator(request: JsonRpcRequest): Promise<boolean> {
+  private jsonRpcRequestValidator(request: JsonRpcRequest): boolean | JsonRpcErrorResponse {
+    if (!request.jsonrpc || request.jsonrpc !== '2.0') {
+      return this.createErrorResponse(request.id, -32600, 'Invalid Request')
+    }
+
+    if (!request.method || typeof request.method !== 'string') {
+      return this.createErrorResponse(request.id, -32600, 'Invalid Request')
+    }
+
+    if (
+      !request.id ||
+      (typeof request.id !== 'number' && typeof request.id !== 'string')
+    ) {
+      return this.createErrorResponse(request.id, -32600, 'Invalid Request')
+    }
+
+    if (!request.params || !Array.isArray(request.params)) {
+      return this.createErrorResponse(request.id, -32600, 'Invalid Request')
+    }
+
+    if (this.httpApi.indexOf(request.method.split('_')[0]) === -1) {
+      return this.createErrorResponse(
+        request.id,
+        -32601,
+        `Method ${request.method} is not supported`
+      )
+    }
     return true
   }
 
@@ -171,7 +134,7 @@ export class RpcMethodHandler {
       jsonrpc: '2.0',
       id,
       result: hexlifyResult,
-    }, '<< Sending response')
+    }, '<< Sending sucess response')
 
     return {
       jsonrpc: '2.0',
@@ -201,6 +164,8 @@ export class RpcMethodHandler {
     if (data) {
       errorResponse.error.data = data
     }
+
+    Logger.debug(errorResponse, '<< Sending error response')
 
     return errorResponse
   }

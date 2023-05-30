@@ -41,18 +41,16 @@ export class BundleProcessor {
   /*
     submit a bundle. After submitting the bundle, remove the remove UserOps from the mempool 
   */
-  async sendNextBundle(): Promise<string> {
+  async sendNextBundle(isAuto: boolean = false): Promise<string> {
     if (this.mempoolManager.size() === 0) {
       Logger.debug('No user ops to bundle')
-      return 'empty_txHash'
+      return 'ok'
     }
-    const entries: MempoolEntry[] =
-      await this.mempoolManager.getNextEntriesToBundle()
 
-    Logger.debug({length: entries.length, entries }, 'attepting to sendNextBundle:')
-
+    // if isAuto is true, send the all pending UserOps in the mempool as a bundle
+    const entries: MempoolEntry[] = isAuto ? await this.mempoolManager.getAllPending() : await this.mempoolManager.getNextPending()
     const [bundle, storageMap] = await this.createBundle(entries)
-    Logger.debug({length: bundle.length, bundle}, 'bundle created:')
+    Logger.debug({length: bundle.length, bundle}, 'bundle created')
 
     return 'sendingNextBundle_txHash'
   }

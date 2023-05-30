@@ -28,7 +28,7 @@ describe('MempoolManager', () => {
         addresses: [],
         hash: ''
       },
-      status: 'idle',
+      status: 'pending',
     }
     const mempoolEntry2 = {
       userOp: userOp2,
@@ -37,7 +37,7 @@ describe('MempoolManager', () => {
         addresses: [],
         hash: ''
       },
-      status: 'idle',
+      status: 'pending',
     }
     const mempoolEntry3 = {
       userOp: userOp3,
@@ -46,7 +46,7 @@ describe('MempoolManager', () => {
         addresses: [],
         hash: ''
       },
-      status: 'idle',
+      status: 'pending',
     }
 
     await mempoolManager.addUserOp(userOpHash1 ,userOp1, {
@@ -144,7 +144,7 @@ describe('MempoolManager', () => {
       hash: ''
     })
 
-    const nextBundle = await mempoolManager.getNextEntriesToBundle()
+    const nextBundle = await mempoolManager.getNextPending()
 
     expect(nextBundle.length).to.eq(5)
     expect(nextBundle[0].status).to.eq('bundling')

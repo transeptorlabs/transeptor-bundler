@@ -32,7 +32,7 @@ export class DebugAPI {
   }
 
   async sendBundleNow(): Promise<string> {
-    return await this.bundleManager.forceSendBundle()
+    return await this.bundleManager.doAttemptAutoBundle(true)
   }
 
   async setReputation(param: any[]): Promise<ReputationEntry[]> {

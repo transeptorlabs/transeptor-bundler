@@ -8,7 +8,6 @@ import { RpcMethodHandler } from '../json-rpc-handler'
 import { JsonRpcRequest } from '../types'
 import { Logger } from '../logger'
 
-
 export class JsonrpcHttpServer {
   private app: express.Application
   private readonly httpServer: Server

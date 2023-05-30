@@ -53,16 +53,16 @@ export class Config {
     .option('--maxBundleGas <number>', 'max gas the bundler will use in transactions', '5e6')
     .option('--auto', 'automatic bundling', false)
     .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '120000')
-    .option('--bundleSize <number>', 'mempool bundle size', '5')
+    .option('--bundleSize <number>', 'maximum # of pending mempool entities', '5')
     .option('--port <number>', 'server listening port', '3000')
     .option('--minStake <string>', 'minimum stake a entity has to have to pass reputation system(When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH)', '1') // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
-    .option('--minUnstakeDelay <number>', 'mempool bundle size', '84600') // One day
+    .option('--minUnstakeDelay <number>', 'time paymaster has to wait to unlock the stake(seconds)', '84600') // One day
     .option('--txMode <string>', 'bundler transaction mode (base, conditional, searcher)', 'base')
     .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node)', false)
     .option('--p2p', 'p2p mode enabled)', false)
 
     const programOpts: OptionValues = program.parse(args).opts()
-    Logger.debug({programOpts}, 'programOpts')
+    Logger.debug({programOpts}, 'program args')
         
     if (this.SUPPORTED_MODES.indexOf(programOpts.txMode as string) === -1) {      
       throw new Error('Invalid bundler mode')

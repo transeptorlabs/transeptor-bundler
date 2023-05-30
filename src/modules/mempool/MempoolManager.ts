@@ -1,6 +1,7 @@
 import { Mutex } from 'async-mutex'
-import { MempoolEntry, ReferencedCodeHashes, UserOperation } from '../types'
+import { MempoolEntry, ReferencedCodeHashes, StakeInfo, UserOperation } from '../types'
 import { Logger } from '../logger'
+import { BigNumberish } from 'ethers'
 
 /* In-memory mempool with used to manage UserOperations.
   The MempoolManager class is a Hash Table data structure that provides efficient insertion, removal, and retrieval of items based on a hash string key. 
@@ -10,7 +11,8 @@ import { Logger } from '../logger'
     - findByHash(): Retrieves the MempoolEntry associated with the given hash string key. It acquires the mutex to ensure thread-safety during access.
     - addUserOp(): Sets the value associated with the given userOpHash string key. It acquires the mutex to ensure thread-safety during modification.
     - removeUserOp(): Removes the MempoolEntry with the given userOpHash string key from the mempool. It acquires the mutex to ensure thread-safety during modification. Returns true if the item is successfully removed, and false if the item doesn't exist.
-    - createNextUserOpBundle(): Removes items from the MempoolEntry in bundles of the specified bundleSize. It acquires the mutex to ensure thread-safety during modification. Returns an array of key-value pairs ([string, MempoolEntry]) representing the removed MempoolEntrys.
+    - getNextIdle(): Gets items from the MempoolEntry in bundles of the specified bundleSize that have status of idle. It acquires the mutex to ensure thread-safety during modification. Returns an array of key-value pairs ([string, MempoolEntry]) representing the removed MempoolEntrys.
+    - getNextIdle(): Gets all items from the MempoolEntry that have status of idle. It acquires the mutex to ensure thread-safety during modification. Returns an array of key-value pairs ([string, MempoolEntry]) representing the removed MempoolEntrys.
     - size: return current size of mempool for debugging
     - dump: print all items in mempool for debugging
     - clearState: clear all items in mempool for debugging
@@ -19,7 +21,7 @@ export class MempoolManager {
   private readonly mempool: Map<string, MempoolEntry>
   private readonly mutex: Mutex
   private readonly MAX_MEMPOOL_USEROPS_PER_SENDER = 4
-  private readonly bundleSize: number
+  private readonly bundleSize: number // maximum # of pending mempool entities
 
   // count entities in mempool.
   private entryCount: { [addr: string]: number | undefined } = {}
@@ -40,14 +42,16 @@ export class MempoolManager {
     }
   }
 
-  public async addUserOp(userOpHash: string, userOp:UserOperation, referencedContracts: ReferencedCodeHashes): Promise<void> {
+  public async addUserOp(userOp: UserOperation, userOpHash: string, prefund: BigNumberish, senderInfo: StakeInfo, referencedContracts: ReferencedCodeHashes, aggregator?: string): Promise<void> {
     const release = await this.mutex.acquire()
     try {
       const entry: MempoolEntry = {
         userOp,
         userOpHash,
+        prefund,
         referencedContracts,
-        status: 'idle',
+        aggregator,
+        status: 'pending',
       }
       this.entryCount[entry.userOp.sender] = (this.entryCount[entry.userOp.sender] ?? 0) + 1
       this.mempool.set(userOpHash, entry)
@@ -72,7 +76,7 @@ export class MempoolManager {
     }
   }
 
-  public async getNextEntriesToBundle(): Promise< MempoolEntry[]> {
+  public async getNextPending(): Promise< MempoolEntry[]> {
     const release = await this.mutex.acquire()
     try {
       const entries: MempoolEntry[] = []
@@ -94,6 +98,28 @@ export class MempoolManager {
     } finally {
       release()
     }
+  }
+
+  public async getAllPending(): Promise< MempoolEntry[]> {
+    const release = await this.mutex.acquire()
+    try {
+      const entries: MempoolEntry[] = []
+      for (const [key, value] of this.mempool.entries()) {
+        if (value.status === 'bundling') {
+          continue
+        }
+
+        value.status = 'bundling'
+        entries.push(value)
+      }
+      return entries
+    } finally {
+      release()
+    }
+  }
+
+  public isMempoolOverloaded(): boolean {
+    return this.size() >= this.bundleSize
   }
 
   public size(): number {

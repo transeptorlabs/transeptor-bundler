@@ -1,5 +1,5 @@
 import { ContractFactory, Wallet, providers } from 'ethers'
-import { TransactionRequest } from '@ethersproject/providers'
+import { JsonRpcProvider, TransactionRequest } from '@ethersproject/providers'
 import { Deferrable } from '@ethersproject/properties'
 import { Result, resolveProperties } from 'ethers/lib/utils'
 import { TraceOptions, TraceResult, tracer2string } from '../validation'
@@ -62,10 +62,17 @@ export class ProviderService {
         return await (this.connectedWallet.provider as providers.JsonRpcProvider).send(method, params)
     }
 
+    public async call(contractAddress: string, data: string): Promise<any> {
+        return await (this.connectedWallet.provider as providers.JsonRpcProvider).call({
+            to: contractAddress,
+            data: data
+        })
+    }
+
     public async debug_traceCall (tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any> {
         const tx1 = await resolveProperties(tx)
         const traceOptions = tracer2string(options)
-        const ret = await (this.connectedWallet.provider as providers.JsonRpcProvider).send('debug_traceCall', [tx1, 'latest', traceOptions]).catch(e => {
+        const ret = await this.provider.send('debug_traceCall', [tx1, 'latest', traceOptions]).catch(e => {
             Logger.error({error: e.message}, 'ex=')
             Logger.debug({traceOptions: traceOptions.tracer?.toString().split('\n').map((line, index) => `${index + 1}: ${line}`).join('\n')}, 'tracer=')
             throw e

@@ -41,7 +41,9 @@ async function runBundler() {
   const bundleManager = new BundleManager(
     bundleProcessor,
     config.isAutoBundle,
-    config.autoBundleInterval
+    config.autoBundleInterval,
+    validationService,
+    mempoolManager
   )
   const eventsManager = new EventsManager(
     providerService,
@@ -51,7 +53,11 @@ async function runBundler() {
   )
 
   // get rpc server components
-  const eth = new EthAPI(mempoolManager, config.entryPointContract)
+  const eth = new EthAPI(
+    config.entryPointContract,
+    providerService,
+    bundleManager
+  )
   const debug = new DebugAPI(bundleManager, reputationManager, mempoolManager)
   const web3 = new Web3API(config.clientVersion, config.isUnsafeMode)
   const rpcHandler = new RpcMethodHandler(
