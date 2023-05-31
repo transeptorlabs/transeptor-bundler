@@ -75,7 +75,8 @@ export class BundleManager {
     const release = await this.mutex.acquire()
     try {
       Logger.debug({ force }, 'attepting to sendNextBundle')
-      return await this.bundleProcessor.sendNextBundle(force)
+      const { transactionHash } = await this.bundleProcessor.sendNextBundle(force)
+      return transactionHash
     } finally {
       release()
     }

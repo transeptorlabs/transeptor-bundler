@@ -36,7 +36,9 @@ async function runBundler() {
     mempoolManager,
     config.maxBundleGas,
     config.entryPointContract,
-    config.isConditionalTxMode()
+    config.isConditionalTxMode(),
+    config.beneficiaryAddr,
+    config.minSignerBalance
   )
   const bundleManager = new BundleManager(
     bundleProcessor,
@@ -73,7 +75,6 @@ async function runBundler() {
     rpcHandler,
     providerService,
     config.entryPointContract,
-    config.connectedWallet,
     config.isConditionalTxMode(),
     config.isUnsafeMode,
     config.port

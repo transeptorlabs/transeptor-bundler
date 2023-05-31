@@ -1,5 +1,5 @@
-import { ContractFactory, Wallet, providers } from 'ethers'
-import { JsonRpcProvider, TransactionRequest } from '@ethersproject/providers'
+import { ContractFactory, Wallet, ethers, providers } from 'ethers'
+import { TransactionRequest } from '@ethersproject/providers'
 import { Deferrable } from '@ethersproject/properties'
 import { Result, resolveProperties } from 'ethers/lib/utils'
 import { TraceOptions, TraceResult, tracer2string } from '../validation'
@@ -14,9 +14,8 @@ export class ProviderService {
         this.connectedWallet = connectedWallet
     }
 
-    async getNetwork() {
-        const provider = this.provider
-        return await provider.getNetwork()
+    async getNetwork(): Promise<ethers.providers.Network> {
+        return await this.provider.getNetwork()
     }
 
     public async checkContractDeployment(contractAddress: string): Promise<boolean> {
@@ -56,6 +55,27 @@ export class ProviderService {
 
     public async getBlockNumber(): Promise<number> {
         return await this.provider.getBlockNumber()
+    }
+
+    public async getSignerBalance(): Promise<ethers.BigNumber> {
+        return await this.connectedWallet.getBalance()
+    }
+
+    public async getSignerAddress(): Promise<string> {
+        return await this.connectedWallet.getAddress()
+    }
+
+    public async getFeeData(): Promise<ethers.providers.FeeData> {
+        return await this.provider.getFeeData()
+    }
+
+    public async getTransactionCount(): Promise<number> {
+        return await this.connectedWallet.getTransactionCount()
+    }
+
+    public async signTransaction(tx: Deferrable<TransactionRequest>): Promise<string> {
+        const tx1 = await resolveProperties(tx)
+        return this.connectedWallet.signTransaction(tx1)
     }
 
     public async send(method: string, params: any[]): Promise<any> {
@@ -101,7 +121,7 @@ export class ProviderService {
      * example usasge:
      *     hashes = await runContractScript(provider, new GetUserOpHashes__factory(), [entryPoint.address, userOps]).then(ret => ret.userOpHashes)
      */
-    async runContractScript<T extends ContractFactory> (c: T, ctrParams: Parameters<T['getDeployTransaction']>): Promise<Result> {
+    public async runContractScript<T extends ContractFactory> (c: T, ctrParams: Parameters<T['getDeployTransaction']>): Promise<Result> {
         const tx = c.getDeployTransaction(...ctrParams)
         const ret = await this.provider.call(tx)
         const parsed = ContractFactory.getInterface(c.interface).parseError(ret)

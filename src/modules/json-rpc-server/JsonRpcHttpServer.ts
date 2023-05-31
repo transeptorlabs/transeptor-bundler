@@ -14,15 +14,14 @@ export class JsonrpcHttpServer {
   private readonly rpc: RpcMethodHandler 
   private readonly providerService: ProviderService 
   private readonly entryPointContract: ethers.Contract
-  private readonly connectedWallet: Wallet
   private readonly isConditionalTxMode: boolean
   private readonly isUnsafeMode: boolean
   private readonly port: number
   
   constructor(
-    rpc: RpcMethodHandler, providerService: ProviderService,
+    rpc: RpcMethodHandler, 
+    providerService: ProviderService,
     entryPointContract: ethers.Contract,
-    connectedWallet: Wallet,
     isConditionalTxMode: boolean,
     isUnsafeMode: boolean,
     port: number
@@ -30,7 +29,6 @@ export class JsonrpcHttpServer {
     this.rpc = rpc
     this.providerService = providerService
     this.entryPointContract = entryPointContract
-    this.connectedWallet = connectedWallet
     this.isConditionalTxMode = isConditionalTxMode
     this.isUnsafeMode = isUnsafeMode
     this.port = port
@@ -65,7 +63,8 @@ export class JsonrpcHttpServer {
         }
       }
       
-      const bal = await this.connectedWallet.getBalance()
+      // TODO: replace with providerService.getBalance()
+      const bal = await this.providerService.getSignerBalance()
       if (bal.eq(0)) {
         throw new Error('Bundler signer account is not funded:')
       }
@@ -81,6 +80,7 @@ export class JsonrpcHttpServer {
 
       Logger.info( 
         {
+          signerAddress: await this.providerService.getSignerAddress(),
           signerBalanceWei: bal.toString(),
           network: {chainId, name},
           rpcProviderSupportsDebugTraceCall: true,
