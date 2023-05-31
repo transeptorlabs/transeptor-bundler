@@ -1,4 +1,4 @@
-import { BigNumber, ethers } from 'ethers'
+import { BigNumber, ContractFactory, ethers } from 'ethers'
 import {
   MempoolEntry,
   ReputationStatus,
@@ -8,7 +8,7 @@ import {
   ValidateUserOpResult,
 } from '../types'
 import { MempoolManager } from '../mempool'
-import { getAddr, mergeStorageMap } from '../utils'
+import { GET_USEROP_HASHES_ABI, GET_USEROP_HASHES_BYTECODE, getAddr, mergeStorageMap } from '../utils'
 import { ReputationManager } from '../reputation'
 import { ProviderService } from '../provider'
 import { ValidationService } from '../validation'
@@ -247,6 +247,7 @@ export class BundleProcessor {
       // TODO: parse ret, and revert if needed.
       Logger.debug({ret}, 'ret=')
       Logger.debug({length: userOps.length}, 'sent handleOps')
+
       // hashes are needed for debug rpc only.
       const hashes = await this.getUserOpHashes(userOps)
       return {
@@ -310,5 +311,20 @@ export class BundleProcessor {
     if (e.error?.code === -32601) {
       throw e
     }
+  }
+
+  // TODO: add unit test
+  async getUserOpHashes(userOps: UserOperation[]): Promise<string[]> {
+    const getCodeHashesFactory = new ethers.ContractFactory(
+      GET_USEROP_HASHES_ABI,
+      GET_USEROP_HASHES_BYTECODE
+    ) as ContractFactory
+
+    const { userOpHashes } = await this.providerService.runContractScript(
+      getCodeHashesFactory,
+      [this.entryPointContract.address, userOps]
+    )
+
+    return userOpHashes
   }
 }

@@ -1,7 +1,9 @@
 import { Mutex } from 'async-mutex'
-import { MempoolEntry, ReferencedCodeHashes, StakeInfo, UserOperation } from '../types'
+import { MempoolEntry, ReferencedCodeHashes, StakeInfo, UserOperation, ValidationErrors } from '../types'
 import { Logger } from '../logger'
-import { BigNumberish } from 'ethers'
+import { BigNumber, BigNumberish } from 'ethers'
+import { getAddr, requireCond } from '../utils'
+import { ReputationManager } from '../reputation'
 
 /* In-memory mempool with used to manage UserOperations.
   The MempoolManager class is a Hash Table data structure that provides efficient insertion, removal, and retrieval of items based on a hash string key. 
@@ -20,28 +22,25 @@ import { BigNumberish } from 'ethers'
 export class MempoolManager {
   private readonly mempool: Map<string, MempoolEntry>
   private readonly mutex: Mutex
-  private readonly MAX_MEMPOOL_USEROPS_PER_SENDER = 4
+  private readonly MAX_MEMPOOL_USEROPS_PER_SENDER = 4 // max # of pending mempool entities per sender
   private readonly bundleSize: number // maximum # of pending mempool entities
+  private readonly reputationManager: ReputationManager
 
-  // count entities in mempool.
-  private entryCount: { [addr: string]: number | undefined } = {}
+  private entryCount: { [addr: string]: number | undefined } = {} // count entities in mempool.
 
-  constructor(bundleSize: number) {
+  constructor( reputationManager: ReputationManager, bundleSize: number) {
     this.mempool = new Map<string, MempoolEntry>()
     this.mutex = new Mutex()
     this.bundleSize = bundleSize
+    this.reputationManager = reputationManager
     Logger.debug('MempoolManager initialized')
   }
 
-  public async findByHash(userOpHash: string): Promise<MempoolEntry | undefined> {
-    const release = await this.mutex.acquire()
-    try {
-      return this.mempool.get(userOpHash)
-    } finally {
-      release()
-    }
-  }
-
+  /* 
+    * add userOp into the mempool, after initial validation.
+    * replace existing, if any (and if new gas is higher)
+    * revets if unable to add UserOp to mempool (too many UserOps with this sender)
+  */ 
   public async addUserOp(userOp: UserOperation, userOpHash: string, prefund: BigNumberish, senderInfo: StakeInfo, referencedContracts: ReferencedCodeHashes, aggregator?: string): Promise<void> {
     const release = await this.mutex.acquire()
     try {
@@ -53,19 +52,93 @@ export class MempoolManager {
         aggregator,
         status: 'pending',
       }
-      this.entryCount[entry.userOp.sender] = (this.entryCount[entry.userOp.sender] ?? 0) + 1
-      this.mempool.set(userOpHash, entry)
+
+      const oldEntry = this.findBySenderNonce(userOp.sender, userOp.nonce)
+      if (oldEntry) {
+        // TODO: check that the status is not 'bundling'
+        this.checkReplaceUserOp(oldEntry, entry)
+        Logger.debug({ sender: userOp.sender, nonce: userOp.nonce }, 'replace userOp')
+        this.mempool.delete(oldEntry.userOpHash)
+        this.mempool.set(userOpHash, entry)
+      } else {
+        Logger.debug({ sender: userOp.sender, nonce: userOp.nonce }, 'add userOp')
+        this.entryCount[entry.userOp.sender] = (this.entryCount[entry.userOp.sender] ?? 0) + 1
+        this.checkSenderCountInMempool(userOp, senderInfo)
+        this.mempool.set(userOpHash, entry)
+      }
+      this.updateSeenStatus(aggregator, userOp)
     } finally {
       release()
     }
   }
 
-  public async removeUserOp(userOpHash: string): Promise<boolean> {
+  /*
+   * check if there are already too many entries in mempool for that sender.
+    (allow 4 entities if unstaked, or any number if staked)
+  */
+  private checkSenderCountInMempool (userOp: UserOperation, senderInfo: StakeInfo): void {
+    if ((this.entryCount[userOp.sender] ?? 0) > this.MAX_MEMPOOL_USEROPS_PER_SENDER) {
+      // already enough entities with this sender in mempool.
+      // check that it is staked
+      this.reputationManager.checkStake('account', senderInfo)
+    }
+  }
+
+  private updateSeenStatus (aggregator: string | undefined, userOp: UserOperation): void {
+    this.reputationManager.updateSeenStatus(aggregator)
+    this.reputationManager.updateSeenStatus(getAddr(userOp.paymasterAndData))
+    this.reputationManager.updateSeenStatus(getAddr(userOp.initCode))
+  }
+
+  private checkReplaceUserOp (oldEntry: MempoolEntry, entry: MempoolEntry): void {
+    const oldMaxPriorityFeePerGas = BigNumber.from(oldEntry.userOp.maxPriorityFeePerGas).toNumber()
+    const newMaxPriorityFeePerGas = BigNumber.from(entry.userOp.maxPriorityFeePerGas).toNumber()
+    const oldMaxFeePerGas = BigNumber.from(oldEntry.userOp.maxFeePerGas).toNumber()
+    const newMaxFeePerGas = BigNumber.from(entry.userOp.maxFeePerGas).toNumber()
+    // the error is "invalid fields", even though it is detected only after validation
+    requireCond(newMaxPriorityFeePerGas >= oldMaxPriorityFeePerGas * 1.1,
+      `Replacement UserOperation must have higher maxPriorityFeePerGas (old=${oldMaxPriorityFeePerGas} new=${newMaxPriorityFeePerGas}) `, ValidationErrors.InvalidFields)
+    requireCond(newMaxFeePerGas >= oldMaxFeePerGas * 1.1,
+      `Replacement UserOperation must have higher maxFeePerGas (old=${oldMaxFeePerGas} new=${newMaxFeePerGas}) `, ValidationErrors.InvalidFields)
+  }
+
+  public async findByHash(userOpHash: string): Promise<MempoolEntry | undefined> {
     const release = await this.mutex.acquire()
     try {
-      const entry = this.mempool.get(userOpHash)
+      return this.mempool.get(userOpHash)
+    } finally {
+      release()
+    }
+  }
+
+  private findBySenderNonce(sender: string, nonce: BigNumberish): MempoolEntry | undefined{
+    for (const [key, value] of this.mempool.entries()) {
+      if (value.userOp.sender === sender && value.userOp.nonce === nonce) {
+        return value
+      }
+    }
+
+    return  undefined
+  }
+
+  // TODO: add test
+  public async removeUserOp(userOpOrHash: string | UserOperation): Promise<boolean> {
+    const release = await this.mutex.acquire()
+    try {
+      let entry: MempoolEntry | undefined
+      if (typeof userOpOrHash === 'string') {
+        entry = this.mempool.get(userOpOrHash)
+      } else {
+        entry = this.findBySenderNonce(userOpOrHash.sender, userOpOrHash.nonce)
+      }
+
+      if (!entry) {
+        return false
+      }
+
+      const userOpHash = entry.userOpHash
       const result = this.mempool.delete(userOpHash)
-      if (result && entry) {
+      if (result) {
         const count = (this.entryCount[entry.userOp.sender] ?? 0) - 1
         count <= 0 ? delete this.entryCount[entry.userOp.sender] : this.entryCount[entry.userOp.sender] = count
       }

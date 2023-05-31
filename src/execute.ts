@@ -14,13 +14,13 @@ async function runBundler() {
   const config = new Config(process.argv)
   const providerService = new ProviderService(config.provider, config.connectedWallet)
 
-  // erc-4337 in-memory mempool
-  const mempoolManager = new MempoolManager(config.bundleSize)
-
   // erc-4337 entity reputation components
   const reputationManager = new ReputationManager(config.minStake, config.minUnstakeDelay)
   reputationManager.addWhitelist(config.whitelist)
   reputationManager.addBlacklist(config.blacklist)
+
+  // erc-4337 in-memory mempool
+  const mempoolManager = new MempoolManager(reputationManager, config.bundleSize)
 
   // erc-4337 user operation bundle components
   const validationService = new ValidationService(
