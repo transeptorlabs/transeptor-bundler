@@ -3,6 +3,7 @@ import { MempoolManager } from '../mempool'
 import { ProviderService } from '../provider'
 import { ReputationManager } from '../reputation'
 import { Logger } from '../logger'
+import { Log } from '@ethersproject/providers'
 
 /**
  * listen to events. trigger ReputationManager's Included
@@ -33,7 +34,7 @@ export class EventsManager {
   /**
    * automatically listen to all UserOperationEvent events and will flush mempool from already-included UserOperations
    */
-  initEventListener(): void {
+  private initEventListener(): void {
     this.entryPointContract.on('UserOperationEvent', (...args) => {
       Logger.debug({args},'UserOperationEvent:')
       const ev = args.slice(-1)[0]
@@ -44,8 +45,8 @@ export class EventsManager {
 
   /**
    * process all new events since last run
-   */
-  async handlePastEvents(): Promise<void> {
+  */
+  public async handlePastEvents(): Promise<void> {
     if (this.lastBlock === undefined) {
       this.lastBlock = Math.max(
         1,
@@ -110,5 +111,46 @@ export class EventsManager {
       const addr = data.slice(0, 42)
       this.reputationManager.updateIncludedStatus(addr)
     }
+  }
+
+  public async getUserOperationEvent (userOpHash: string): Promise<ethers.Event> {
+    // TODO: eth_getLogs is throttled. must be acceptable for finding a UserOperation by hash
+    const event = await this.entryPointContract.queryFilter(this.entryPointContract.filters.UserOperationEvent(userOpHash))
+    return event[0]
+  }
+
+  /* filter full bundle logs, and leave only logs for the given userOpHash
+    // @param userOpEvent - the event of our UserOp (known to exist in the logs)
+    // @param logs - full bundle logs. after each group of logs there is a single UserOperationEvent with unique hash.
+  */
+  public filterLogs (userOpEvent: ethers.Event, logs: Log[]): Log[] {
+    let startIndex = -1
+    let endIndex = -1
+    const events = Object.values(this.entryPointContract.interface.events)
+    const beforeExecutionTopic = this.entryPointContract.interface.getEventTopic(events.find(e => e.name === 'BeforeExecution')!)
+    
+    logs.forEach((log, index) => {
+      if (log?.topics[0] === beforeExecutionTopic) {
+        // all UserOp execution events start after the "BeforeExecution" event.
+        startIndex = endIndex = index
+      } else if (log?.topics[0] === userOpEvent.topics[0]) {
+        // process UserOperationEvent
+        if (log.topics[1] === userOpEvent.topics[1]) {
+          // it's our userOpHash. save as end of logs array
+          endIndex = index
+        } else {
+          // it's a different hash. remember it as beginning index, but only if we didn't find our end index yet.
+          if (endIndex === -1) {
+            startIndex = index
+          }
+        }
+      }
+    })
+
+    if (endIndex === -1) {
+      throw new Error('fatal: no UserOperationEvent in logs')
+    }
+
+    return logs.slice(startIndex + 1, endIndex)
   }
 }

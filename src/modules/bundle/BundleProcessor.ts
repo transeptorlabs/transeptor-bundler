@@ -234,7 +234,6 @@ export class BundleProcessor {
 
       let ret: string
       if (this.isConditionalTxMode) {
-        Logger.debug({storageMap}, 'eth_sendRawTransactionConditional')
         ret = await this.providerService.send('eth_sendRawTransactionConditional', [
           signedTx, { knownAccounts: storageMap }
         ])
@@ -242,8 +241,9 @@ export class BundleProcessor {
       } else {
         // ret = await this.signer.sendTransaction(tx)
         ret = await this.providerService.send('eth_sendRawTransaction', [signedTx])
-        Logger.debug('eth_sendRawTransaction ret=', ret)
+        Logger.debug({ret}, 'eth_sendRawTransaction ret=')
       }
+
       // TODO: parse ret, and revert if needed.
       Logger.debug({ret}, 'ret=')
       Logger.debug({length: userOps.length}, 'sent handleOps')

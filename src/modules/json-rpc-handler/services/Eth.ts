@@ -1,5 +1,5 @@
-import { ethers } from 'ethers'
-import { UserOperation } from '../../types'
+import { BigNumber, ethers } from 'ethers'
+import { UserOperation, UserOperationByHashResponse, UserOperationReceipt } from '../../types'
 import { Logger } from '../../logger'
 import { getAddr, requireCond, tostr } from '../../utils'
 import { ProviderService } from '../../provider'
@@ -7,6 +7,7 @@ import { resolveProperties } from 'ethers/lib/utils'
 import { BundleManager } from '../../bundle'
 import { MempoolManager } from '../../mempool'
 import { ValidationService } from '../../validation'
+import { EventsManager } from '../../event'
 
 export class EthAPI {
   private readonly entryPointContract: ethers.Contract
@@ -14,6 +15,7 @@ export class EthAPI {
   private readonly bundleManager: BundleManager
   private readonly validationService: ValidationService
   private readonly mempoolManager: MempoolManager
+  private readonly eventsManager: EventsManager
   private readonly HEX_REGEX = /^0x[a-fA-F\d]*$/i
 
   constructor(
@@ -21,13 +23,15 @@ export class EthAPI {
     providerService: ProviderService,
     bundleManager: BundleManager,
     validationService: ValidationService,
-    mempoolManager: MempoolManager
+    mempoolManager: MempoolManager,
+    eventsManager: EventsManager
   ) {
     this.entryPointContract = entryPointContract
     this.providerService = providerService
     this.bundleManager = bundleManager
     this.validationService = validationService
     this.mempoolManager = mempoolManager
+    this.eventsManager = eventsManager
   }
 
   public async sendUserOperation(userOp: UserOperation, supportedEntryPoints: string) {
@@ -81,6 +85,86 @@ export class EthAPI {
 
   public getSupportedEntryPoints(): string[] {
     return [this.entryPointContract.address]
+  }
+
+  public async getUserOperationReceipt (userOpHash: string): Promise<UserOperationReceipt | null> {
+    requireCond(userOpHash?.toString()?.match(this.HEX_REGEX) != null, 'Missing/invalid userOpHash', -32601)
+    const event = await this.eventsManager.getUserOperationEvent(userOpHash)
+    if (event == null) {
+      return null
+    }
+    const receipt = await event.getTransactionReceipt()
+    const logs = this.eventsManager.filterLogs(event, receipt.logs)
+    return {
+      userOpHash,
+      sender: event.args?.sender,
+      nonce: event.args?.nonce,
+      actualGasCost: event.args?.actualGasCost,
+      actualGasUsed: event.args?.actualGasUsed,
+      success: event.args?.success,
+      logs,
+      receipt
+    }
+  }
+
+  async getUserOperationByHash (userOpHash: string): Promise<UserOperationByHashResponse | null> {
+    requireCond(userOpHash?.toString()?.match(this.HEX_REGEX) != null, 'Missing/invalid userOpHash', -32601)
+    const event = await this.eventsManager.getUserOperationEvent(userOpHash)
+    if (event == null) {
+      return null
+    }
+    const tx = await event.getTransaction()
+    if (tx.to !== this.entryPointContract.address) {
+      throw new Error('unable to parse transaction')
+    }
+
+    const parsed = this.entryPointContract.interface.parseTransaction(tx)
+    const ops: UserOperation[] = parsed?.args.ops
+    if (ops == null) {
+      throw new Error('failed to parse transaction')
+    }
+    
+    const op = ops.find(op =>
+      op.sender === event.args?.sender &&
+      BigNumber.from(op.nonce).eq(event.args?.nonce)
+    )
+    if (op == null) {
+      throw new Error('unable to find userOp in transaction')
+    }
+
+    const {
+      sender,
+      nonce,
+      initCode,
+      callData,
+      callGasLimit,
+      verificationGasLimit,
+      preVerificationGas,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+      paymasterAndData,
+      signature
+    } = op
+
+    return {
+      userOperation: {
+        sender,
+        nonce,
+        initCode,
+        callData,
+        callGasLimit,
+        verificationGasLimit,
+        preVerificationGas,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+        paymasterAndData,
+        signature
+      },
+      entryPoint: this.entryPointContract.address,
+      transactionHash: tx.hash,
+      blockHash: tx.blockHash ?? '',
+      blockNumber: tx.blockNumber ?? 0
+    }
   }
 
   private async validateParameters(

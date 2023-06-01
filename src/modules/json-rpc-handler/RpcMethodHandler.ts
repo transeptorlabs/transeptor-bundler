@@ -52,10 +52,10 @@ export class RpcMethodHandler {
           result = true
           break
         case 'eth_getUserOperationReceipt':
-          result = true
+          result = await this.eth.getUserOperationReceipt(params[0])
           break
         case 'eth_getUserOperationByHash':
-          result = true
+          result = await this.eth.getUserOperationByHash(params[0])
           break
         case 'web3_clientVersion':
           result = this.web3.clientVersion()

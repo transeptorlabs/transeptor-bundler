@@ -58,7 +58,8 @@ async function runBundler() {
     providerService,
     bundleManager,
     validationService,
-    mempoolManager
+    mempoolManager,
+    eventsManager
   )
   const debug = new DebugAPI(bundleManager, reputationManager, mempoolManager)
   const web3 = new Web3API(config.clientVersion, config.isUnsafeMode)

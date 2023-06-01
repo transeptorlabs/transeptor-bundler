@@ -53,7 +53,7 @@ export class Config {
     .option('--maxBundleGas <number>', 'max gas the bundler will use in transactions', '5e6')
     .option('--auto', 'automatic bundling', false)
     .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '120000')
-    .option('--bundleSize <number>', 'maximum # of pending mempool entities', '5')
+    .option('--bundleSize <number>', 'maximum # of pending mempool entities', '2')
     .option('--port <number>', 'server listening port', '3000')
     .option('--minStake <string>', 'minimum stake a entity has to have to pass reputation system(When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH)', '1') // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
     .option('--minUnstakeDelay <number>', 'time paymaster has to wait to unlock the stake(seconds)', '84600') // One day
