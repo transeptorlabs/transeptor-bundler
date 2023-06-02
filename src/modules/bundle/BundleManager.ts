@@ -26,14 +26,13 @@ export class BundleManager {
     if (this.bundleMode === 'auto') {
       this.startAutoBundler()
     }
-    Logger.debug(
-      { bundleMode: this.bundleMode },
-      'Init BundleManager with bundleMode:'
-    )
+    Logger.info(`Bundle mode set to ${ this.bundleMode}`)
+    Logger.debug('BundleManager initialized')
   }
   
   public setBundlingMode(mode: 'auto' | 'manual') {
     this.bundleMode = mode
+    Logger.info({ mode }, 'Set bundling mode')
 
     if (mode === 'auto') {
       this.startAutoBundler()

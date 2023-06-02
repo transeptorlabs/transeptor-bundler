@@ -36,7 +36,7 @@ async function runBundler() {
     mempoolManager,
     config.maxBundleGas,
     config.entryPointContract,
-    config.isConditionalTxMode(),
+    config.txMode,
     config.beneficiaryAddr,
     config.minSignerBalance
   )
@@ -76,7 +76,7 @@ async function runBundler() {
     rpcHandler,
     providerService,
     config.entryPointContract,
-    config.isConditionalTxMode(),
+    config.txMode,
     config.isUnsafeMode,
     config.port
   )

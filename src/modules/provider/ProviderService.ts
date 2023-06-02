@@ -36,7 +36,8 @@ export class ProviderService {
         let code
         if (ret.url && ret.body && ret.url.includes('alchemy.com')) {
             const alchemyRet = JSON.parse(ret.body)
-            code = alchemyRet.error?.code ?? alchemyRet.code
+            // code = alchemyRet.error?.code ?? alchemyRet.code
+            code === -32602 // wrong params (meaning, method exists) alchemy can not support full validation
         } else {
             code = ret.error?.code ?? ret.code
         }

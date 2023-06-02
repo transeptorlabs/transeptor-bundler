@@ -60,7 +60,7 @@ export class ReputationManager {
   public startHourlyCron() {
     this.stopHourlyCron()
     
-    Logger.info(`Set reputation interval to ${60 * 60 * 1000} (ms)`)
+    Logger.info(`Set reputation interval to execute every ${60 * 60 * 1000} (ms)`)
 
     this.interval = setInterval(this.hourlyCron, 60 * 60 * 1000) // 60 minutes * 60 seconds * 1000 milliseconds
   }

@@ -14,7 +14,7 @@ export class JsonrpcHttpServer {
   private readonly rpc: RpcMethodHandler 
   private readonly providerService: ProviderService 
   private readonly entryPointContract: ethers.Contract
-  private readonly isConditionalTxMode: boolean
+  private readonly txMode: string
   private readonly isUnsafeMode: boolean
   private readonly port: number
   
@@ -22,14 +22,14 @@ export class JsonrpcHttpServer {
     rpc: RpcMethodHandler, 
     providerService: ProviderService,
     entryPointContract: ethers.Contract,
-    isConditionalTxMode: boolean,
+    txMode: string,
     isUnsafeMode: boolean,
     port: number
   ) {
     this.rpc = rpc
     this.providerService = providerService
     this.entryPointContract = entryPointContract
-    this.isConditionalTxMode = isConditionalTxMode
+    this.txMode = txMode
     this.isUnsafeMode = isUnsafeMode
     this.port = port
 
@@ -43,7 +43,7 @@ export class JsonrpcHttpServer {
     this.app.use(cors())
     this.app.use(express.json())
 
-    this.app.post('/v1', this.handleRequest.bind(this))
+    this.app.post('/rpc', this.handleRequest.bind(this))
 
     this.httpServer = createServer(this.app)
   }
@@ -55,7 +55,7 @@ export class JsonrpcHttpServer {
       }
 
       const { name, chainId } = await this.providerService.getNetwork()
-    
+
       if (chainId === 31337 || chainId === 1337) {
         const isDeployed = await this.providerService.checkContractDeployment(this.entryPointContract.address)
         if (!isDeployed) {
@@ -63,27 +63,27 @@ export class JsonrpcHttpServer {
         }
       }
       
-      // TODO: replace with providerService.getBalance()
       const bal = await this.providerService.getSignerBalance()
       if (bal.eq(0)) {
         throw new Error('Bundler signer account is not funded:')
       }
 
-      if (this.isConditionalTxMode && !await this.providerService.supportsRpcMethod('eth_sendRawTransactionConditional')) {
+      if (this.txMode === 'conditional' && !await this.providerService.supportsRpcMethod('eth_sendRawTransactionConditional')) {
         throw new Error('(conditional mode requires connection to a node that support eth_sendRawTransactionConditional')
       }
 
-      // full validation requires (debug_traceCall) method on eth node geth or alchemy debug_traceCall API (for local UNSAFE mode: use --unsafe)
-      if (!this.isUnsafeMode && !await this.providerService.supportsRpcMethod('debug_traceCall')) {
-        throw new Error('Full validation requires (debug_traceCall) method on eth node geth or alchemy debug_traceCall API. For local UNSAFE mode: use --unsafe')
+      // full validation requires (debug_traceCall) method on eth node geth and can only be run in private and conditional txMode
+      if (this.txMode === 'searcher' && !this.isUnsafeMode && !await this.providerService.supportsRpcMethod('debug_traceCall')) {
+        throw new Error(`${this.txMode} mode does not support full validation. Full validation requires (debug_traceCall) method on eth node geth. For local UNSAFE mode: use --unsafe --txMode base or --unsafe --txMode conditional`)
       }
 
-      Logger.info( 
+      Logger.info(
         {
           signerAddress: await this.providerService.getSignerAddress(),
           signerBalanceWei: bal.toString(),
           network: {chainId, name},
-          rpcProviderSupportsDebugTraceCall: true,
+          txMode: this.txMode,
+          unsafeMode: this.isUnsafeMode,
         },
         'Bundler passed preflight check'
       )

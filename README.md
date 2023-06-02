@@ -32,8 +32,8 @@ GETH node supports `debug_traceCall` with javascript "tracer"
 2. Add environment variables to `.env`-  `MNEMONIC=<your_seed_phrase>` and `BENEFICIARY=<address_to_receive_funds>`
 3. Start local GETH client `npm run geth:start` (will start at http://localhost:8545/)
 4. Deploy entry point contract and fund the bundler signer account `npm run deploy:local`
-5. Start up Bundler server `npm run start`
-6. Bundler will start up in `private` mode
+5. Start up Bundler server `npm run start:base`
+6. Bundler will start up in `base` mode with full validation
 
 Use `npm run geth:stop` to stop GETH client
 
@@ -46,7 +46,7 @@ Alchemy nodes support both `debug_traceCall` and `debug_traceTransaction` API, t
 1. Need to sign up for an [Alchemy account](https://auth.alchemy.com/signup)
 2. Add environment variables to `.env` - `ALCHEMY_API_KEY=<your-api-key>`, `MNEMONIC=<your_seed_phrase_for_bundler_signer_account>` and `BENEFICIARY=<address_to_receive_funds>`
 3. Start up Bundler in searcher mode `npm run start:searcher`
-4. Bundler will start up in `private-searcher` mode
+4. Bundler will start up in `searcher` mode
 
 ## ERC-4337 Entrypoint contract
 This Bundler uses [Infinitism](https://github.com/eth-infinitism/account-abstraction) `@account-abstraction/contracts`(version 0.6.0) entry point contract for local development. The `npm fetch:abi` script fetched abi for the contract and saves it locally at `./abi/entrypoint.js`.

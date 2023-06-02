@@ -26,7 +26,7 @@ export class BundleProcessor {
 
   private readonly maxBundleGas: number
   private readonly entryPointContract: ethers.Contract
-  private readonly isConditionalTxMode: boolean
+  private readonly txMode: string
   private readonly beneficiary: string
   public readonly minSignerBalance: BigNumber
 
@@ -37,7 +37,7 @@ export class BundleProcessor {
     mempoolManager: MempoolManager,
     maxBundleGas: number,
     entryPointContract: ethers.Contract,
-    isConditionalTxMode: boolean,
+    txMode: string,
     beneficiary: string,
     minSignerBalance: BigNumber
   ) {
@@ -47,7 +47,7 @@ export class BundleProcessor {
     this.mempoolManager = mempoolManager
     this.maxBundleGas = maxBundleGas
     this.entryPointContract = entryPointContract
-    this.isConditionalTxMode = isConditionalTxMode
+    this.txMode = txMode
     this.beneficiary = beneficiary
     this.minSignerBalance = minSignerBalance
   }
@@ -55,7 +55,7 @@ export class BundleProcessor {
   /*
     submit a bundle. After submitting the bundle, remove the remove UserOps from the mempool 
   */
-  async sendNextBundle(isAuto = false): Promise<SendBundleReturn> {
+  public async sendNextBundle(isAuto = false): Promise<SendBundleReturn> {
     if (this.mempoolManager.size() === 0) {
       Logger.debug('No user ops to bundle')
       return {
@@ -199,7 +199,7 @@ export class BundleProcessor {
       }
 
       // If sender's account already exist: replace with its storage root hash
-      if (this.isConditionalTxMode && entry.userOp.initCode.length <= 2) {
+      if (this.txMode === 'conditional' && entry.userOp.initCode.length <= 2) {
         // in conditionalRpc: always put root hash (not specific storage slots) for "sender" entries
         const { storageHash } = await this.providerService.send('eth_getProof',[entry.userOp.sender, [], 'latest'])
         storageMap[entry.userOp.sender.toLowerCase()] = storageHash
@@ -233,7 +233,7 @@ export class BundleProcessor {
       const signedTx = await this.providerService.signTransaction(tx)
 
       let ret: string
-      if (this.isConditionalTxMode) {
+      if (this.txMode === 'conditional') {
         ret = await this.providerService.send('eth_sendRawTransactionConditional', [
           signedTx, { knownAccounts: storageMap }
         ])
@@ -300,7 +300,7 @@ export class BundleProcessor {
     // below min-balance redeem to the signer, to keep it active.
     if (currentBalance.lte(this.minSignerBalance)) {
       beneficiary = await this.providerService.getSignerAddress()
-      console.log('low balance. using ', beneficiary, 'as beneficiary instead of ', this.beneficiary)
+      Logger.debug(`low balance. using, ${beneficiary}, as beneficiary instead of , ${this.beneficiary}`)
     }
     return beneficiary
   }
@@ -314,7 +314,7 @@ export class BundleProcessor {
   }
 
   // TODO: add unit test
-  async getUserOpHashes(userOps: UserOperation[]): Promise<string[]> {
+  public async getUserOpHashes(userOps: UserOperation[]): Promise<string[]> {
     const getCodeHashesFactory = new ethers.ContractFactory(
       GET_USEROP_HASHES_ABI,
       GET_USEROP_HASHES_BYTECODE
