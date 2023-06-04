@@ -260,7 +260,7 @@ export class BundleProcessor {
         parsedError = this.entryPointContract.interface.parseError((e.data?.data ?? e.data))
       } catch (e1) {
         this.checkFatal(e)
-        console.warn('Failed handleOps, but non-FailedOp error', e)
+        Logger.warn({e}, 'Failed handleOps, but non-FailedOp error')
         return {
           transactionHash: 'ok',
           userOpHashes: []
@@ -281,7 +281,7 @@ export class BundleProcessor {
       } else {
         // TODO: add support to mempoolManager to remove by userOp
         this.mempoolManager.removeUserOp(userOp)
-        console.warn(`Failed handleOps sender=${userOp.sender} reason=${reasonStr}`)
+        Logger.warn(`Failed handleOps sender=${userOp.sender} reason=${reasonStr}`)
       }
       return {
         transactionHash: 'ok',
