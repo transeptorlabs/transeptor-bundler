@@ -28,7 +28,7 @@ export class MempoolManager {
 
   private entryCount: { [addr: string]: number | undefined } = {} // count entities in mempool.
 
-  constructor( reputationManager: ReputationManager, bundleSize: number) {
+  constructor(reputationManager: ReputationManager, bundleSize: number) {
     this.mempool = new Map<string, MempoolEntry>()
     this.mutex = new Mutex()
     this.bundleSize = bundleSize
