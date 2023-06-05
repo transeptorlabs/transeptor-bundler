@@ -9,3 +9,8 @@ export interface SlotMap {
 export interface StorageMap {
     [address: string]: string | SlotMap
 }
+
+export interface SendBundleReturn {
+    transactionHash: string
+    userOpHashes: string[]
+}

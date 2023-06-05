@@ -1,4 +1,4 @@
-import { ContractFactory, Wallet, providers } from 'ethers'
+import { ContractFactory, Wallet, ethers, providers } from 'ethers'
 import { TransactionRequest } from '@ethersproject/providers'
 import { Deferrable } from '@ethersproject/properties'
 import { Result, resolveProperties } from 'ethers/lib/utils'
@@ -14,9 +14,8 @@ export class ProviderService {
         this.connectedWallet = connectedWallet
     }
 
-    async getNetwork() {
-        const provider = this.provider
-        return await provider.getNetwork()
+    async getNetwork(): Promise<ethers.providers.Network> {
+        return await this.provider.getNetwork()
     }
 
     public async checkContractDeployment(contractAddress: string): Promise<boolean> {
@@ -37,7 +36,8 @@ export class ProviderService {
         let code
         if (ret.url && ret.body && ret.url.includes('alchemy.com')) {
             const alchemyRet = JSON.parse(ret.body)
-            code = alchemyRet.error?.code ?? alchemyRet.code
+            // code = alchemyRet.error?.code ?? alchemyRet.code
+            code === -32602 // wrong params (meaning, method exists) alchemy can not support full validation
         } else {
             code = ret.error?.code ?? ret.code
         }
@@ -58,14 +58,42 @@ export class ProviderService {
         return await this.provider.getBlockNumber()
     }
 
+    public async getSignerBalance(): Promise<ethers.BigNumber> {
+        return await this.connectedWallet.getBalance()
+    }
+
+    public async getSignerAddress(): Promise<string> {
+        return await this.connectedWallet.getAddress()
+    }
+
+    public async getFeeData(): Promise<ethers.providers.FeeData> {
+        return await this.provider.getFeeData()
+    }
+
+    public async getTransactionCount(): Promise<number> {
+        return await this.connectedWallet.getTransactionCount()
+    }
+
+    public async signTransaction(tx: Deferrable<TransactionRequest>): Promise<string> {
+        const tx1 = await resolveProperties(tx)
+        return this.connectedWallet.signTransaction(tx1)
+    }
+
     public async send(method: string, params: any[]): Promise<any> {
         return await (this.connectedWallet.provider as providers.JsonRpcProvider).send(method, params)
+    }
+
+    public async call(contractAddress: string, data: string): Promise<any> {
+        return await (this.connectedWallet.provider as providers.JsonRpcProvider).call({
+            to: contractAddress,
+            data: data
+        })
     }
 
     public async debug_traceCall (tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any> {
         const tx1 = await resolveProperties(tx)
         const traceOptions = tracer2string(options)
-        const ret = await (this.connectedWallet.provider as providers.JsonRpcProvider).send('debug_traceCall', [tx1, 'latest', traceOptions]).catch(e => {
+        const ret = await this.provider.send('debug_traceCall', [tx1, 'latest', traceOptions]).catch(e => {
             Logger.error({error: e.message}, 'ex=')
             Logger.debug({traceOptions: traceOptions.tracer?.toString().split('\n').map((line, index) => `${index + 1}: ${line}`).join('\n')}, 'tracer=')
             throw e
@@ -94,7 +122,7 @@ export class ProviderService {
      * example usasge:
      *     hashes = await runContractScript(provider, new GetUserOpHashes__factory(), [entryPoint.address, userOps]).then(ret => ret.userOpHashes)
      */
-    async runContractScript<T extends ContractFactory> (c: T, ctrParams: Parameters<T['getDeployTransaction']>): Promise<Result> {
+    public async runContractScript<T extends ContractFactory> (c: T, ctrParams: Parameters<T['getDeployTransaction']>): Promise<Result> {
         const tx = c.getDeployTransaction(...ctrParams)
         const ret = await this.provider.call(tx)
         const parsed = ContractFactory.getInterface(c.interface).parseError(ret)

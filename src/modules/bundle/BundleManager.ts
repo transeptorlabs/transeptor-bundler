@@ -9,25 +9,31 @@ import { Logger } from '../logger'
 export class BundleManager {
   private readonly bundleProcessor: BundleProcessor
 
-  private interval: any| null = null
+  private interval: any | null = null
   private mutex: Mutex = new Mutex()
   private bundleMode: 'auto' | 'manual'
   private autoBundleInterval: number
 
-  constructor(bundleProcessor: BundleProcessor, isAutoBundle: boolean, autoBundleInterval: number) {
-    this.bundleProcessor = bundleProcessor
+  constructor(
+    bundleProcessor: BundleProcessor,
+    isAutoBundle: boolean,
+    autoBundleInterval: number,
+  ) {
     this.bundleMode = isAutoBundle ? 'auto' : 'manual'
     this.autoBundleInterval = autoBundleInterval
+    this.bundleProcessor = bundleProcessor
 
     if (this.bundleMode === 'auto') {
       this.startAutoBundler()
     }
-    Logger.debug({ bundleMode: this.bundleMode}, 'Init BundleManager with bundleMode:')
+    Logger.info(`Bundle mode set to ${ this.bundleMode}`)
+    Logger.debug('BundleManager initialized')
   }
-
+  
   public setBundlingMode(mode: 'auto' | 'manual') {
     this.bundleMode = mode
-    
+    Logger.info({ mode }, 'Set bundling mode')
+
     if (mode === 'auto') {
       this.startAutoBundler()
     } else {
@@ -42,17 +48,16 @@ export class BundleManager {
   */
   public startAutoBundler() {
     this.stopAutoBundler()
-    
-    Logger.info(`Set auto bundler with interval: ${this.autoBundleInterval} ms`)
+
+    Logger.info(
+      `Set auto bundler with interval: ${this.autoBundleInterval} ms`
+    )
 
     this.interval = setInterval(async () => {
-      const release = await this.mutex.acquire()
       try {
-        await this.doAttemptBundle()
+        await this.doAttemptAutoBundle(false)
       } catch (error: any) {
-        Logger.error({error: error.mesage }, 'Error running auto bundle:')
-      } finally {
-        release()
+        Logger.error({ error: error.mesage }, 'Error running auto bundle:')
       }
     }, this.autoBundleInterval)
   }
@@ -65,21 +70,14 @@ export class BundleManager {
     }
   }
 
-  public async forceSendBundle(): Promise<string> {
+  public async doAttemptAutoBundle(force: boolean): Promise<string> {
     const release = await this.mutex.acquire()
-
     try {
-      const result =  await this.doAttemptBundle()
-      return result
-    } catch (error: any) {
-      Logger.error({error: error.message}, 'Error running force bundle:')
-      throw error
+      Logger.debug({ force }, 'attepting to sendNextBundle')
+      const { transactionHash } = await this.bundleProcessor.sendNextBundle(force)
+      return transactionHash
     } finally {
       release()
     }
-  }
-
-  private async doAttemptBundle(): Promise<string> {
-    return await this.bundleProcessor.sendNextBundle()
   }
 }

@@ -14,13 +14,13 @@ async function runBundler() {
   const config = new Config(process.argv)
   const providerService = new ProviderService(config.provider, config.connectedWallet)
 
-  // erc-4337 in-memory mempool
-  const mempoolManager = new MempoolManager(config.bundleSize)
-
   // erc-4337 entity reputation components
   const reputationManager = new ReputationManager(config.minStake, config.minUnstakeDelay)
   reputationManager.addWhitelist(config.whitelist)
   reputationManager.addBlacklist(config.blacklist)
+
+  // erc-4337 in-memory mempool
+  const mempoolManager = new MempoolManager(reputationManager, config.bundleSize)
 
   // erc-4337 user operation bundle components
   const validationService = new ValidationService(
@@ -36,12 +36,14 @@ async function runBundler() {
     mempoolManager,
     config.maxBundleGas,
     config.entryPointContract,
-    config.isConditionalTxMode()
+    config.txMode,
+    config.beneficiaryAddr,
+    config.minSignerBalance
   )
   const bundleManager = new BundleManager(
     bundleProcessor,
     config.isAutoBundle,
-    config.autoBundleInterval
+    config.autoBundleInterval,
   )
   const eventsManager = new EventsManager(
     providerService,
@@ -51,7 +53,14 @@ async function runBundler() {
   )
 
   // get rpc server components
-  const eth = new EthAPI(mempoolManager, config.entryPointContract)
+  const eth = new EthAPI(
+    config.entryPointContract,
+    providerService,
+    bundleManager,
+    validationService,
+    mempoolManager,
+    eventsManager
+  )
   const debug = new DebugAPI(bundleManager, reputationManager, mempoolManager)
   const web3 = new Web3API(config.clientVersion, config.isUnsafeMode)
   const rpcHandler = new RpcMethodHandler(
@@ -67,8 +76,7 @@ async function runBundler() {
     rpcHandler,
     providerService,
     config.entryPointContract,
-    config.connectedWallet,
-    config.isConditionalTxMode(),
+    config.txMode,
     config.isUnsafeMode,
     config.port
   )

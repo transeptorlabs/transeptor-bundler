@@ -53,16 +53,15 @@ export class Config {
     .option('--maxBundleGas <number>', 'max gas the bundler will use in transactions', '5e6')
     .option('--auto', 'automatic bundling', false)
     .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '120000')
-    .option('--bundleSize <number>', 'mempool bundle size', '5')
+    .option('--bundleSize <number>', 'maximum # of pending mempool entities', '2')
     .option('--port <number>', 'server listening port', '3000')
     .option('--minStake <string>', 'minimum stake a entity has to have to pass reputation system(When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH)', '1') // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
-    .option('--minUnstakeDelay <number>', 'mempool bundle size', '84600') // One day
+    .option('--minUnstakeDelay <number>', 'time paymaster has to wait to unlock the stake(seconds)', '84600') // One day
     .option('--txMode <string>', 'bundler transaction mode (base, conditional, searcher)', 'base')
-    .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node)', false)
+    .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode)')
     .option('--p2p', 'p2p mode enabled)', false)
 
     const programOpts: OptionValues = program.parse(args).opts()
-    Logger.debug({programOpts}, 'programOpts')
         
     if (this.SUPPORTED_MODES.indexOf(programOpts.txMode as string) === -1) {      
       throw new Error('Invalid bundler mode')
@@ -72,7 +71,7 @@ export class Config {
       throw new Error('Entry point not a valid address')
     }
 
-    if (programOpts.txMode as string === 'private-searcher' || programOpts.txMode as string === 'public-searcher') {
+    if (programOpts.txMode as string === 'searcher') {
       if (!process.env.ALCHEMY_API_KEY) {
         throw new Error('ALCHEMY_API_KEY env var not set')
       }
@@ -124,7 +123,7 @@ export class Config {
     this.port = parseInt(programOpts.port as string)
     this.txMode = programOpts.txMode as string
     this.clientVersion = packageJson.version as string
-    this.isUnsafeMode = programOpts.unsafe as boolean
+    this.isUnsafeMode = programOpts.unsafe as boolean ? true : false
     this.isP2PMode = programOpts.p2p as boolean
 
     this.httpApi = (programOpts.httpApi as string).split(',')
@@ -134,7 +133,8 @@ export class Config {
       }
     }
 
-    Logger.debug('Done init Config global')
+    this.dump()
+    Logger.debug('Config initialized')
   }
 
   private getNetworkProvider(url: string, apiKey?: string): providers.JsonRpcProvider {
@@ -150,15 +150,28 @@ export class Config {
     return pattern.test(url)
   }
 
-  public isbaseTxMode(): boolean {
-    return this.txMode === 'base'
-  }
-
-  public isConditionalTxMode(): boolean {
-    return this.txMode === 'conditional'
-  }
-
-  public isSearcherTxMode(): boolean {
-    return this.txMode === 'searcher'
+  private dump(): void {
+    Logger.debug(
+      {
+      clientVersion: this.clientVersion,
+      txMode: this.txMode,
+      isUnsafeMode: this.isUnsafeMode,
+      isP2PMode: this.isP2PMode,
+      httpApi: this.httpApi,
+      beneficiaryAddr: this.beneficiaryAddr,
+      entryPointContractAddress: this.entryPointContract.address,
+      autoBundleInterval: this.autoBundleInterval,
+      bundleSize: this.bundleSize,
+      isAutoBundle: this.isAutoBundle,
+      minStake: this.minStake.toString(),
+      minUnstakeDelay: this.minUnstakeDelay.toString(),
+      gasFactor: this.gasFactor,
+      minSignerBalance: this.minSignerBalance.toString(),
+      maxBundleGas: this.maxBundleGas,
+      port: this.port,
+      whitelist: this.whitelist,
+      blacklist: this.blacklist
+    },
+    'Bundler config')
   }
 }

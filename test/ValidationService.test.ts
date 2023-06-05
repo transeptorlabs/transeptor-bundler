@@ -9,7 +9,6 @@ import { ProviderService } from '../src/modules/provider'
 import { ValidationService } from '../src/modules/validation'
 import { ReputationManager } from '../src/modules/reputation'
 import { testWallet } from './utils/test-helpers'
-import { ENTRY_POINT_ABI } from '../src/modules/utils'
 import { Logger } from '../src/modules/logger'
 
 describe('ValidationService', () => {
@@ -41,7 +40,7 @@ describe('ValidationService', () => {
     // ValidationService dependencies
     ps = new ProviderService(provider, connectedWallet)
     rm = new ReputationManager(BigNumber.from('1'), 84600)
-    entryPointContract = new ethers.Contract(epAddr, ENTRY_POINT_ABI, connectedWallet)
+    entryPointContract = new ethers.Contract(epAddr, EntryPoint__factory.abi, connectedWallet)
   
     vs = new ValidationService(ps, rm, entryPointContract, true)
   })

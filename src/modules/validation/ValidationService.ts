@@ -27,7 +27,7 @@ export class ValidationService {
   }
 
   // standard eth_call to simulateValidation
-  async _callSimulateValidation(
+  public async callSimulateValidation(
     userOp: UserOperation
   ): Promise<ValidationResult> {
     const errorResult = await this.entryPointContract.callStatic
@@ -104,7 +104,7 @@ export class ValidationService {
     }
   }
 
-  async _geth_traceCall_SimulateValidation(
+  public async gethTraceCallSimulateValidation(
     userOp: UserOperation
   ): Promise<[ValidationResult, BundlerCollectorReturn]> {
     // By encoding the function name and its parameters, you create a compact binary representation of the function call, which is required to interact with the contract correctly.
@@ -185,7 +185,7 @@ export class ValidationService {
    * one item to check that was un-modified is the aggregator..
    * @param userOp
    */
-  async validateUserOp(
+  public async validateUserOp(
     userOp: UserOperation,
     previousCodeHashes?: ReferencedCodeHashes,
     checkStakes = true
@@ -209,8 +209,9 @@ export class ValidationService {
     let storageMap: StorageMap = {}
 
     if (!this.isUnsafeMode) {
+      Logger.debug('Running full validation with storage/opcode checks')
       let tracerResult: BundlerCollectorReturn;
-      [res, tracerResult] = await this._geth_traceCall_SimulateValidation(
+      [res, tracerResult] = await this.gethTraceCallSimulateValidation(
         userOp
       )
       let contractAddresses: string[];
@@ -231,8 +232,9 @@ export class ValidationService {
         throw new Error('simulateValidation reverted with no revert string!')
       }
     } else {
+      Logger.debug('Running validation no storage or opcode checks')
       // NOTE: this mode doesn't do any opcode checking and no stake checking!
-      res = await this._callSimulateValidation(userOp)
+      res = await this.callSimulateValidation(userOp)
     }
 
     requireCond(
@@ -264,7 +266,7 @@ export class ValidationService {
     }
   }
 
-  async getCodeHashes(addresses: string[]): Promise<ReferencedCodeHashes> {
+  public async getCodeHashes(addresses: string[]): Promise<ReferencedCodeHashes> {
     const getCodeHashesFactory = new ethers.ContractFactory(
       GET_CODE_HASH_ABI,
       GET_CODE_HASH_BYTECODE
