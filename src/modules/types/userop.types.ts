@@ -1,6 +1,5 @@
-import type { BigNumber, BigNumberish, BytesLike } from 'ethers'
+import type { BigNumberish, BytesLike } from 'ethers'
 import { TransactionReceipt } from '@ethersproject/providers'
-import { ethers } from 'ethers'
 
 /* 
     types: https://docs.ethers.org/v5/api/utils/bignumber/
@@ -50,6 +49,31 @@ export interface UserOperationByHashResponse {
     blockNumber: number
     blockHash: string
     transactionHash: string
+}
+
+export interface EstimateUserOpGasResult {
+    /**
+     * the preVerification gas used by this UserOperation.
+     */
+    preVerificationGas: BigNumberish
+    /**
+     * gas used for validation of this UserOperation, including account creation
+     */
+    verificationGas: BigNumberish
+  
+    /**
+     * (possibly future timestamp) after which this UserOperation is valid
+     */
+    validAfter?: BigNumberish
+  
+    /**
+     * the deadline after which this UserOperation is invalid (not a gas estimation parameter, but returned by validation
+     */
+    validUntil?: BigNumberish
+    /**
+     * estimated cost of calling the account with the given callData
+     */
+    callGasLimit: BigNumberish
 }
 
 

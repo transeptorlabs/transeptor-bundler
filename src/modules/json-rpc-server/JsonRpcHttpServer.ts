@@ -95,7 +95,7 @@ export class JsonrpcHttpServer {
   async start(): Promise<void> {
     await this.preflightCheck()
     this.httpServer.listen(this.port, () => {
-      Logger.info(`Bundler running on http://localhost:${this.port}/v1`)
+      Logger.info(`Bundler running on http://localhost:${this.port}/rpc`)
     })
   }
 
