@@ -33,6 +33,7 @@
   },
   "license": "GNU",
   "dependencies": {
+    "@account-abstraction/sdk": "^0.6.0",
     "async-mutex": "0.4.0",
     "commander": "10.0.1",
     "cors": "2.8.5",
@@ -45,7 +46,6 @@
   },
   "devDependencies": {
     "@account-abstraction/contracts": "^0.6.0",
-    "@account-abstraction/sdk": "^0.6.0",
     "@nomicfoundation/hardhat-network-helpers": "1.0.0",
     "@nomicfoundation/hardhat-toolbox": "1.0.2",
     "@nomiclabs/hardhat-ethers": "^2.0.0",

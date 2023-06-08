@@ -1,9 +1,8 @@
-import { ethers } from 'ethers'
 import { EthAPI, Web3API, DebugAPI} from './services'
 import { ProviderService } from '../provider'
 import { JsonRpcErrorResponse, JsonRpcRequest, JsonRpcResponse, JsonRpcSuccessResponse } from '../types'
 import { Logger } from '../logger'
-import { RpcError } from '../utils'
+import { RpcError, deepHexlify } from '../utils'
 
 export class RpcMethodHandler {
   private readonly eth: EthAPI
@@ -49,7 +48,7 @@ export class RpcMethodHandler {
           result = await this.eth.sendUserOperation(params[0], params[1])
           break
         case 'eth_estimateUserOperationGas':
-          result = true
+          result = await this.eth.estimateUserOperationGas(params[0], params[1])
           break
         case 'eth_getUserOperationReceipt':
           result = await this.eth.getUserOperationReceipt(params[0])
@@ -129,7 +128,7 @@ export class RpcMethodHandler {
     id: number | string,
     result: any
   ): JsonRpcSuccessResponse {
-    const hexlifyResult = this.deepHexlify(result)
+    const hexlifyResult = deepHexlify(result)
     Logger.debug({
       jsonrpc: '2.0',
       id,
@@ -169,24 +168,4 @@ export class RpcMethodHandler {
 
     return errorResponse
   }
-
-  /*
-    * hexlify all members of object, recursively
-  */
-  private deepHexlify(obj: any): any {
-    if (typeof obj === 'function') {
-      return undefined
-    }
-    if (obj == null || typeof obj === 'string' || typeof obj === 'boolean') {
-      return obj
-    }
-    else if (obj._isBigNumber != null || typeof obj !== 'object') {
-      return ethers.utils.hexlify(obj).replace(/^0x0/, '0x')
-    }
-    if (Array.isArray(obj)) {
-      return obj.map(member => this.deepHexlify(member))
-    }
-    return Object.keys(obj)
-      .reduce((set, key) => (Object.assign(Object.assign({}, set), { [key]: this.deepHexlify(obj[key]) })), {})
- }
 }

@@ -1,13 +1,14 @@
 import { BigNumber, ethers } from 'ethers'
-import { UserOperation, UserOperationByHashResponse, UserOperationReceipt } from '../../types'
+import { EstimateUserOpGasResult, UserOperation, UserOperationByHashResponse, UserOperationReceipt, ValidationErrors } from '../../types'
 import { Logger } from '../../logger'
-import { getAddr, requireCond, tostr } from '../../utils'
+import { RpcError, deepHexlify, getAddr, requireCond, tostr } from '../../utils'
 import { ProviderService } from '../../provider'
 import { resolveProperties } from 'ethers/lib/utils'
 import { BundleManager } from '../../bundle'
 import { MempoolManager } from '../../mempool'
 import { ValidationService } from '../../validation'
 import { EventsManager } from '../../event'
+import { calcPreVerificationGas } from '@account-abstraction/sdk'
 
 export class EthAPI {
   private readonly entryPointContract: ethers.Contract
@@ -87,7 +88,7 @@ export class EthAPI {
     return [this.entryPointContract.address]
   }
 
-  public async getUserOperationReceipt (userOpHash: string): Promise<UserOperationReceipt | null> {
+  public async getUserOperationReceipt(userOpHash: string): Promise<UserOperationReceipt | null> {
     requireCond(userOpHash?.toString()?.match(this.HEX_REGEX) != null, 'Missing/invalid userOpHash', -32601)
     const event = await this.eventsManager.getUserOperationEvent(userOpHash)
     if (event == null) {
@@ -107,7 +108,7 @@ export class EthAPI {
     }
   }
 
-  async getUserOperationByHash (userOpHash: string): Promise<UserOperationByHashResponse | null> {
+  public async getUserOperationByHash(userOpHash: string): Promise<UserOperationByHashResponse | null> {
     requireCond(userOpHash?.toString()?.match(this.HEX_REGEX) != null, 'Missing/invalid userOpHash', -32601)
     const event = await this.eventsManager.getUserOperationEvent(userOpHash)
     if (event == null) {
@@ -164,6 +165,58 @@ export class EthAPI {
       transactionHash: tx.hash,
       blockHash: tx.blockHash ?? '',
       blockNumber: tx.blockNumber ?? 0
+    }
+  }
+
+  public async estimateUserOperationGas (userOp1: UserOperation, entryPointInput: string): Promise<EstimateUserOpGasResult> {
+    const userOp = {
+      ...await resolveProperties(userOp1),
+      // default values for missing fields.
+      paymasterAndData: '0x',
+      maxFeePerGas: 0,
+      maxPriorityFeePerGas: 0,
+      preVerificationGas: 0,
+      verificationGasLimit: 10e6
+    }
+
+    // todo: checks the existence of parameters, but since we hexlify the inputs, it fails to validate
+    await this.validateParameters(deepHexlify(userOp), entryPointInput)
+
+    const errorResult = await this.entryPointContract.callStatic.simulateValidation(userOp).catch(e => e)
+    if (errorResult.errorName === 'FailedOp') {
+      throw new RpcError(errorResult.errorArgs.at(-1), ValidationErrors.SimulateValidation)
+    }
+
+    if (errorResult.errorName !== 'ValidationResult') {
+      throw errorResult
+    }
+
+    const { returnInfo } = errorResult.errorArgs
+    let {
+      preOpGas,
+      validAfter,
+      validUntil
+    } = returnInfo
+
+    const callGasLimit = await this.providerService.estimateGas(this.entryPointContract.address, userOp.sender, userOp.callData)
+    validAfter = BigNumber.from(validAfter)
+    validUntil = BigNumber.from(validUntil)
+    preOpGas = BigNumber.from(preOpGas)
+    if (validUntil === BigNumber.from(0)) {
+      validUntil = undefined
+    }
+    if (validAfter === BigNumber.from(0)) {
+      validAfter = undefined
+    }
+
+    const preVerificationGas = calcPreVerificationGas(userOp)
+    const verificationGas = BigNumber.from(preOpGas).toNumber()
+    return {
+      preVerificationGas,
+      verificationGas,
+      validAfter,
+      validUntil,
+      callGasLimit
     }
   }
 

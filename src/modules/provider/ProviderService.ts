@@ -4,6 +4,7 @@ import { Deferrable } from '@ethersproject/properties'
 import { Result, resolveProperties } from 'ethers/lib/utils'
 import { TraceOptions, TraceResult, tracer2string } from '../validation'
 import { Logger } from '../logger'
+import { ExecutionErrors, RpcError } from '../utils'
 
 export class ProviderService {
     private readonly provider: providers.JsonRpcProvider
@@ -77,6 +78,19 @@ export class ProviderService {
     public async signTransaction(tx: Deferrable<TransactionRequest>): Promise<string> {
         const tx1 = await resolveProperties(tx)
         return this.connectedWallet.signTransaction(tx1)
+    }
+
+    public async estimateGas(from: string, to: string, data: string | ethers.utils.Bytes): Promise<number> {
+        const gasLimit = await this.provider.estimateGas({
+            from,
+            to,
+            data
+        }).catch(err => {
+            const message = err.message.match(/reason="(.*?)"/)?.at(1) ?? 'execution reverted'
+            throw new RpcError(message, ExecutionErrors.UserOperationReverted)
+        })
+
+        return gasLimit.toNumber()
     }
 
     public async send(method: string, params: any[]): Promise<any> {
