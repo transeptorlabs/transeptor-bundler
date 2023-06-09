@@ -50,13 +50,23 @@ Follow the steps below to run Bundler server using a remote Alchemy ETH client
 - `npm run lint`
 - `npm run lint:fix`
 
-## ERC-4337 Entrypoint contract
+## ERC-4337 contracts
 This Bundler uses [Infinitism](https://github.com/eth-infinitism/account-abstraction) `@account-abstraction/contracts`(version 0.6.0) entry point contract for development. The `npm fetch:abi` script fetches abi for the contract and saves it locally at `./abi/entrypoint.js`.
+
+### Entrypoint
+Deterministic address: 0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789
 
 - [Mainnet](https://etherscan.io/address/0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789#code)
 - [Goerli](https://goerli.etherscan.io/address/0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789#code)
 - [Linea Goerli](https://explorer.goerli.linea.build/address/0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789)
 
+### Simple Account Factory
+Deterministic address: 0x9406cc6185a346906296840746125a0e44976454
+
+- [Mainnet](https://etherscan.io/address/0x9406cc6185a346906296840746125a0e44976454#code)
+- [Goerli](https://goerli.etherscan.io/address/0x9406cc6185a346906296840746125a0e44976454#code)
+- [Linea Goerli](https://explorer.goerli.linea.build/address/0x9406cc6185a346906296840746125a0e44976454)
+  
 ## Contributing
 We welcome contributions to enhance our ERC-4337 Bundler. If you would like to contribute, please follow these guidelines [here](https://github.com/transeptorlabs/transeptor-bundler/blob/main/CONTRIBUTING.md).
 
