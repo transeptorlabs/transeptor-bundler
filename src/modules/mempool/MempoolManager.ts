@@ -56,16 +56,15 @@ export class MempoolManager {
 
       const oldEntry = this.findBySenderNonce(userOp.sender, userOp.nonce)
       if (oldEntry) {
-        // TODO: check that the status is not 'bundling' before replacing
         this.checkReplaceUserOp(oldEntry, entry)
         Logger.debug({ sender: userOp.sender, nonce: userOp.nonce, userOpHash, status: entry.status }, 'replace userOp in mempool')
         this.mempool.delete(oldEntry.userOpHash)
         this.mempool.set(userOpHash, entry)
       } else {
         Logger.debug({ sender: userOp.sender, nonce: userOp.nonce, userOpHash, status: entry.status }, 'added userOp to mempool ')
-        this.entryCount[userOp.sender] = (this.entryCount[userOp.sender] ?? 0) + 1
         this.checkSenderCountInMempool(userOp, senderInfo)
         this.mempool.set(userOpHash, entry)
+        this.entryCount[userOp.sender] = (this.entryCount[userOp.sender] ?? 0) + 1
       }
       this.updateSeenStatus(aggregator, userOp)
     } finally {
@@ -78,10 +77,7 @@ export class MempoolManager {
     (allow 4 entities if unstaked, or any number if staked)
   */
   private checkSenderCountInMempool (userOp: UserOperation, senderInfo: StakeInfo): void {
-    console.log('checkStake(test2):', senderInfo, this.entryCount[userOp.sender])
-    if ((this.entryCount[userOp.sender] ?? 0) > this.MAX_MEMPOOL_USEROPS_PER_SENDER) {
-      // already enough entities with this sender in mempool.
-      // check that it is staked
+    if ((this.entryCount[userOp.sender] ?? 0) === this.MAX_MEMPOOL_USEROPS_PER_SENDER) {
       this.reputationManager.checkStake('account', senderInfo)
     }
   }
@@ -123,7 +119,6 @@ export class MempoolManager {
     return  undefined
   }
 
-  // TODO: add test
   public async removeUserOp(userOpOrHash: string | UserOperation): Promise<boolean> {
     const release = await this.mutex.acquire()
     try {

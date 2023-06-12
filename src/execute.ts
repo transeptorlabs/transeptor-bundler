@@ -61,7 +61,7 @@ async function runBundler() {
     mempoolManager,
     eventsManager
   )
-  const debug = new DebugAPI(bundleManager, reputationManager, mempoolManager)
+  const debug = new DebugAPI(bundleManager, reputationManager, mempoolManager, eventsManager)
   const web3 = new Web3API(config.clientVersion, config.isUnsafeMode)
   const rpcHandler = new RpcMethodHandler(
     eth,

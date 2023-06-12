@@ -197,8 +197,6 @@ export class ReputationManager {
     if (info?.addr == null || this.isWhitelisted(info.addr)) {
       return
     }
-    console.log('checkStake(inside):', info?.stake.toString(), this.minStake.toString())
-    console.log('checkStake(inside-2):', info?.unstakeDelaySec.toString(), BigNumber.from(this.minUnstakeDelay).toString())
     requireCond(this.getStatus(info.addr) !== ReputationStatus.BANNED,
       `${title} ${info.addr} is banned`,
       ValidationErrors.Reputation, { [title]: info.addr })

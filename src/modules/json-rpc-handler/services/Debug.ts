@@ -8,15 +8,18 @@ export class DebugAPI {
   private readonly bundleManager: BundleManager;
   private readonly reputationManager: ReputationManager;
   private readonly mempoolManager: MempoolManager;
+  private readonly eventsManager: EventsManager;
 
   constructor(
     bundleManager: BundleManager,
     reputationManager: ReputationManager,
     mempoolManager: MempoolManager,
+    eventsManager: EventsManager
   ) {
     this.bundleManager = bundleManager;
     this.reputationManager = reputationManager;
     this.mempoolManager = mempoolManager;
+    this.eventsManager = eventsManager;
   }
 
   async clearState(): Promise<void> {
@@ -38,6 +41,7 @@ export class DebugAPI {
 
   async sendBundleNow(): Promise<SendBundleReturn> {
     const result = await this.bundleManager.doAttemptAutoBundle(true);
+    await this.eventsManager.handlePastEvents();
     return result;
   }
 
