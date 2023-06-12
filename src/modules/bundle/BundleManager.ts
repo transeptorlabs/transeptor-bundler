@@ -1,6 +1,7 @@
 import { Mutex } from 'async-mutex'
 import { BundleProcessor } from './BundleProcessor'
 import { Logger } from '../logger'
+import { SendBundleReturn } from '../types'
 
 /*
   This class act as a top-level interface to bundle UserOperations.
@@ -70,12 +71,11 @@ export class BundleManager {
     }
   }
 
-  public async doAttemptAutoBundle(force: boolean): Promise<string> {
+  public async doAttemptAutoBundle(force: boolean): Promise<SendBundleReturn> {
     const release = await this.mutex.acquire()
     try {
       Logger.debug({ force }, 'attepting to sendNextBundle')
-      const { transactionHash } = await this.bundleProcessor.sendNextBundle(force)
-      return transactionHash
+      return await this.bundleProcessor.sendNextBundle(force)
     } finally {
       release()
     }

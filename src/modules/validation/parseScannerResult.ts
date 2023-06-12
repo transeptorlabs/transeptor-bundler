@@ -152,7 +152,7 @@ function parseEntitySlots (stakeInfoEntities: { [addr: string]: StakeInfo | unde
  * @return list of contract addresses referenced by this UserOp
  */
 export function parseScannerResult (userOp: UserOperation, tracerResults: BundlerCollectorReturn, validationResult: ValidationResult, entryPoint: ethers.Contract): [string[], StorageMap] {
-  Logger.debug({tracerResults: inspect(tracerResults, true, 10, true)}, '=== simulation')
+  // Logger.debug({tracerResults: inspect(tracerResults, true, 10, true)}, '=== simulation')
   // todo: block access to no-code addresses (might need update to tracer)
 
   const entryPointAddress = entryPoint.address.toLowerCase()

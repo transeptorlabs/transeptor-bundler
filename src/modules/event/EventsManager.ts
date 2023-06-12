@@ -37,7 +37,7 @@ export class EventsManager {
    */
   private initEventListener(): void {
     this.entryPointContract.on('UserOperationEvent', (...args) => {
-      Logger.debug({args},'UserOperationEvent:')
+      Logger.debug({args},'UserOperationEvent incomming ->:')
       const ev = args.slice(-1)[0]
       void this.handleEvent(ev as any)
     })
@@ -58,15 +58,17 @@ export class EventsManager {
       { address: this.entryPointContract.address },
       this.lastBlock
     )
+
+    Logger.debug({lastBlock: this.lastBlock, events: events.length}, 'Handling past Entrypoint events since last run')
     for (const ev of events) {
-      this.handleEvent(ev)
+      await this.handleEvent(ev)
     }
   }
 
-  private handleEvent(ev: any): void {
+  private async handleEvent(ev: any): Promise<void> {
     switch (ev.event) {
       case 'UserOperationEvent':
-        this.handleUserOperationEvent(ev as any)
+        await this.handleUserOperationEvent(ev as any)
         break
       case 'AccountDeployed':
         this.handleAccountDeployedEvent(ev as any)
@@ -78,9 +80,9 @@ export class EventsManager {
     this.lastBlock = ev.blockNumber + 1
   }
 
-  private handleUserOperationEvent(ev: any): void {
+  private async handleUserOperationEvent(ev: any): Promise<void> {
     const hash = ev.args.userOpHash
-    this.mempoolManager.removeUserOp(hash)
+    await this.mempoolManager.removeUserOp(hash)
     this.includedAddress(ev.args.sender)
     this.includedAddress(ev.args.paymaster)
     this.includedAddress(this.getEventAggregator(ev))
@@ -114,7 +116,7 @@ export class EventsManager {
     }
   }
 
-  public async getUserOperationEvent (userOpHash: string): Promise<ethers.Event> {
+  public async getUserOperationEvent (userOpHash: string): Promise<any> {
     // TODO: eth_getLogs is throttled. must be acceptable for finding a UserOperation by hash
     const event = await this.entryPointContract.queryFilter(this.entryPointContract.filters.UserOperationEvent(userOpHash))
     return event[0]
@@ -124,11 +126,15 @@ export class EventsManager {
     // @param userOpEvent - the event of our UserOp (known to exist in the logs)
     // @param logs - full bundle logs. after each group of logs there is a single UserOperationEvent with unique hash.
   */
-  public filterLogs (userOpEvent: ethers.Event, logs: Log[]): Log[] {
+  public filterLogs (userOpEvent: any, logs: Log[]): Log[] {
     let startIndex = -1
     let endIndex = -1
     const events = Object.values(this.entryPointContract.interface.events)
-    const beforeExecutionTopic = this.entryPointContract.interface.getEventTopic(events.find(e => e.name === 'BeforeExecution')!)
+    const foundEvent = events.find(e => e.name === 'BeforeExecution')
+    if (!foundEvent) {
+      throw new Error('fatal: no BeforeExecution event found')
+    }
+    const beforeExecutionTopic = this.entryPointContract.interface.getEventTopic(foundEvent)
     
     logs.forEach((log, index) => {
       if (log?.topics[0] === beforeExecutionTopic) {

@@ -7,12 +7,14 @@ import { decodeErrorReason } from './GethTracer'
 import { ReputationManager } from '../reputation'
 import { parseScannerResult } from './parseScannerResult'
 import { Logger } from '../logger'
+import { calcPreVerificationGas } from '@account-abstraction/sdk'
 
 export class ValidationService {
   private readonly providerService: ProviderService
   private readonly reputationManager: ReputationManager
   private readonly entryPointContract: ethers.Contract
   private readonly isUnsafeMode: boolean
+  private readonly HEX_REGEX = /^0x[a-fA-F\d]*$/i
 
   constructor(
     providerService: ProviderService,
@@ -149,23 +151,21 @@ export class ValidationService {
         // a real error, not a result.
         throw new Error(errFullName)
       }
-      Logger.debug(
-        {
-          dumpTree: JSON.stringify(tracerResult, null, 2)
-          .replace(new RegExp(userOp.sender.toLowerCase()), '{sender}')
-          .replace(
-            new RegExp(getAddr(userOp.paymasterAndData) ?? '--no-paymaster--'),
-            '{paymaster}'
-          )
-          .replace(
-            new RegExp(getAddr(userOp.initCode) ?? '--no-initcode--'),
-            '{factory}'
-          )
-        }, 
-        '==dump tree='
-      )
-      // console.log('==debug=', ...tracerResult.numberLevels.forEach(x=>x.access), 'sender=', userOp.sender, 'paymaster=', hexlify(userOp.paymasterAndData)?.slice(0, 42))
-      // errorResult is "ValidationResult"
+      // Logger.debug(
+      //   {
+      //     dumpTree: JSON.stringify(tracerResult, null, 2)
+      //     .replace(new RegExp(userOp.sender.toLowerCase()), '{sender}')
+      //     .replace(
+      //       new RegExp(getAddr(userOp.paymasterAndData) ?? '--no-paymaster--'),
+      //       '{paymaster}'
+      //     )
+      //     .replace(
+      //       new RegExp(getAddr(userOp.initCode) ?? '--no-initcode--'),
+      //       '{factory}'
+      //     )
+      //   }, 
+      //   '==dump tree='
+      // )
       return [errorResult, tracerResult]
     } catch (e: any) {
       // if already parsed, throw as is
@@ -259,11 +259,60 @@ export class ValidationService {
       ValidationErrors.UnsupportedSignatureAggregator
     )
 
+    Logger.debug({ userOp }, 'UserOp passed validation')
     return {
       ...res,
       referencedContracts: codeHashes,
       storageMap,
     }
+  }
+
+  /**
+ * perform static checking on input parameters.
+ * @param userOp
+ * @param entryPointInput
+ * @param requireSignature
+ * @param requireGasParams
+ */
+  validateInputParameters (userOp: UserOperation, entryPointInput: string, requireSignature = true, requireGasParams = true): void {
+    requireCond(entryPointInput != null, 'No entryPoint param', ValidationErrors.InvalidFields)
+    requireCond(entryPointInput.toLowerCase() === this.entryPointContract.address.toLowerCase(),
+      `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${this.entryPointContract.address}`,
+      ValidationErrors.InvalidFields)
+
+    // minimal sanity check: userOp exists, and all members are hex
+    requireCond(userOp != null, 'No UserOperation param', ValidationErrors.InvalidFields)
+
+    const fields = ['sender', 'nonce', 'initCode', 'callData', 'paymasterAndData']
+    if (requireSignature) {
+      fields.push('signature')
+    }
+    if (requireGasParams) {
+      fields.push('preVerificationGas', 'verificationGasLimit', 'callGasLimit', 'maxFeePerGas', 'maxPriorityFeePerGas')
+    }
+    fields.forEach(key => {
+      const value: string = (userOp as any)[key]?.toString()
+      requireCond(value != null,
+        'Missing userOp field: ' + key + ' ' + JSON.stringify(userOp),
+        ValidationErrors.InvalidFields)
+      requireCond(value.match(this.HEX_REGEX) != null,
+        `Invalid hex value for property ${key}:${value} in UserOp`,
+        ValidationErrors.InvalidFields)
+    })
+
+    requireCond(userOp.paymasterAndData.length === 2 || userOp.paymasterAndData.length >= 42,
+      'paymasterAndData: must contain at least an address',
+      ValidationErrors.InvalidFields)
+
+    // syntactically, initCode can be only the deployer address. but in reality, it must have calldata to uniquely identify the account
+    requireCond(userOp.initCode.length === 2 || userOp.initCode.length >= 42,
+      'initCode: must contain at least an address',
+      ValidationErrors.InvalidFields)
+
+    const calcPreVerificationGas1 = calcPreVerificationGas(userOp)
+    requireCond(BigNumber.from(userOp.preVerificationGas.toString()).gte(BigNumber.from(calcPreVerificationGas1)),
+      `preVerificationGas too low: expected at least ${calcPreVerificationGas1}`,
+      ValidationErrors.InvalidFields)
   }
 
   public async getCodeHashes(addresses: string[]): Promise<ReferencedCodeHashes> {
