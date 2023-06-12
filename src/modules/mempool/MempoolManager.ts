@@ -56,14 +56,14 @@ export class MempoolManager {
 
       const oldEntry = this.findBySenderNonce(userOp.sender, userOp.nonce)
       if (oldEntry) {
-        // TODO: check that the status is not 'bundling'
+        // TODO: check that the status is not 'bundling' before replacing
         this.checkReplaceUserOp(oldEntry, entry)
-        Logger.debug({ sender: userOp.sender, nonce: userOp.nonce }, 'replace userOp')
+        Logger.debug({ sender: userOp.sender, nonce: userOp.nonce, userOpHash, status: entry.status }, 'replace userOp in mempool')
         this.mempool.delete(oldEntry.userOpHash)
         this.mempool.set(userOpHash, entry)
       } else {
-        Logger.debug({ sender: userOp.sender, nonce: userOp.nonce }, 'add userOp')
-        this.entryCount[entry.userOp.sender] = (this.entryCount[entry.userOp.sender] ?? 0) + 1
+        Logger.debug({ sender: userOp.sender, nonce: userOp.nonce, userOpHash, status: entry.status }, 'added userOp to mempool ')
+        this.entryCount[userOp.sender] = (this.entryCount[userOp.sender] ?? 0) + 1
         this.checkSenderCountInMempool(userOp, senderInfo)
         this.mempool.set(userOpHash, entry)
       }
@@ -78,6 +78,7 @@ export class MempoolManager {
     (allow 4 entities if unstaked, or any number if staked)
   */
   private checkSenderCountInMempool (userOp: UserOperation, senderInfo: StakeInfo): void {
+    console.log('checkStake(test2):', senderInfo, this.entryCount[userOp.sender])
     if ((this.entryCount[userOp.sender] ?? 0) > this.MAX_MEMPOOL_USEROPS_PER_SENDER) {
       // already enough entities with this sender in mempool.
       // check that it is staked
@@ -179,12 +180,10 @@ export class MempoolManager {
     try {
       const entries: MempoolEntry[] = []
       for (const [key, value] of this.mempool.entries()) {
-        if (value.status === 'bundling') {
-          continue
+        if (value.status === 'pending') {
+          value.status = 'bundling'
+          entries.push(value)
         }
-
-        value.status = 'bundling'
-        entries.push(value)
       }
       return entries
     } finally {
@@ -211,11 +210,13 @@ export class MempoolManager {
   }
 
   public dump(): Array<UserOperation> {
+    Logger.debug(`_______________________________MEMPOOL DUMP____________________________________________`)
     Logger.debug(`Mempool size: ${this.mempool.size}`)
-    Logger.debug(`Mempool entryCount: ${this.entryCount}`)
+    Logger.debug({entryCount:this.entryCount }, `Mempool entryCount`)
     for (const [key, value] of this.mempool.entries()) {
-      Logger.debug(`Key: ${key}, Value: ${value}`)
+      Logger.debug({uop: value }, `Key: ${key}`)
     }
+    Logger.debug(`________________________________________________________________________________________`)
     return Array.from(this.mempool.values()).map((mempoolEntry) => mempoolEntry.userOp)
   }
 }

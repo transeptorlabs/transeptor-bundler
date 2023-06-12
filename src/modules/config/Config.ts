@@ -50,13 +50,13 @@ export class Config {
     .option('--entryPoint <string>', 'supported entry point address', this.DEFAULT_ENTRY_POINT)
     .option('--gasFactor <number>', '1')
     .option('--minBalance <string>', 'below this signer balance, keep fee for itself, ignoring "beneficiary" address', '1')
-    .option('--maxBundleGas <number>', 'max gas the bundler will use in transactions', '5e6')
+    .option('--maxBundleGas <number>', 'max gas the bundler will use in transactions', '5000000')
     .option('--auto', 'automatic bundling', false)
     .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '120000')
-    .option('--bundleSize <number>', 'maximum # of pending mempool entities', '2')
+    .option('--bundleSize <number>', 'maximum # of pending mempool entities', '10')
     .option('--port <number>', 'server listening port', '3000')
     .option('--minStake <string>', 'minimum stake a entity has to have to pass reputation system(When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH)', '1') // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
-    .option('--minUnstakeDelay <number>', 'time paymaster has to wait to unlock the stake(seconds)', '84600') // One day
+    .option('--minUnstakeDelay <number>', 'time paymaster has to wait to unlock the stake(seconds)', '0') // One day - 84600
     .option('--txMode <string>', 'bundler transaction mode (base, conditional, searcher)', 'base')
     .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode)')
     .option('--p2p', 'p2p mode enabled)', false)
@@ -163,10 +163,10 @@ export class Config {
       autoBundleInterval: this.autoBundleInterval,
       bundleSize: this.bundleSize,
       isAutoBundle: this.isAutoBundle,
-      minStake: this.minStake.toString(),
+      minStake: `${this.minStake.toString()} wei`,
       minUnstakeDelay: this.minUnstakeDelay.toString(),
       gasFactor: this.gasFactor,
-      minSignerBalance: this.minSignerBalance.toString(),
+      minSignerBalance: `${this.minSignerBalance.toString()} wei`,
       maxBundleGas: this.maxBundleGas,
       port: this.port,
       whitelist: this.whitelist,

@@ -29,6 +29,12 @@ async function runBundler() {
     config.entryPointContract,
     config.isUnsafeMode
   )
+  const eventsManager = new EventsManager(
+    providerService,
+    reputationManager,
+    mempoolManager,
+    config.entryPointContract,
+  )
   const bundleProcessor = new BundleProcessor(
     providerService,
     validationService,
@@ -44,12 +50,6 @@ async function runBundler() {
     bundleProcessor,
     config.isAutoBundle,
     config.autoBundleInterval,
-  )
-  const eventsManager = new EventsManager(
-    providerService,
-    reputationManager,
-    mempoolManager,
-    config.entryPointContract,
   )
 
   // get rpc server components

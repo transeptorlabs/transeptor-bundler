@@ -38,7 +38,6 @@ export class EthAPI {
   public async sendUserOperation(userOp: UserOperation, supportedEntryPoints: string) {
     await this.validateParameters(userOp, supportedEntryPoints)
     const userOpReady = await resolveProperties(userOp)
-
     Logger.debug(
       {
         sender: userOpReady.sender,
@@ -46,27 +45,12 @@ export class EthAPI {
         entryPoint: supportedEntryPoints,
         paymaster: getAddr(userOpReady.paymasterAndData),
       },
-      'send UserOperation'
+      'Starting UserOperation validation'
     )
 
-    const callData = this.entryPointContract.interface.encodeFunctionData(
-      'getUserOpHash',
-      [userOpReady]
-    )
-    const result = await this.providerService.call(
-      this.entryPointContract.address,
-      callData
-    )
-    const userOpHash = this.entryPointContract.interface.decodeFunctionResult(
-      'getUserOpHash',
-      result
-    )[0] as string
-
-    Logger.debug('first validation and sendUserOperation to mempool')
-    const validationResult = await this.validationService.validateUserOp(
-      userOp,
-      undefined
-    )
+    this.validationService.validateInputParameters(userOp, supportedEntryPoints)
+    const validationResult = await this.validationService.validateUserOp(userOp, undefined)
+    const userOpHash = await this.entryPointContract.getUserOpHash(userOpReady)
 
     await this.mempoolManager.addUserOp(
       userOp,
@@ -147,7 +131,7 @@ export class EthAPI {
       signature
     } = op
 
-    return {
+    return deepHexlify({
       userOperation: {
         sender,
         nonce,
@@ -165,7 +149,7 @@ export class EthAPI {
       transactionHash: tx.hash,
       blockHash: tx.blockHash ?? '',
       blockNumber: tx.blockNumber ?? 0
-    }
+    })
   }
 
   public async estimateUserOperationGas (userOp1: UserOperation, entryPointInput: string): Promise<EstimateUserOpGasResult> {

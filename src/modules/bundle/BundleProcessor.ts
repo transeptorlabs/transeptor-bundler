@@ -57,9 +57,9 @@ export class BundleProcessor {
   */
   public async sendNextBundle(isAuto = false): Promise<SendBundleReturn> {
     if (this.mempoolManager.size() === 0) {
-      Logger.debug('No user ops to bundle')
+      Logger.debug('Mempool size is 0 - no user ops to bundle')
       return {
-        transactionHash: 'ok',
+        transactionHash: '',
         userOpHashes: []
       }
     }
@@ -69,13 +69,14 @@ export class BundleProcessor {
       ? await this.mempoolManager.getAllPending()
       : await this.mempoolManager.getNextPending()
     
+    Logger.debug(`Got entries from mempool: ${entries.length}`)
     const [bundle, storageMap] = await this.createBundle(entries)
     Logger.debug({ length: bundle.length, bundle }, 'bundle created')
 
     if (bundle.length === 0) {
       Logger.debug('sendNextBundle - no bundle to send')
       return {
-        transactionHash: 'ok',
+        transactionHash: '',
         userOpHashes: []
       }
     } else {
@@ -87,6 +88,8 @@ export class BundleProcessor {
   }
 
   private async createBundle(entries: MempoolEntry[]): Promise<[UserOperation[], StorageMap]> {
+    Logger.debug('Attepting to create bundle for entries', entries.length)
+
     const bundle: UserOperation[] = []
     const storageMap: StorageMap = {}
     let totalGas = BigNumber.from(0)
@@ -98,7 +101,8 @@ export class BundleProcessor {
     // each sender is allowed only once per bundle
     const senders = new Set<string>()
 
-    for (const entry of entries) {
+    for (let i =0; i < entries.length; i++) {
+      const entry =  entries[i]
       const paymaster = getAddr(entry.userOp.paymasterAndData)
       const factory = getAddr(entry.userOp.initCode)
       const paymasterStatus = this.reputationManager.getStatus(paymaster)
@@ -109,6 +113,7 @@ export class BundleProcessor {
         paymasterStatus === ReputationStatus.BANNED ||
         deployerStatus === ReputationStatus.BANNED
       ) {
+        Logger.debug(`skipping banned entry ${entry.userOpHash}`)
         this.mempoolManager.removeUserOp(entry.userOpHash)
         continue
       }
@@ -146,7 +151,7 @@ export class BundleProcessor {
       if (senders.has(entry.userOp.sender)) {
         Logger.debug(
           {
-            semder: entry.userOp.sender,
+            sender: entry.userOp.sender,
             nonce: entry.userOp.nonce,
           },
           'skipping already included sender'
@@ -177,7 +182,8 @@ export class BundleProcessor {
       const userOpGasCost = BigNumber.from(validationResult.returnInfo.preOpGas).add(entry.userOp.callGasLimit)
       const newTotalGas = totalGas.add(userOpGasCost)
       if (newTotalGas.gt(this.maxBundleGas)) {
-        // TODO: bundle is full set the UserOp back to pending
+        Logger.debug({stopIndex: i, entriesLength: entries.length}, 'Bundle is full sending user ops back to mempool with status pending')
+        // TODO: bundle is full set the remaining UserOps back to pending or they will be lost is mempool with status 'bundling'
         break
       }
 
@@ -186,8 +192,10 @@ export class BundleProcessor {
           paymasterDeposit[paymaster] = await this.entryPointContract.balanceOf(paymaster)
         }
         if (paymasterDeposit[paymaster].lt(validationResult.returnInfo.prefund)) {
-          // not enough balance in paymaster to pay for all UserOps
+          // TODO: bundle is full set the UserOp back to pending
+          // not enough balance in paymaster to pay for all UserOp
           // (but it passed validation, so it can sponsor them separately
+          Logger.debug(`paymaster ${paymaster} does not have not enough balance to pay for UserOp, sending user ops back to mempool with status pending`)
           continue
         }
         stakedEntityCount[paymaster] = (stakedEntityCount[paymaster] ?? 0) + 1
@@ -209,6 +217,7 @@ export class BundleProcessor {
       senders.add(entry.userOp.sender)
       bundle.push(entry.userOp)
       totalGas = newTotalGas
+      Logger.debug('added user op to bundle')
     }
 
     return [bundle, storageMap]
@@ -245,7 +254,7 @@ export class BundleProcessor {
       }
 
       // TODO: parse ret, and revert if needed.
-      Logger.debug({ret}, 'ret=')
+      // Logger.debug({ret}, 'ret=')
       Logger.debug({length: userOps.length}, 'sent handleOps')
 
       // hashes are needed for debug rpc only.
@@ -262,7 +271,7 @@ export class BundleProcessor {
         this.checkFatal(e)
         Logger.warn({e}, 'Failed handleOps, but non-FailedOp error')
         return {
-          transactionHash: 'ok',
+          transactionHash: '',
           userOpHashes: []
         }
       }
@@ -284,7 +293,7 @@ export class BundleProcessor {
         Logger.warn(`Failed handleOps sender=${userOp.sender} reason=${reasonStr}`)
       }
       return {
-        transactionHash: 'ok',
+        transactionHash: '',
         userOpHashes: []
       }
     }

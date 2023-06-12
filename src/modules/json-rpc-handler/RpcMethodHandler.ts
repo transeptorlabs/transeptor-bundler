@@ -27,6 +27,8 @@ export class RpcMethodHandler {
 
   public async doHandleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
     try {
+      Logger.debug({request}, '>> Incoming request')
+
       const isValidRpc: boolean | JsonRpcErrorResponse = this.jsonRpcRequestValidator(request)
       if (typeof isValidRpc !== 'boolean') {
         return isValidRpc
@@ -36,7 +38,7 @@ export class RpcMethodHandler {
       const params = request.params
       let result: any
 
-      Logger.debug({method: method, param: params}, '>> Handling request')
+      Logger.debug('Handling request(PASSED VALIDATION)')
       switch (method) {
         case 'eth_chainId':
           result = await this.providerService.getChainId()
@@ -68,6 +70,9 @@ export class RpcMethodHandler {
           break
         case 'debug_bundler_sendBundleNow':
           result = await this.debug.sendBundleNow()
+          if (result.transactionHash === '' && result.userOpHashes.length === 0) {
+            result = 'ok'
+          }
           break
         case 'debug_bundler_setBundlingMode':
           this.debug.setBundlingMode(params[0])
@@ -93,22 +98,22 @@ export class RpcMethodHandler {
 
   private jsonRpcRequestValidator(request: JsonRpcRequest): boolean | JsonRpcErrorResponse {
     if (!request.jsonrpc || request.jsonrpc !== '2.0') {
-      return this.createErrorResponse(request.id, -32600, 'Invalid Request')
+      return this.createErrorResponse(request.id, -32600, 'Invalid Request, jsonrpc must be exactly "2.0"')
     }
 
     if (!request.method || typeof request.method !== 'string') {
-      return this.createErrorResponse(request.id, -32600, 'Invalid Request')
+      return this.createErrorResponse(request.id, -32600, 'Invalid Request, method must be a string')
     }
 
     if (
       !request.id ||
       (typeof request.id !== 'number' && typeof request.id !== 'string')
     ) {
-      return this.createErrorResponse(request.id, -32600, 'Invalid Request')
+      return this.createErrorResponse(request.id, -32600, 'Invalid Request, id must be a number or string')
     }
 
     if (!request.params || !Array.isArray(request.params)) {
-      return this.createErrorResponse(request.id, -32600, 'Invalid Request')
+      return this.createErrorResponse(request.id, -32600, 'Invalid Request, params must be an array')
     }
 
     if (this.httpApi.indexOf(request.method.split('_')[0]) === -1) {
