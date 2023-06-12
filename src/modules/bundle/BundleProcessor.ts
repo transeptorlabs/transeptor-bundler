@@ -316,7 +316,6 @@ export class BundleProcessor {
 
   // fatal errors we know we can't recover
   private checkFatal (e: any): void {
-    // console.log('ex entries=',Object.entries(e))
     if (e.error?.code === -32601) {
       throw e
     }

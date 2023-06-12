@@ -205,13 +205,13 @@ export class MempoolManager {
   }
 
   public dump(): Array<UserOperation> {
-    Logger.debug(`_______________________________MEMPOOL DUMP____________________________________________`)
+    Logger.debug('_______________________________MEMPOOL DUMP____________________________________________')
     Logger.debug(`Mempool size: ${this.mempool.size}`)
-    Logger.debug({entryCount:this.entryCount }, `Mempool entryCount`)
+    Logger.debug({entryCount:this.entryCount }, 'Mempool entryCount')
     for (const [key, value] of this.mempool.entries()) {
       Logger.debug({uop: value }, `Key: ${key}`)
     }
-    Logger.debug(`________________________________________________________________________________________`)
+    Logger.debug('________________________________________________________________________________________')
     return Array.from(this.mempool.values()).map((mempoolEntry) => mempoolEntry.userOp)
   }
 }

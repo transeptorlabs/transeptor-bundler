@@ -61,14 +61,14 @@ export class EventsManager {
 
     Logger.debug({lastBlock: this.lastBlock, events: events.length}, 'Handling past Entrypoint events since last run')
     for (const ev of events) {
-      this.handleEvent(ev)
+      await this.handleEvent(ev)
     }
   }
 
-  private handleEvent(ev: any): void {
+  private async handleEvent(ev: any): Promise<void> {
     switch (ev.event) {
       case 'UserOperationEvent':
-        this.handleUserOperationEvent(ev as any)
+        await this.handleUserOperationEvent(ev as any)
         break
       case 'AccountDeployed':
         this.handleAccountDeployedEvent(ev as any)
@@ -80,9 +80,9 @@ export class EventsManager {
     this.lastBlock = ev.blockNumber + 1
   }
 
-  private handleUserOperationEvent(ev: any): void {
+  private async handleUserOperationEvent(ev: any): Promise<void> {
     const hash = ev.args.userOpHash
-    this.mempoolManager.removeUserOp(hash)
+    await this.mempoolManager.removeUserOp(hash)
     this.includedAddress(ev.args.sender)
     this.includedAddress(ev.args.paymaster)
     this.includedAddress(this.getEventAggregator(ev))
@@ -130,7 +130,11 @@ export class EventsManager {
     let startIndex = -1
     let endIndex = -1
     const events = Object.values(this.entryPointContract.interface.events)
-    const beforeExecutionTopic = this.entryPointContract.interface.getEventTopic(events.find(e => e.name === 'BeforeExecution')!)
+    const foundEvent = events.find(e => e.name === 'BeforeExecution')
+    if (!foundEvent) {
+      throw new Error('fatal: no BeforeExecution event found')
+    }
+    const beforeExecutionTopic = this.entryPointContract.interface.getEventTopic(foundEvent)
     
     logs.forEach((log, index) => {
       if (log?.topics[0] === beforeExecutionTopic) {

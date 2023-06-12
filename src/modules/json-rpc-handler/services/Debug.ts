@@ -1,14 +1,14 @@
 import { BundleManager } from '../../bundle'
-import { EventsManager } from '../../event';
+import { EventsManager } from '../../event'
 import { MempoolManager } from '../../mempool'
 import { ReputationManager } from '../../reputation'
 import { ReputationEntry, SendBundleReturn } from '../../types'
 
 export class DebugAPI {
-  private readonly bundleManager: BundleManager;
-  private readonly reputationManager: ReputationManager;
-  private readonly mempoolManager: MempoolManager;
-  private readonly eventsManager: EventsManager;
+  private readonly bundleManager: BundleManager
+  private readonly reputationManager: ReputationManager
+  private readonly mempoolManager: MempoolManager
+  private readonly eventsManager: EventsManager
 
   constructor(
     bundleManager: BundleManager,
@@ -16,40 +16,40 @@ export class DebugAPI {
     mempoolManager: MempoolManager,
     eventsManager: EventsManager
   ) {
-    this.bundleManager = bundleManager;
-    this.reputationManager = reputationManager;
-    this.mempoolManager = mempoolManager;
-    this.eventsManager = eventsManager;
+    this.bundleManager = bundleManager
+    this.reputationManager = reputationManager
+    this.mempoolManager = mempoolManager
+    this.eventsManager = eventsManager
   }
 
   async clearState(): Promise<void> {
-    await this.mempoolManager.clearState();
-    this.reputationManager.clearState();
+    await this.mempoolManager.clearState()
+    this.reputationManager.clearState()
   }
 
   dumpMempool() {
-    return this.mempoolManager.dump();
+    return this.mempoolManager.dump()
   }
 
   setBundlingMode(mode: string): boolean {
-    if (mode !== "auto" && mode !== "manual") {
-      throw new Error("Invalid bundling mode");
+    if (mode !== 'auto' && mode !== 'manual') {
+      throw new Error('Invalid bundling mode')
     }
-    this.bundleManager.setBundlingMode(mode);
-    return true;
+    this.bundleManager.setBundlingMode(mode)
+    return true
   }
 
   async sendBundleNow(): Promise<SendBundleReturn> {
-    const result = await this.bundleManager.doAttemptAutoBundle(true);
-    await this.eventsManager.handlePastEvents();
-    return result;
+    const result = await this.bundleManager.doAttemptAutoBundle(true)
+    await this.eventsManager.handlePastEvents()
+    return result
   }
 
   async setReputation(param: any[]): Promise<ReputationEntry[]> {
-    return this.reputationManager.setReputation(param);
+    return this.reputationManager.setReputation(param)
   }
 
   dumpReputation(): ReputationEntry[] {
-    return this.reputationManager.dump();
+    return this.reputationManager.dump()
   }
 }
