@@ -6,23 +6,27 @@ services:
       - "8545:8545"
     command: >
       --miner.gaslimit 12000000
-      --http --http.api personal,eth,net,web3,debug
-      --http.vhosts '*,localhost,host.docker.internal' --http.addr "0.0.0.0"
-      --ignore-legacy-receipts --allow-insecure-unlock --rpc.allow-unprotected-txs
+      --http 
+      --http.api personal,eth,net,web3,debug
+      --http.vhosts '*,localhost,host.docker.internal' 
+      --http.addr "0.0.0.0"
+      --ignore-legacy-receipts 
+      --allow-insecure-unlock 
+      --rpc.allow-unprotected-txs
       --dev
       --verbosity 2
       --nodiscover --maxpeers 0 --mine --miner.threads 1
       --networkid 1337
 
-  bundler:
-    image: bundler-typescript
+  transeptor:
+    image: bundler-typescript:v0.1.0
     ports:
       - "3000:3000"
     env_file:
       - .env
     command: >
       --port 3000
-      --network http://localhost:8545
+      --network http://host.docker.internal:8545
       --txMode base
       --httpApi web3,eth,debug
-      --entryPoint 0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789
+      --unsafe

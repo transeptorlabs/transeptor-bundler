@@ -19,6 +19,8 @@
     "geth:start": "docker-compose up geth",
     "geth:stop": "docker-compose stop geth",
     "deploy:local": "hardhat deploy --network localhost",
+    "transeptor:start": "docker-compose up transeptor",
+    "transeptor:stop": "docker-compose stop transeptor",
     "signer:balance": "hardhat run ./scripts/check-signer-balance.ts --network localhost",
     "fetch:abis": "ts-node scripts/abis.ts",
     "print": "hardhat run ./scripts/print-deterministic-addr.ts --network localhost",
