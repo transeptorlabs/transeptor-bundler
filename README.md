@@ -53,11 +53,10 @@ Follow the steps below to run Bundler server using a remote Alchemy ETH client
 ## Run Bundler as Docker image
 We will use the `docker-compose.yml` to run bundler in Docker container
 
-1. Build bundler image - `docker build -t bundler-typescript:v0.1.0 .`
+1. Build bundler image - `docker build -t bundler-typescript:v0.1.0-alpha .`
 2. Start geth - make sure geth is up and running `docker-compose up geth`
 3. Make Entrypoint is deployed and bunder signer is funded - (use `npm run deploy:local` is running on local network)
 4. start Transeptor - `docker-compose up transeptor`
-
 
 ## ERC-4337 contracts
 This Bundler uses [Infinitism](https://github.com/eth-infinitism/account-abstraction) `@account-abstraction/contracts`(version 0.6.0) entry point contract for development. The `npm fetch:abi` script fetches abi for the contract and saves it locally at `./abi/entrypoint.js`.

@@ -1,6 +1,6 @@
 {
   "name": "transeptor-bundle",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A modular Typescript ERC-4337 Bundler, designed with a strong emphasis on performance",
   "main": "execute.ts",
   "scripts": {
