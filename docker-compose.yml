@@ -23,7 +23,7 @@ services:
       --networkid 1337
 
   transeptor:
-    image: bundler-typescript:v0.1.0
+    image: transeptorlabs/bundler:latest
     ports:
       - "3000:3000"
     env_file:
