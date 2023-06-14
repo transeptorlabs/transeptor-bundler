@@ -8,7 +8,7 @@ module.exports = {
     path: path.resolve(__dirname, 'dist'),
     filename: 'bundler.js'
   },
-  mode: 'production',
+  mode: 'development', // TODO: change to production - setting to production causes bundler to fail bundler-spec-test
   resolve: {
     extensions: ['.ts', '.js'],
     alias: {
@@ -30,7 +30,7 @@ module.exports = {
       },
     ]
   },
-  stats: 'errors-only',
+  // stats: 'errors-only',
     plugins: [
       new BundleAnalyzerPlugin({
         analyzerMode: 'static',

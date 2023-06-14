@@ -6,6 +6,7 @@ services:
       - "8545:8545"
     command: >
       --miner.gaslimit 12000000
+      --dev.gaslimit 20000000
       --http 
       --http.api personal,eth,net,web3,debug
       --http.vhosts '*,localhost,host.docker.internal' 
@@ -15,7 +16,10 @@ services:
       --rpc.allow-unprotected-txs
       --dev
       --verbosity 2
-      --nodiscover --maxpeers 0 --mine --miner.threads 1
+      --nodiscover 
+      --maxpeers 0 
+      --mine 
+      --miner.threads 1
       --networkid 1337
 
   transeptor:
@@ -29,4 +33,3 @@ services:
       --network http://host.docker.internal:8545
       --txMode base
       --httpApi web3,eth,debug
-      --unsafe

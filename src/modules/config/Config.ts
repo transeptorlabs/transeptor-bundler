@@ -26,7 +26,6 @@ export class Config {
   public readonly minStake: BigNumber
   public readonly minUnstakeDelay: number
 
-  public readonly gasFactor: number
   public readonly minSignerBalance: BigNumber
   public readonly maxBundleGas: number
 
@@ -48,7 +47,6 @@ export class Config {
     .option('--httpApi <string>', 'rpc method name spaces', 'web3,eth')
     .option('--network <string>', 'eth client url', `${this.DEFAULT_NETWORK}`)
     .option('--entryPoint <string>', 'supported entry point address', this.DEFAULT_ENTRY_POINT)
-    .option('--gasFactor <number>', '1')
     .option('--minBalance <string>', 'below this signer balance, keep fee for itself, ignoring "beneficiary" address', '1')
     .option('--maxBundleGas <number>', 'max gas the bundler will use in transactions', '5000000')
     .option('--auto', 'automatic bundling', false)
@@ -116,7 +114,6 @@ export class Config {
     this.minStake = parseEther(programOpts.minStake as string)
     this.minUnstakeDelay = parseInt(programOpts.minUnstakeDelay as string)
 
-    this.gasFactor = parseInt(programOpts.gasFactor as string)
     this.minSignerBalance = parseEther(programOpts.minBalance as string)
     this.maxBundleGas = parseInt(programOpts.maxBundleGas as string)
 
@@ -165,7 +162,6 @@ export class Config {
       isAutoBundle: this.isAutoBundle,
       minStake: `${this.minStake.toString()} wei`,
       minUnstakeDelay: this.minUnstakeDelay.toString(),
-      gasFactor: this.gasFactor,
       minSignerBalance: `${this.minSignerBalance.toString()} wei`,
       maxBundleGas: this.maxBundleGas,
       port: this.port,
