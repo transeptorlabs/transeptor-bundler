@@ -3,7 +3,6 @@ import {
   mockEntryPointGetUserOpHash,
 } from './utils/test-helpers'
 import { MempoolManager } from '../src/modules/mempool'
-import { expect } from 'chai'
 import { ReputationManager } from '../src/modules/reputation'
 import { BigNumber } from 'ethers'
 
@@ -94,9 +93,9 @@ describe('MempoolManager', () => {
     const value2 = await mempoolManager.findByHash(userOpHash2)
     const value3 = await mempoolManager.findByHash(userOpHash3)
 
-    expect(value1?.userOpHash).to.eq(mempoolEntry1.userOpHash)
-    expect(value2?.userOpHash).to.eq(mempoolEntry2.userOpHash)
-    expect(value3?.userOpHash).to.eq(mempoolEntry3.userOpHash)
+    expect(value1?.userOpHash).toEqual(mempoolEntry1.userOpHash)
+    expect(value2?.userOpHash).toEqual(mempoolEntry2.userOpHash)
+    expect(value3?.userOpHash).toEqual(mempoolEntry3.userOpHash)
   })
 
   it('should remove removeUserOp correctly', async () => {
@@ -150,10 +149,10 @@ describe('MempoolManager', () => {
     const removed3 = await mempoolManager.removeUserOp(userOpHash3)
     const notRemoved = await mempoolManager.removeUserOp('key4')
 
-    expect(removed1).to.eq(true)
-    expect(removed2).to.eq(true)
-    expect(removed3).to.eq(true)
-    expect(notRemoved).to.eq(false)
+    expect(removed1).toEqual(true)
+    expect(removed2).toEqual(true)
+    expect(removed3).toEqual(true)
+    expect(notRemoved).toEqual(false)
   })
 
   it('should createNextUserOpBundle(FIFO) correctly', async () => {
@@ -246,12 +245,12 @@ describe('MempoolManager', () => {
 
     const nextBundle = await mempoolManager.getNextPending()
 
-    expect(nextBundle.length).to.eq(5)
-    expect(nextBundle[0].status).to.eq('bundling')
-    expect(nextBundle[1].status).to.eq('bundling')
-    expect(nextBundle[2].status).to.eq('bundling')
-    expect(nextBundle[3].status).to.eq('bundling')
-    expect(nextBundle[4].status).to.eq('bundling')
+    expect(nextBundle.length).toEqual(5)
+    expect(nextBundle[0].status).toEqual('bundling')
+    expect(nextBundle[1].status).toEqual('bundling')
+    expect(nextBundle[2].status).toEqual('bundling')
+    expect(nextBundle[3].status).toEqual('bundling')
+    expect(nextBundle[4].status).toEqual('bundling')
   })
 
   it('should return correct size of the mempool', async () => {
@@ -306,7 +305,7 @@ describe('MempoolManager', () => {
 
     const size2 = mempoolManager.size()
 
-    expect(size1).to.eq(3)
-    expect(size2).to.eq(2)
+    expect(size1).toEqual(3)
+    expect(size2).toEqual(2)
   })
 })

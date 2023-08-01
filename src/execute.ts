@@ -9,6 +9,9 @@ import { ProviderService } from './modules/provider'
 import { ReputationManager } from './modules/reputation'
 import { ValidationService } from './modules/validation'
 import { Logger } from './modules/logger'
+import { Libp2pNode } from './modules/p2p'
+
+let p2pNode: Libp2pNode
 
 async function runBundler() {
   const config = new Config(process.argv)
@@ -71,6 +74,10 @@ async function runBundler() {
     config.httpApi
   )
 
+  // start p2p node
+  p2pNode = new Libp2pNode(config.peerMultiaddrs, false)
+  await p2pNode.start()
+
   // start rpc server
   const bundlerServer = new JsonrpcHttpServer(
     rpcHandler,
@@ -83,7 +90,15 @@ async function runBundler() {
   await bundlerServer.start()
 }
 
+async function stopLibp2p() {
+  await p2pNode.stop()
+}
+
 runBundler().catch(async (error) => {
   Logger.fatal({error: error.message}, 'Aborted')
+  stopLibp2p()
   process.exit(1)
 })
+
+process.on('SIGTERM', stopLibp2p)
+process.on('SIGINT', stopLibp2p)

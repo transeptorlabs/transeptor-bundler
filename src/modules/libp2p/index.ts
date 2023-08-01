@@ -1,1 +1,0 @@
-export { Libp2pNode } from './libp2p-node';

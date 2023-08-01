@@ -1,0 +1,41 @@
+{
+  "name": "transeptor-bundle-hardhat",
+  "version": "0.1.0",
+  "description": "A set of tool for developing and test Transeptor",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "hardhat test",
+    "compile": "hardhat compile",
+    "deploy:aa": "npx hardhat run scripts/deploy-aa.js --network localhost",
+    "deploy": "npx hardhat run scripts/deploy.js --network localhost",
+    "deploy:all": "npm run deploy && npm run deploy:aa",
+    "fund": "npx hardhat --network localhost faucet",
+    "node": "docker-compose up geth",
+    "bundler": "docker-compose up bundler"
+  },
+  "author": {
+    "name": "Transeptor Labs",
+    "email": "bowmanidris95@gmail.com",
+    "url": "https://transeptorlabs.io"
+  },
+  "license": "GNU",
+  "devDependencies": {
+    "@account-abstraction/contracts": "^0.6.0",
+    "@account-abstraction/sdk": "^0.6.0",
+    "@ethersproject/abi": "^5.7.0",
+    "@ethersproject/providers": "^5.7.2",
+    "@nomicfoundation/hardhat-chai-matchers": "^1.0.5",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "@nomiclabs/hardhat-ethers": "^2.2.1",
+    "@nomiclabs/hardhat-etherscan": "^3.1.4",
+    "chai": "^4.3.7",
+    "dotenv": "^16.3.1",
+    "ethers": "^5.7.2",
+    "hardhat": "^2.12.5",
+    "hardhat-gas-reporter": "^1.0.9",
+    "solidity-coverage": "^0.8.2"
+  }
+}

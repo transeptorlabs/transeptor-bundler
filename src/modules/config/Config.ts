@@ -1,4 +1,4 @@
-import packageJson from '../../../package.json'
+import packageJson from '../../../package.json' assert { type: "json" };
 import dotenv from 'dotenv'
 import { Command, OptionValues } from 'commander'
 import { BigNumber, Wallet, ethers, providers } from 'ethers'
@@ -37,6 +37,7 @@ export class Config {
 
   public readonly whitelist: string[]
   public readonly blacklist: string[]
+  public readonly peerMultiaddrs: string[]
 
   public readonly httpApi: string[]
 
@@ -103,6 +104,17 @@ export class Config {
       this.blacklist = process.env.BLACKLIST.split(',')
     }
 
+    this.isP2PMode = programOpts.p2p as boolean
+    if (this.isP2PMode) {
+      if(!process.env.PEER_MULTIADDRS) {
+        this.peerMultiaddrs = []
+      } else {
+        this.peerMultiaddrs = process.env.PEER_MULTIADDRS.split(',')
+      }
+    } else {
+      this.peerMultiaddrs = []
+    }
+  
     this.connectedWallet = Wallet.fromMnemonic(process.env.MNEMONIC as string).connect(this.provider)
     this.beneficiaryAddr = process.env.BENEFICIARY as string
     this.entryPointContract = new ethers.Contract(programOpts.entryPoint as string, ENTRY_POINT_ABI, this.connectedWallet)
@@ -121,7 +133,6 @@ export class Config {
     this.txMode = programOpts.txMode as string
     this.clientVersion = packageJson.version as string
     this.isUnsafeMode = programOpts.unsafe as boolean ? true : false
-    this.isP2PMode = programOpts.p2p as boolean
 
     this.httpApi = (programOpts.httpApi as string).split(',')
     for (let i = 0; i < this.httpApi.length; i++) {
@@ -154,6 +165,7 @@ export class Config {
       txMode: this.txMode,
       isUnsafeMode: this.isUnsafeMode,
       isP2PMode: this.isP2PMode,
+      peerMultiaddrs: this.peerMultiaddrs,
       httpApi: this.httpApi,
       beneficiaryAddr: this.beneficiaryAddr,
       entryPointContractAddress: this.entryPointContract.address,
@@ -166,7 +178,7 @@ export class Config {
       maxBundleGas: this.maxBundleGas,
       port: this.port,
       whitelist: this.whitelist,
-      blacklist: this.blacklist
+      blacklist: this.blacklist,
     },
     'Bundler config')
   }
