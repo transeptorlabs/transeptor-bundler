@@ -1,15 +1,15 @@
-import '@nomiclabs/hardhat-ethers'
-import { HardhatRuntimeEnvironment } from 'hardhat/types'
-import { DeployFunction } from 'hardhat-deploy/types'
-import { ethers } from 'hardhat'
-import { DeterministicDeployer } from '@account-abstraction/sdk'
-import { EntryPoint__factory } from '@account-abstraction/contracts'
 
-/*
-  * This script deploys the EntryPoint contract to the local network.
-  geth: chainId 1337
-*/
-const deployEP: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+const { network, ethers } = require("hardhat");
+
+const { DeterministicDeployer } = require("@account-abstraction/sdk");
+const { EntryPoint__factory } = require("@account-abstraction/contracts");
+
+async function main() {
+  if (network.config.chainId !== 1337 && network.config.chainId !== 31337) {
+    console.log('NOT deploying contracts. use pre-deployed contracts')
+    process.exit(1)
+  }
+
   console.log('<<<<<--Running script to deploy EntryPoint contract-->>>>>')
   const dep = new DeterministicDeployer(ethers.provider)
   const epAddr = DeterministicDeployer.getAddress(EntryPoint__factory.bytecode)
@@ -18,7 +18,7 @@ const deployEP: DeployFunction = async function (hre: HardhatRuntimeEnvironment)
     return
   }
 
-  const net = await hre.ethers.provider.getNetwork()
+  const net = await ethers.provider.getNetwork()
   if (net.chainId !== 1337 && net.chainId !== 31337) {
     console.log('NOT deploying EntryPoint. use pre-deployed entrypoint')
     process.exit(1)
@@ -28,4 +28,11 @@ const deployEP: DeployFunction = async function (hre: HardhatRuntimeEnvironment)
   console.log(`Deployed EntryPoint at ${epAddr} on chainId ${net.chainId}`)
 }
 
-export default deployEP
+
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

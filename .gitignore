@@ -1,6 +1,6 @@
 # Dependencies
 /node_modules
-hardhat/node_modules
+tools/node_modules
 
 # test
 coverage

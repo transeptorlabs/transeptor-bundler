@@ -1,29 +1,26 @@
-import '@nomiclabs/hardhat-ethers'
-import { HardhatRuntimeEnvironment } from 'hardhat/types'
-import { DeployFunction } from 'hardhat-deploy/types'
-import { parseEther } from 'ethers/lib/utils'
-import { Wallet } from 'ethers'
-import dotenv from 'dotenv'
+
+const { network, ethers } = require("hardhat");
+const { parseEther } = require("ethers/lib/utils");
+const { Wallet } = require("ethers");
+const dotenv = require("dotenv");
 dotenv.config()
 
-/*
-  * This script funds bundler signer account locally.
-  geth: chainId 1337
-  signer account: default "hardhat node" account as the signer
-*/
-const fundsigner: DeployFunction = async function (
-  hre: HardhatRuntimeEnvironment
-) {
+async function main() {
+  if (network.config.chainId !== 1337 && network.config.chainId !== 31337) {
+    console.log('NOT deploying contracts. use pre-deployed contracts')
+    process.exit(1)
+  }
+
   // on geth, fund the default "hardhat node" account.
   console.log('<<<<<--Running script to fund default signer account-->>>>>')
 
-  const net = await hre.ethers.provider.getNetwork()
+  const net = await ethers.provider.getNetwork()
   if (net.chainId !== 1337 && net.chainId !== 31337) {
     console.log('NOT funding default signer account. use pre-funded signer account')
     process.exit(1)
   }
 
-  const provider = hre.ethers.provider
+  const provider = ethers.provider
   const signer = provider.getSigner()
   const signerBalance = await provider.getBalance(signer.getAddress())
 
@@ -43,4 +40,11 @@ const fundsigner: DeployFunction = async function (
   }
 }
 
-export default fundsigner
+
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });

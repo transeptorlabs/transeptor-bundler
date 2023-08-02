@@ -1,6 +1,6 @@
-import { EntryPoint__factory, SimpleAccountFactory__factory, SimpleAccount__factory } from '@account-abstraction/contracts'
-import fs from 'fs'
-import path from 'path'
+const { EntryPoint__factory, SimpleAccountFactory__factory, SimpleAccount__factory } = require("@account-abstraction/contracts");
+const fs = require("fs");
+const path = require("path");
 
 async function main() {
   console.log('<<<<<--Running script to fetch entry point and simple account factory abi-->>>>>')

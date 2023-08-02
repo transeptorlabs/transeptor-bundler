@@ -75,7 +75,7 @@ async function runBundler() {
   )
 
   // start p2p node
-  p2pNode = new Libp2pNode(config.peerMultiaddrs, false)
+  p2pNode = new Libp2pNode(config.peerMultiaddrs, config.isP2PMode ? true : false)
   await p2pNode.start()
 
   // start rpc server

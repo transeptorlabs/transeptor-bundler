@@ -1,6 +1,6 @@
-import { EntryPoint__factory, SimpleAccountFactory__factory } from '@account-abstraction/contracts'
-import { DeterministicDeployer } from '@account-abstraction/sdk'
-import { ethers } from 'hardhat'
+const { EntryPoint__factory, SimpleAccountFactory__factory } = require("@account-abstraction/contracts");
+const { DeterministicDeployer } = require("@account-abstraction/sdk");
+const { ethers } = require("hardhat");
 
 async function main() {
   console.log('<<<<<--Running script to print entry point and simple account factory address-->>>>>')

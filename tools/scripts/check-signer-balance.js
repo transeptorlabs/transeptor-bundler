@@ -1,7 +1,6 @@
-import '@nomiclabs/hardhat-ethers'
-import hre from 'hardhat'
-import { Wallet } from 'ethers'
-import dotenv from 'dotenv'
+const { network, ethers } = require("hardhat");
+const { Wallet } = require("ethers");
+const dotenv = require("dotenv");
 dotenv.config()
 
 /*
@@ -11,14 +10,14 @@ dotenv.config()
 async function main() {
   console.log('<<<<<--Running script to check ETH balance of default signer account-->>>>>')
   const mnemonic = process.env.MNEMONIC || 'test '.repeat(11) + 'junk'
-  const provider = hre.ethers.provider
+  const provider = ethers.provider
   const wallet = Wallet.fromMnemonic(mnemonic).connect(provider)
 
   const bundlerSignerAccount = await wallet.getAddress()
   const bal = await provider.getBalance(bundlerSignerAccount)
 
   console.log('Bundler signer account address:', bundlerSignerAccount)
-  console.log(`ETH balance:, ${bal.toString()} wei (${hre.ethers.utils.formatEther(bal)} ETH)`)
+  console.log(`ETH balance:, ${bal.toString()} wei (${ethers.utils.formatEther(bal)} ETH)`)
 }
 
 main()
