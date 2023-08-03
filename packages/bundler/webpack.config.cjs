@@ -3,11 +3,14 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 const nodeExternals = require('webpack-node-externals');
 
 module.exports = {
-  // entry: './bundler/src/execute.ts',
+  experiments: {
+    outputModule: true, // Enable outputModule experiment
+  },
   entry: path.resolve(__dirname, 'src/execute.ts'),
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'bundler.cjs',
+    filename: 'bundler.js', // Use .mjs extension for ESM format
+    chunkFormat: 'module', // Specify the chunk format for ESM modules
   },
   mode: 'development', // TODO: change to production - setting to production causes bundler to fail bundler-spec-test
   resolve: {

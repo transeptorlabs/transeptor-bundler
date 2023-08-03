@@ -1,16 +1,21 @@
 {
-  "name": "root",
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "workspaces": [
-    "packages/*"
-  ],
+  "name": "transeptor-monorepo",
+  "version": "1.0.0",
   "author": {
     "name": "Transeptor Labs",
     "email": "bowmanidris95@gmail.com",
     "url": "https://transeptorlabs.io"
   },
+  "license": "GNU",
+  "homepage": "https://github.com/transeptorlabs/transeptor-bundler#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/transeptorlabs/transeptor-bundler.git"
+  },
+  "bugs": {
+    "url": "https://github.com/transeptorlabs/transeptor-bundler/issues"
+  },
+  "private": true,
   "scripts": {
     "eth-node": "cd packages/tools && npm run geth:start",
     "bundler-prep": "cd packages/tools && npm run bundler-startup",
@@ -22,10 +27,16 @@
     "bundler:searcher": "cd packages/bundler && npm run start:searcher",
     "test-bundler": "cd packages/bundler && npm run test",
     "lint-bundler": "cd packages/bundler && npm run lint",
-    "build-bundler-cjs": "cd packages/bundler && npm run build",
-    "prod-cjs": "cd packages/bundler && npm run start:prod-cjs",
-    "build-bundler-esm": "cd packages/bundler && npm run compile:bundler",
-    "prod-esm": "cd packages/bundler && npm run start:prod-esm"
+    "build-bundler-esm": "cd packages/bundler && npm run build",
+    "start:prod": "cd packages/bundler && npm run start:prod-esm"
   },
-  "license": "GNU"
+  "devDependencies": {
+    "hardhat": "^2.12.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
 }

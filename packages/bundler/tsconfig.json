@@ -26,7 +26,9 @@
   },
   "exclude": [
     "node_modules",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "packages/**/dist",
+    "packages/tools/**",
   ],
   "include": [
     "src/**/*",
