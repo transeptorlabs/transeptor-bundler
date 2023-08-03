@@ -4,7 +4,7 @@ RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY ./package/bundler/package*.json ./
 
 RUN npm ci
 

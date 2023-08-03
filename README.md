@@ -11,6 +11,36 @@ A modular Typescript ERC-4337 Open Source Bundler, designed with a strong emphas
 - See our road-map [here](https://hackmd.io/@V00D00-child/SyXKL6Kmn#Project-StatusRoadmap-)
 
 > :warning: **This repository is currently under active development.**
+  
+## Running Bundler locally
+Follow the steps below to run Bundler server locally:
+
+### base or conditional mode
+Follow the steps below to requires the Bundler to run along side a GETH client:
+1. Install dependencies `npm install`
+2. Add environment variables to `.env`-  `MNEMONIC=<your_seed_phrase>` and `BENEFICIARY=<address_to_receive_funds>`
+3. Start local GETH client `npm run geth:start` (will start at http://localhost:8545/)
+4. Deploy entry point contract and fund the bundler signer account `npm run deploy:local`
+5. Start up Bundler server `npm run start:base`
+6. Bundler will start up in `base` mode with full validation
+
+Use `npm run geth:stop` to stop GETH client
+
+**note: if GETH is terminated, the `npm run deploy:local` script will need to be run again to re-deploy entry point contract and re-fund the bundler signer account.
+
+### searcher mode 
+Follow the steps below to run Bundler server using a remote Alchemy ETH client
+1. Need to sign up for an [Alchemy account](https://auth.alchemy.com/signup)
+2. Add environment variables to `.env` - `ALCHEMY_API_KEY=<your-api-key>`, `MNEMONIC=<your_seed_phrase_for_bundler_signer_account>` and `BENEFICIARY=<address_to_receive_funds>`
+3. Start up Bundler in searcher mode `npm run start:searcher`
+4. Bundler will start up in `searcher` mode
+
+## Test
+`npm run test`
+
+## Lint
+- `npm run lint`
+- `npm run lint:fix`
 
 ## UserOperation Validation
 Storage access rules and opcode banning are two mechanisms implemented in Ethereum clients to enforce security and prevent certain malicious or unsafe behaviors on the network. The Bundler has many configurations to ensure it can handle storage access rules and opcode banning.
@@ -25,41 +55,6 @@ Standard call to entry Point Contract `simulateValidation()`. Run Bundler with `
 - base
 - conditional
 - searcher
-  
-## Running Bundler in base or conditional mode
-Follow the steps below to requires the Bundler to run along side a GETH client:
-1. Install dependencies `npm install`
-2. Add environment variables to `.env`-  `MNEMONIC=<your_seed_phrase>` and `BENEFICIARY=<address_to_receive_funds>`
-3. Start local GETH client `npm run geth:start` (will start at http://localhost:8545/)
-4. Deploy entry point contract and fund the bundler signer account `npm run deploy:local`
-5. Start up Bundler server `npm run start:base`
-6. Bundler will start up in `base` mode with full validation
-
-Use `npm run geth:stop` to stop GETH client
-
-**note: if GETH is terminated, the `npm run deploy:local` script will need to be run again to re-deploy entry point contract and re-fund the bundler signer account.
-
-## Running Bundler in searcher mode 
-Follow the steps below to run Bundler server using a remote Alchemy ETH client
-1. Need to sign up for an [Alchemy account](https://auth.alchemy.com/signup)
-2. Add environment variables to `.env` - `ALCHEMY_API_KEY=<your-api-key>`, `MNEMONIC=<your_seed_phrase_for_bundler_signer_account>` and `BENEFICIARY=<address_to_receive_funds>`
-3. Start up Bundler in searcher mode `npm run start:searcher`
-4. Bundler will start up in `searcher` mode
-
-## Test
-`npm run test`
-
-## Lint
-- `npm run lint`
-- `npm run lint:fix`
-
-## Run Bundler as Docker image
-We will use the `docker-compose.yml` to run bundler in Docker container
-
-1. Build bundler image - `docker build -t bundler-typescript:v0.1.0-alpha .`
-2. Start geth - make sure geth is up and running `docker-compose up geth`
-3. Make Entrypoint is deployed and bunder signer is funded - (use `npm run deploy:local` is running on local network)
-4. start Transeptor - `docker-compose up transeptor`
 
 ## ERC-4337 contracts
 This Bundler uses [Infinitism](https://github.com/eth-infinitism/account-abstraction) `@account-abstraction/contracts`(version 0.6.0) entry point contract for development. The `npm fetch:abi` script fetches abi for the contract and saves it locally at `./abi/entrypoint.js`.

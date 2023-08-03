@@ -3,10 +3,11 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 const nodeExternals = require('webpack-node-externals');
 
 module.exports = {
-  entry: './src/execute.ts',
+  // entry: './bundler/src/execute.ts',
+  entry: path.resolve(__dirname, 'src/execute.ts'),
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'bundler.js'
+    filename: 'bundler.cjs',
   },
   mode: 'development', // TODO: change to production - setting to production causes bundler to fail bundler-spec-test
   resolve: {
@@ -15,8 +16,8 @@ module.exports = {
       // the packages below has a "browser" and "main" entry. Unfortunately, webpack uses the "browser" entry,
       // even through we explicitly use set "target: node"
       // (see https://github.com/webpack/webpack/issues/4674)
-      '@ethersproject/random': path.resolve(__dirname, './node_modules/@ethersproject/random/lib/index.js'),
-      '@ethersproject/base64': path.resolve(__dirname, './node_modules/@ethersproject/base64/lib/index.js')
+      '@ethersproject/random': path.resolve(__dirname, '../../node_modules/@ethersproject/random/lib/index.js'),
+      '@ethersproject/base64': path.resolve(__dirname, '../../node_modules/@ethersproject/base64/lib/index.js')
     },
   },
   externals: [nodeExternals()],

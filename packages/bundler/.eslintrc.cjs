@@ -22,7 +22,7 @@ module.exports = {
   overrides: [
     {
       files: ['*.ts'],
-      excludedFiles: 'dist/**',
+      excludedFiles: './dist/**',
     },
   ],
 }
