@@ -68,6 +68,35 @@ PEER_MULTIADDRS=<multiaddrs_of_peers_SEPARATEDBY_COMMA>
 
 The bundler will start on `http://localhost:3000/rpc`.
 
+## Command line arguments
+List of all command line arguments supported by the bundler.
+
+|       **Option**       |  **Type** |                                                                                      **Description**                                                                                     | **Default Value**                                |
+|:----------------------:|:---------:|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------|
+| `--httpApi`            | `string`  | rpc method name spaces                                                                                                                                                                   | `web3,eth`                                 |
+| `--network`            | `string`  | eth client url                                                                                                                                                                           | `http://localhost:8545`                      |
+| `entryPoint`           | `number`  | supported entry point address                                                                                                                                                            | `0x5FF1...2789`*** |
+| `--minBalance`         | `number`  | min ETH balance for signer account                                                                                                                                                       | `1`                                          |
+| `--maxBundleGas`       | `number`  | max gas the bundler will use in transactions                                                                                                                                             | `5000000`                                    |
+| `--auto`               | `boolean` | automatic bundling                                                                                                                                                                       | `false`                                      |
+| `--autoBundleInterval` | `number`  | auto bundler interval in (ms)                                                                                                                                                            | `120000`                                     |
+| `--bundleSize`         | `number`  | maximum # of pending mempool entities                                                                                                                                                    | `10`                                         |
+| `--port`               | `number`  | server listening port                                                                                                                                                                    | `3000`                                       |
+| `--minUnstakeDelay`    | `number`  | time paymaster has to wait to unlock the stake (seconds)                                                                                                                                  | `0`                                          |
+| `--minStake`           | `number`  | minimum stake an entity has to have to pass the reputation system* | `1`                                          |
+| `--txMode`             | `string`  | bundler transaction mode (base, conditional, searcher)                                                                                                                                   | `base`                                       |
+| `--unsafe`             | `boolean` | UNSAFE mode: no storage or opcode checks **                          | `false`                                      |
+| `--p2p`                | `boolean` | p2p mode enabled                                                                                                                                                                         | `false`                                      |
+
+*When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH.
+**safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode.
+***0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+
+## Docker image
+```bash
+docker pull transeptorlabs/bundler
+```
+
 ## 🧪 Test
 ```bash
 npm run test
