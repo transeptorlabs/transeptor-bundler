@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "author": {
     "name": "Transeptor Labs",
-    "email": "bowmanidris95@gmail.com",
+    "email": "transeptorhq@gmail.com",
     "url": "https://transeptorlabs.io"
   },
   "license": "GNU",
@@ -29,9 +29,6 @@
     "lint-bundler": "cd packages/bundler && npm run lint",
     "build-bundler-esm": "cd packages/bundler && npm run build",
     "start:prod": "cd packages/bundler && npm run start:prod-esm"
-  },
-  "devDependencies": {
-    "hardhat": "^2.12.5"
   },
   "engines": {
     "node": ">=18.0.0"

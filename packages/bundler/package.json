@@ -20,6 +20,7 @@
     "///ab": "_____________________________________________________________________",
     "///cv": "________________________BUNDLER DEV __________________________________",
     "start:base": "ts-node --experimental-specifier-resolution=node src/execute.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "start:base-p2p": "ts-node --experimental-specifier-resolution=node src/execute.ts --httpApi web3,eth,debug --txMode base --p2p | pino-pretty",
     "start:base-peer": "ts-node --experimental-specifier-resolution=node src/execute.ts --httpApi web3,eth,debug --txMode base --p2p  --port 3001| pino-pretty",
     "start:base:unsafe": "ts-node --experimental-specifier-resolution=node src/execute.ts --httpApi web3,eth,debug --txMode base  --unsafe | pino-pretty",
     "start:conditional": "ts-node --experimental-specifier-resolution=node src/execute.ts --httpApi web3,eth,debug --txMode conditional | pino-pretty",
@@ -44,7 +45,7 @@
   },
   "author": {
     "name": "Transeptor Labs",
-    "email": "bowmanidris95@gmail.com",
+    "email": "transeptorhq@gmail.com",
     "url": "https://transeptorlabs.io"
   },
   "license": "GNU",
