@@ -36,7 +36,7 @@
     "start:prod-tsc": "node --experimental-specifier-resolution=node dist/src/execute.js --httpApi web3,eth,debug --txMode base",
     "///tu": "_____________________________________________________________________",
     "///iu": "________________________TEST/LINT SCRIPTS_____________________________",
-    "test": "jest",
+    "test": "jest --coverage",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "lint": "eslint .",

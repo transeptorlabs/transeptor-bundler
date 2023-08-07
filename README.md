@@ -3,6 +3,7 @@
 ![Node Version](https://img.shields.io/badge/node-18.x-green)
 ![TS](https://badgen.net/badge/-/TypeScript?icon=typescript&label&labelColor=blue&color=555555)
 ![Github workflow build status(main)](https://img.shields.io/github/actions/workflow/status/transeptorlabs/transeptor-bundler/build.yml?branch=main)
+[![codecov](https://img.shields.io/codecov/c/github/transeptorlabs/transeptor-bundler.svg?style=flat-square)](https://app.codecov.io/gh/transeptorlabs/transeptor-bundler)
 ![Docker pulls](https://img.shields.io/docker/pulls/transeptorlabs/bundler)
 
 A modular Typescript ERC-4337 Open Source Bundler, designed with a strong emphasis on performance. See our road-map [here](https://hackmd.io/@V00D00-child/SyXKL6Kmn#Project-StatusRoadmap-)

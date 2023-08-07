@@ -25,7 +25,7 @@
     "bundler:conditional": "cd packages/bundler && npm run start:conditional",
     "bundler:conditional-safe": "cd packages/bundler && npm run start:conditional:unsafe",
     "bundler:searcher": "cd packages/bundler && npm run start:searcher",
-    "test-bundler": "cd packages/bundler && npm run test",
+    "test": "cd packages/bundler && npm run test",
     "lint-bundler": "cd packages/bundler && npm run lint",
     "build-bundler-esm": "cd packages/bundler && npm run build",
     "start:prod": "cd packages/bundler && npm run start:prod-esm"
