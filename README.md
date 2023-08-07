@@ -71,7 +71,7 @@ The bundler will start on `http://localhost:3000/rpc`.
 ## Command line arguments
 List of all command line arguments supported by the bundler.
 
-|       **Option**       |  **Type** |                                                                                      **Description**                                                                                     | **Default Value**                                |
+|       **Options**       |  **Type** |                                                                                      **Description**                                                                                     | **Default Value**                                |
 |:----------------------:|:---------:|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------|
 | `--httpApi`            | `string`  | rpc method name spaces                                                                                                                                                                   | `web3,eth`                                 |
 | `--network`            | `string`  | eth client url                                                                                                                                                                           | `http://localhost:8545`                      |
