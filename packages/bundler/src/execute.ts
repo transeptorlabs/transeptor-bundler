@@ -11,7 +11,7 @@ import { ValidationService } from './modules/validation'
 import { Logger } from './modules/logger'
 import { Libp2pNode } from './modules/p2p'
 
-let p2pNode: Libp2pNode = undefined
+let p2pNode: Libp2pNode
 
 async function runBundler() {
   const config = new Config(process.argv)
@@ -21,6 +21,7 @@ async function runBundler() {
   const reputationManager = new ReputationManager(config.minStake, config.minUnstakeDelay)
   reputationManager.addWhitelist(config.whitelist)
   reputationManager.addBlacklist(config.blacklist)
+  reputationManager.startHourlyCron()
 
   // erc-4337 in-memory mempool
   const mempoolManager = new MempoolManager(reputationManager, config.bundleSize)

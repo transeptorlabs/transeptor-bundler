@@ -27,7 +27,7 @@
     "bundler:base-p2p": "cd packages/bundler && npm run start:base-p2p",
     "bundler:peer": "cd packages/bundler && npm run start:base-peer",
     "test": "cd packages/bundler && npm run test",
-    "lint-bundler": "cd packages/bundler && npm run lint",
+    "lint": "cd packages/bundler && npm run lint",
     "lint-bundler-fix": "cd packages/bundler && npm run lint:fix",
     "build": "cd packages/bundler && npm run build",
     "start:prod": "cd packages/bundler && npm run start:prod-esm",
