@@ -1,0 +1,53 @@
+{
+  "name": "@transeptor/tools",
+  "version": "1.0.0",
+  "description": "A set of tool for developing Transeptor",
+  "author": {
+    "name": "Transeptor Labs",
+    "email": "transeptorhq@gmail.com",
+    "url": "https://transeptorlabs.io"
+  },
+  "license": "GNU",
+  "homepage": "https://github.com/transeptorlabs/transeptor-bundler#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/transeptorlabs/transeptor-bundler.git"
+  },
+  "bugs": {
+    "url": "https://github.com/transeptorlabs/transeptor-bundler/issues"
+  },
+  "private": true,
+  "scripts": {
+    "test": "hardhat test",
+    "compile": "npx hardhat compile",
+    "deploy:ep": "npx hardhat run scripts/deploy.js --network localhost",
+    "deploy:scf": "npx hardhat run scripts/deploy-scf.js --network localhost",
+    "fund-signer": "npx hardhat run scripts/fund-signer.js --network localhost",
+    "signer-balance": "npx hardhat run scripts/check-signer-balance.js --network localhost",
+    "bundler-startup": "npm run deploy:ep && npm run deploy:scf && npm run fund-signer",
+    "faucet": "npx hardhat --network localhost faucet",
+    "geth:start": "docker-compose up geth",
+    "geth:stop": "docker-compose stop geth",
+    "start:docker-bundler": "docker-compose up bundler-typescript-local"
+  },
+  "devDependencies": {
+    "@account-abstraction/contracts": "^0.6.0",
+    "@account-abstraction/sdk": "^0.6.0",
+    "@ethersproject/abi": "^5.7.0",
+    "@ethersproject/providers": "^5.7.2",
+    "@nomicfoundation/hardhat-chai-matchers": "^1.0.5",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "@nomiclabs/hardhat-ethers": "^2.2.1",
+    "@nomiclabs/hardhat-etherscan": "^3.1.4",
+    "chai": "^4.3.7",
+    "dotenv": "^16.3.1",
+    "ethers": "^5.7.2",
+    "hardhat": "^2.12.5",
+    "hardhat-gas-reporter": "^1.0.9",
+    "solidity-coverage": "^0.8.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

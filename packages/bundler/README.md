@@ -1,27 +1,8 @@
-<p align="center">
-  <a href="https://transeptorlabs.io/docs/category/bundler">
-    <img width="500" title="Transeptor" src='https://transeptorlabs.io/img/brand/transeptor.png' />
-  </a>
-</p>
+# @transeptor-bundler
 
-<p align="center">
-  The TypeScript implementation of the ERC-4337 Bundler client; was designed with a strong emphasis on performance.
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/node-18.x-green" alt="Node Version">
-  <img src="https://badgen.net/badge/-/TypeScript?icon=typescript&label&labelColor=blue&color=555555" alt="TypeScript">
-  <img src="https://img.shields.io/github/actions/workflow/status/transeptorlabs/transeptor-bundler/build.yml?branch=main" alt="Github workflow build status (main)">
-  <a href="https://app.codecov.io/gh/transeptorlabs/transeptor-bundler">
-    <img src="https://img.shields.io/codecov/c/github/transeptorlabs/transeptor-bundler.svg?style=flat-square" alt="codecov">
-  </a>
-  <img src="https://img.shields.io/docker/pulls/transeptorlabs/bundler" alt="Docker pulls">
-</p>
-
-## Project status
-
-> :warning: **This repository is currently under active development.**
-> See our road-map [here](https://hackmd.io/@V00D00-child/SyXKL6Kmn#Project-StatusRoadmap-)
+![Node Version](https://img.shields.io/badge/node-18.x-green)
+![TS](https://badgen.net/badge/-/TypeScript?icon=typescript&label&labelColor=blue&color=555555)
+![Github workflow build status(main)](https://img.shields.io/github/actions/workflow/status/transeptorlabs/transeptor-bundler/build.yml?branch=main)
 
 ## 📥 Installation
 
@@ -76,6 +57,17 @@ PEER_MULTIADDRS=<multiaddrs_of_peers_SEPARATEDBY_COMMA>
 | conditional         | `npm run bundler:conditional`        | Full Validation    | Uses `eth_sendRawTransactionConditional` RPC                                             |
 | conditional(unsafe) | `npm run bundler:conditional-unsafe` | Partial Validation | Uses `eth_sendRawTransactionConditional` RPC                                             |
 | searcher            | `npm run bundler:searcher`           | Partial Validation | Uses [Flashbots](https://docs.flashbots.net/flashbots-auction/searchers/quick-start) API |
+| base-p2p            | `npm run bundler:base-p2p`           | Full Validation |  | Uses `eth_sendRawTransaction` 
+| base-p2p-peer            | `npm run bundler:peer`           | Full Validation |  | Uses `eth_sendRawTransaction` 
+
+
+The bundler will start on `http://localhost:3001/rpc`.
+
+#### Start Bundler node p2p
+1. Ensure that ETH node is running, ERC-4337 contracts are deployed and bundler signer account is funded.
+2. Ensure that a bundler node is running on `http://localhost:3000/rpc` with `--p2p` flag(mode base-p2p ).
+3. Add the bundler node's multiaddr to the `PEER_MULTIADDRS` in `.env` file.
+4. Start bundler peer node(mode base-p2p-peer).
 
 The bundler will start on `http://localhost:3000/rpc`.
 
@@ -123,8 +115,7 @@ npm run build:bundler-docker
 
 Run image locally
 ```bash
-npm run start:bundler-docker
-```
+npm ru
 
 ## 🧪 Test
 
@@ -144,31 +135,11 @@ or
 npm run lint
 ```
 
-## Contribute
+## EIP4337 bundler compatibility tests
+1. Clone EIP4337 bundler compatibility [repo](https://github.com/eth-infinitism/bundler-spec-tests)
+2. Follow readme to install the dependencies.
+3. Inside repo directory run the following command to run the tests(make sure the bundler is running locally).
 
-We welcome contributions to enhance our ERC-4337 Bundler. If you would like to contribute, please follow these guidelines [here](https://github.com/transeptorlabs/transeptor-bundler/blob/main/CONTRIBUTING.md). There are a few things you can do right now to help out:
-
-- Add tests. There can never be enough tests.
-
-## Acknowledgements
-
-We want to express our gratitude to the following individuals and organizations for their contributions and support in making this project possible:
-
-- [Infinitism](https://github.com/eth-infinitism/bundler) - for inspiring our project and serving as a reference for implementation techniques.
-
-We are grateful to the open-source community and the countless developers who have shared their knowledge and resources, enabling us to build upon their work.
-
-Thank you all for your support!
-
-## Contact
-
-If you have any questions or feedback about the ERC-4337 Bundler project, please feel free to reach out to us.
-
-- **Twitter**: [@transeptorlabs](https://twitter.com/transeptorlabs)
-- **Telegram**: [Telegram channel](https://t.me/+eUGda3KIND4zMjRh)
-
-We value and appreciate your feedback and involvement, as it plays a crucial role in the growth and success of the project. We look forward to hearing from you!
-
-## 📄 License
-
-Licensed under the [GPL-3.0 License](https://github.com/transeptorlabs/transeptor-bundler/blob/main/LICENSE).
+```bash
+pdm run pytest -rA -W ignore::DeprecationWarning --url http://localhost:3000/rpc --entry-point 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 --ethereum-node http://localhost:8545
+```
