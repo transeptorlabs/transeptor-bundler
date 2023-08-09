@@ -4,49 +4,122 @@
 ![TS](https://badgen.net/badge/-/TypeScript?icon=typescript&label&labelColor=blue&color=555555)
 ![Github workflow build status(main)](https://img.shields.io/github/actions/workflow/status/transeptorlabs/transeptor-bundler/build.yml?branch=main)
 
-## Installation
+## 📥 Installation
+
 ```bash
 npm install
 ```
 
-## Development
+## 🚀 Development
+
 Everything you need to get started developing with the Bundler.
 
 #### Run local ETH Node
-`npm run eth-node`
+
+```bash
+npm run eth-node
+```
 
 #### Deploy ERC-4337 contracts and fund bundler signer account
-Run `npm run bundler-prep` to set up the bundler for development. This will:
+
+```bash
+npm run bundler-prep
+```
+
+Use this script to:
+
 - deploy the entry point contract to the local eth node.
-- deploy simple account factory contract to the local eth node. 
+- deploy simple account factory contract to the local eth node.
 - Fund the bundler signer account with ETH.
 
-#### Start Bundler node 
-1. Ensure that ETH node is running, ERC-4337 contracts are deployed and bundler signer account is funded.
-2. Copy values in `.env.sample` into `.env` and fill in the values with your own.
-3. Pick a mode to run the bundler in; see table below for details.
+#### Start Bundler node
 
-|   Mode  |    Script   | Validation | Bundle strategy |
-|:-------:|:-----------:|------------|:---------------:|
-| address | `string`    |            |                 |
-| balance | `BigNumber` |            |                 |
+Copy values in `.env.sample` into `.env` and fill in the values with your own.
+
+```env
+MNEMONIC=test test test test test test test test test test test junk
+INFURA_API_KEY=<your-infura-api-key>
+ALCHEMY_API_KEY=<your-alcemy-api-key>
+BENEFICIARY=<address_to_receive_funds>
+WHITE_LIST=<address_to_whitelist_SEPARATEDBY_COMMA>
+BLACK_LIST=<address_to_blacklist_SEPARATEDBY_COMMA>
+PEER_MULTIADDRS=<multiaddrs_of_peers_SEPARATEDBY_COMMA>
+```
+
+1. Ensure that the ETH node is running, ERC-4337 contracts are deployed, and the bundler signer account is funded.
+2. Ensure that you populate `.env` with your own.
+3. Pick a mode to run the bundler; see the table below for details.
+
+| Mode                | Script                               | Validation         | Bundle strategy                                                                          |
+| ------------------- | ------------------------------------ | ------------------ | ---------------------------------------------------------------------------------------- |
+| base                | `npm run bundler:base`               | Full Validation    | Uses `eth_sendRawTransaction` RPC                                                        |
+| base(unsafe)        | `npm run bundler:base-unsafe`        | Partial Validation | Uses `eth_sendRawTransaction` RPC                                                        |
+| conditional         | `npm run bundler:conditional`        | Full Validation    | Uses `eth_sendRawTransactionConditional` RPC                                             |
+| conditional(unsafe) | `npm run bundler:conditional-unsafe` | Partial Validation | Uses `eth_sendRawTransactionConditional` RPC                                             |
+| searcher            | `npm run bundler:searcher`           | Partial Validation | Uses [Flashbots](https://docs.flashbots.net/flashbots-auction/searchers/quick-start) API |
+| base-p2p            | `npm run bundler:base-p2p`           | Full Validation |  | Uses `eth_sendRawTransaction` 
+| base-p2p-peer            | `npm run bundler:peer`           | Full Validation |  | Uses `eth_sendRawTransaction` 
 
 
-The bundler will start on `http://localhost:3000/rpc`
+The bundler will start on `http://localhost:3001/rpc`.
 
 #### Start Bundler node p2p
 1. Ensure that ETH node is running, ERC-4337 contracts are deployed and bundler signer account is funded.
-2. Start the bundler node in p2p mode.
-3. 
+2. Ensure that a bundler node is running on `http://localhost:3000/rpc` with `--p2p` flag(mode base-p2p ).
+3. Add the bundler node's multiaddr to the `PEER_MULTIADDRS` in `.env` file.
+4. Start bundler peer node(mode base-p2p-peer).
 
+The bundler will start on `http://localhost:3000/rpc`.
 
 ## Features
-- **Full Validation** - Uses geth `debug_traceCall` method to enforce the full spec storage access rules and opcode banning.
-- **Partial Validation** - Standard call to entry Point Contract `simulateValidation()`. No storage access rules and opcode banning. 
-  
-## Test
-`npm run test`
 
-## Lint
-- `npm run lint`
-- `npm run lint:fix`
+- **Full Validation** - Uses geth `debug_traceCall` method to enforce the full spec storage access rules and opcode banning.
+- **Partial Validation** - Standard call to entry Point Contract `simulateValidation()`. No storage access rules and opcode banning.
+
+## Command line arguments
+
+List of all command line arguments supported by the bundler.
+
+|      **Options**       | **Type**  | **Description**                                                     | **Default Value**       |
+| -------------------- | ------- | ------------------------------------------------------------------- | ----------------------- |
+|      `--httpApi`       | `string`  | rpc method name spaces                                              | `web3,eth`              |
+|      `--network`       | `string`  | eth client url                                                      | `http://localhost:8545` |
+|      `entryPoint`      | `number`  | supported entry point address                                       | `0x5FF1...2789`\*\*\*   |
+|     `--minBalance`     | `number`  | min ETH balance for signer account                                  | `1`                     |
+|    `--maxBundleGas`    | `number`  | max gas the bundler will use in transactions                        | `5000000`               |
+|        `--auto`        | `boolean` | automatic bundling                                                  | `false`                 |
+| `--autoBundleInterval` | `number`  | auto bundler interval in (ms)                                       | `120000`                |
+|     `--bundleSize`     | `number`  | maximum # of pending mempool entities                               | `10`                    |
+|        `--port`        | `number`  | server listening port                                               | `3000`                  |
+|  `--minUnstakeDelay`   | `number`  | time paymaster has to wait to unlock the stake (seconds)            | `0`                     |
+|      `--minStake`      | `number`  | minimum stake an entity has to have to pass the reputation system\* | `1`                     |
+|       `--txMode`       | `string`  | bundler transaction mode (base, conditional, searcher)              | `base`                  |
+|       `--unsafe`       | `boolean` | UNSAFE mode: no storage or opcode checks \*\*                       | `false`                 |
+|        `--p2p`         | `boolean` | p2p mode enabled                                                    | `false`                 |
+
+\*When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH.
+**safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode. \***0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
+
+## Docker image
+
+```bash
+docker pull transeptorlabs/bundler
+```
+
+## 🧪 Test
+
+```bash
+npm run test
+```
+
+## 🔍 Lint
+
+```bash
+npm run lint:fix
+```
+
+or
+
+```bash
+npm run lint
+```
