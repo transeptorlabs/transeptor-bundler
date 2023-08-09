@@ -36,7 +36,7 @@
     "start:prod-tsc": "node --experimental-specifier-resolution=node dist/src/execute.js --httpApi web3,eth,debug --txMode base",
     "///tu": "_____________________________________________________________________",
     "///iu": "________________________TEST/LINT SCRIPTS_____________________________",
-    "test": "jest --coverage",
+    "test": "jest --coverage --detectOpenHandles",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "lint": "eslint .",
@@ -101,7 +101,9 @@
     },
     "collectCoverageFrom": [
       "src/**/*.(t|j)s",
-      "!src/types/**/*.(t|j)s"
+      "!src/modules/types/**/*.ts",
+      "!src/modules/config/**/*.ts",
+      "!src/modules/cli/**/*.ts"
     ],
     "coverageDirectory": "./coverage",
     "testEnvironment": "node"

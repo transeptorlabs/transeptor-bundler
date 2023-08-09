@@ -26,8 +26,6 @@ export class ReputationManager {
   constructor(minStake: BigNumber, minUnstakeDelay: number) {
     this.minStake = minStake
     this.minUnstakeDelay = minUnstakeDelay
-
-    this.startHourlyCron()
   }
 
   /**
