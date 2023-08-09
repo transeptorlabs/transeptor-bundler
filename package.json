@@ -28,8 +28,10 @@
     "bundler:searcher": "cd packages/bundler && npm run start:searcher",
     "test": "cd packages/bundler && npm run test",
     "lint-bundler": "cd packages/bundler && npm run lint",
-    "build-bundler-esm": "cd packages/bundler && npm run build",
-    "start:prod": "cd packages/bundler && npm run start:prod-esm"
+    "build": "cd packages/bundler && npm run build",
+    "start:prod": "cd packages/bundler && npm run start:prod-esm",
+    "build:bundler-docker": "docker build -t bundler-typescript:v-local .",
+    "start:bundler-docker": "cd packages/tools && npm run start:docker-bundler"
   },
   "engines": {
     "node": ">=18.0.0"

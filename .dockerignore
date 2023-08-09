@@ -4,18 +4,16 @@ Dockerfile*
 .nvmrc
 
 # Production
-/reports
-/test
-/scripts
-/cache
-/contracts
-/deploy
-/abi
-/artifacts
-/dist
-/typechain
+/packages/bundler/node_modules
+/packages/bundler/reports
+/packages/bundler/test
+/packages/bundler/dist
+/packages/tools
 
 # secrets
+/packages/bundler/.env
+/packages/bundler/.env.sample
+
 .env
 .env.local
 .env.development.local
@@ -48,9 +46,9 @@ tags.json
 .github
 .gitignore
 .eslintcache
-transeptor-architecture.svg
+/packages/bundler/transeptor-architecture.svg
 *svg
 
 # config
 hardhat.config.ts
-.eslint.js
+/packages/bundler/.eslint.cjs

@@ -21,3 +21,17 @@ services:
       --mine 
       --miner.threads 1
       --networkid 1337
+
+  bundler-typescript-local:
+    image: bundler-typescript:v-local
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../bundler/.env
+    command: >
+      --port 3000
+      --network http://host.docker.internal:8545
+      --txMode base
+      --httpApi web3,eth,debug
+      --auto
+      --autoBundleInterval 12000

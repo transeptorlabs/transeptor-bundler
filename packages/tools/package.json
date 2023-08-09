@@ -27,7 +27,8 @@
     "bundler-startup": "npm run deploy:ep && npm run deploy:scf && npm run fund-signer",
     "faucet": "npx hardhat --network localhost faucet",
     "geth:start": "docker-compose up geth",
-    "geth:stop": "docker-compose stop geth"
+    "geth:stop": "docker-compose stop geth",
+    "start:docker-bundler": "docker-compose up bundler-typescript-local"
   },
   "devDependencies": {
     "@account-abstraction/contracts": "^0.6.0",

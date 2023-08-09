@@ -110,8 +110,19 @@ List of all command line arguments supported by the bundler.
 
 ## Docker image
 
+Pull latest image from docker hub
 ```bash
 docker pull transeptorlabs/bundler
+```
+
+Build image locally
+```bash
+npm run build:bundler-docker
+```
+
+Run image locally
+```bash
+npm run start:bundler-docker
 ```
 
 ## 🧪 Test

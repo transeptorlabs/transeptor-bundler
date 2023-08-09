@@ -4,11 +4,12 @@ RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
 WORKDIR /app
 
-COPY ./package/bundler/package*.json ./
+COPY package*.json ./
+
+# Copy the bundler source code from the host machine to the container
+COPY ./packages/bundler /app/packages/bundler
 
 RUN npm ci
-
-COPY . .
 
 RUN npm run build
 
@@ -16,11 +17,17 @@ RUN npm run build
 FROM node:18.0.0-alpine as run
 RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
-WORKDIR /app
+WORKDIR /app-run
 
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/packages/bundler/dist /app-run/packages/bundler/dist
+COPY --from=builder /app/packages/bundler/package.json /app-run/packages/bundler
 COPY --from=builder /app/package*.json ./
 
 RUN npm ci --only=production
 
-ENTRYPOINT ["node","./dist/bundler.js"]
+# Cleanup Temp Files and Cache
+RUN npm cache clean --force
+
+ENV NODE_OPTIONS=--experimental-specifier-resolution=node
+
+ENTRYPOINT ["node", "--experimental-specifier-resolution=node", "./packages/bundler/dist/bundler.js"]
