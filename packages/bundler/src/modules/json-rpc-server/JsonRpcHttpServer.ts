@@ -82,8 +82,6 @@ export class JsonrpcHttpServer {
           signerAddress: await this.providerService.getSignerAddress(),
           signerBalanceWei: bal.toString(),
           network: {chainId, name},
-          txMode: this.txMode,
-          unsafeMode: this.isUnsafeMode,
         },
         'Bundler passed preflight check'
       )
@@ -95,7 +93,7 @@ export class JsonrpcHttpServer {
   async start(): Promise<void> {
     await this.preflightCheck()
     this.httpServer.listen(this.port, () => {
-      Logger.info(`Bundler running on http://localhost:${this.port}/rpc`)
+      Logger.info(`Bundler listening on http://localhost:${this.port}/rpc`)
     })
   }
 

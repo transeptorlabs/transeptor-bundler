@@ -95,7 +95,8 @@ List of all command line arguments supported by the bundler.
 |      `--minStake`      | `number`  | minimum stake an entity has to have to pass the reputation system\* | `1`                     |
 |       `--txMode`       | `string`  | bundler transaction mode (base, conditional, searcher)              | `base`                  |
 |       `--unsafe`       | `boolean` | UNSAFE mode: no storage or opcode checks \*\*                       | `false`                 |
-|        `--p2p`         | `boolean` | p2p mode enabled                                                    | `false`                 |
+|        `--p2p`         | `boolean` | enable p2p mode enabled                                                    | `false`                 |
+|        `--findPeers`         | `boolean` | search for peers when p2p enabled                                                    | `false`                 |
 
 \*When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH.
 **safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode. \***0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
@@ -132,4 +133,13 @@ or
 
 ```bash
 npm run lint
+```
+
+## EIP4337 bundler compatibility tests
+1. Clone EIP4337 bundler compatibility [repo](https://github.com/eth-infinitism/bundler-spec-tests)
+2. Follow readme to install the dependencies.
+3. Inside repo directory run the following command to run the tests(make sure the bundler is running locally).
+
+```bash
+pdm run pytest -rA -W ignore::DeprecationWarning --url http://localhost:3000/rpc --entry-point 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 --ethereum-node http://localhost:8545
 ```

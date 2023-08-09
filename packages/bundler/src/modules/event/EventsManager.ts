@@ -29,7 +29,6 @@ export class EventsManager {
     this.mempoolManager = mempoolManager
     this.entryPointContract = entryPointContract
     this.initEventListener()
-    Logger.debug('EventManager initialized')
   }
 
   /**

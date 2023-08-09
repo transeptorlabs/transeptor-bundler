@@ -33,8 +33,7 @@ export class MempoolManager {
     this.mutex = new Mutex()
     this.bundleSize = bundleSize
     this.reputationManager = reputationManager
-    Logger.info(`Mempool has bundleSize=${bundleSize} and MAX_MEMPOOL_USEROPS_PER_SENDER=${this.MAX_MEMPOOL_USEROPS_PER_SENDER}`)
-    Logger.debug('MempoolManager initialized')
+    Logger.info(`In-memory Mempool initialized with bundleSize=${bundleSize} and MAX_MEMPOOL_USEROPS_PER_SENDER=${this.MAX_MEMPOOL_USEROPS_PER_SENDER}`)
   }
 
   /* 

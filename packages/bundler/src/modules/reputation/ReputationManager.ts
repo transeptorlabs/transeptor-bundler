@@ -28,7 +28,6 @@ export class ReputationManager {
     this.minUnstakeDelay = minUnstakeDelay
 
     this.startHourlyCron()
-    Logger.debug('ReputationManager initialized')
   }
 
   /**

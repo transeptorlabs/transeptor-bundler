@@ -35,3 +35,4 @@ services:
       --httpApi web3,eth,debug
       --auto
       --autoBundleInterval 12000
+      -- unsafe

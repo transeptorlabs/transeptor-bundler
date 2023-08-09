@@ -1,4 +1,4 @@
-import packageJson from '../../../package.json' assert { type: "json" };
+import packageJson from '../../../package.json' assert { type: 'json' }
 import dotenv from 'dotenv'
 import { Command, OptionValues } from 'commander'
 import { BigNumber, Wallet, ethers, providers } from 'ethers'
@@ -34,6 +34,7 @@ export class Config {
   public readonly clientVersion: string
   public readonly isUnsafeMode: boolean
   public readonly isP2PMode: boolean
+  public readonly findPeers: boolean
 
   public readonly whitelist: string[]
   public readonly blacklist: string[]
@@ -58,7 +59,8 @@ export class Config {
     .option('--minUnstakeDelay <number>', 'time paymaster has to wait to unlock the stake(seconds)', '0') // One day - 84600
     .option('--txMode <string>', 'bundler transaction mode (base, conditional, searcher)', 'base')
     .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode)')
-    .option('--p2p', 'p2p mode enabled)', false)
+    .option('--p2p', 'p2p mode enabled', false)
+    .option('--findPeers', 'search for peers when p2p enabled', false)
 
     const programOpts: OptionValues = program.parse(args).opts()
         
@@ -75,8 +77,10 @@ export class Config {
         throw new Error('ALCHEMY_API_KEY env var not set')
       }
       
+      Logger.debug(`Using remote eth client at ${programOpts.network as string}`)
       this.provider = this.getNetworkProvider(programOpts.network as string, process.env.ALCHEMY_API_KEY as string)
     } else {
+      Logger.debug(`Using local eth client at ${programOpts.network as string}`)
       this.provider = this.getNetworkProvider(programOpts.network as string)
     } 
 
@@ -133,6 +137,7 @@ export class Config {
     this.txMode = programOpts.txMode as string
     this.clientVersion = packageJson.version as string
     this.isUnsafeMode = programOpts.unsafe as boolean ? true : false
+    this.findPeers = programOpts.findPeers as boolean ? true : false
 
     this.httpApi = (programOpts.httpApi as string).split(',')
     for (let i = 0; i < this.httpApi.length; i++) {
@@ -142,7 +147,6 @@ export class Config {
     }
 
     this.dump()
-    Logger.debug('Config initialized')
   }
 
   private getNetworkProvider(url: string, apiKey?: string): providers.JsonRpcProvider {
@@ -180,6 +184,6 @@ export class Config {
       whitelist: this.whitelist,
       blacklist: this.blacklist,
     },
-    'Bundler config')
+    'Bundler config setup')
   }
 }
