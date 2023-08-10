@@ -30,7 +30,7 @@
     "lint": "cd packages/bundler && npm run lint",
     "lint-bundler-fix": "cd packages/bundler && npm run lint:fix",
     "build": "cd packages/bundler && npm run build",
-    "start:prod": "cd packages/bundler && npm run start:prod-esm",
+    "start:prod": "cd packages/bundler && npm run start:prod",
     "build:bundler-docker": "docker build -t bundler-typescript:v-local .",
     "start:bundler-docker": "cd packages/tools && npm run start:docker-bundler"
   },
