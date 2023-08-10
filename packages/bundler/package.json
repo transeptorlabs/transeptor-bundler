@@ -28,12 +28,10 @@
     "start:base-peer": "ts-node --experimental-specifier-resolution=node src/execute.ts --httpApi web3,eth,debug --txMode base  --unsafe --p2p --findPeers --port 3001| pino-pretty",
     "///ar": "_____________________________________________________________________",
     "///ch": "________________________BUNDLER PROD __________________________________",
-    "compile": "tsc",
-    "build": "npx webpack",
+    "build": "tsc",
+    "start:prod": "node --experimental-specifier-resolution=node dist/src/execute.js --httpApi web3,eth,debug --txMode base --unsafe",
     "transeptor:start": "docker-compose up transeptor",
     "transeptor:stop": "docker-compose stop transeptor",
-    "start:prod-esm": "node --experimental-specifier-resolution=node dist/bundler.js --httpApi web3,eth,debug --txMode base",
-    "start:prod-tsc": "node --experimental-specifier-resolution=node dist/src/execute.js --httpApi web3,eth,debug --txMode base",
     "///tu": "_____________________________________________________________________",
     "///iu": "________________________TEST/LINT SCRIPTS_____________________________",
     "test": "jest --coverage --detectOpenHandles",
@@ -80,13 +78,8 @@
     "jest": "^29.5.0",
     "pino-pretty": "^10.0.0",
     "ts-jest": "^29.1.0",
-    "ts-loader": "9.4.2",
     "ts-node": "10.9.1",
-    "typescript": "5.0.4",
-    "webpack": "5.82.0",
-    "webpack-bundle-analyzer": "^4.8.0",
-    "webpack-cli": "5.0.2",
-    "webpack-node-externals": "^3.0.0"
+    "typescript": "5.0.4"
   },
   "jest": {
     "moduleFileExtensions": [

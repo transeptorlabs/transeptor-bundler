@@ -28,11 +28,11 @@ services:
       - "3000:3000"
     env_file:
       - ../bundler/.env
+    depends_on:
+    - geth
     command: >
       --port 3000
       --network http://host.docker.internal:8545
       --txMode base
       --httpApi web3,eth,debug
-      --auto
-      --autoBundleInterval 12000
-      -- unsafe
+      --unsafe
