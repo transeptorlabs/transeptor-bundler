@@ -53,7 +53,7 @@ Use this script to:
 
 #### Start Bundler node
 
-Copy values in `.env.sample` into `.env` and fill in the values with your own.
+Copy values in `.env.sample` into `packages/bundler/.env` and fill in the values with your own.
 
 ```env
 MNEMONIC=test test test test test test test test test test test junk
