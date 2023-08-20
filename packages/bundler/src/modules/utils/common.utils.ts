@@ -31,7 +31,7 @@ export function mapOf<T> (keys: Iterable<string>, mapper: (key: string) => T, fi
 }
 
 // contract abi are taken from @account-abstraction/contracts
-export const ENTRY_POINT_ABI = [
+export const IENTRY_POINT_ABI = [
   {
     inputs: [
       {
@@ -1341,7 +1341,7 @@ export const ENTRY_POINT_ABI = [
   },
 ]
 
-export const PAYMASTER_ABI = [
+export const IPAYMASTER_ABI = [
   {
     inputs: [
       {
@@ -1473,6 +1473,95 @@ export const SENDER_CREATOR_ABI = [
         internalType: 'address',
         name: 'sender',
         type: 'address',
+      },
+    ],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+]
+
+export const IACCOUNT_ABI = [
+  {
+    inputs: [
+      {
+        components: [
+          {
+            internalType: 'address',
+            name: 'sender',
+            type: 'address',
+          },
+          {
+            internalType: 'uint256',
+            name: 'nonce',
+            type: 'uint256',
+          },
+          {
+            internalType: 'bytes',
+            name: 'initCode',
+            type: 'bytes',
+          },
+          {
+            internalType: 'bytes',
+            name: 'callData',
+            type: 'bytes',
+          },
+          {
+            internalType: 'uint256',
+            name: 'callGasLimit',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'verificationGasLimit',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'preVerificationGas',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'maxFeePerGas',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'maxPriorityFeePerGas',
+            type: 'uint256',
+          },
+          {
+            internalType: 'bytes',
+            name: 'paymasterAndData',
+            type: 'bytes',
+          },
+          {
+            internalType: 'bytes',
+            name: 'signature',
+            type: 'bytes',
+          },
+        ],
+        internalType: 'struct UserOperation',
+        name: 'userOp',
+        type: 'tuple',
+      },
+      {
+        internalType: 'bytes32',
+        name: 'userOpHash',
+        type: 'bytes32',
+      },
+      {
+        internalType: 'uint256',
+        name: 'missingAccountFunds',
+        type: 'uint256',
+      },
+    ],
+    name: 'validateUserOp',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: 'validationData',
+        type: 'uint256',
       },
     ],
     stateMutability: 'nonpayable',
