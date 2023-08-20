@@ -6,12 +6,13 @@ import { StorageMap } from './bundle.types'
  */
 export interface ValidationResult {
     returnInfo: {
-      preOpGas: BigNumberish
-      prefund: BigNumberish
-      sigFailed: boolean
-      deadline: number
+        preOpGas: BigNumberish
+        prefund: BigNumberish
+        sigFailed: boolean
+        validAfter: number
+        validUntil: number
     }
-  
+
     senderInfo: StakeInfo
     factoryInfo?: StakeInfo
     paymasterInfo?: StakeInfo
@@ -36,7 +37,7 @@ export enum ValidationErrors {
     SimulateValidation = -32500,
     SimulatePaymasterValidation = -32501,
     OpcodeValidation = -32502,
-    ExpiresShortly = -32503,
+    NotInTimeRange = -32503,
     Reputation = -32504,
     InsufficientStake = -32505,
     UnsupportedSignatureAggregator = -32506,

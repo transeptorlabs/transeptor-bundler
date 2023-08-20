@@ -3,7 +3,7 @@ import dotenv from 'dotenv'
 import { Command, OptionValues } from 'commander'
 import { BigNumber, Wallet, ethers, providers } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
-import { ENTRY_POINT_ABI, isValidAddress } from '../utils'
+import { IENTRY_POINT_ABI, isValidAddress } from '../utils'
 import { Logger } from '../logger'
 dotenv.config()
 
@@ -121,7 +121,7 @@ export class Config {
   
     this.connectedWallet = Wallet.fromMnemonic(process.env.MNEMONIC as string).connect(this.provider)
     this.beneficiaryAddr = process.env.BENEFICIARY as string
-    this.entryPointContract = new ethers.Contract(programOpts.entryPoint as string, ENTRY_POINT_ABI, this.connectedWallet)
+    this.entryPointContract = new ethers.Contract(programOpts.entryPoint as string, IENTRY_POINT_ABI, this.connectedWallet)
 
     this.autoBundleInterval = parseInt(programOpts.autoBundleInterval as string)
     this.bundleSize = parseInt(programOpts.bundleSize as string)

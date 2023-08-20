@@ -96,7 +96,10 @@
       "src/**/*.(t|j)s",
       "!src/modules/types/**/*.ts",
       "!src/modules/config/**/*.ts",
-      "!src/modules/cli/**/*.ts"
+      "!src/modules/cli/**/*.ts",
+      "!src/modules/validation/GethTracer.ts",
+      "!src/modules/validation/parseScannerResult.ts",
+      "!src/modules/validation/BundlerCollectorTracer.ts"
     ],
     "coverageDirectory": "./coverage",
     "testEnvironment": "node"

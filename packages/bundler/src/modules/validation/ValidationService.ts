@@ -15,6 +15,7 @@ export class ValidationService {
   private readonly entryPointContract: ethers.Contract
   private readonly isUnsafeMode: boolean
   private readonly HEX_REGEX = /^0x[a-fA-F\d]*$/i
+  private readonly VALID_UNTIL_FUTURE_SECONDS = 30  // how much time into the future a UserOperation must be valid in order to be accepted
 
   constructor(
     providerService: ProviderService,
@@ -29,19 +30,12 @@ export class ValidationService {
   }
 
   // standard eth_call to simulateValidation
-  public async callSimulateValidation(
-    userOp: UserOperation
-  ): Promise<ValidationResult> {
-    const errorResult = await this.entryPointContract.callStatic
-      .simulateValidation(userOp, { gasLimit: 10e6 })
-      .catch((e) => e)
+  public async callSimulateValidation(userOp: UserOperation): Promise<ValidationResult> {
+    const errorResult = await this.entryPointContract.callStatic.simulateValidation(userOp, { gasLimit: 10e6 }).catch((e) => e)
     return this.parseErrorResult(userOp, errorResult)
   }
 
-  private parseErrorResult(
-    userOp: UserOperation,
-    errorResult: { errorName: string; errorArgs: any }
-  ): ValidationResult {
+  private parseErrorResult(userOp: UserOperation, errorResult: { errorName: string; errorArgs: any }): ValidationResult {
     if (!errorResult?.errorName?.startsWith('ValidationResult')) {
       // parse it as FailedOp
       // if its FailedOp, then we have the paymaster param... otherwise its an Error(string)
@@ -106,19 +100,10 @@ export class ValidationService {
     }
   }
 
-  public async gethTraceCallSimulateValidation(
-    userOp: UserOperation
-  ): Promise<[ValidationResult, BundlerCollectorReturn]> {
+  public async gethTraceCallSimulateValidation(userOp: UserOperation): Promise<[ValidationResult, BundlerCollectorReturn]> {
     // By encoding the function name and its parameters, you create a compact binary representation of the function call, which is required to interact with the contract correctly.
-    const simulateCall = this.entryPointContract.interface.encodeFunctionData(
-      'simulateValidation',
-      [userOp]
-    )
-
-    const simulationGas = BigNumber.from(userOp.preVerificationGas).add(
-      userOp.verificationGasLimit
-    )
-
+    const simulateCall = this.entryPointContract.interface.encodeFunctionData('simulateValidation', [userOp])
+    const simulationGas = BigNumber.from(userOp.preVerificationGas).add(userOp.verificationGasLimit)
     const tracerResult: BundlerCollectorReturn =
       await this.providerService.debug_traceCall(
         {
@@ -134,14 +119,14 @@ export class ValidationService {
     if (lastResult.type !== 'REVERT') {
       throw new Error('Invalid response. simulateCall must revert')
     }
+
     const data = (lastResult as ExitInfo).data
     // Hack to handle SELFDESTRUCT until we fix entrypoint
     if (data === '0x') {
       return [data as any, tracerResult]
     }
     try {
-      const { name: errorName, args: errorArgs } =
-        this.entryPointContract.interface.parseError(data)
+      const { name: errorName, args: errorArgs } = this.entryPointContract.interface.parseError(data)
       const errFullName = `${errorName}(${errorArgs.toString()})`
       const errorResult = this.parseErrorResult(userOp, {
         errorName,
@@ -151,21 +136,21 @@ export class ValidationService {
         // a real error, not a result.
         throw new Error(errFullName)
       }
-      // Logger.debug(
-      //   {
-      //     dumpTree: JSON.stringify(tracerResult, null, 2)
-      //     .replace(new RegExp(userOp.sender.toLowerCase()), '{sender}')
-      //     .replace(
-      //       new RegExp(getAddr(userOp.paymasterAndData) ?? '--no-paymaster--'),
-      //       '{paymaster}'
-      //     )
-      //     .replace(
-      //       new RegExp(getAddr(userOp.initCode) ?? '--no-initcode--'),
-      //       '{factory}'
-      //     )
-      //   }, 
-      //   '==dump tree='
-      // )
+      Logger.debug(
+        {
+          dumpTree: JSON.stringify(tracerResult, null, 2)
+          .replace(new RegExp(userOp.sender.toLowerCase()), '{sender}')
+          .replace(
+            new RegExp(getAddr(userOp.paymasterAndData) ?? '--no-paymaster--'),
+            '{paymaster}'
+          )
+          .replace(
+            new RegExp(getAddr(userOp.initCode) ?? '--no-initcode--'),
+            '{factory}'
+          )
+        }, 
+        '==dump tree='
+      )
       return [errorResult, tracerResult]
     } catch (e: any) {
       // if already parsed, throw as is
@@ -185,20 +170,10 @@ export class ValidationService {
    * one item to check that was un-modified is the aggregator..
    * @param userOp
    */
-  public async validateUserOp(
-    userOp: UserOperation,
-    previousCodeHashes?: ReferencedCodeHashes,
-    checkStakes = true
-  ): Promise<ValidateUserOpResult> {
+  public async validateUserOp(userOp: UserOperation, previousCodeHashes?: ReferencedCodeHashes, checkStakes = true): Promise<ValidateUserOpResult> {
     if (previousCodeHashes != null && previousCodeHashes.addresses.length > 0) {
-      const { hash: codeHashes } = await this.getCodeHashes(
-        previousCodeHashes.addresses
-      )
-      requireCond(
-        codeHashes === previousCodeHashes.hash,
-        'modified code after first validation',
-        ValidationErrors.OpcodeValidation
-      )
+      const { hash: codeHashes } = await this.getCodeHashes(previousCodeHashes.addresses)
+      requireCond(codeHashes === previousCodeHashes.hash, 'modified code after first validation', ValidationErrors.OpcodeValidation)
     }
 
     let res: ValidationResult
@@ -242,17 +217,26 @@ export class ValidationService {
       'Invalid UserOp signature or paymaster signature',
       ValidationErrors.InvalidSignature
     )
-    requireCond(
-      res.returnInfo.deadline == null ||
-        res.returnInfo.deadline + 30 < Date.now() / 1000,
-      'expires too soon',
-      ValidationErrors.ExpiresShortly
+
+    const now = Math.floor(Date.now() / 1000)
+    requireCond(res.returnInfo.validAfter <= now,
+      'time-range in the future time',
+      ValidationErrors.NotInTimeRange
     )
 
+    requireCond(res.returnInfo.validUntil == null || res.returnInfo.validUntil >= now,
+      'already expired',
+      ValidationErrors.NotInTimeRange
+    )
+
+    requireCond(res.returnInfo.validUntil == null || res.returnInfo.validUntil > now + this.VALID_UNTIL_FUTURE_SECONDS,
+      'expires too soon',
+      ValidationErrors.NotInTimeRange
+    )
+   
     if (res.aggregatorInfo != null) {
       this.reputationManager.checkStake('aggregator', res.aggregatorInfo)
     }
-
     requireCond(
       res.aggregatorInfo == null,
       'Currently not supporting aggregator',
