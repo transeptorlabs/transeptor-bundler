@@ -52,7 +52,7 @@ export class Config {
     .option('--minBalance <string>', 'below this signer balance, keep fee for itself, ignoring "beneficiary" address', '1')
     .option('--maxBundleGas <number>', 'max gas the bundler will use in transactions', '5000000')
     .option('--auto', 'automatic bundling', false)
-    .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '120000')
+    .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '12000')
     .option('--bundleSize <number>', 'maximum # of pending mempool entities', '10')
     .option('--port <number>', 'server listening port', '3000')
     .option('--minStake <string>', 'minimum stake a entity has to have to pass reputation system(When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH)', '1') // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction

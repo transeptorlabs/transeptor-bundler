@@ -1,8 +1,10 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { BigNumber, BytesLike, ContractFactory, ethers } from 'ethers'
 import { ReferencedCodeHashes, StakeInfo, StorageMap, UserOperation, ValidateUserOpResult, ValidationErrors, ValidationResult } from '../types'
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE, RpcError, getAddr, requireCond } from '../utils'
 import { ProviderService } from '../provider'
-import { BundlerCollectorReturn, ExitInfo, bundlerCollectorTracer } from './BundlerCollectorTracer'
+import { BundlerCollectorReturn, ExitInfo } from './BundlerCollectorTracer'
 import { decodeErrorReason } from './GethTracer'
 import { ReputationManager } from '../reputation'
 import { parseScannerResult } from './parseScannerResult'
@@ -104,6 +106,15 @@ export class ValidationService {
     // By encoding the function name and its parameters, you create a compact binary representation of the function call, which is required to interact with the contract correctly.
     const simulateCall = this.entryPointContract.interface.encodeFunctionData('simulateValidation', [userOp])
     const simulationGas = BigNumber.from(userOp.preVerificationGas).add(userOp.verificationGasLimit)
+    
+    const tracer = readFileSync(
+      resolve(process.cwd(), 'tracer.js')
+    ).toString()
+    if (tracer == null) {
+      throw new Error('Tracer not found')
+    }
+    const regexp = /function \w+\s*\(\s*\)\s*{\s*return\s*(\{[\s\S]+\});?\s*\}\s*$/
+    const stringifiedTracer = tracer.match(regexp)![1]    
     const tracerResult: BundlerCollectorReturn =
       await this.providerService.debug_traceCall(
         {
@@ -112,7 +123,7 @@ export class ValidationService {
           data: simulateCall,
           gasLimit: simulationGas,
         },
-        { tracer: bundlerCollectorTracer }
+        { tracer: stringifiedTracer }
       )
 
     const lastResult = tracerResult.calls.slice(-1)[0]
@@ -186,9 +197,7 @@ export class ValidationService {
     if (!this.isUnsafeMode) {
       Logger.debug('Running full validation with storage/opcode checks')
       let tracerResult: BundlerCollectorReturn;
-      [res, tracerResult] = await this.gethTraceCallSimulateValidation(
-        userOp
-      )
+      [res, tracerResult] = await this.gethTraceCallSimulateValidation(userOp)
       let contractAddresses: string[];
 
       [contractAddresses, storageMap] = parseScannerResult(
