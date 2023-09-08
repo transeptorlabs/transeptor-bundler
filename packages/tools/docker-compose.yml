@@ -35,4 +35,3 @@ services:
       --network http://host.docker.internal:8545
       --txMode base
       --httpApi web3,eth,debug
-      --unsafe

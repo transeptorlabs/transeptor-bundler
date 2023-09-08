@@ -21,6 +21,7 @@ WORKDIR /app-run
 
 COPY --from=builder /app/packages/bundler/dist/src /app-run/packages/bundler/dist
 COPY --from=builder /app/packages/bundler/package.json /app-run/packages/bundler
+COPY --from=builder /app/packages/bundler/tracer.js ./
 COPY --from=builder /app/package*.json ./
 
 RUN npm ci --only=production
