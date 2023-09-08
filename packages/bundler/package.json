@@ -20,6 +20,7 @@
     "///ab": "_____________________________________________________________________",
     "///cv": "________________________BUNDLER DEV __________________________________",
     "start:base": "ts-node --experimental-specifier-resolution=node src/execute.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "start:base-auto": "ts-node --experimental-specifier-resolution=node src/execute.ts --httpApi web3,eth,debug --txMode base --auto | pino-pretty",
     "start:base:unsafe": "ts-node --experimental-specifier-resolution=node src/execute.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
     "start:base:unsafe-auto": "ts-node --experimental-specifier-resolution=node src/execute.ts --httpApi web3,eth,debug --txMode base --unsafe --auto | pino-pretty",
     "start:conditional": "ts-node --experimental-specifier-resolution=node src/execute.ts --httpApi web3,eth,debug --txMode conditional | pino-pretty",

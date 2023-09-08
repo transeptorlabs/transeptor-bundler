@@ -20,6 +20,7 @@
     "eth-node": "cd packages/tools && npm run geth:start",
     "bundler-prep": "cd packages/tools && npm run bundler-startup",
     "bundler:base": "cd packages/bundler && npm run start:base",
+    "bundler:base-auto": "cd packages/bundler && npm run start:base-auto",
     "bundler:base-unsafe": "cd packages/bundler && npm run start:base:unsafe",
     "bundler:base-unsafe-auto": "cd packages/bundler && npm run start:base:unsafe-auto",
     "bundler:conditional": "cd packages/bundler && npm run start:conditional",
