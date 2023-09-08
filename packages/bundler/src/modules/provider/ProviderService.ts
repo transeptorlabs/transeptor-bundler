@@ -2,9 +2,10 @@ import { ContractFactory, Wallet, ethers, providers } from 'ethers'
 import { TransactionRequest } from '@ethersproject/providers'
 import { Deferrable } from '@ethersproject/properties'
 import { Result, resolveProperties } from 'ethers/lib/utils'
-import { TraceOptions, TraceResult, tracer2string } from '../validation'
+import { TraceOptions, TraceResult } from '../validation'
 import { Logger } from '../logger'
 import { ExecutionErrors, RpcError } from '../utils'
+import { BundlerCollectorReturn } from '../validation/BundlerCollectorTracer'
 
 export class ProviderService {
     private readonly provider: providers.JsonRpcProvider
@@ -106,14 +107,12 @@ export class ProviderService {
 
     public async debug_traceCall (tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any> {
         const tx1 = await resolveProperties(tx)
-        const traceOptions = tracer2string(options)
-        const ret = await this.provider.send('debug_traceCall', [tx1, 'latest', traceOptions]).catch(e => {
+        const ret = await this.provider.send('debug_traceCall', [tx1, 'latest', options]).catch(e => {
             Logger.error({error: e.message}, 'ex=')
-            Logger.debug({traceOptions: traceOptions.tracer?.toString().split('\n').map((line, index) => `${index + 1}: ${line}`).join('\n')}, 'tracer=')
+            Logger.debug({traceOptions: options.tracer?.toString().split('\n').map((line, index) => `${index + 1}: ${line}`).join('\n')}, 'tracer=')
             throw e
         })
-        // return applyTracer(ret, options)
-        return ret
+        return ret as BundlerCollectorReturn
     }
 
     // a hack for network that doesn't have traceCall: mine the transaction, and use debug_traceTransaction
@@ -123,7 +122,7 @@ export class ProviderService {
     }
 
     public async debug_traceTransaction (hash: string, options: TraceOptions): Promise<TraceResult | any> {
-        const ret = await this.provider.send('debug_traceTransaction', [hash, tracer2string(options)])
+        const ret = await this.provider.send('debug_traceTransaction', [hash, options])
         return ret
     }
 

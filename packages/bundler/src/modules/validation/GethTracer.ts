@@ -11,40 +11,6 @@ import utils from 'ethers/lib/utils'
  */
 type LogTracerFunc = () => LogTracer
 
-/**
- * extract the body of "LogTracerFunc".
- * note that we extract the javascript body, even if the function was created as typescript
- * @param func
- */
-export function getTracerBodyString (func: LogTracerFunc): string {
-  const tracerFunc = func.toString()
-  // function must return a plain object:
-  //  function xyz() { return {...}; }
-  const regexp = /function \w+\s*\(\s*\)\s*{\s*return\s*(\{[\s\S]+\});?\s*\}\s*$/ // (\{[\s\S]+\}); \} $/
-  const match = tracerFunc.match(regexp)
-  if (match == null) {
-    throw new Error('Not a simple method returning value')
-  }
-  let ret = match[1]
-  ret = ret
-    // .replace(/\/\/.*\n/g,'\n')
-    // .replace(/\n\s*\n/g, '\n')
-    .replace(/\b(?:const|let)\b/g, '')
-  // console.log('== tracer source',ret.split('\n').map((line,index)=>`${index}: ${line}`).join('\n'))
-  return ret
-}
-
-export function tracer2string (options: TraceOptions): TraceOptions {
-  if (typeof options.tracer === 'function') {
-    return {
-      ...options,
-      tracer: getTracerBodyString(options.tracer)
-    }
-  } else {
-    return options
-  }
-}
-
 export function decodeErrorReason(error: string) {
   const ErrorSig = (0, utils.keccak256)(Buffer.from('Error(string)')).slice(0, 10) // 0x08c379a0
   const FailedOpSig = (0, utils.keccak256)(Buffer.from('FailedOp(uint256,string)')).slice(0, 10) // 0x220266b6

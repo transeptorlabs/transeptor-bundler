@@ -1,4 +1,3 @@
-// This is the same BundlerCollectorTracer from github.com/eth-infinitism/bundler
 import { hexZeroPad, Interface, keccak256 } from 'ethers/lib/utils'
 import { BundlerCollectorReturn } from './BundlerCollectorTracer'
 import { BigNumber, BigNumberish, ethers } from 'ethers'
@@ -97,8 +96,6 @@ function parseCallStack (tracerResults: BundlerCollectorReturn): CallEntry[] {
         stack.push(c)
       }
     })
-
-  // TODO: verify that stack is empty at the end.
 
   return out
 }

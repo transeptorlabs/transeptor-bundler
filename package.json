@@ -21,6 +21,7 @@
     "bundler-prep": "cd packages/tools && npm run bundler-startup",
     "bundler:base": "cd packages/bundler && npm run start:base",
     "bundler:base-unsafe": "cd packages/bundler && npm run start:base:unsafe",
+    "bundler:base-unsafe-auto": "cd packages/bundler && npm run start:base:unsafe-auto",
     "bundler:conditional": "cd packages/bundler && npm run start:conditional",
     "bundler:conditional-unsafe": "cd packages/bundler && npm run start:conditional:unsafe",
     "bundler:searcher": "cd packages/bundler && npm run start:searcher",

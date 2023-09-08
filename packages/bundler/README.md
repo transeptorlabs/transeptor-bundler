@@ -88,7 +88,7 @@ List of all command line arguments supported by the bundler.
 |     `--minBalance`     | `number`  | min ETH balance for signer account                                  | `1`                     |
 |    `--maxBundleGas`    | `number`  | max gas the bundler will use in transactions                        | `5000000`               |
 |        `--auto`        | `boolean` | automatic bundling                                                  | `false`                 |
-| `--autoBundleInterval` | `number`  | auto bundler interval in (ms)                                       | `120000`                |
+| `--autoBundleInterval` | `number`  | auto bundler interval in (ms)                                       | `12000`                |
 |     `--bundleSize`     | `number`  | maximum # of pending mempool entities                               | `10`                    |
 |        `--port`        | `number`  | server listening port                                               | `3000`                  |
 |  `--minUnstakeDelay`   | `number`  | time paymaster has to wait to unlock the stake (seconds)            | `0`                     |
