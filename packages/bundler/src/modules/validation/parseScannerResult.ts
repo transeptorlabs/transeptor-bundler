@@ -1,7 +1,7 @@
 import { hexZeroPad, Interface, keccak256 } from 'ethers/lib/utils'
 import { BundlerCollectorReturn } from './BundlerCollectorTracer'
 import { BigNumber, BigNumberish, ethers } from 'ethers'
-import { IENTRY_POINT_ABI, mapOf, IPAYMASTER_ABI, requireCond, SENDER_CREATOR_ABI, TEST_OPCODE_ACCOUNT_API, TEST_OPCODE_ACCOUNT_FACTORY_API, TEST_STORAGE_ACCOUNT, toBytes32, IACCOUNT_ABI } from '../utils'
+import { IENTRY_POINT_ABI, mapOf, IPAYMASTER_ABI, requireCond, SENDER_CREATOR_ABI, TEST_OPCODE_ACCOUNT_ABI, TEST_OPCODE_ACCOUNT_FACTORY_ABI, TEST_STORAGE_ACCOUNT_ABI, toBytes32, IACCOUNT_ABI } from '../utils'
 import { StakeInfo, StorageMap, UserOperation, ValidationErrors, ValidationResult } from '../types'
 import { Logger } from '../logger'
 import { utils} from 'ethers'
@@ -25,9 +25,9 @@ interface CallEntry {
  */
 function parseCallStack (tracerResults: BundlerCollectorReturn): CallEntry[] {
   const abi = Object.values([
-    ...TEST_OPCODE_ACCOUNT_API,
-    ...TEST_OPCODE_ACCOUNT_FACTORY_API,
-    ...TEST_STORAGE_ACCOUNT,
+    ...TEST_OPCODE_ACCOUNT_ABI,
+    ...TEST_OPCODE_ACCOUNT_FACTORY_ABI,
+    ...TEST_STORAGE_ACCOUNT_ABI,
     ...SENDER_CREATOR_ABI,
     ...IENTRY_POINT_ABI,
     ...IPAYMASTER_ABI
@@ -87,6 +87,7 @@ function parseCallStack (tracerResults: BundlerCollectorReturn): CallEntry[] {
               to: top.to,
               from: top.from,
               type: top.type,
+              value: top.value,
               method: method.name ?? method,
               return: ret
             })
@@ -95,7 +96,7 @@ function parseCallStack (tracerResults: BundlerCollectorReturn): CallEntry[] {
       } else {
         stack.push(c)
       }
-    })
+  })
 
   return out
 }
@@ -152,63 +153,52 @@ const callsFromEntryPointMethodSigs: {[key: string]: string} = {
  * @return list of contract addresses referenced by this UserOp
  */
 export function parseScannerResult (userOp: UserOperation, tracerResults: BundlerCollectorReturn, validationResult: ValidationResult, entryPoint: ethers.Contract): [string[], StorageMap] {
-  Logger.debug({tracerResults}, '=== simulation result, running parseScannerResult')
-
+  // TODO: block access to no-code addresses (might need update to tracer)
   const entryPointAddress = entryPoint.address.toLowerCase()
-
   const bannedOpCodes = new Set([
-    'GASPRICE',
-    'GASLIMIT',
-    'DIFFICULTY',
-    'TIMESTAMP',
-    'BASEFEE',
-    'BLOCKHASH',
-    'NUMBER',
-    'SELFBALANCE',
-    'BALANCE',
-    'ORIGIN',
-    'GAS',
-    'CREATE',
-    'COINBASE',
-    'SELFDESTRUCT',
-    'RANDOM',
-    'PREVRANDAO',
-  ])
+    "GASPRICE",
+    "GASLIMIT",
+    "DIFFICULTY",
+    "TIMESTAMP",
+    "BASEFEE",
+    "BLOCKHASH",
+    "NUMBER",
+    "SELFBALANCE",
+    "BALANCE",
+    "ORIGIN",
+    "GAS",
+    "CREATE",
+    "COINBASE",
+    "SELFDESTRUCT",
+    "RANDOM",
+    "PREVRANDAO",
+  ]);
 
   if (Object.values(tracerResults.callsFromEntryPoint).length < 1) {
     throw new Error('Unexpected traceCall result: no calls from entrypoint.')
   }
-
   const callStack = parseCallStack(tracerResults)
 
-  const callInfoEntryPoint = callStack.find(
-    (call) =>
-      call.to === entryPointAddress && 
-      call.from !== entryPointAddress &&
-      call.method !== '0x' && 
-      call.method !== 'depositTo'
-  )
+  const callInfoEntryPoint = callStack.find(call =>
+    call.to === entryPointAddress && call.from !== entryPointAddress &&
+    (call.method !== '0x' && call.method !== 'depositTo'))
   requireCond(callInfoEntryPoint == null,
     `illegal call into EntryPoint during validation ${callInfoEntryPoint?.method}`,
     ValidationErrors.OpcodeValidation
   )
 
   const illegalNonZeroValueCall = callStack.find(
-    (call) =>
+    call =>
       call.to !== entryPointAddress &&
-      !BigNumber.from(call.value ?? 0).eq(0)
-  )
+      !BigNumber.from(call.value ?? 0).eq(0))
   requireCond(
     illegalNonZeroValueCall == null,
     'May not may CALL with value',
-    ValidationErrors.OpcodeValidation
-  )
+    ValidationErrors.OpcodeValidation)
 
-  /*
-    Stake info per "number" level (factory, sender, paymaster)
-    We only use stake info if we notice a memory reference that require stake
-  */
   const sender = userOp.sender.toLowerCase()
+  // stake info per "number" level (factory, sender, paymaster)
+  // we only use stake info if we notice a memory reference that require stake
   const stakeInfoEntities = {
     factory: validationResult.factoryInfo,
     account: validationResult.senderInfo,
@@ -219,10 +209,7 @@ export function parseScannerResult (userOp: UserOperation, tracerResults: Bundle
 
   Object.entries(stakeInfoEntities).forEach(([entityTitle, entStakes]) => {
     const entityAddr = (entStakes?.addr ?? '').toLowerCase()
-    const currentNumLevel = tracerResults.callsFromEntryPoint.find(
-      (info) => info.topLevelMethodSig === callsFromEntryPointMethodSigs[entityTitle]
-    )
-
+    const currentNumLevel = tracerResults.callsFromEntryPoint.find(info => info.topLevelMethodSig === callsFromEntryPointMethodSigs[entityTitle])
     if (currentNumLevel == null) {
       if (entityTitle === 'account') {
         throw new Error('missing trace into validateUserOp')
@@ -231,21 +218,19 @@ export function parseScannerResult (userOp: UserOperation, tracerResults: Bundle
     }
     const opcodes = currentNumLevel.opcodes
     const access = currentNumLevel.access
-    requireCond(!(currentNumLevel.oog ?? false),`${entityTitle} internally reverts on oog`, ValidationErrors.OpcodeValidation)
 
-    // check for banned opcodes
+    // check for baned opcodes
+    requireCond(!(currentNumLevel.oog ?? false),
+      `${entityTitle} internally reverts on oog`, ValidationErrors.OpcodeValidation)
     Object.keys(opcodes).forEach(opcode =>
       requireCond(!bannedOpCodes.has(opcode), `${entityTitle} uses banned opcode: ${opcode}`, ValidationErrors.OpcodeValidation)
     )
-
-    // Special case for CREATE2
     if (entityTitle === 'factory') {
       requireCond((opcodes.CREATE2 ?? 0) <= 1, `${entityTitle} with too many CREATE2`, ValidationErrors.OpcodeValidation)
     } else {
       requireCond(opcodes.CREATE2 == null, `${entityTitle} uses banned opcode: CREATE2`, ValidationErrors.OpcodeValidation)
     }
 
-    // Storage access checks
     Object.entries(access).forEach(([addr, {
       reads,
       writes
@@ -286,7 +271,7 @@ export function parseScannerResult (userOp: UserOperation, tracerResults: Bundle
         return false
       }
 
-      Logger.debug({
+      Logger.debug ({
         entityTitle,
         entityAddr,
         k: mapOf(tracerResults.keccak, k => keccak256(k)),
@@ -372,6 +357,17 @@ export function parseScannerResult (userOp: UserOperation, tracerResults: Bundle
     requireCond(
       illegalZeroCodeAccess == null,
       `${entityTitle} accesses un-deployed contract address ${illegalZeroCodeAccess?.address as string} with opcode ${illegalZeroCodeAccess?.opcode as string}`, ValidationErrors.OpcodeValidation)
+
+    let illegalEntryPointCodeAccess
+    for (const addr of Object.keys(currentNumLevel.extCodeAccessInfo)) {
+      if (addr === entryPointAddress) {
+        illegalEntryPointCodeAccess = currentNumLevel.extCodeAccessInfo[addr]
+        break
+      }
+    }
+    requireCond(
+      illegalEntryPointCodeAccess == null,
+      `${entityTitle} accesses EntryPoint contract address ${entryPointAddress} with opcode ${illegalEntryPointCodeAccess}`, ValidationErrors.OpcodeValidation)
   })
 
   // return list of contract addresses by this UserOp. already known not to contain zero-sized addresses.

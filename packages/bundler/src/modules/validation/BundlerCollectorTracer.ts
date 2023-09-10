@@ -39,6 +39,7 @@ export interface TopLevelCallInfo {
   opcodes: { [opcode: string]: number }
   access: { [address: string]: AccessInfo }
   contractSize: { [addr: string]: ContractSizeInfo }
+  extCodeAccessInfo: { [addr: string]: string }
   oog?: boolean
 }
 
