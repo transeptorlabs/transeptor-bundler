@@ -83,7 +83,7 @@ jobs:
 
       - name: Setup Configuration for Transeptor
         # This private key is for testing only. Use hardhat default private key[0]
-        run: cp packages/bundler/.env-compliance-test.sample ./packages/bundler/dist/.env
+        run: cp packages/bundler/.env-compliance-test.sample ./.env
 
       - name: Start Transeptor
         run: npm run start:prod
