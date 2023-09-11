@@ -59,7 +59,7 @@ export interface EstimateUserOpGasResult {
     /**
      * gas used for validation of this UserOperation, including account creation
      */
-    verificationGas: BigNumberish
+    verificationGasLimit: BigNumberish
   
     /**
      * (possibly future timestamp) after which this UserOperation is valid

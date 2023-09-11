@@ -154,13 +154,13 @@ export class EthAPI {
 
   public async estimateUserOperationGas (userOp1: UserOperation, entryPointInput: string): Promise<EstimateUserOpGasResult> {
     const userOp = {
-      ...await resolveProperties(userOp1),
       // default values for missing fields.
       paymasterAndData: '0x',
       maxFeePerGas: 0,
       maxPriorityFeePerGas: 0,
       preVerificationGas: 0,
-      verificationGasLimit: 10e6
+      verificationGasLimit: 10e6,
+      ...await resolveProperties(userOp1),
     }
 
     // todo: checks the existence of parameters, but since we hexlify the inputs, it fails to validate
@@ -194,10 +194,10 @@ export class EthAPI {
     }
 
     const preVerificationGas = calcPreVerificationGas(userOp)
-    const verificationGas = BigNumber.from(preOpGas).toNumber()
+    const verificationGasLimit = BigNumber.from(preOpGas).toNumber()
     return {
       preVerificationGas,
-      verificationGas,
+      verificationGasLimit,
       validAfter,
       validUntil,
       callGasLimit
@@ -206,48 +206,30 @@ export class EthAPI {
 
   private async validateParameters(
     userOp1: UserOperation,
-    entryPointInput: string
+    entryPointInput: string,
+    requireSignature = true, 
+    requireGasParams = true
   ): Promise<void> {
     requireCond(entryPointInput != null, 'No entryPoint param', -32602)
 
-    if (
-      entryPointInput?.toString().toLowerCase() !==
-      this.entryPointContract.address.toLowerCase()
-    ) {
-      throw new Error(
-        `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${this.entryPointContract.address}`
-      )
+    if (entryPointInput?.toString().toLowerCase() !== this.entryPointContract.address.toLowerCase()) {
+      throw new Error(`The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${this.entryPointContract.address}`)
     }
     // minimal sanity check: userOp exists, and all members are hex
     requireCond(userOp1 != null, 'No UserOperation param')
-    const userOp = (await resolveProperties(userOp1)) as any
+    const userOp = await resolveProperties(userOp1) as any
 
-    const fields = [
-      'sender',
-      'nonce',
-      'initCode',
-      'callData',
-      'paymasterAndData',
-      'signature',
-      'preVerificationGas',
-      'verificationGasLimit',
-      'callGasLimit',
-      'maxFeePerGas',
-      'maxPriorityFeePerGas',
-    ]
-
-    fields.forEach((key) => {
-      requireCond(
-        userOp[key] != null,
-        'Missing userOp field: ' + key + JSON.stringify(userOp),
-        -32602
-      )
+    const fields = ['sender', 'nonce', 'initCode', 'callData', 'paymasterAndData']
+    if (requireSignature) {
+      fields.push('signature')
+    }
+    if (requireGasParams) {
+      fields.push('preVerificationGas', 'verificationGasLimit', 'callGasLimit', 'maxFeePerGas', 'maxPriorityFeePerGas')
+    }
+    fields.forEach(key => {
+      requireCond(userOp[key] != null, 'Missing userOp field: ' + key + JSON.stringify(userOp), -32602)
       const value: string = userOp[key].toString()
-      requireCond(
-        value.match(this.HEX_REGEX) != null,
-        `Invalid hex value for property ${key}:${value} in UserOp`,
-        -32602
-      )
+      requireCond(value.match(this.HEX_REGEX) != null, `Invalid hex value for property ${key}:${value} in UserOp`, -32602)
     })
   }
 }

@@ -89,18 +89,15 @@ export class BundleProcessor {
 
   private async createBundle(entries: MempoolEntry[]): Promise<[UserOperation[], StorageMap]> {
     Logger.debug('Attepting to create bundle for entries', entries.length)
-
     const bundle: UserOperation[] = []
     const storageMap: StorageMap = {}
     let totalGas = BigNumber.from(0)
+    const paymasterDeposit: { [paymaster: string]: BigNumber } = {} // paymaster deposit should be enough for all UserOps in the bundle.
+    const stakedEntityCount: { [addr: string]: number } = {} // throttled paymasters and deployers are allowed only small UserOps per bundle.
+    const senders = new Set<string>() // each sender is allowed only once per bundle
+    const knownSenders = entries.map(it => { return it.userOp.sender.toLowerCase()}) // all entities that are known to be valid senders in the mempool
 
-    // paymaster deposit should be enough for all UserOps in the bundle.
-    const paymasterDeposit: { [paymaster: string]: BigNumber } = {}
-    // throttled paymasters and deployers are allowed only small UserOps per bundle.
-    const stakedEntityCount: { [addr: string]: number } = {}
-    // each sender is allowed only once per bundle
-    const senders = new Set<string>()
-
+    mainLoop:
     for (let i =0; i < entries.length; i++) {
       const entry =  entries[i]
       const paymaster = getAddr(entry.userOp.paymasterAndData)
@@ -109,54 +106,26 @@ export class BundleProcessor {
       const deployerStatus = this.reputationManager.getStatus(factory)
 
       // check entry reputation status
-      if (
-        paymasterStatus === ReputationStatus.BANNED ||
-        deployerStatus === ReputationStatus.BANNED
-      ) {
+      if (paymasterStatus === ReputationStatus.BANNED || deployerStatus === ReputationStatus.BANNED) {
         Logger.debug(`skipping banned entry ${entry.userOpHash}`)
         this.mempoolManager.removeUserOp(entry.userOpHash)
         continue
       }
 
-      if (
-        paymaster != null &&
-        (paymasterStatus === ReputationStatus.THROTTLED ??
-          (stakedEntityCount[paymaster] ?? 0) > 1)
-      ) {
-        Logger.debug(
-          {
-            sender: entry.userOp.sender,
-            nonce: entry.userOp.nonce,
-          },
-          'skipping throttled paymaster'
-        )
+      if (paymaster != null && (paymasterStatus === ReputationStatus.THROTTLED ?? (stakedEntityCount[paymaster] ?? 0) > 1)) {
+        Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce, }, 'skipping throttled paymaster')
         continue
       }
 
-      if (
-        factory != null &&
-        (deployerStatus === ReputationStatus.THROTTLED ??
-          (stakedEntityCount[factory] ?? 0) > 1)
-      ) {
-        Logger.debug(
-          {
-            sender: entry.userOp.sender,
-            nonce: entry.userOp.nonce,
-          },
-          'skipping throttled factory'
-        )
+      if (factory != null && (deployerStatus === ReputationStatus.THROTTLED ?? (stakedEntityCount[factory] ?? 0) > 1)) {
+        Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce, }, 'skipping throttled factory')
         continue
       }
 
       if (senders.has(entry.userOp.sender)) {
-        Logger.debug(
-          {
-            sender: entry.userOp.sender,
-            nonce: entry.userOp.nonce,
-          },
-          'skipping already included sender'
-        )
+        Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce}, 'skipping already included sender')
         // allow only a single UserOp per sender per bundle
+        this.mempoolManager.updateEntryStatusPending(entry.userOpHash)
         continue
       }
 
@@ -174,6 +143,16 @@ export class BundleProcessor {
         // failed validation. don't try anymore
         this.mempoolManager.removeUserOp(entry.userOpHash)
         continue
+      }
+
+      for (const storageAddress of Object.keys(validationResult.storageMap)) {
+        if (
+          storageAddress.toLowerCase() !== entry.userOp.sender.toLowerCase() &&
+          knownSenders.includes(storageAddress.toLowerCase())
+        ) {
+          Logger.debug(`UserOperation from ${entry.userOp.sender} sender accessed a storage of another known sender ${storageAddress}`)
+          continue mainLoop
+        }
       }
 
       // TODO: we take UserOp's callGasLimit, even though it will probably require less (but we don't
@@ -217,7 +196,7 @@ export class BundleProcessor {
       senders.add(entry.userOp.sender)
       bundle.push(entry.userOp)
       totalGas = newTotalGas
-      Logger.debug('added user op to bundle')
+      Logger.debug(entry, 'added user op entry to bundle')
     }
 
     return [bundle, storageMap]
@@ -321,7 +300,6 @@ export class BundleProcessor {
     }
   }
 
-  // TODO: add unit test
   public async getUserOpHashes(userOps: UserOperation[]): Promise<string[]> {
     const getCodeHashesFactory = new ethers.ContractFactory(
       GET_USEROP_HASHES_ABI,

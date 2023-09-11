@@ -7,22 +7,23 @@ function bundlerCollectorTracer() {
     logs: [],
     debug: [],
     lastOp: '',
+    lastThreeOpcodes: [],
     stopCollectingTopic: 'bb47ee3e183a558b1a2ff0874b079f3fc5478b7454eacf2bfc5af2ff5878f972',
     stopCollecting: false,
     topLevelCallCounter: 0,
-    fault: function fault(log, db) {
+    fault: function (log, db) {
       this.debug.push('fault depth=', log.getDepth(), ' gas=', log.getGas(), ' cost=', log.getCost(), ' err=', log.getError());
     },
-    result: function result(ctx, db) {
+    result: function (ctx, db) {
       return {
         callsFromEntryPoint: this.callsFromEntryPoint,
         keccak: this.keccak,
         logs: this.logs,
         calls: this.calls,
-        debug: this.debug,
+        debug: this.debug
       };
     },
-    enter: function enter(frame) {
+    enter: function (frame) {
       if (this.stopCollecting) {
         return;
       }
@@ -32,29 +33,36 @@ function bundlerCollectorTracer() {
         to: toHex(frame.getTo()),
         method: toHex(frame.getInput()).slice(0, 10),
         gas: frame.getGas(),
-        value: frame.getValue(),
+        value: frame.getValue()
       });
     },
-    exit: function exit(frame) {
+    exit: function (frame) {
       if (this.stopCollecting) {
         return;
       }
       this.calls.push({
         type: frame.getError() != null ? 'REVERT' : 'RETURN',
         gasUsed: frame.getGasUsed(),
-        data: toHex(frame.getOutput()).slice(0, 4000),
+        data: toHex(frame.getOutput()).slice(0, 4000)
       });
     },
-    countSlot: function countSlot(list, key) {
-      var _a;
-      list[key] = ((_a = list[key]) !== null && _a !== void 0 ? _a : 0) + 1;
+    countSlot: function (list, key) {
+      list[key] = (list[key] !== null && list[key] !== undefined ? list[key] : 0) + 1;
     },
-    step: function step(log, db) {
-      var _a;
+    step: function (log, db) {
       if (this.stopCollecting) {
         return;
       }
       var opcode = log.op.toString();
+      var stackSize = log.stack.length();
+      var stackTop3 = [];
+      for (var i = 0; i < 3 && i < stackSize; i++) {
+        stackTop3.push(log.stack.peek(i));
+      }
+      this.lastThreeOpcodes.push({ opcode: opcode, stackTop3: stackTop3 });
+      if (this.lastThreeOpcodes.length > 3) {
+        this.lastThreeOpcodes.shift();
+      }
       if (log.getGas() < log.getCost()) {
         this.currentLevel.oog = true;
       }
@@ -66,24 +74,28 @@ function bundlerCollectorTracer() {
           this.calls.push({
             type: opcode,
             gasUsed: 0,
-            data: data,
+            data: data
           });
         }
+        this.lastThreeOpcodes = [];
       }
       if (log.getDepth() === 1) {
         if (opcode === 'CALL' || opcode === 'STATICCALL') {
+          // stack.peek(0) - gas
           var addr = toAddress(log.stack.peek(1).toString(16));
           var topLevelTargetAddress = toHex(addr);
+          // stack.peek(2) - value
           var ofs = parseInt(log.stack.peek(3).toString());
+          // stack.peek(4) - len
           var topLevelMethodSig = toHex(log.memory.slice(ofs, ofs + 4));
-          this.currentLevel = this.callsFromEntryPoint[
-            this.topLevelCallCounter
-          ] = {
+
+          this.currentLevel = this.callsFromEntryPoint[this.topLevelCallCounter] = {
             topLevelMethodSig: topLevelMethodSig,
             topLevelTargetAddress: topLevelTargetAddress,
             access: {},
             opcodes: {},
-            contractSize: {},
+            extCodeAccessInfo: {},
+            contractSize: {}
           };
           this.topLevelCallCounter++;
         } else if (opcode === 'LOG1') {
@@ -95,21 +107,38 @@ function bundlerCollectorTracer() {
         this.lastOp = '';
         return;
       }
+      var lastOpInfo = this.lastThreeOpcodes[this.lastThreeOpcodes.length - 2];
+      if (lastOpInfo && lastOpInfo.opcode.match(/^(EXT.*)$/) != null) {
+        var addr = toAddress(lastOpInfo.stackTop3[0].toString(16));
+        var addrHex = toHex(addr);
+        var last3opcodesString = this.lastThreeOpcodes.map(function (x) {
+          return x.opcode;
+        }).join(' ');
+        if (last3opcodesString.match(/^(\w+) EXTCODESIZE ISZERO$/) == null) {
+          this.currentLevel.extCodeAccessInfo[addrHex] = opcode;
+        }
+      }
+      var isAllowedPrecompiled = function (address) {
+        var addrHex = toHex(address);
+        var addressInt = parseInt(addrHex);
+        return addressInt > 0 && addressInt < 10;
+      };
       if (opcode.match(/^(EXT.*|CALL|CALLCODE|DELEGATECALL|STATICCALL)$/) != null) {
         var idx = opcode.startsWith('EXT') ? 0 : 1;
         var addr = toAddress(log.stack.peek(idx).toString(16));
         var addrHex = toHex(addr);
-        if (((_a = this.currentLevel.contractSize[addrHex]) !== null && _a !== void 0 ? _a : 0) === 0 && !isPrecompiled(addr)) {
-          this.currentLevel.contractSize[addrHex] = db.getCode(addr).length;
+        if (this.currentLevel.contractSize[addrHex] == null && !isAllowedPrecompiled(addr)) {
+          this.currentLevel.contractSize[addrHex] = {
+            contractSize: db.getCode(addr).length,
+            opcode: opcode
+          };
         }
       }
       if (this.lastOp === 'GAS' && !opcode.includes('CALL')) {
         this.countSlot(this.currentLevel.opcodes, 'GAS');
       }
       if (opcode !== 'GAS') {
-        if (
-          opcode.match(/^(DUP\d+|PUSH\d+|SWAP\d+|POP|ADD|SUB|MUL|DIV|EQ|LTE?|S?GTE?|SLT|SH[LR]|AND|OR|NOT|ISZERO)$/) == null
-        ) {
+        if (opcode.match(/^(DUP\d+|PUSH\d+|SWAP\d+|POP|ADD|SUB|MUL|DIV|EQ|LTE?|S?GTE?|SLT|SH[LR]|AND|OR|NOT|ISZERO)$/) == null) {
           this.countSlot(this.currentLevel.opcodes, opcode);
         }
       }
@@ -123,7 +152,7 @@ function bundlerCollectorTracer() {
         if (access == null) {
           access = {
             reads: {},
-            writes: {},
+            writes: {}
           };
           this.currentLevel.access[addrHex] = access;
         }
@@ -152,9 +181,9 @@ function bundlerCollectorTracer() {
         var data = toHex(log.memory.slice(ofs, ofs + len));
         this.logs.push({
           topics: topics,
-          data: data,
+          data: data
         });
       }
-    },
+    }
   };
 }

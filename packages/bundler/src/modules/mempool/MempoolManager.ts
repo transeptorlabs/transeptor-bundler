@@ -185,6 +185,18 @@ export class MempoolManager {
     }
   }
 
+  public async updateEntryStatusPending(userOpHash: string): Promise<void> {
+    const release = await this.mutex.acquire()
+    try {
+      const entry = this.mempool.get(userOpHash)
+      if (entry) {
+        entry.status = 'pending'
+      }
+    } finally {
+      release()
+    }
+  }
+
   public isMempoolOverloaded(): boolean {
     return this.size() >= this.bundleSize
   }

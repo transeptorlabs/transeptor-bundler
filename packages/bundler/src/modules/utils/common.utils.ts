@@ -30,6 +30,7 @@ export function mapOf<T> (keys: Iterable<string>, mapper: (key: string) => T, fi
   return ret
 }
 
+// TODO: Move all contract abis to a separate contract module
 // contract abi are taken from @account-abstraction/contracts
 export const IENTRY_POINT_ABI = [
   {
@@ -1569,7 +1570,7 @@ export const IACCOUNT_ABI = [
   },
 ]
 
-export const TEST_OPCODE_ACCOUNT_FACTORY_API = [
+export const TEST_OPCODE_ACCOUNT_FACTORY_ABI = [
   {
     inputs: [
       {
@@ -1591,7 +1592,13 @@ export const TEST_OPCODE_ACCOUNT_FACTORY_API = [
   },
 ]
 
-export const TEST_OPCODE_ACCOUNT_API = [
+export const TEST_OPCODE_ACCOUNT_ABI =  [
+  {
+    anonymous: false,
+    inputs: [],
+    name: 'ExecutionMessage',
+    type: 'event',
+  },
   {
     anonymous: false,
     inputs: [
@@ -1635,6 +1642,13 @@ export const TEST_OPCODE_ACCOUNT_API = [
     name: 'addStake',
     outputs: [],
     stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'execEvent',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
@@ -1871,7 +1885,7 @@ export const TEST_OPCODE_ACCOUNT_API = [
   },
 ]
 
-export const TEST_STORAGE_ACCOUNT = [
+export const TEST_STORAGE_ACCOUNT_ABI = [
   {
     anonymous: false,
     inputs: [
