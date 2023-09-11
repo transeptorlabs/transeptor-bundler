@@ -1,4 +1,4 @@
-// This is the same BundlerCollectorTracer from github.com/eth-infinitism/bundler
+// This is the same GethTracer from github.com/eth-infinitism/bundler
 import { BigNumber } from 'ethers'
 import utils from 'ethers/lib/utils'
 
