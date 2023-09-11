@@ -1,0 +1,93 @@
+name: Transeptor - ERC-4337 bundler compliance test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  bundler-spec-tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+    matrix:
+      node-version: [18.x]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup PDM
+        run: curl -sSL https://raw.githubusercontent.com/pdm-project/pdm/main/install-pdm.py | python3 -
+
+      - name: Setup NodeJS
+        uses: "actions/setup-node@v3"
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Checkout bundler spec tests
+        uses: actions/checkout@v3
+        with:
+          repository: eth-infinitism/bundler-spec-tests
+          ref: master
+          path: ./bundler-spec-tests
+          submodules: true
+
+      - name: Setup bundler spec tests
+        working-directory: ./bundler-spec-tests
+        run: pdm install && pdm run update-deps
+
+      - name: Install Geth
+        run: |
+          sudo add-apt-repository -y ppa:ethereum/ethereum && \
+          sudo apt-get update && \
+          sudo apt-get install ethereum
+
+      - name: Run Geth
+        run: |
+          geth \
+          --verbosity 1 \
+          --http.vhosts '*,localhost,host.docker.internal' \
+          --http \
+          --http.api eth,net,web3,debug \
+          --http.corsdomain '*' \
+          --http.addr "0.0.0.0" \
+          --nodiscover --maxpeers 0 --mine \
+          --networkid 1337 \
+          --dev \
+          --allow-insecure-unlock \
+          --rpc.allow-unprotected-txs \
+          --dev.gaslimit 20000000 &
+
+      - name: Deploy ERC-4337 contracts
+        working-directory: ./bundler-spec-tests
+        # checkout to 0.6.0 commit https://github.com/eth-infinitism/account-abstraction/commits/abff2aca61a8f0934e533d0d352978055fddbd96
+        run: |
+          cd @account-abstraction && \
+          git checkout abff2aca61a8f0934e533d0d352978055fddbd96 && \
+          yarn deploy --network localhost
+
+      - name: Fund bundler
+        run: |
+          geth \
+          --exec "eth.sendTransaction({from: eth.accounts[0], to: \"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\", value: web3.toWei(4337, \"ether\")})" \
+          attach http://localhost:8545/
+
+      - name: Install Transeptor deps 
+        run: npm install
+
+      - name: Build Transeptor
+        run: npm run build
+
+      - name: Setup Configuration for Transeptor
+        # This private key is for testing only. Use hardhat default private key[0]
+        run: cp packages/bundler/.env-compliance-test.sample ./packages/bundler/dist/.env
+
+      - name: Start Transeptor
+        run: npm run start:prod
+
+      - name: Run tests
+        working-directory: ./bundler-spec-tests
+        run: pdm run pytest -rA -W ignore::DeprecationWarning --url http://127.0.0.1:3000/rpc/ --entry-point 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 --ethereum-node http://localhost:8545
