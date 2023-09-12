@@ -11,8 +11,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/node-18.x-green" alt="Node Version">
   <img src="https://badgen.net/badge/-/TypeScript?icon=typescript&label&labelColor=blue&color=555555" alt="TypeScript">
-  <img src="https://img.shields.io/github/actions/workflow/status/transeptorlabs/transeptor-bundler/build.yml?branch=main" alt="Github workflow build status (main)">
-  <img src="https://img.shields.io/github/actions/workflow/status/transeptorlabs/transeptor-bundler/bundler-spec-test.yml?branch=main" alt="Github workflow bundler spec test status (main)">
+    <img src="https://github.com/transeptorlabs/transeptor-bundler/actions/workflows/build.yml/badge.svg?branch=main">
+  <img src="https://github.com/transeptorlabs/transeptor-bundler/actions/workflows/bundler-spec-test.yml/badge.svg?branch=main">
   <a href="https://app.codecov.io/gh/transeptorlabs/transeptor-bundler">
     <img src="https://img.shields.io/codecov/c/github/transeptorlabs/transeptor-bundler.svg?style=flat-square" alt="codecov">
   </a>
