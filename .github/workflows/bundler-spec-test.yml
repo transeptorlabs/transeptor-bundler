@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-    matrix:
+     matrix:
       node-version: [18.x]
 
     steps:
@@ -82,11 +82,10 @@ jobs:
         run: npm run build
 
       - name: Setup Configuration for Transeptor
-        # This private key is for testing only. Use hardhat default private key[0]
-        run: cp packages/bundler/.env-compliance-test.sample ./packages/bundler/dist/.env
+        run: chmod +x ./compliance_test.sh
 
       - name: Start Transeptor
-        run: npm run start:prod
+        run: nohup ./compliance_test.sh &
 
       - name: Run tests
         working-directory: ./bundler-spec-tests
