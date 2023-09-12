@@ -1,4 +1,4 @@
-name: Transeptor - ERC-4337 bundler compliance test
+name: 4337 compliance
 
 on:
   push:
