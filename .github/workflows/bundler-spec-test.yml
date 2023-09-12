@@ -1,4 +1,4 @@
-name: 4337 compliance
+name: compliance
 
 on:
   push:
