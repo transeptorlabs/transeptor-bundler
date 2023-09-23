@@ -1,0 +1,25 @@
+name: Feature Request
+description: File a feature request
+title: "[Feat]: "
+labels: ["enhancement"]
+projects: ["transeptorlabs/projects/3"]
+assignees:
+  - V00D00-child
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this feature request!
+  - type: textarea
+    id: feat-details
+    attributes:
+      label: Feature description?
+      description: Provide a description of your feature request
+      placeholder: Tell us what you want to see!
+      value: "A new feature!"
+    validations:
+      required: true
+
+
+
+
