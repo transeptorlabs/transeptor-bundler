@@ -1,8 +1,8 @@
-name: Feature Request
+name: 🚀 Feature Request
 description: File a feature request
 title: "[Feat]: "
 labels: ["enhancement"]
-projects: ["transeptorlabs/projects/3"]
+projects: ["orgs/transeptorlabs/projects/3"]
 assignees:
   - V00D00-child
 body:
