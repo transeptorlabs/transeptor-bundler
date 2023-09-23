@@ -63,10 +63,11 @@ jobs:
 
       - name: Deploy ERC-4337 contracts
         working-directory: ./bundler-spec-tests
-        # checkout to 0.6.0 commit https://github.com/eth-infinitism/account-abstraction/commits/abff2aca61a8f0934e533d0d352978055fddbd96
+        # checkout to v0.6.0  https://github.com/eth-infinitism/account-abstraction
         run: |
           cd @account-abstraction && \
-          git checkout abff2aca61a8f0934e533d0d352978055fddbd96 && \
+          git fetch --tags origin && \
+          git checkout v0.6.0 && \
           yarn deploy --network localhost
 
       - name: Fund bundler

@@ -34,13 +34,13 @@ npm install
 
 Everything you need to get started developing with the Bundler.
 
-#### Run local ETH Node
+### Run local ETH Node
 
 ```bash
 npm run eth-node
 ```
 
-#### Deploy ERC-4337 contracts and fund bundler signer account
+### Deploy ERC-4337 contracts and fund bundler signer account
 
 ```bash
 npm run bundler-prep
@@ -52,7 +52,7 @@ Use this script to:
 - deploy simple account factory contract to the local eth node.
 - Fund the bundler signer account with ETH.
 
-#### Start Bundler node
+### Start Bundler node
 
 Copy values in `.env.sample` into `packages/bundler/.env` and fill in the values with your own.
 
@@ -80,12 +80,39 @@ PEER_MULTIADDRS=<multiaddrs_of_peers_SEPARATEDBY_COMMA>
 
 The bundler will start on `http://localhost:3000/rpc`.
 
-## Features
+### Test
 
+```bash
+npm run test
+```
+
+### Lint
+
+```bash
+npm run lint-bundler-fix
+```
+
+or
+
+```bash
+npm run lint
+```
+
+## 🐳 Run from Docker image
+
+Build image locally
+```bash
+docker build -t bundler-typescript:v-local .
+```
+
+Run image locally
+```bash
+npm run start:bundler-docker
+```
+
+## 🧮 Command line arguments
 - **Full Validation** - Uses geth `debug_traceCall` method to enforce the full spec storage access rules and opcode banning.
 - **Partial Validation** - Standard call to entry Point Contract `simulateValidation()`. No storage access rules and opcode banning.
-
-## Command line arguments
 
 List of all command line arguments supported by the bundler.
 
@@ -109,41 +136,6 @@ List of all command line arguments supported by the bundler.
 
 \*When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH.
 **safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode. \***0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
-
-## Docker image
-
-Pull latest image from docker hub
-```bash
-docker pull transeptorlabs/bundler
-```
-
-Build image locally
-```bash
-npm run build:bundler-docker
-```
-
-Run image locally
-```bash
-npm run start:bundler-docker
-```
-
-## 🧪 Test
-
-```bash
-npm run test
-```
-
-## 🔍 Lint
-
-```bash
-npm run lint:fix
-```
-
-or
-
-```bash
-npm run lint
-```
 
 ## Contribute
 
