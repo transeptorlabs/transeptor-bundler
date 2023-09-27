@@ -1,7 +1,7 @@
 # Dependencies
-/node_modules
-packages/tools/node_modules
-packages/bundler/node_modules
+node_modules/
+**/lib
+packages/*/lib
 
 # test
 coverage

@@ -1,14 +1,7 @@
-node_modules
+node_modules/
 docker-compose*
 Dockerfile*
 .nvmrc
-
-# Production
-/packages/bundler/node_modules
-/packages/bundler/reports
-/packages/bundler/test
-/packages/bundler/dist
-/packages/tools
 
 # secrets
 /packages/bundler/.env

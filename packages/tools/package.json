@@ -1,5 +1,5 @@
 {
-  "name": "@transeptor/tools",
+  "name": "tools",
   "version": "1.0.0",
   "description": "A set of tool for developing Transeptor",
   "author": {
