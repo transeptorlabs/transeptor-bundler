@@ -1,8 +1,7 @@
 import { hexZeroPad, Interface, keccak256 } from 'ethers/lib/utils'
-import { BundlerCollectorReturn, TopLevelCallInfo } from './BundlerCollectorTracer'
 import { BigNumber, BigNumberish, ethers } from 'ethers'
 import { IENTRY_POINT_ABI, mapOf, IPAYMASTER_ABI, requireCond, SENDER_CREATOR_ABI, TEST_OPCODE_ACCOUNT_ABI, TEST_OPCODE_ACCOUNT_FACTORY_ABI, TEST_STORAGE_ACCOUNT_ABI, toBytes32, IACCOUNT_ABI } from 'utils'
-import { StakeInfo, StorageMap, UserOperation, ValidationErrors, ValidationResult } from 'types'
+import { StakeInfo, StorageMap, UserOperation, ValidationErrors, ValidationResult,  BundlerCollectorReturn, TopLevelCallInfo } from 'types'
 import { Logger } from 'logger'
 import { utils} from 'ethers'
 

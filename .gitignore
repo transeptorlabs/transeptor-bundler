@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-**/lib
 packages/*/lib
 
 # test
@@ -9,18 +8,12 @@ coverage.json
 
 # secrets
 .env
-packages/tools/.env
-packages/bundler/.env
 
 # Hardhat files
 packages/tools/cache
 packages/tools/artifacts
 packages/tools/typechain
 packages/tools/typechain-types
-
-# Production
-packages/bundler/dist
-packages/bundler/reports
 
 # Misc
 .DS_Store

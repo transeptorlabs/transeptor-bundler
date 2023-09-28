@@ -7,12 +7,12 @@ import {
   UserOperation,
   ValidateUserOpResult,
 } from 'types'
+import { Logger } from 'logger'
 import { MempoolManager } from 'mempool'
 import { GET_USEROP_HASHES_ABI, GET_USEROP_HASHES_BYTECODE, getAddr, mergeStorageMap } from 'utils'
 import { ReputationManager } from 'reputation'
 import { ProviderService } from 'provider'
 import { ValidationService } from 'validation'
-import { Logger } from 'logger'
 import { ErrorDescription } from '@ethersproject/abi/lib/interface'
 
 /*

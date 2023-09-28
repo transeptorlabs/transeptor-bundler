@@ -2,7 +2,7 @@ import { ContractFactory, Wallet, ethers, providers } from 'ethers'
 import { TransactionRequest } from '@ethersproject/providers'
 import { Deferrable } from '@ethersproject/properties'
 import { Result, resolveProperties } from 'ethers/lib/utils'
-import { TraceOptions, TraceResult, BundlerCollectorReturn } from 'validation'
+import { TraceOptions, TraceResult, BundlerCollectorReturn } from 'types'
 import { Logger } from 'logger'
 import { ExecutionErrors, RpcError } from 'utils'
 

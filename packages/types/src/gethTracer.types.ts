@@ -1,6 +1,5 @@
 // This is the same GethTracer from github.com/eth-infinitism/bundler
 import { BigNumber } from 'ethers'
-import utils from 'ethers/lib/utils'
 
 /**
  * a function returning a LogTracer.
@@ -9,24 +8,7 @@ import utils from 'ethers/lib/utils'
  * may only reference external functions defined by geth (see go-ethereum/eth/tracers/js): toHex, toWord, isPrecompiled, slice, toString(16)
  * (its OK if original function was in typescript: we extract its value as javascript
  */
-type LogTracerFunc = () => LogTracer
-
-export function decodeErrorReason(error: string) {
-  const ErrorSig = (0, utils.keccak256)(Buffer.from('Error(string)')).slice(0, 10) // 0x08c379a0
-  const FailedOpSig = (0, utils.keccak256)(Buffer.from('FailedOp(uint256,string)')).slice(0, 10) // 0x220266b6
-
-  if (error.startsWith(ErrorSig)) {
-    const [message] = utils.defaultAbiCoder.decode(['string'], '0x' + error.substring(10))
-    return { message }
-  } else if (error.startsWith(FailedOpSig)) {
-    const [opIndex, message] = utils.defaultAbiCoder.decode(['uint256', 'string'], '0x' + error.substring(10))
-    const errorMessage = `FailedOp: ${message}`
-    return {
-      message: errorMessage,
-      opIndex
-    }
-  }
-}
+export type LogTracerFunc = () => LogTracer
 
 // the trace options param for debug_traceCall and debug_traceTransaction
 export interface TraceOptions {

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2021",
-    "module": "esnext",
+    "module": "commonjs",
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "sourceMap": true,
@@ -23,10 +23,13 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
   },
+  "include": [
+    "packages/**/*"
+  ],
   "exclude": [
     "packages/tools/**",
   ],
   "ts-node": {
-    "esm": true
-	}
+    "swc": true
+}
 }

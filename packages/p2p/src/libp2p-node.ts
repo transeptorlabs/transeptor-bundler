@@ -4,7 +4,6 @@ import { noise } from '@chainsafe/libp2p-noise'
 import { mplex } from '@libp2p/mplex'
 import { PingService, pingService } from 'libp2p/ping'
 import { Multiaddr, isMultiaddr, multiaddr } from '@multiformats/multiaddr'
-import { Logger } from 'logger'
 
 const GOSSIP_MAX_SIZE = 1048576 // (= 1048576, 1 MiB) The maximum allowed size of uncompressed gossip messages.
 const MAX_OPS_PER_REQUEST = 4096 // Maximum number of UserOps in a single request.
@@ -52,11 +51,11 @@ export class Libp2pNode {
         })
 
         this.node.addEventListener('peer:discovery', (evt: any) => {
-            Logger.info(evt, 'Discovered peer')
+            console.log(evt, 'Discovered peer')
           })
           
         this.node.addEventListener('peer:connect', (evt: any) => {
-            Logger.info(evt, 'Connected to peer')
+            console.log(evt, 'Connected to peer')
         })
     }
 
@@ -64,9 +63,9 @@ export class Libp2pNode {
         if (this.node) {
             await this.node.start()
 
-            Logger.info('libp2p node listening on addresses:')
+            console.log('libp2p node listening on addresses:')
             this.node.getMultiaddrs().forEach((addr: Multiaddr) => {
-                Logger.info(`- ${addr.toString()}`)
+                console.log(`- ${addr.toString()}`)
             })
 
             await this.doPing()
@@ -77,14 +76,14 @@ export class Libp2pNode {
     }
 
     private async doPing() {
-        Logger.info('Starting pinging remote peer to check connectivity')
+        console.log('Starting pinging remote peer to check connectivity')
         const pingService = this.node.services.ping as PingService
         if (this.peerMultiaddrs.length >= 0 && this.connectToPeers) {
             const ma: Multiaddr = multiaddr(this.peerMultiaddrs[0])
             const latency = await pingService.ping(ma)
-            Logger.info(`pinged remote peer at ${this.peerMultiaddrs[0]} in ${latency}ms`)
+            console.log(`pinged remote peer at ${this.peerMultiaddrs[0]} in ${latency}ms`)
         } else {
-            Logger.info('No remote peer address given, skipping ping')
+            console.log('No remote peer address given, skipping ping')
         }
     }
     
@@ -93,7 +92,7 @@ export class Libp2pNode {
             throw new Error('Libp2p node is not created')
         }
         await this.node.stop()
-        Logger.info('Stoping libp2p node')
+        console.log('Stoping libp2p node')
     }
 }
 

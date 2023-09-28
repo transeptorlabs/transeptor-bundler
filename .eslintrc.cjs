@@ -13,16 +13,16 @@ module.exports = {
     'no-console': 'warn',
     'no-debugger': 'warn',
     'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-    'semi': ["error", "never"],
-    'quotes': ["error", "single"],
-    "no-unused-vars": "off",
-    "@typescript-eslint/no-unused-vars": "off"
+    'semi': ['error', 'never'],
+    'quotes': ['error', 'single'],
+    'no-unused-vars': 'off',
+    '@typescript-eslint/no-unused-vars': 'off'
   },
   ignorePatterns: ['node_modules', 'lib', '**/*.js', '.eslintrc.js', 'scripts' ,'deploy'],
   overrides: [
     {
       files: ['*.ts'],
-      excludedFiles: './dist/**',
+      excludedFiles: './lib/**',
     },
   ],
 }

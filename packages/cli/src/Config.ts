@@ -1,4 +1,4 @@
-import packageJson from '../package.json' assert { type: 'json' }
+import packageJson from '../package.json'
 import dotenv from 'dotenv'
 import { Command, OptionValues } from 'commander'
 import { BigNumber, Wallet, ethers, providers } from 'ethers'
