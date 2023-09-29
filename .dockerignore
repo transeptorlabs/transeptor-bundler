@@ -1,19 +1,14 @@
 node_modules
-docker-compose*
-Dockerfile*
+docker-compose.yml
+Dockerfile
 coverage
 compliance_test.sh
-transeptor
 
 # Docker
 Dockerfile
-docker-compose.yml
 
 # secrets
 .env
-
-#Ignore the logs directory
-logs/
 
 #Ignoring git and cache folders
 .git
@@ -23,21 +18,18 @@ logs/
 *.md
 LICENSE
 README.md
-packages/**/README.md
-packages/**/CHANGELOG.md
 SECURITY.md
 CONTRIBUTING.md
 
 # Tests
 packages/**/test
 packages/**/lib
-packages/tool/*
+packages/**/README.MD
+packages/**/CHANGELOG.MD
+packages/tools
 
 # Github & configs
 .github
-.codeclimate.yml
-.codecov.yml
-config.json
 
 # Misc
 .DS_Store
@@ -46,12 +38,10 @@ LICENCE
 npm-debug.log
 tags.json
 .vscode
-.github
 .gitignore
 .eslintcache
 
 # config
-hardhat.config.ts
 .eslint.cjs
 .nvmrc
 .eslintrc.cjs

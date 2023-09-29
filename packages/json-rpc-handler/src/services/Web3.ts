@@ -8,6 +8,6 @@ export class Web3API {
     }
   
     clientVersion(): string {
-        return 'aa-bundler/' + this.version + (this.isUnsafeMode ? '/unsafe' : '')
+        return 'transeptor/' + this.version + (this.isUnsafeMode ? '/unsafe' : '')
     }
 }
