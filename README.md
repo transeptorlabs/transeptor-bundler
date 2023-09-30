@@ -58,13 +58,13 @@ npm run test
 ### Lint
 
 ```bash
-npm run lint-bundler-fix
+npm run lint
 ```
 
 or
 
 ```bash
-npm run lint
+npm run lint:fix
 ```
 
 ## 🔧  Run from source
