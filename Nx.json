@@ -1,0 +1,24 @@
+{
+    "tasksRunnerOptions": {
+      "default": {
+        "runner": "nx/tasks-runners/default",
+        "options": {
+          "cacheableOperations": ["build", "test"]
+        }
+      }
+    },
+    "namedInputs": {
+      "default": ["{projectRoot}/**/*"],
+      "prod": ["!{projectRoot}/**/*.spec.tsx"]
+    },
+    "targetDefaults": {
+      "build": {
+        "dependsOn": ["prebuild", "^build"],
+        "inputs": ["prod", "^prod"],
+        "outputs": ["{projectRoot}/dist"]
+      },
+      "test": {
+        "inputs": ["default", "^prod", "{workspaceRoot}/jest.config.ts"]
+      }
+    }
+  }

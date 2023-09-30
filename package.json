@@ -30,7 +30,8 @@
     "start:dev": "test -n \"$(find packages/*/lib -type f)\" || npm run build && node packages/cli/lib/src/cli.js --httpApi web3,eth,debug --txMode base",
     "test": "lerna run test --concurrency 1",
     "lint": "lerna run lint --concurrency 1",
-    "lint:fix": "lerna run lint:fix --concurrency 1"
+    "lint:fix": "lerna run lint:fix --concurrency 1",
+    "version": "lerna version"
   },
   "devDependencies": {
     "@account-abstraction/contracts": "^0.6.0",
