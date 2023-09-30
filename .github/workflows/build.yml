@@ -27,9 +27,10 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npm install --no-optional
+    - run: npm install --no-package-lock
     - run: npm install --save-dev @nomicfoundation/solidity-analyzer-linux-x64-gnu
-    - run: npm run build
+    - name: Build
+      run: npm run build
     - name: Lint
       run: npm run lint
     - name: Test
