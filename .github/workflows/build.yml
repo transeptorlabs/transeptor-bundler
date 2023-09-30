@@ -27,7 +27,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npm ci
+    - run: npm install
     - run: npm install --save-dev @nomicfoundation/solidity-analyzer-linux-x64-gnu
     - run: npm run build
     - name: Lint
