@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 packages/*/lib
+packages/*/coverage
 
 # test
 coverage

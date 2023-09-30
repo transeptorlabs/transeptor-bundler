@@ -32,7 +32,7 @@ Everything you need to get started developing with Transeptor.
 ### Run local development
 1. Install dependencies `npm install`
 2. Build all packages `npm run build`
-3. Start local geth node `npm run eth-node`
+3. Start local geth node `npm run geth-node`
 4. Prepare bundler for development `npm run bundler-prep`
 5. Copy values in `.env.sample` into `.env` and fill in the values with your own.
 

@@ -2,7 +2,7 @@ import {
   mockUserOperationFactory,
   mockEntryPointGetUserOpHash,
 } from './test-helpers'
-import { MempoolManager } from 'mempool'
+import { MempoolManager } from '../src/index'
 import { ReputationManager } from 'reputation'
 import { BigNumber } from 'ethers'
 
