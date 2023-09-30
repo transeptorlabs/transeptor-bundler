@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { resolve, join } from 'node:path'
 import { BigNumber, BytesLike, ContractFactory, ethers } from 'ethers'
 import { ReferencedCodeHashes, StakeInfo, StorageMap, UserOperation, ValidateUserOpResult, ValidationErrors, ValidationResult, BundlerCollectorReturn, ExitInfo } from 'types'
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE, RpcError, getAddr, requireCond } from 'utils'
@@ -9,7 +9,6 @@ import { ReputationManager } from 'reputation'
 import { parseScannerResult } from './parseScannerResult'
 import { Logger } from 'logger'
 import { calcPreVerificationGas } from '@account-abstraction/sdk'
-
 export class ValidationService {
   private readonly providerService: ProviderService
   private readonly reputationManager: ReputationManager
@@ -106,9 +105,8 @@ export class ValidationService {
     const simulateCall = this.entryPointContract.interface.encodeFunctionData('simulateValidation', [userOp])
     const simulationGas = BigNumber.from(userOp.preVerificationGas).add(userOp.verificationGasLimit)
     
-    const tracer = readFileSync(
-      resolve(process.cwd(), 'tracer.js')
-    ).toString()
+    const jsFilePath = join(__dirname, '../tracer.js');
+    const tracer = readFileSync(jsFilePath).toString()
     if (tracer == null) {
       throw new Error('Tracer not found')
     }

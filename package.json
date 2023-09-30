@@ -28,9 +28,9 @@
     "bundler-prep": "cd packages/tools && npm run bundler-prep",
     "watch:dev": "lerna watch -- lerna run build",
     "start:dev": "test -n \"$(find packages/*/lib -type f)\" || npm run build && node packages/cli/lib/src/cli.js --httpApi web3,eth,debug --txMode base",
-    "test": "lerna run test --concurrency 1",
-    "lint": "lerna run lint --concurrency 1",
-    "lint:fix": "lerna run lint:fix --concurrency 1",
+    "test": "lerna run test --concurrency 2",
+    "lint": "lerna run lint --concurrency 2",
+    "lint:fix": "lerna run lint:fix --concurrency 2",
     "version": "lerna version"
   },
   "devDependencies": {
