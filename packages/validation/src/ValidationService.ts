@@ -105,7 +105,7 @@ export class ValidationService {
     const simulateCall = this.entryPointContract.interface.encodeFunctionData('simulateValidation', [userOp])
     const simulationGas = BigNumber.from(userOp.preVerificationGas).add(userOp.verificationGasLimit)
     
-    const jsFilePath = join(__dirname, '../tracer.js');
+    const jsFilePath = join(__dirname, '../tracer.js')
     const tracer = readFileSync(jsFilePath).toString()
     if (tracer == null) {
       throw new Error('Tracer not found')
