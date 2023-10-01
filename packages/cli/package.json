@@ -36,16 +36,16 @@
         "dotenv": "16.0.3",
         "ethers": "^5.7.1",
         "commander": "10.0.1",
-        "logger": "*",
-        "utils": "*",
-        "bundle": "*",
-        "event": "*",
-        "json-rpc-handler": "*",
-        "json-rpc-server": "*",
-        "mempool": "*",
-        "provider": "*",
-        "reputation": "*",
-        "validation": "*"
+        "logger": "file:../logger",
+        "utils": "file:../utils",
+        "bundle": "file:../bundle",
+        "event": "file:../event",
+        "json-rpc-handler": "file:../json-rpc-handler",
+        "json-rpc-server": "file:../json-rpc-server",
+        "mempool": "file:../mempool",
+        "provider": "file:../provider",
+        "reputation": "file:../reputation",
+        "validation": "file:../validation"
     },
     "devDependencies": {
     }

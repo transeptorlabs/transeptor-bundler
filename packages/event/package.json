@@ -34,10 +34,10 @@
     },
     "dependencies": {
         "ethers": "^5.7.1",
-        "mempool": "*",
-        "provider": "*",
-        "reputation": "*",
-        "logger": "*"
+        "mempool": "file:../mempool",
+        "provider": "file:../provider",
+        "reputation": "file:../reputation",
+        "logger": "file:../logger"
     },
     "devDependencies": {
     }

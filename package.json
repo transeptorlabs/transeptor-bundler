@@ -22,16 +22,16 @@
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
     "clean:deps": "rm -rf ./node_modules ./packages/*/node_modules",
     "clean:coverage": "rm -rf ./coverage ./packages/*/coverage",
-    "lerna-clean": "lerna run clean",
-    "build": "lerna run build",
+    "lerna-clean": "npx lerna run clean",
+    "build": "npx lerna run build --concurrency 3",
     "geth-node": "cd packages/tools && npm run geth:start",
     "bundler-prep": "cd packages/tools && npm run bundler-prep",
-    "watch:dev": "lerna watch -- lerna run build",
+    "watch:dev": "npx lerna watch -- lerna run build",
     "start:dev": "test -n \"$(find packages/*/lib -type f)\" || npm run build && node packages/cli/lib/src/cli.js --httpApi web3,eth,debug --txMode base",
-    "test": "lerna run test --concurrency 2",
-    "lint": "lerna run lint --concurrency 2",
-    "lint:fix": "lerna run lint:fix --concurrency 2",
-    "version": "lerna version"
+    "test": "npx lerna run test --concurrency 2",
+    "lint": "npx lerna run lint --concurrency 2",
+    "lint:fix": "npx lerna run lint:fix --concurrency 2",
+    "version": "npx lerna version --no-private"
   },
   "devDependencies": {
     "@account-abstraction/contracts": "^0.6.0",

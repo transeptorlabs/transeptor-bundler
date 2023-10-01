@@ -34,9 +34,9 @@
     },
     "dependencies": {
         "ethers": "^5.7.1",
-        "logger": "*",
-        "utils": "*",
-        "types": "*"
+        "logger": "file:../logger",
+        "utils": "file:../utils",
+        "types": "file:../types"
     },
     "devDependencies": {
     }

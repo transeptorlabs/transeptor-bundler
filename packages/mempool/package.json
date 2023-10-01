@@ -34,10 +34,10 @@
     },
     "dependencies": {
         "async-mutex": "0.4.0",
-        "logger":  "*",
-        "utils":  "*",
-        "reputation":  "*",
-        "types":  "*"
+        "logger":  "file:../logger",
+        "utils":  "file:../utils",
+        "reputation":  "file:../reputation",
+        "types":  "file:../types"
     },
     "devDependencies": {
     }

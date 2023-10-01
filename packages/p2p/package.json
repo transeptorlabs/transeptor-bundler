@@ -29,7 +29,7 @@
         "build": "echo \"TODO\""
     },
     "dependencies": {
-        "logger": "*",
+        "logger": "file:../",
         "@chainsafe/libp2p-noise": "^12.0.2",
         "@libp2p/mplex": "^8.0.4",
         "@libp2p/tcp": "^7.0.3",

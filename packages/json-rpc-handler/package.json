@@ -33,14 +33,14 @@
         "lint:fix": "eslint src/**/*.ts --fix"
     },
     "dependencies": {
-        "provider": "*",
-        "logger": "*",
-        "utils": "*",
-        "types": "*",
-        "bundle": "*",
-        "event": "*",
-        "mempool": "*",
-        "reputation": "*"
+        "provider": "file:../provider",
+        "logger": "file:../logger",
+        "utils": "file:../utils",
+        "types": "file:../types",
+        "bundle": "file:../bundle",
+        "event": "file:../event",
+        "mempool": "file:../mempool",
+        "reputation": "file:../reputation"
     },
     "devDependencies": {
     }

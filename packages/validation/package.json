@@ -35,11 +35,11 @@
     "dependencies": {
         "@account-abstraction/sdk": "^0.6.0",
         "ethers": "^5.7.1",
-        "types": "*",
-        "logger": "*",
-        "utils": "*",
-        "provider": "*",
-        "reputation": "*"
+        "types": "file:../types",
+        "logger": "file:../logger",
+        "utils": "file:../utils",
+        "provider": "file:../provider",
+        "reputation": "file:../reputation"
     },
     "devDependencies": {
     }

@@ -7,13 +7,14 @@ RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 COPY . .
 
 # Install dependencies without generating a package-lock.json
-RUN npm install --no-package-lock
+# RUN npm install --no-package-lock
+RUN npm install
 
 # Build the project
 RUN npm run build
 
 # Install production dependencies without generating a package-lock.json
-RUN npm install --no-package-lock --production
+# RUN npm install --no-package-lock --production
 
 # Stage 2: Build the dependencies
 FROM node:18-alpine as build_deps
@@ -24,7 +25,8 @@ RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 COPY --from=build_src /usr/app .
 
 # Install production dependencies without generating a package-lock.json
-RUN npm install --no-package-lock --production --force
+# RUN npm install --no-package-lock --production --force
+RUN npm install
 
 # Stage 3: Create the final image
 FROM node:18-alpine

@@ -35,13 +35,13 @@
     "dependencies": {
         "async-mutex": "0.4.0",
         "ethers": "^5.7.1",
-        "types": "*",
-        "logger": "*",
-        "mempool": "*",
-        "utils": "*",
-        "provider": "*",
-        "validation": "*",
-        "reputation": "*"
+        "types": "file:../types",
+        "logger": "file:../logger",
+        "mempool": "file:../mempool",
+        "utils": "file:../utils",
+        "provider": "file:../provider",
+        "validation": "file:../validation",
+        "reputation": "file:../reputation"
     },
     "devDependencies": {
     }
