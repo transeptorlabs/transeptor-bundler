@@ -4,4 +4,4 @@
 export MNEMONIC='test test test test test test test test test test test junk'
 export BENEFICIARY='0xd21934eD8eAf27a67f0A70042Af50A1D6d195E81'
 
-npm run start:prod
+node packages/cli/lib/src/cli.js --httpApi web3,eth,debug --txMode base

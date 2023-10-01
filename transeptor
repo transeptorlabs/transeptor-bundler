@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Simple script to run Transeptor after building from built source
+node packages/cli/lib/src/cli.js

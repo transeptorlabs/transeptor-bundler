@@ -1,4 +1,4 @@
-# @transeptor/tools
+# tools
 
 ![Node Version](https://img.shields.io/badge/node-18.x-green)
 ![Github workflow build status(main)](https://img.shields.io/github/actions/workflow/status/transeptorlabs/transeptor-bundler/build.yml?branch=main)

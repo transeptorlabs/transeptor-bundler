@@ -1,34 +1,38 @@
-# We use a multi-stage build approach to first build the app using Webpack in a temporary builder image (builder stage). Then, we copy the built files and the minimal set of necessary dependencies to a new image that will be used for running the app (final stage).
-FROM node:18-alpine as builder
+# Stage 1: Build the source code
+FROM node:18-alpine as build_src
+WORKDIR /usr/app
 RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
-WORKDIR /app
+# Copy all files from the current directory to the container's working directory
+COPY . .
 
-COPY package*.json ./
+# Install dependencies without generating a package-lock.json
+# RUN npm install --no-package-lock
+RUN npm install
 
-# Copy the bundler source code from the host machine to the container
-COPY ./packages/bundler /app/packages/bundler
-
-RUN npm ci
-
+# Build the project
 RUN npm run build
 
-# Use a minimal base image for running the app
-FROM node:18-alpine as run
+# Install production dependencies without generating a package-lock.json
+# RUN npm install --no-package-lock --production
+
+# Stage 2: Build the dependencies
+FROM node:18-alpine as build_deps
+WORKDIR /usr/app
 RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
-WORKDIR /app-run
+# Copy files from the previous build stage
+COPY --from=build_src /usr/app .
 
-COPY --from=builder /app/packages/bundler/dist/src /app-run/packages/bundler/dist
-COPY --from=builder /app/packages/bundler/package.json /app-run/packages/bundler
-COPY --from=builder /app/packages/bundler/tracer.js ./
-COPY --from=builder /app/package*.json ./
+# Install production dependencies without generating a package-lock.json
+# RUN npm install --no-package-lock --production --force
+RUN npm install
 
-RUN npm ci --only=production
+# Stage 3: Create the final image
+FROM node:18-alpine
+WORKDIR /usr/app
 
-# Cleanup Temp Files and Cache
-RUN npm cache clean --force
+# Copy files from the previous build stage
+COPY --from=build_deps /usr/app .
 
-ENV NODE_OPTIONS=--experimental-specifier-resolution=node
-
-ENTRYPOINT ["node", "--experimental-specifier-resolution=node", "./packages/bundler/dist/execute.js"]
+ENTRYPOINT ["node", "./packages/cli/lib/src/cli.js"]

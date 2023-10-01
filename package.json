@@ -1,6 +1,5 @@
 {
-  "name": "transeptor-monorepo",
-  "version": "1.0.0",
+  "name": "root",
   "author": {
     "name": "Transeptor Labs",
     "email": "transeptorhq@gmail.com",
@@ -17,29 +16,42 @@
   },
   "private": true,
   "scripts": {
-    "eth-node": "cd packages/tools && npm run geth:start",
-    "bundler-prep": "cd packages/tools && npm run bundler-startup",
-    "bundler:base": "cd packages/bundler && npm run start:base",
-    "bundler:base-auto": "cd packages/bundler && npm run start:base-auto",
-    "bundler:base-unsafe": "cd packages/bundler && npm run start:base:unsafe",
-    "bundler:base-unsafe-auto": "cd packages/bundler && npm run start:base:unsafe-auto",
-    "bundler:conditional": "cd packages/bundler && npm run start:conditional",
-    "bundler:conditional-unsafe": "cd packages/bundler && npm run start:conditional:unsafe",
-    "bundler:searcher": "cd packages/bundler && npm run start:searcher",
-    "bundler:base-p2p": "cd packages/bundler && npm run start:base-p2p",
-    "bundler:peer": "cd packages/bundler && npm run start:base-peer",
-    "test": "cd packages/bundler && npm run test",
-    "lint": "cd packages/bundler && npm run lint",
-    "lint-bundler-fix": "cd packages/bundler && npm run lint:fix",
-    "build": "cd packages/bundler && npm run build",
-    "start:prod": "cd packages/bundler && npm run start:prod",
-    "build:bundler-docker": "docker build -t bundler-typescript:v-local .",
-    "start:bundler-docker": "cd packages/tools && npm run start:docker-bundler"
+    "///ab": "_____________________________________________________________________",
+    "///cv": "________________________WELCOME BUILDERS______________________________",
+    "///tu": "_____________________________________________________________________",
+    "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
+    "clean:deps": "rm -rf ./node_modules ./packages/*/node_modules",
+    "clean:coverage": "rm -rf ./coverage ./packages/*/coverage",
+    "lerna-clean": "npx lerna run clean",
+    "build": "npx lerna run build --concurrency 3",
+    "geth-node": "cd packages/tools && npm run geth:start",
+    "bundler-prep": "cd packages/tools && npm run bundler-prep",
+    "watch:dev": "npx lerna watch -- lerna run build",
+    "start:dev": "test -n \"$(find packages/*/lib -type f)\" || npm run build && node packages/cli/lib/src/cli.js --httpApi web3,eth,debug --txMode base",
+    "test": "npx lerna run test --concurrency 2",
+    "lint": "npx lerna run lint --concurrency 2",
+    "lint:fix": "npx lerna run lint:fix --concurrency 2",
+    "version": "npx lerna version --no-private"
+  },
+  "devDependencies": {
+    "@account-abstraction/contracts": "^0.6.0",
+    "@types/jest": "^29.5.2",
+    "@types/node": "18.16.3",
+    "@typescript-eslint/eslint-plugin": "5.59.2",
+    "@typescript-eslint/parser": "5.59.2",
+    "eslint": "8.39.0",
+    "jest": "^29.5.0",
+    "lerna": "^7.3.0",
+    "pino-pretty": "^10.0.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "10.9.1",
+    "typescript": "5.0.4"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "dependencies": {}
 }

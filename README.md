@@ -24,59 +24,28 @@
 > :warning: **This repository is currently under active development.**
 > See our road-map [here](https://hackmd.io/@V00D00-child/SyXKL6Kmn#Project-StatusRoadmap-)
 
-## 📥 Installation
-
-```bash
-npm install
-```
 
 ## 🚀 Development
 
-Everything you need to get started developing with the Bundler.
+Everything you need to get started developing with Transeptor.
 
-### Run local ETH Node
+### Run local development
+1. Install dependencies `npm install`
+2. Build all packages `npm run build`
+3. Start local geth node `npm run geth-node`
+4. Prepare bundler for development `npm run bundler-prep`
+5. Copy values in `.env.sample` into `.env` and fill in the values with your own.
 
+
+Now let's watch all `packages/*` and recompile on change.
 ```bash
-npm run eth-node
+npm run watch:dev
 ```
 
-### Deploy ERC-4337 contracts and fund bundler signer account
-
+Open a new terminal and then start the bundler node.
 ```bash
-npm run bundler-prep
+npm run start:dev
 ```
-
-Use this script to:
-
-- deploy the entry point contract to the local eth node.
-- deploy simple account factory contract to the local eth node.
-- Fund the bundler signer account with ETH.
-
-### Start Bundler node
-
-Copy values in `.env.sample` into `packages/bundler/.env` and fill in the values with your own.
-
-```env
-MNEMONIC=test test test test test test test test test test test junk
-INFURA_API_KEY=<your-infura-api-key>
-ALCHEMY_API_KEY=<your-alcemy-api-key>
-BENEFICIARY=<address_to_receive_funds>
-WHITE_LIST=<address_to_whitelist_SEPARATEDBY_COMMA>
-BLACK_LIST=<address_to_blacklist_SEPARATEDBY_COMMA>
-PEER_MULTIADDRS=<multiaddrs_of_peers_SEPARATEDBY_COMMA>
-```
-
-1. Ensure that the ETH node is running, ERC-4337 contracts are deployed, and the bundler signer account is funded.
-2. Ensure that you populate `.env` with your own.
-3. Pick a mode to run the bundler; see the table below for details.
-
-| Mode                | Script                               | Validation         | Bundle strategy                                                                          |
-| ------------------- | ------------------------------------ | ------------------ | ---------------------------------------------------------------------------------------- |
-| base                | `npm run bundler:base`               | Full Validation    | Uses `eth_sendRawTransaction` RPC                                                        |
-| base(unsafe)        | `npm run bundler:base-unsafe`        | Partial Validation | Uses `eth_sendRawTransaction` RPC                                                        |
-| conditional         | `npm run bundler:conditional`        | Full Validation    | Uses `eth_sendRawTransactionConditional` RPC                                             |
-| conditional(unsafe) | `npm run bundler:conditional-unsafe` | Partial Validation | Uses `eth_sendRawTransactionConditional` RPC                                             |
-| searcher            | `npm run bundler:searcher`           | Partial Validation | Uses [Flashbots](https://docs.flashbots.net/flashbots-auction/searchers/quick-start) API |
 
 The bundler will start on `http://localhost:3000/rpc`.
 
@@ -89,13 +58,24 @@ npm run test
 ### Lint
 
 ```bash
-npm run lint-bundler-fix
+npm run lint
 ```
 
 or
 
 ```bash
-npm run lint
+npm run lint:fix
+```
+
+## 🔧  Run from source
+1. Install dependencies `npm install`
+2. Build all packages `npm run build`
+2. Give the script execution permission `chmod +x ./transeptor`
+
+Now let's start the bundler node.(make sure to pass your command line arguments)
+```bash
+
+./transeptor --httpApi web3,eth,debug --txMode base
 ```
 
 ## 🐳 Run from Docker image
@@ -131,8 +111,8 @@ List of all command line arguments supported by the bundler.
 |      `--minStake`      | `number`  | minimum stake an entity has to have to pass the reputation system\* | `1`                     |
 |       `--txMode`       | `string`  | bundler transaction mode (base, conditional, searcher)              | `base`                  |
 |       `--unsafe`       | `boolean` | UNSAFE mode: no storage or opcode checks \*\*                       | `false`                 |
-|        `--p2p`         | `boolean` | enable p2p mode enabled                                                    | `false`                 |
-|        `--findPeers`         | `boolean` | search for peers when p2p enabled                                                    | `false`                 |
+|        `--p2p`         | `boolean` | enable p2p mode enabled(under development)                                                    | `false`                 |
+|        `--findPeers`         | `boolean` | search for peers when p2p enabled(under development)                                                  | `false`                 |
 
 \*When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH.
 **safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode. \***0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789

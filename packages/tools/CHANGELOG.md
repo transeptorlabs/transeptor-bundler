@@ -1,2 +1,2 @@
-# @transeptor/tools
+# tools
 

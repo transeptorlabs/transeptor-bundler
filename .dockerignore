@@ -1,28 +1,14 @@
 node_modules
-docker-compose*
-Dockerfile*
-.nvmrc
+docker-compose.yml
+Dockerfile
+coverage
+compliance_test.sh
 
-# Production
-/packages/bundler/node_modules
-/packages/bundler/reports
-/packages/bundler/test
-/packages/bundler/dist
-/packages/tools
+# Docker
+Dockerfile
 
 # secrets
-/packages/bundler/.env
-/packages/bundler/.env.sample
-
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.sample
-
-#Ignore the logs directory
-logs/
 
 #Ignoring git and cache folders
 .git
@@ -30,11 +16,20 @@ logs/
 
 #Ignoring all the markdown and class files
 *.md
+LICENSE
+README.md
+SECURITY.md
+CONTRIBUTING.md
 
-# Hardhat files
-artifacts
-typechain
-typechain-types
+# Tests
+packages/**/test
+packages/**/lib
+packages/**/README.MD
+packages/**/CHANGELOG.MD
+packages/tools
+
+# Github & configs
+.github
 
 # Misc
 .DS_Store
@@ -43,12 +38,11 @@ LICENCE
 npm-debug.log
 tags.json
 .vscode
-.github
 .gitignore
 .eslintcache
-/packages/bundler/transeptor-architecture.svg
-*svg
 
 # config
-hardhat.config.ts
-/packages/bundler/.eslint.cjs
+.eslint.cjs
+.nvmrc
+.eslintrc.cjs
+
