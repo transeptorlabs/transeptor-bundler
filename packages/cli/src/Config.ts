@@ -42,6 +42,13 @@ export class Config {
 
   public readonly httpApi: string[]
 
+  public readonly isMetricsEnabled: boolean
+  public readonly influxdbConnection: {
+   endpoint: string
+   username: string
+   password: string
+  }
+
   constructor(args: readonly string[]) {
     const program = new Command()
     program
@@ -61,6 +68,10 @@ export class Config {
     .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode)')
     .option('--p2p', 'p2p mode enabled', false)
     .option('--findPeers', 'search for peers when p2p enabled', false)
+    .option('--metrics', 'bundler metrics enabled', false)
+    .option('--metrics.influxdb.endpoint', 'port that influxdb is running on', 'http://localhost:8086')
+    .option('--metrics.influxdb.username', 'influxdb username', 'transeptor')
+    .option('--metrics.influxdb.password', 'influxdb password', null)
 
     const programOpts: OptionValues = program.parse(args).opts()
         
@@ -117,6 +128,25 @@ export class Config {
       }
     } else {
       this.peerMultiaddrs = []
+    }
+
+    this.isMetricsEnabled = programOpts.metrics as boolean
+    console.log(programOpts.metrics)
+    console.log(programOpts.metrics.influxdb.endpoint)
+    console.log(programOpts.metrics.influxdb.username)
+    console.log(programOpts.metrics.influxdb.password)
+    if (this.isMetricsEnabled) {
+      if (programOpts.metrics.influxdb.endpoint) {
+        if (!programOpts.metrics.influxdb.username || !programOpts.metrics.influxdb.password) {
+          throw new Error('Influxdb username or password not set')
+        }
+        this.influxdbConnection = {
+          endpoint: programOpts.metrics.influxdb.endpoint as string,
+          username: programOpts.metrics.influxdb.username as string,
+          password: programOpts.metrics.influxdb.password as string
+        }
+      }
+      Logger.info(`Metrics enabled with`)
     }
   
     this.connectedWallet = Wallet.fromMnemonic(process.env.MNEMONIC as string).connect(this.provider)
@@ -183,6 +213,8 @@ export class Config {
       port: this.port,
       whitelist: this.whitelist,
       blacklist: this.blacklist,
+      metrics: this.isMetricsEnabled,
+      metricsDataStore: this.influxdbConnection
     },
     'Bundler config setup')
   }

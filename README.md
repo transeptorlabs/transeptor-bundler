@@ -113,6 +113,10 @@ List of all command line arguments supported by the bundler.
 |       `--unsafe`       | `boolean` | UNSAFE mode: no storage or opcode checks \*\*                       | `false`                 |
 |        `--p2p`         | `boolean` | enable p2p mode enabled(under development)                                                    | `false`                 |
 |        `--findPeers`         | `boolean` | search for peers when p2p enabled(under development)                                                  | `false`                 |
+|       `--metric`       | `boolean`  | bundler metrics enabled              | `false`                  |
+|       `--metric.influxdb.endpoint`       | `string`  | port that influxdb is running on              | `8086`                  |
+|       `--metric.influxdb.username`       | `string`  | influxdb username              | ``                  |
+|       `--metric.influxdb.password`       | `string`  | influxdb password              | ``                  |
 
 \*When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH.
 **safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode. \***0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789
