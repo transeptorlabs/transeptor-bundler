@@ -1,7 +1,6 @@
 version: "3"
 services:
   geth:
-    container_name: geth
     image: ethereum/client-go:v1.10.26
     ports:
       - "8545:8545"
@@ -24,7 +23,6 @@ services:
       --networkid 1337
 
   bundler-typescript-local:
-    container_name: bundler
     image: bundler-typescript:v-local
     ports:
       - "3000:3000"
@@ -39,11 +37,21 @@ services:
       --httpApi web3,eth,debug
 
   influxdb:
-    container_name: influxdb
     image: influxdb:2.7.1
     ports:
       - "8086:8086"
     command: >
       --reporting-disabled
     volumes:
-      - $PWD../../influxdb-data:/var/lib/influxdb2
+      - ../../influxdb-data:/var/lib/influxdb2
+
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    volumes:
+      - ../../grafana-data:/var/lib/grafana
+volumes:
+  grafana-data: {}

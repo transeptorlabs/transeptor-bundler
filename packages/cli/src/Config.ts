@@ -69,11 +69,12 @@ export class Config {
     .option('--p2p', 'p2p mode enabled', false)
     .option('--findPeers', 'search for peers when p2p enabled', false)
     .option('--metrics', 'bundler metrics enabled', false)
-    .option('--metrics.influxdb.endpoint', 'port that influxdb is running on', 'http://localhost:8086')
-    .option('--metrics.influxdb.username', 'influxdb username', 'transeptor')
-    .option('--metrics.influxdb.password', 'influxdb password', null)
+    .option('--influxdbEndpoint', 'port that influxdb is running on', 'http://localhost:8086')
+    .option('--influxdbUsername', 'influxdb username', 'transeptor')
+    .option('--influxdbPassword', 'influxdb password', 'transeptor')
 
     const programOpts: OptionValues = program.parse(args).opts()
+    console.log(programOpts)
         
     if (this.SUPPORTED_MODES.indexOf(programOpts.txMode as string) === -1) {      
       throw new Error('Invalid bundler mode')
@@ -214,7 +215,6 @@ export class Config {
       whitelist: this.whitelist,
       blacklist: this.blacklist,
       metrics: this.isMetricsEnabled,
-      metricsDataStore: this.influxdbConnection
     },
     'Bundler config setup')
   }

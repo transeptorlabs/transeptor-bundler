@@ -80,3 +80,30 @@ InfluxDB is now running and configured to store metrics for Transeptor.
 
 ## Setting up Prometheus Docker
 ## Setting up Grafana Docker
+
+By default, Grafana is reachable at localhost:3000. We can use docker to run Grafana in a container.
+
+### Persist data outside the Grafana container
+Create a new directory to store your metrics data.
+
+```bash
+mkdir $PWD/grafana-data
+```
+
+### Run Grafana(in docker container)
+
+```bash
+docker run -d -p 3000:3000 --name=grafana \
+  --volume $PWD/grafana-data:/var/lib/grafana \
+  grafana/grafana-enterprise
+```
+
+Grafana can now be reached at localhost:3000
+
+1. User your browser to navigate `http://localhost:3000` to access a visualization dashboard. 
+2. On the signin page, enter admin for username and password.
+3. Make sure to update the admin password when prompted.
+
+### Data sources
+InfluxDB: https://grafana.com/docs/grafana/latest/datasources/influxdb/
+Prometheus: https://grafana.com/docs/grafana/latest/datasources/prometheus/

@@ -30,3 +30,5 @@ yarn-error.log*
 
 # Metrics data
 /influxdb-data
+/grafana-data
+

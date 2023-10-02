@@ -3,6 +3,7 @@ docker-compose.yml
 Dockerfile
 coverage
 compliance_test.sh
+/grafana-data
 
 # Docker
 Dockerfile

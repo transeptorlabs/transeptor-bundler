@@ -29,7 +29,7 @@
     "influxdb": "cd packages/tools && npm run start:influxdb",
     "watch:dev": "npx lerna watch -- lerna run build",
     "start:dev": "test -n \"$(find packages/*/lib -type f)\" || npm run build && node packages/cli/lib/src/cli.js --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "start:dev-metrics": "test -n \"$(find packages/*/lib -type f)\" || npm run build && node packages/cli/lib/src/cli.js --httpApi web3,eth,debug --txMode base --metrics --metrics.influxdb.endpoint http://localhost:8086 --metrics.influxdb.username transeptor --metrics.influxdb.password devpwd | pino-pretty",
+    "start:dev-metrics": "test -n \"$(find packages/*/lib -type f)\" || npm run build && node packages/cli/lib/src/cli.js --httpApi web3,eth,debug --txMode base --metrics --influxdbEndpoint http://localhost:8086 --influxdbUsername transeptor --influxdbPassword devpwd | pino-pretty",
     "test": "npx lerna run test --concurrency 2",
     "lint": "npx lerna run lint --concurrency 2",
     "lint:fix": "npx lerna run lint:fix --concurrency 2",
