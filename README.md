@@ -47,7 +47,7 @@ Open a new terminal and then start the bundler node.
 npm run start:dev
 ```
 
-The bundler will start on `http://localhost:3000/rpc`.
+The bundler will start on `http://localhost:3001/rpc`.
 
 ### Test
 
@@ -106,17 +106,18 @@ List of all command line arguments supported by the bundler.
 |        `--auto`        | `boolean` | automatic bundling                                                  | `false`                 |
 | `--autoBundleInterval` | `number`  | auto bundler interval in (ms)                                       | `12000`                |
 |     `--bundleSize`     | `number`  | maximum # of pending mempool entities                               | `10`                    |
-|        `--port`        | `number`  | server listening port                                               | `3000`                  |
+|        `--port`        | `number`  | server listening port                                               | `4000`                  |
 |  `--minUnstakeDelay`   | `number`  | time paymaster has to wait to unlock the stake (seconds)            | `0`                     |
 |      `--minStake`      | `number`  | minimum stake an entity has to have to pass the reputation system\* | `1`                     |
 |       `--txMode`       | `string`  | bundler transaction mode (base, conditional, searcher)              | `base`                  |
 |       `--unsafe`       | `boolean` | UNSAFE mode: no storage or opcode checks \*\*                       | `false`                 |
 |        `--p2p`         | `boolean` | enable p2p mode enabled(under development)                                                    | `false`                 |
 |        `--findPeers`         | `boolean` | search for peers when p2p enabled(under development)                                                  | `false`                 |
-|       `--metric`       | `boolean`  | bundler metrics enabled              | `false`                  |
-|       `--metric.influxdb.endpoint`       | `string`  | port that influxdb is running on              | `8086`                  |
-|       `--metric.influxdb.username`       | `string`  | influxdb username              | ``                  |
-|       `--metric.influxdb.password`       | `string`  | influxdb password              | ``                  |
+|       `--metrics`       | `boolean`  | bundler metrics enabled              | `false`                  |
+|       `--metricsPort`       | `number`  | metrics server listening port              | `4001`                  |
+|       `--influxdbUrl`       | `string`  | url influxdb is running on            | `http://localhost:8086'`                  |
+|       `--influxdbOrg`       | `string`  | influxdb org              | `transeptor-labs`                  |
+|       `--influxdbBucket`       | `string`  | influxdb bucket              | `transeptor_metrics`                  |
 
 \*When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH.
 **safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode. \***0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789

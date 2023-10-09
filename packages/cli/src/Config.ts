@@ -43,10 +43,17 @@ export class Config {
   public readonly httpApi: string[]
 
   public readonly isMetricsEnabled: boolean
+  readonly metricsPort: number
   public readonly influxdbConnection: {
-   endpoint: string
-   username: string
-   password: string
+   url: string
+   org: string
+   bucket: string
+   token: string
+  } = {
+    url: '',
+    org: '',
+    bucket: '',
+    token: ''
   }
 
   constructor(args: readonly string[]) {
@@ -61,7 +68,7 @@ export class Config {
     .option('--auto', 'automatic bundling', false)
     .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '12000')
     .option('--bundleSize <number>', 'maximum # of pending mempool entities', '10')
-    .option('--port <number>', 'server listening port', '3000')
+    .option('--port <number>', 'server listening port', '4000')
     .option('--minStake <string>', 'minimum stake a entity has to have to pass reputation system(When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH)', '1') // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
     .option('--minUnstakeDelay <number>', 'time paymaster has to wait to unlock the stake(seconds)', '0') // One day - 84600
     .option('--txMode <string>', 'bundler transaction mode (base, conditional, searcher)', 'base')
@@ -69,9 +76,10 @@ export class Config {
     .option('--p2p', 'p2p mode enabled', false)
     .option('--findPeers', 'search for peers when p2p enabled', false)
     .option('--metrics', 'bundler metrics enabled', false)
-    .option('--influxdbEndpoint', 'port that influxdb is running on', 'http://localhost:8086')
-    .option('--influxdbUsername', 'influxdb username', 'transeptor')
-    .option('--influxdbPassword', 'influxdb password', 'transeptor')
+    .option('--metricsPort <number>', 'metrics server listening port', '4001')
+    .option('--influxdbUrl <string>', 'url influxdb is running on', 'http://localhost:8086')
+    .option('--influxdbOrg <string>', 'influxdb org', 'transeptor-labs')
+    .option('--influxdbBucket <string>', 'influxdb bucket', 'transeptor_metrics')
 
     const programOpts: OptionValues = program.parse(args).opts()
     console.log(programOpts)
@@ -132,22 +140,18 @@ export class Config {
     }
 
     this.isMetricsEnabled = programOpts.metrics as boolean
-    console.log(programOpts.metrics)
-    console.log(programOpts.metrics.influxdb.endpoint)
-    console.log(programOpts.metrics.influxdb.username)
-    console.log(programOpts.metrics.influxdb.password)
     if (this.isMetricsEnabled) {
-      if (programOpts.metrics.influxdb.endpoint) {
-        if (!programOpts.metrics.influxdb.username || !programOpts.metrics.influxdb.password) {
-          throw new Error('Influxdb username or password not set')
-        }
-        this.influxdbConnection = {
-          endpoint: programOpts.metrics.influxdb.endpoint as string,
-          username: programOpts.metrics.influxdb.username as string,
-          password: programOpts.metrics.influxdb.password as string
-        }
+      if (!process.env.INFLUX_TOKEN) {
+        throw new Error('INFLUX_TOKEN env var not set')
       }
-      Logger.info(`Metrics enabled with`)
+      this.influxdbConnection = {
+        url: programOpts.influxdbUrl as string,
+        token: process.env.INFLUX_TOKEN as string,
+        org: programOpts.influxdbOrg as string,
+        bucket: programOpts.influxdbBucket as string
+      }
+      this.metricsPort = parseInt(programOpts.metricsPort as string)
+      Logger.info(`Metrics enabled, connecting to influxdb at ${this.influxdbConnection.url} with org ${this.influxdbConnection.org} and bucket ${this.influxdbConnection.bucket}`)
     }
   
     this.connectedWallet = Wallet.fromMnemonic(process.env.MNEMONIC as string).connect(this.provider)
@@ -215,6 +219,7 @@ export class Config {
       whitelist: this.whitelist,
       blacklist: this.blacklist,
       metrics: this.isMetricsEnabled,
+      metricsPort: this.metricsPort,
     },
     'Bundler config setup')
   }

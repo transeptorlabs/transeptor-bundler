@@ -8,6 +8,7 @@ import { ReputationManager } from 'reputation'
 import { ValidationService } from 'validation'
 import { Logger } from 'logger'
 import { Config } from './Config'
+import { InfluxdbClient, MetricsHttpServer } from 'metrics'
 
 async function runBundler() {
   const config = new Config(process.argv)
@@ -71,6 +72,18 @@ async function runBundler() {
     config.httpApi
   )
 
+  // stat metrics server
+  if (config.isMetricsEnabled) {
+    const influxdbClient = new InfluxdbClient(
+      config.influxdbConnection.url,
+      config.influxdbConnection.token,
+      config.influxdbConnection.org,
+      config.influxdbConnection.bucket
+    )
+    const metricsServer = new MetricsHttpServer(config.metricsPort)
+    await metricsServer.start()
+  }
+  
   // start rpc server
   const bundlerServer = new JsonrpcHttpServer(
     rpcHandler,

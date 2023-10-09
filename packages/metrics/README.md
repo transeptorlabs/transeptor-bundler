@@ -15,16 +15,7 @@ mkdir $PWD/influxdb-data
 
 ### Run InfluxDB(in docker container)
 
-```bash
-docker run \
-    --name influxdb \
-    -p 8086:8086 \
-    --volume $PWD/influxdb-data:/var/lib/influxdb2 \
-    influxdb:2.7.1 --reporting-disabled
-```
-
-or use docker-compose
-
+use docker-compose in tool package to run InfluxDB in a container.
 ```bash
 npm run influxdb
 ```
@@ -65,11 +56,25 @@ influx user create -n transeptor -p mydevpwd
 ```
 
 Verify created entries with:
-
 ```bash
-influx bucket list
 influx user list
 ```
+
+Get the bucket ID for the bucket we created earlier with:
+```bash
+influx bucket list
+```
+
+Use the bucket ID to create a read token for the bucket with:
+```bash
+influx auth create \
+  --org transeptor-labs \
+  --read-bucket <bucket_id> \
+  --write-bucket <bucket_id> \
+  --user transeptor   
+```
+
+Copy the token value and save it for later use. The token value is used to configure a data source in Grafana and used in `.env` file for `INFLUX_TOKEN` value.
 
 Leave InfluxDB shell.
 ```bash
@@ -92,10 +97,9 @@ mkdir $PWD/grafana-data
 
 ### Run Grafana(in docker container)
 
+use docker-compose in tool package to run Grafana in a container.
 ```bash
-docker run -d -p 3000:3000 --name=grafana \
-  --volume $PWD/grafana-data:/var/lib/grafana \
-  grafana/grafana-enterprise
+npm run grafana
 ```
 
 Grafana can now be reached at localhost:3000

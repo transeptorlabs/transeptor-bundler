@@ -45,7 +45,8 @@
         "mempool": "file:../mempool",
         "provider": "file:../provider",
         "reputation": "file:../reputation",
-        "validation": "file:../validation"
+        "validation": "file:../validation",
+        "metrics": "file:../metrics"
     },
     "devDependencies": {
     }

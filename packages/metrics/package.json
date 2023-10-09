@@ -33,7 +33,8 @@
         "lint:fix": "eslint src/**/*.ts --fix"
     },
     "dependencies": {
-        "logger":  "file:../logger"
+        "logger":  "file:../logger",
+        "@influxdata/influxdb-client": "1.33.2"
     },
     "devDependencies": {
     }

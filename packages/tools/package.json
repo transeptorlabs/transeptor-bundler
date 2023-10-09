@@ -29,7 +29,8 @@
     "geth:start": "docker-compose up geth",
     "geth:stop": "docker-compose stop geth",
     "start:docker-bundler": "docker-compose up bundler-typescript-local",
-    "start:influxdb": "docker-compose up influxdb"
+    "start:influxdb": "docker-compose up influxdb",
+    "start:grafana": "docker-compose up grafana"
   },
   "devDependencies": {
     "@account-abstraction/contracts": "^0.6.0",
