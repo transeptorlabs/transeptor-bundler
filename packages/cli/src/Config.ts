@@ -5,6 +5,7 @@ import { BigNumber, Wallet, ethers, providers } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import { IENTRY_POINT_ABI, isValidAddress } from 'utils'
 import { Logger } from 'logger'
+import { InfluxdbConnection } from 'types'
 dotenv.config()
 
 export class Config {
@@ -44,12 +45,7 @@ export class Config {
 
   public readonly isMetricsEnabled: boolean
   readonly metricsPort: number
-  public readonly influxdbConnection: {
-   url: string
-   org: string
-   bucket: string
-   token: string
-  } = {
+  public readonly influxdbConnection: InfluxdbConnection  = {
     url: '',
     org: '',
     bucket: '',
@@ -82,7 +78,6 @@ export class Config {
     .option('--influxdbBucket <string>', 'influxdb bucket', 'transeptor_metrics')
 
     const programOpts: OptionValues = program.parse(args).opts()
-    console.log(programOpts)
         
     if (this.SUPPORTED_MODES.indexOf(programOpts.txMode as string) === -1) {      
       throw new Error('Invalid bundler mode')

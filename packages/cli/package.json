@@ -46,7 +46,8 @@
         "provider": "file:../provider",
         "reputation": "file:../reputation",
         "validation": "file:../validation",
-        "metrics": "file:../metrics"
+        "metrics": "file:../metrics",
+        "types": "file:../types"
     },
     "devDependencies": {
     }

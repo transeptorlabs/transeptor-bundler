@@ -34,7 +34,8 @@
     },
     "dependencies": {
         "logger":  "file:../logger",
-        "@influxdata/influxdb-client": "1.33.2"
+        "@influxdata/influxdb-client": "1.33.2",
+        "os-utils": "0.0.14"
     },
     "devDependencies": {
     }

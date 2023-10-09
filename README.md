@@ -68,9 +68,10 @@ npm run lint:fix
 ```
 
 ## 🔧  Run from source
-1. Install dependencies `npm install`
-2. Build all packages `npm run build`
-2. Give the script execution permission `chmod +x ./transeptor`
+1. `nvm use`
+2. Install dependencies `npm install`
+3. Build all packages `npm run build`
+4. Give the script execution permission `chmod +x ./transeptor`
 
 Now let's start the bundler node.(make sure to pass your command line arguments)
 ```bash
