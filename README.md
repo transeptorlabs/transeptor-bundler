@@ -24,7 +24,6 @@
 > :warning: **This repository is currently under active development.**
 > See our road-map [here](https://hackmd.io/@V00D00-child/SyXKL6Kmn#Project-StatusRoadmap-)
 
-
 ## 🚀 Development
 
 Everything you need to get started developing with Transeptor.
@@ -67,15 +66,15 @@ or
 npm run lint:fix
 ```
 
-## 🔧  Run from source
-1. `nvm use`
+## 🔧 Run from source
+1. Use correct node version `nvm use`
 2. Install dependencies `npm install`
 3. Build all packages `npm run build`
-4. Give the script execution permission `chmod +x ./transeptor`
+4. Copy values in `.env.sample` into `.env` and fill in the values with your own.
+5. Give the script execution permission `chmod +x ./transeptor`
 
 Now let's start the bundler node.(make sure to pass your command line arguments)
 ```bash
-
 ./transeptor --httpApi web3,eth,debug --txMode base
 ```
 
@@ -91,9 +90,13 @@ Run image locally
 npm run start:bundler-docker
 ```
 
+## ✨ Features
+- **Full Validation** - Uses geth `debug_traceCall` method to enforce the full spec storage access rules and opcode banning. 
+- **Partial Validation** - Standard call to entry Point Contract `simulateValidation()`. No storage access rules and opcode banning. User `--unsafe` flag to enable.
+- **Metrics** - Metrics gives insight into the bundler node to allow for performance tuning and debugging. Transeptor bundler can be be configure to store metrics using a push(InfluxDB) and pull(Prometheus) metrics system. Grafana is used to visualize all the metrics. Use `--metrics` flag to enable.
+
+
 ## 🧮 Command line arguments
-- **Full Validation** - Uses geth `debug_traceCall` method to enforce the full spec storage access rules and opcode banning.
-- **Partial Validation** - Standard call to entry Point Contract `simulateValidation()`. No storage access rules and opcode banning.
 
 List of all command line arguments supported by the bundler.
 
