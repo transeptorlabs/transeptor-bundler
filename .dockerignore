@@ -3,13 +3,14 @@ docker-compose.yml
 Dockerfile
 coverage
 compliance_test.sh
-/grafana-data
 
 # Docker
 Dockerfile
 
 # Metrics data
 /influxdb-data
+/grafana-data
+/packages/metrics/screen-shoots/
 
 # secrets
 .env
