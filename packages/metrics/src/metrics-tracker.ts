@@ -54,4 +54,8 @@ export class MetricsTracker {
             Logger.info('Stopping metrics tracker interval')
         }
     }
+
+    public isWorkerRunning(): boolean {
+        return this.systemMetricsWorker !== null
+    }
 }

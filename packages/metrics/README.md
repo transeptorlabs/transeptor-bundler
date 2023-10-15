@@ -1,21 +1,22 @@
-# Monitoring Geth with InfluxDB and Grafana
+# Monitoring Transeptor with InfluxDB, Prometheus and Grafana
 
-Metrics gives inight into the bundler node to allow for preformance tuning and debugging. Transeptor bundler can be be configure to store metrics using a push(InfluxDB) and pull(Prometheus) metrics system. Grafana is used to visualize the metrics.
+Metrics gives insight into the bundler node to allow for performance tuning and debugging. Transeptor bundler can be be configure to store metrics using a push(InfluxDB) and pull(Prometheus) metrics system. Grafana is used to visualize all the metrics.
+
+## Requirements
+1. Docker - `>= v20.10.17`
+2. Docker Compose - `>= v2.10.2`
+3. InfluxDB(docker image) - `influxdb:2.7.1`
 
 ## Setting up InfluxDB Docker
 
 By default, InfluxDB is reachable at localhost:8086. We can use docker to run InfluxDB in a container.
 
-### Persist data outside the InfluxDB container
-Create a new directory to store your metrics data.
-
+1. Create a new directory to store your metrics data.
 ```bash
 mkdir $PWD/influxdb-data
 ```
 
-### Run InfluxDB(in docker container)
-
-use docker-compose in tool package to run InfluxDB in a container.
+2. Use docker-compose in tool package to run InfluxDB in a docker container.
 ```bash
 npm run influxdb
 ```
@@ -28,25 +29,25 @@ To use the influx command line interface, open a shell in the influxdb Docker co
 docker exec -it influxdb /bin/bash
 ```
 
-The following example command is use to set up InfluxDB in non-interactive mode with an initial admin user, operator token, and bucket. For local develploment we use defaults user credentials below:
+The following example command is use to set up InfluxDB in non-interactive mode with an initial admin user, operator token, and bucket. For local development we use defaults user credentials below:
 
-- username 'transeptor-admin'
+- username 'admin'
 - password 'adminpwd'
-- token 'DEV_TOKEN'
+- token 'ADMIN_TOKEN'
 - org 'transeptor-labs'
-- bucket '_transeptor_metrics'
+- bucket 'transeptor_metrics'
 
 ```bash
 influx setup \
-  --username 'transeptor-admin' \
+  --username 'admin' \
   --password 'adminpwd' \
-  --token 'DEV_TOKEN' \
+  --token 'ADMIN_TOKEN' \
   --org 'transeptor-labs' \
   --bucket 'transeptor_metrics' \
   --force
 ```
 
-Now that we are all set up with the initial admin user let created a user for Transeptor node. For local develploment we use defaults user credentials below:
+Now that we are all set up with the initial admin user let created a user for Transeptor node. For local development we use defaults user credentials below:
 
 - username 'transeptor'
 - password 'mydevpwd'
@@ -60,7 +61,7 @@ Verify created entries with:
 influx user list
 ```
 
-Get the bucket ID for the bucket we created earlier with:
+Get the bucket ID for the bucket we created earlier for `transeptor_metrics`:
 ```bash
 influx bucket list
 ```
@@ -69,8 +70,8 @@ Use the bucket ID to create a read token for the bucket with:
 ```bash
 influx auth create \
   --org transeptor-labs \
-  --read-bucket <bucket_id> \
-  --write-bucket <bucket_id> \
+  --read-bucket <your_bucket_id> \
+  --write-bucket <your_bucket_id> \
   --user transeptor   
 ```
 
@@ -84,30 +85,83 @@ exit
 InfluxDB is now running and configured to store metrics for Transeptor.
 
 ## Setting up Prometheus Docker
+
+coming soon
+  
 ## Setting up Grafana Docker
 
-By default, Grafana is reachable at localhost:3000. We can use docker to run Grafana in a container.
+By default, Grafana is reachable at `http://localhost:3000`. We can use docker to run Grafana in a container.
 
-### Persist data outside the Grafana container
-Create a new directory to store your metrics data.
-
+1. Create a new directory to store your metrics data.
 ```bash
 mkdir $PWD/grafana-data
 ```
 
-### Run Grafana(in docker container)
-
-use docker-compose in tool package to run Grafana in a container.
+2. Use docker-compose in tool package to run Grafana in a container.
 ```bash
 npm run grafana
 ```
 
-Grafana can now be reached at localhost:3000
+Grafana can now be reached at `http://localhost:3000`
 
 1. User your browser to navigate `http://localhost:3000` to access a visualization dashboard. 
-2. On the signin page, enter admin for username and password.
+2. On the sign in page, enter admin for username and password(username=`admin` password=`admin`).
 3. Make sure to update the admin password when prompted.
 
-### Data sources
-InfluxDB: https://grafana.com/docs/grafana/latest/datasources/influxdb/
-Prometheus: https://grafana.com/docs/grafana/latest/datasources/prometheus/
+### Adding Data sources
+We will need to add a data source to Grafana for InfluxDB and Prometheus to visualize metrics. Follow these steps to add a data source to Grafana.
+
+#### InfluxDB
+Grafana supports two query languages for InfluxDB: InfluxQL and Flux. InfluxQL is the default query language for InfluxDB 1.x. Flux is the default query language for InfluxDB 2.0. We will add two data sources for InfluxDB, one for each query language.
+
+**InfluxQL**
+1. Navigate to `http://localhost:3000` and click on `Add your first data source`
+![add data source](./screen-shoots/influx-db-01.jpg)
+2. Select `InfluxDB` as the data source
+![influxql data source](./screen-shoots/influx-db-02.jpg)
+3. Configure the data source with the following values:
+  - Name: `InfluxDB-InfluxQL`
+  - Query Language: `InfluxQL`
+  - URL: `http://host.docker.internal:8086`
+  - Auth: toggle on `Basic Auth`
+  - Basic Auth Details: add username and password for InfluxDB admin user(username=`admin` password=`adminpwd`)
+  - Custom HTTP Headers: Header=`Authorization` Value=`Token <ADMIN_TOKEN>`
+  - InfluxDB Details: Database=`transeptor_metrics`, User=`transeptor`, Password=`mydevpwd`, HTTP Method=`GET`
+![influxql data source config one](./screen-shoots/influxql-db-01.jpg)
+![influxql data source config two](./screen-shoots/influxql-db-02.jpg)
+4. Click `Save & Test` to save the data source and test the connection.
+![influxql data source config three](./screen-shoots/influxql-db-03.jpg)
+
+You should see a green `Data source is working` message if the connection is successful.
+
+**Flux**
+1. Navigate to `http://localhost:3000` and click on `Add your first data source`
+![add data source](./screen-shoots/influx-db-01.jpg)
+2. Select `InfluxDB` as the data source
+![influx data source](./screen-shoots/influx-db-02.jpg)
+3. Configure the data source with the following values:
+  - Name: `InfluxDB-Flux`
+  - Query Language: `Flux`
+  - URL: `http://host.docker.internal:8086`
+  - Auth: toggle on `Basic Auth`
+  - Basic Auth Details: add username and password for InfluxDB transeptor user(username=`transeptor` password=`mydevpwd`)
+  - InfluxDB Details: Organization=`transeptor-labs`, Token=`<YOUR_TOKEN_FOR_TRANSEPTOR_USER>`, Default Bucket=`transeptor_metrics`
+![flux data source config one](./screen-shoots/flux-db-01.jpg)
+![flux data source config two](./screen-shoots/flux-db-02.jpg)
+4. Click `Save & Test` to save the data source and test the connection.
+![flux data source config three](./screen-shoots/flux-db-03.jpg)
+
+You should see a green `Data source is working` message if the connection is successful.
+
+#### Prometheus
+
+- Prometheus: https://grafana.com/docs/grafana/latest/datasources/prometheus/
+
+### Importing Dashboards
+We will import a dashboard to visualize metrics for Transeptor. Follow these steps to import a dashboard to Grafana.
+
+![influxql data source](./screen-shoots/dashboard-db-01.jpg)
+
+For a Transeptor InfluxDB monitoring dashboard, copy the URL of [this](https://grafana.com/grafana/dashboards) dashboard and paste it in the `Dashboard Import page` in Grafana. You can import using `Import via grafana.com` or `Import via panel json`. Make sure to select the `InfluxDB-InfluxQL` or `InfluxDB-Flux` data source when importing the dashboard.
+
+Once the dashboard is imported, you can view it by clicking on the dashboard name. Now just start up transeptor with metrics enabled and you should see metrics in the dashboard.

@@ -1,12 +1,15 @@
 export enum MeasurementName {
     FREE_MEMORY='free_memory',
     TOTAL_MEMORY='total_memory',
-    MEMORY_USAGE='memory_usage',
+    USED_MEMORY='used_memory',
+    MEMORY_USAGE='memory_usage', // Percentage
+
     FREE_DISK='free_disk',
     TOTAL_DISK='total_disk',
-    DISK_USAGE='disk_usage',
-    CPU_USAGE='cpu_usage',
-    NETWORK='network_usage',
+    USED_DISK='used_disk',
+    DISK_USAGE='disk_usage', // Percentage
+
+    CPU_USAGE='cpu_usage', // Percentage
 }
 
 export type InfluxdbConnection = {

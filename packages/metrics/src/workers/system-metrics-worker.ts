@@ -26,11 +26,17 @@ async function collectAndStoreSystemMetrics() {
     options.bucket,
   )
   const cpuUsage = await getCpuUsage()
-  const {total, free} = await getDiskUsage()
-  const freeMem = osUtils.freemem() 
+
+  const freeMem = osUtils.freemem()
   const totalMem = osUtils.totalmem()
+  const usedMem = totalMem - freeMem
   const memoryUsage = (((totalMem - freeMem) / totalMem) * 100)
+
+  const {total, free, used} = await getDiskUsage()
   const diskUsage = (((total - free) / total) * 100)
+
+  // get reads and writes for disk
+  const diskIO =
 
   await client.writePoint(
     'system_metrics',
@@ -44,6 +50,14 @@ async function collectAndStoreSystemMetrics() {
         value: memoryUsage // Percentage
       },
       { 
+        name: MeasurementName.DISK_USAGE,
+        value: diskUsage // Percentage
+      },
+      { 
+        name: MeasurementName.USED_MEMORY,
+        value: usedMem / 1024 // convert to GB
+      },
+      { 
         name: MeasurementName.FREE_MEMORY,
         value: freeMem / 1024 // convert to GB
       },
@@ -52,8 +66,8 @@ async function collectAndStoreSystemMetrics() {
         value: totalMem / 1024 // convert to GB
       },
       { 
-        name: MeasurementName.DISK_USAGE,
-        value: diskUsage // Percentage
+        name: MeasurementName.USED_DISK,
+        value: used
       },
       { 
         name: MeasurementName.FREE_DISK,
