@@ -1,6 +1,6 @@
 # Monitoring Transeptor with InfluxDB, Prometheus and Grafana
 
-Metrics gives insight into the bundler node to allow for performance tuning and debugging. Transeptor bundler can be be configure to store metrics using a push(InfluxDB) and pull(Prometheus) metrics system. Grafana is used to visualize all the metrics.
+Metrics give insight into the bundler node to allow for performance tuning and debugging. Transeptor bundler can be configured to store metrics using a push(InfluxDB) and pull(Prometheus) metrics system. Grafana is used to visualize all the metrics.
 
 ## Requirements
 1. Docker - `>= v20.10.17`
