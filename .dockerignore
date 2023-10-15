@@ -11,6 +11,7 @@ Dockerfile
 /influxdb-data
 /grafana-data
 /packages/metrics/screen-shoots/
+/packages/metrics/dashboards/
 
 # secrets
 .env

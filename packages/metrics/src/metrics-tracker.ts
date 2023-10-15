@@ -8,9 +8,11 @@ export class MetricsTracker {
     private systemMetricsWorker: Worker | null = null
     private options: InfluxdbConnection
     private readonly intervalTime: number = 1000 // Run every second
+    private startUsage: NodeJS.CpuUsage
 
     constructor(options: InfluxdbConnection) {
         this.options = options
+        this.startUsage = process.cpuUsage();
     }
 
     public startTracker() {
@@ -22,7 +24,8 @@ export class MetricsTracker {
             const workerFilePath = join(__dirname, './workers/system-metrics-worker.js')
             this.systemMetricsWorker = new Worker(workerFilePath, {
                 workerData: {
-                    influxdbConnectionOptions: this.options
+                    influxdbConnectionOptions: this.options,
+                    startUsage: this.startUsage
                 }
             })
     

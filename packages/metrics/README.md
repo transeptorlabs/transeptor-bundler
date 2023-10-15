@@ -160,8 +160,13 @@ You should see a green `Data source is working` message if the connection is suc
 ### Importing Dashboards
 We will import a dashboard to visualize metrics for Transeptor. Follow these steps to import a dashboard to Grafana.
 
-![influxql data source](./screen-shoots/dashboard-db-01.jpg)
+![import dashboard 1](./screen-shoots/dashboard-db-01.jpg)
 
-For a Transeptor InfluxDB monitoring dashboard, copy the URL of [this](https://grafana.com/grafana/dashboards) dashboard and paste it in the `Dashboard Import page` in Grafana. You can import using `Import via grafana.com` or `Import via panel json`. Make sure to select the `InfluxDB-InfluxQL` or `InfluxDB-Flux` data source when importing the dashboard.
+For a Transeptor InfluxDB monitoring dashboard; you can import using `Import via panel json`. Copy json data in `./packages/metrics/dashboard/transeptor-metrics-v1.json` into `Import via panel json` section and click `Load`.
+![import dashboard 2](./screen-shoots/dashboard-db-02.jpg)
 
-Once the dashboard is imported, you can view it by clicking on the dashboard name. Now just start up transeptor with metrics enabled and you should see metrics in the dashboard.
+One the final import page select which folder to import the dashboard into and click `Import`. You can use the default name or change it to something else.
+![import dashboard 3](./screen-shoots/dashboard-db-03.jpg)
+
+Once the dashboard is imported, you can view it by clicking on the dashboard name. Now just start up transeptor with metrics enabled and you should see metrics in the dashboard. The dashboard will look something like this:
+![import dashboard 4](./screen-shoots/dashboard-db-04.jpg)
