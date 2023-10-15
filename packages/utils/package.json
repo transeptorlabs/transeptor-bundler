@@ -1,7 +1,7 @@
 {
     "name": "utils",
     "description": "A modular Typescript ERC-4337 Bundler, designed with a strong emphasis on performance",
-    "version": "0.4.0-alpha",
+    "version": "0.5.0-alpha.0",
     "license": "GNU",
     "homepage": "https://github.com/transeptorlabs/transeptor-bundler#readme",
     "author": {
@@ -19,11 +19,11 @@
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
     "files": [
-      "lib/**/*.d.ts",
-      "lib/**/*.js",
-      "lib/**/*.js.map",
-      "*.d.ts",
-      "*.js"
+        "lib/**/*.d.ts",
+        "lib/**/*.js",
+        "lib/**/*.js.map",
+        "*.d.ts",
+        "*.js"
     ],
     "scripts": {
         "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -35,7 +35,5 @@
     "dependencies": {
         "ethers": "^5.7.1",
         "types": "file:../types"
-    },
-    "devDependencies": {
     }
 }

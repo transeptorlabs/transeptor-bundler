@@ -47,16 +47,16 @@ async function collectAndStoreSystemMetrics() {
     heapUsed(used): Heap memory used by the application.
     external: Memory used by JavaScript objects bound to C++ objects (e.g., Buffers).
   */
-  const memoryUsageProcess = process.memoryUsage();
-  let Mb = 1024 * 1024;
+  const memoryUsageProcess = process.memoryUsage()
+  const Mb = 1024 * 1024
 
   // cpu usage as a percentage (process) in %
-  const endUsage = process.cpuUsage(workerData.startUsage as NodeJS.CpuUsage);
-  const userUsageInSeconds = endUsage.user / 1e6; // Convert to seconds
-  const systemUsageInSeconds = endUsage.system / 1e6; // Convert to seconds
+  const endUsage = process.cpuUsage(workerData.startUsage as NodeJS.CpuUsage)
+  const userUsageInSeconds = endUsage.user / 1e6 // Convert to seconds
+  const systemUsageInSeconds = endUsage.system / 1e6 // Convert to seconds
 
-  const totalUserCpuUsagePerc = (userUsageInSeconds / process.uptime()) * 100;
-  const totalSystemCpuUsagePerc = (systemUsageInSeconds / process.uptime()) * 100;
+  const totalUserCpuUsagePerc = (userUsageInSeconds / process.uptime()) * 100
+  const totalSystemCpuUsagePerc = (systemUsageInSeconds / process.uptime()) * 100
 
   await client.writePoint(
     'system_metrics',

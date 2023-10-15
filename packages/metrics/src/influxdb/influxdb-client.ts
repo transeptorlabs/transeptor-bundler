@@ -1,7 +1,6 @@
 'use strict'
 import os from 'os'
 import { InfluxDB, Point } from '@influxdata/influxdb-client'
-import { Logger } from 'logger'
 import { MeasurementName } from 'types'
 
 export class InfluxdbClient {
@@ -30,13 +29,6 @@ export class InfluxdbClient {
         })
 
         writeApi.writePoint(point)
-        Logger.debug(
-            {
-                point
-            },
-            'InfluxDB: writing point'
-        )
-
         /**
          * Flush pending writes and close writeApi.
         **/

@@ -1,7 +1,7 @@
 {
     "name": "json-rpc-handler",
     "description": "A modular Typescript ERC-4337 Bundler, designed with a strong emphasis on performance",
-    "version": "0.4.0-alpha",
+    "version": "0.5.0-alpha.0",
     "license": "GNU",
     "homepage": "https://github.com/transeptorlabs/transeptor-bundler#readme",
     "author": {
@@ -19,11 +19,11 @@
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
     "files": [
-      "lib/**/*.d.ts",
-      "lib/**/*.js",
-      "lib/**/*.js.map",
-      "*.d.ts",
-      "*.js"
+        "lib/**/*.d.ts",
+        "lib/**/*.js",
+        "lib/**/*.js.map",
+        "*.d.ts",
+        "*.js"
     ],
     "scripts": {
         "clean": "rm -rf lib && rm -f *.tsbuildinfo",
@@ -33,15 +33,13 @@
         "lint:fix": "eslint src/**/*.ts --fix"
     },
     "dependencies": {
-        "provider": "file:../provider",
-        "logger": "file:../logger",
-        "utils": "file:../utils",
-        "types": "file:../types",
         "bundle": "file:../bundle",
         "event": "file:../event",
+        "logger": "file:../logger",
         "mempool": "file:../mempool",
-        "reputation": "file:../reputation"
-    },
-    "devDependencies": {
+        "provider": "file:../provider",
+        "reputation": "file:../reputation",
+        "types": "file:../types",
+        "utils": "file:../utils"
     }
 }
