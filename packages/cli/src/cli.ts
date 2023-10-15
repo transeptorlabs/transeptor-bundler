@@ -8,7 +8,7 @@ import { ReputationManager } from 'reputation'
 import { ValidationService } from 'validation'
 import { Logger } from 'logger'
 import { Config } from './Config'
-import { MetricsHttpServer, PerformanceTracker } from 'metrics'
+import { MetricsHttpServer, MetricsTracker } from 'metrics'
 
 async function runBundler() {
   const config = new Config(process.argv)
@@ -85,11 +85,11 @@ async function runBundler() {
 
   // stat metrics server
   if (config.isMetricsEnabled) {
-    const performanceTracker = new PerformanceTracker(config.influxdbConnection)
+    const metricsTracker = new MetricsTracker(config.influxdbConnection)
     const metricsServer = new MetricsHttpServer(config.metricsPort)
 
     await metricsServer.start()
-    performanceTracker.startTracker()
+    metricsTracker.startTracker()
   }
 }
 

@@ -50,6 +50,7 @@ export class MetricsHttpServer {
   }
 
   async stop(): Promise<void> {
+    Logger.info('Stopping metrics server')
     this.httpServer.close()
   }
 

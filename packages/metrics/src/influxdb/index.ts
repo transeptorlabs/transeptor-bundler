@@ -1,1 +1,1 @@
-export {PerformanceTracker} from './tracker'
+export { InfluxdbClient } from './influxdb-client'
