@@ -28,8 +28,5 @@
   ],
   "exclude": [
     "packages/tools/**",
-  ],
-  "ts-node": {
-    "swc": true
-}
+  ]
 }

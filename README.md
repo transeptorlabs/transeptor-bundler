@@ -24,7 +24,6 @@
 > :warning: **This repository is currently under active development.**
 > See our road-map [here](https://hackmd.io/@V00D00-child/SyXKL6Kmn#Project-StatusRoadmap-)
 
-
 ## 🚀 Development
 
 Everything you need to get started developing with Transeptor.
@@ -47,7 +46,7 @@ Open a new terminal and then start the bundler node.
 npm run start:dev
 ```
 
-The bundler will start on `http://localhost:3000/rpc`.
+The bundler will start on `http://localhost:3001/rpc`.
 
 ### Test
 
@@ -67,14 +66,15 @@ or
 npm run lint:fix
 ```
 
-## 🔧  Run from source
-1. Install dependencies `npm install`
-2. Build all packages `npm run build`
-2. Give the script execution permission `chmod +x ./transeptor`
+## 🔧 Run from source
+1. Use correct node version `nvm use`
+2. Install dependencies `npm install`
+3. Build all packages `npm run build`
+4. Copy values in `.env.sample` into `.env` and fill in the values with your own.
+5. Give the script execution permission `chmod +x ./transeptor`
 
 Now let's start the bundler node.(make sure to pass your command line arguments)
 ```bash
-
 ./transeptor --httpApi web3,eth,debug --txMode base
 ```
 
@@ -90,9 +90,13 @@ Run image locally
 npm run start:bundler-docker
 ```
 
+## ✨ Features
+- **Full Validation** - Uses geth `debug_traceCall` method to enforce the full spec storage access rules and opcode banning. 
+- **Partial Validation** - Standard call to entry Point Contract `simulateValidation()`. No storage access rules and opcode banning. User `--unsafe` flag to enable.
+- **Metrics** - Metrics gives insight into the bundler node to allow for performance tuning and debugging. Transeptor bundler can be be configure to store metrics using a push(InfluxDB) and pull(Prometheus) metrics system. Grafana is used to visualize all the metrics. Use `--metrics` flag to enable.
+
+
 ## 🧮 Command line arguments
-- **Full Validation** - Uses geth `debug_traceCall` method to enforce the full spec storage access rules and opcode banning.
-- **Partial Validation** - Standard call to entry Point Contract `simulateValidation()`. No storage access rules and opcode banning.
 
 List of all command line arguments supported by the bundler.
 
@@ -106,13 +110,18 @@ List of all command line arguments supported by the bundler.
 |        `--auto`        | `boolean` | automatic bundling                                                  | `false`                 |
 | `--autoBundleInterval` | `number`  | auto bundler interval in (ms)                                       | `12000`                |
 |     `--bundleSize`     | `number`  | maximum # of pending mempool entities                               | `10`                    |
-|        `--port`        | `number`  | server listening port                                               | `3000`                  |
+|        `--port`        | `number`  | server listening port                                               | `4000`                  |
 |  `--minUnstakeDelay`   | `number`  | time paymaster has to wait to unlock the stake (seconds)            | `0`                     |
 |      `--minStake`      | `number`  | minimum stake an entity has to have to pass the reputation system\* | `1`                     |
 |       `--txMode`       | `string`  | bundler transaction mode (base, conditional, searcher)              | `base`                  |
 |       `--unsafe`       | `boolean` | UNSAFE mode: no storage or opcode checks \*\*                       | `false`                 |
 |        `--p2p`         | `boolean` | enable p2p mode enabled(under development)                                                    | `false`                 |
 |        `--findPeers`         | `boolean` | search for peers when p2p enabled(under development)                                                  | `false`                 |
+|       `--metrics`       | `boolean`  | bundler metrics enabled              | `false`                  |
+|       `--metricsPort`       | `number`  | metrics server listening port              | `4001`                  |
+|       `--influxdbUrl`       | `string`  | url influxdb is running on            | `http://localhost:8086'`                  |
+|       `--influxdbOrg`       | `string`  | influxdb org              | `transeptor-labs`                  |
+|       `--influxdbBucket`       | `string`  | influxdb bucket              | `transeptor_metrics`                  |
 
 \*When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH.
 **safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode. \***0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789

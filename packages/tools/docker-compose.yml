@@ -1,6 +1,7 @@
 version: "3"
 services:
   geth:
+    container_name: geth
     image: ethereum/client-go:v1.10.26
     ports:
       - "8545:8545"
@@ -23,15 +24,37 @@ services:
       --networkid 1337
 
   bundler-typescript-local:
+    container_name: transeptor
     image: bundler-typescript:v-local
     ports:
-      - "3000:3000"
+      - "4000:4000"
     env_file:
       - ../../.env
     depends_on:
-    - geth
+      - geth
     command: >
-      --port 3000
+      --port 4000
       --network http://host.docker.internal:8545
       --txMode base
       --httpApi web3,eth,debug
+
+  influxdb:
+    container_name: influxdb
+    image: influxdb:2.7.1
+    ports:
+      - "8086:8086"
+    command: >
+      --reporting-disabled
+    volumes:
+      - ../../influxdb-data:/var/lib/influxdb2
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana-enterprise
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    volumes:
+      - ../../grafana-data:/var/lib/grafana
+volumes:
+  grafana-data: {}

@@ -7,6 +7,12 @@ compliance_test.sh
 # Docker
 Dockerfile
 
+# Metrics data
+/influxdb-data
+/grafana-data
+/packages/metrics/screen-shoots/
+/packages/metrics/dashboards/
+
 # secrets
 .env
 
