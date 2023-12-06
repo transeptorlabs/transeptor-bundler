@@ -56,5 +56,25 @@ services:
       - '3000:3000'
     volumes:
       - ../../grafana-data:/var/lib/grafana
+
+  erigon:
+    container_name: erigon
+    image: thorax/erigon:2.54.0-arm64
+    ports: [ "8545:8545" ]
+    command: >
+      --datadir=dev
+      --chain=dev 
+      --private.api.addr=localhost:9090 
+      --nodiscover 
+      --maxpeers 0 
+      --mine
+      --http.corsdomain="*"
+      --http.api=eth,erigon,web3,net,debug,trace,txpool,parity,admin
+      --allow-insecure-unlock 
+      --networkid 1337
+      --http.vhosts '*,localhost,host.docker.internal' 
+      --http.addr "0.0.0.0"
+      --http
+      --miner.gaslimit 12000000   
 volumes:
   grafana-data: {}

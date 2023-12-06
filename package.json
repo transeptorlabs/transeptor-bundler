@@ -33,6 +33,9 @@
     "version": "npx lerna version --no-private",
     "///cK": "________________________DOCKER CONTAINERS______________________________",
     "geth-node": "cd packages/tools && npm run geth:start",
+    "erigon-node": "cd packages/tools && npm run erigon:start",
+    "rpcdaemon-node": "cd packages/tools && npm run rpcdaemon:start",
+    "bundler-docker": "cd packages/tools && npm run start:docker-bundler",
     "bundler-prep": "cd packages/tools && npm run bundler-prep",
     "influxdb": "cd packages/tools && npm run start:influxdb",
     "grafana": "cd packages/tools && npm run start:grafana"
