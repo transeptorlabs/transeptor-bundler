@@ -1,7 +1,6 @@
 {
   "name": "root",
   "version": "0.5.1-alpha.0",
-  "private": true,
   "author": {
     "name": "Transeptor Labs",
     "email": "transeptorhq@gmail.com",
