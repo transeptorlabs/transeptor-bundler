@@ -92,10 +92,8 @@ export class Config {
         throw new Error('ALCHEMY_API_KEY env var not set')
       }
       
-      Logger.debug(`Using remote eth client at ${programOpts.network as string}`)
       this.provider = this.getNetworkProvider(programOpts.network as string, process.env.ALCHEMY_API_KEY as string)
     } else {
-      Logger.debug(`Using local eth client at ${programOpts.network as string}`)
       this.provider = this.getNetworkProvider(programOpts.network as string)
     } 
 

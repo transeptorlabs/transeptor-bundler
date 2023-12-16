@@ -106,7 +106,6 @@ export class ReputationManager {
     }
     const entry = this.getOrCreate(addr)
     entry.opsSeen++
-    Logger.debug({addr, entry}, 'after seen++')
   }
 
   /**
@@ -117,7 +116,6 @@ export class ReputationManager {
   public updateIncludedStatus (addr: string): void {
     const entry = this.getOrCreate(addr)
     entry.opsIncluded++
-    Logger.debug({addr, entry}, 'after Included++')
   }
 
   public isWhitelisted (addr: string): boolean {

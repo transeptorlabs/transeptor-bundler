@@ -38,16 +38,6 @@ export class EthAPI {
   public async sendUserOperation(userOp: UserOperation, supportedEntryPoints: string) {
     await this.validateParameters(userOp, supportedEntryPoints)
     const userOpReady = await resolveProperties(userOp)
-    Logger.debug(
-      {
-        sender: userOpReady.sender,
-        nonce: tostr(userOpReady.nonce),
-        entryPoint: supportedEntryPoints,
-        paymaster: getAddr(userOpReady.paymasterAndData),
-      },
-      'Starting UserOperation validation'
-    )
-
     this.validationService.validateInputParameters(userOp, supportedEntryPoints)
     const validationResult = await this.validationService.validateUserOp(userOp, undefined)
     const userOpHash = await this.entryPointContract.getUserOpHash(userOpReady)
