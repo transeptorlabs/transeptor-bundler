@@ -1,7 +1,7 @@
 {
     "name": "mempool",
     "description": "A modular Typescript ERC-4337 Bundler, designed with a strong emphasis on performance",
-    "version": "0.5.0-alpha.0",
+    "version": "0.5.1-alpha.0",
     "license": "GNU",
     "homepage": "https://github.com/transeptorlabs/transeptor-bundler#readme",
     "author": {
