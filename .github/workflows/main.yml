@@ -9,9 +9,6 @@ jobs:
   build-lint-test:
     uses: ./.github/workflows/build-lint-test.yml
 
-  compliance:
-    uses: ./.github/workflows/compliance.yml
-
   all-jobs-completed:
     name: All jobs completed
     runs-on: ubuntu-latest

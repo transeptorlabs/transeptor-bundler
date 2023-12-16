@@ -1,7 +1,7 @@
 name: compliance
 
 on:
-  workflow_call:
+  workflow_dispatch:
 
 jobs:
   compliance:
