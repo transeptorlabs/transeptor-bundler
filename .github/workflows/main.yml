@@ -7,11 +7,9 @@ on:
 
 jobs:
   build-lint-test:
-    name: Build, lint, and test
     uses: ./.github/workflows/build-lint-test.yml
 
   compliance:
-    name: Build, lint, and test
     uses: ./.github/workflows/compliance.yml
 
   all-jobs-completed:
