@@ -27,8 +27,6 @@ export class RpcMethodHandler {
 
   public async doHandleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
     try {
-      Logger.debug({request}, '>> Incoming request')
-
       const isValidRpc: boolean | JsonRpcErrorResponse = this.jsonRpcRequestValidator(request)
       if (typeof isValidRpc !== 'boolean') {
         return isValidRpc
@@ -38,7 +36,7 @@ export class RpcMethodHandler {
       const params = request.params
       let result: any
 
-      Logger.debug('Handling request(PASSED VALIDATION)')
+      Logger.debug( {method, params}, 'Handling incoming request')
       switch (method) {
         case 'eth_chainId':
           result = await this.providerService.getChainId()
@@ -134,12 +132,6 @@ export class RpcMethodHandler {
     result: any
   ): JsonRpcSuccessResponse {
     const hexlifyResult = deepHexlify(result)
-    Logger.debug({
-      jsonrpc: '2.0',
-      id,
-      result: hexlifyResult,
-    }, '<< Sending sucess response')
-
     return {
       jsonrpc: '2.0',
       id,
@@ -168,9 +160,7 @@ export class RpcMethodHandler {
     if (data) {
       errorResponse.error.data = data
     }
-
-    Logger.debug(errorResponse, '<< Sending error response')
-
+    
     return errorResponse
   }
 }

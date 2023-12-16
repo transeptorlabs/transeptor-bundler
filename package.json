@@ -1,5 +1,6 @@
 {
   "name": "root",
+  "version": "0.5.0-alpha.0",
   "author": {
     "name": "Transeptor Labs",
     "email": "transeptorhq@gmail.com",
@@ -14,7 +15,6 @@
   "bugs": {
     "url": "https://github.com/transeptorlabs/transeptor-bundler/issues"
   },
-  "private": true,
   "scripts": {
     "///ab": "_____________________________________________________________________",
     "///cv": "________________________WELCOME BUILDERS______________________________",

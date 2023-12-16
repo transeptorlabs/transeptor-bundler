@@ -57,7 +57,6 @@ export class BundleProcessor {
   */
   public async sendNextBundle(isAuto = false): Promise<SendBundleReturn> {
     if (this.mempoolManager.size() === 0) {
-      Logger.debug('Mempool size is 0 - no user ops to bundle')
       return {
         transactionHash: '',
         userOpHashes: []
@@ -69,12 +68,10 @@ export class BundleProcessor {
       ? await this.mempoolManager.getAllPending()
       : await this.mempoolManager.getNextPending()
     
-    Logger.debug(`Got entries from mempool: ${entries.length}`)
     const [bundle, storageMap] = await this.createBundle(entries)
     Logger.debug({ length: bundle.length, bundle }, 'bundle created')
 
     if (bundle.length === 0) {
-      Logger.debug('sendNextBundle - no bundle to send')
       return {
         transactionHash: '',
         userOpHashes: []
@@ -82,7 +79,6 @@ export class BundleProcessor {
     } else {
       const beneficiary = await this.selectBeneficiary()
       const ret = await this.sendBundle(bundle, beneficiary, storageMap)
-      Logger.debug(`sendNextBundle exit - after sent a bundle of ${bundle.length} `)
       return ret
     }
   }
@@ -225,17 +221,15 @@ export class BundleProcessor {
         ret = await this.providerService.send('eth_sendRawTransactionConditional', [
           signedTx, { knownAccounts: storageMap }
         ])
-        Logger.debug({ret}, 'eth_sendRawTransactionConditional ret=')
+        Logger.debug({ret, length: userOps.length}, 'eth_sendRawTransactionConditional ret=')
       } else {
         // ret = await this.signer.sendTransaction(tx)
         ret = await this.providerService.send('eth_sendRawTransaction', [signedTx])
-        Logger.debug({ret}, 'eth_sendRawTransaction ret=')
+        Logger.debug({ret, length: userOps.length}, 'eth_sendRawTransaction ret=')
       }
 
       // TODO: parse ret, and revert if needed.
-      // Logger.debug({ret}, 'ret=')
-      Logger.debug({length: userOps.length}, 'sent handleOps')
-
+      
       // hashes are needed for debug rpc only.
       const hashes = await this.getUserOpHashes(userOps)
       return {

@@ -326,16 +326,6 @@ export function parseScannerResult(
         return false
       }
 
-      Logger.debug(
-        {
-          entityTitle,
-          entityAddr,
-          k: mapOf(tracerResults.keccak, (k) => keccak256(k)),
-          reads,
-        },
-        'dump keccak calculations and reads'
-      )
-
       /*
         scan all slots. find a referenced slot
         at the end of the scan, we will check if the entity has stake, and report that slot if not.

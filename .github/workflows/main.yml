@@ -1,0 +1,64 @@
+name: Main
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-lint-test:
+    uses: ./.github/workflows/build-lint-test.yml
+
+  compliance:
+    uses: ./.github/workflows/compliance.yml
+
+  all-jobs-completed:
+    name: All jobs completed
+    runs-on: ubuntu-latest
+    needs:
+      - build-lint-test
+    outputs:
+      PASSED: ${{ steps.set-output.outputs.PASSED }}
+    steps:
+      - name: Set PASSED output
+        id: set-output
+        run: echo "PASSED=true" >> "$GITHUB_OUTPUT"
+
+  all-jobs-pass:
+    name: All jobs pass
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    needs: all-jobs-completed
+    steps:
+      - name: Check that all jobs have passed
+        run: |
+          passed="${{ needs.all-jobs-completed.outputs.PASSED }}"
+          if [[ $passed != "true" ]]; then
+            exit 1
+          fi
+
+  is-release:
+    # Filtering by `push` events ensures that we only release from the `main` branch, which is a
+    # requirement for our npm publishing environment.
+    # The commit author should always be 'github-actions' for releases created by the
+    # 'create-release-pr' workflow, so we filter by that as well to prevent accidentally
+    # triggering a release.
+    if: github.event_name == 'push' && startsWith(github.event.head_commit.author.name, 'github-actions')
+    needs: all-jobs-pass
+    outputs:
+      IS_RELEASE: ${{ steps.is-release.outputs.IS_RELEASE }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: MetaMask/action-is-release@v1
+        id: is-release
+
+  publish-release:
+    needs: is-release
+    if: needs.is-release.outputs.IS_RELEASE == 'true'
+    name: Publish Release transeptor docker image
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-release.yml
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}

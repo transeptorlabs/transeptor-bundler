@@ -107,8 +107,7 @@ export class ProviderService {
     public async debug_traceCall (tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any> {
         const tx1 = await resolveProperties(tx)
         const ret = await this.provider.send('debug_traceCall', [tx1, 'latest', options]).catch(e => {
-            Logger.error({error: e.message}, 'ex=')
-            Logger.debug({traceOptions: options.tracer?.toString().split('\n').map((line, index) => `${index + 1}: ${line}`).join('\n')}, 'tracer=')
+            Logger.error({error: e.message}, 'error in debug_traceCall')
             throw e
         })
         return ret as BundlerCollectorReturn

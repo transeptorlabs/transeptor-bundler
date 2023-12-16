@@ -1,0 +1,48 @@
+name: Create Release Pull Request
+
+on:
+  workflow_dispatch:
+    inputs:
+      base-branch:
+        description: "The base branch for git operations and the pull request."
+        default: "main"
+        required: true
+      release-version:
+        description: "A specific version to bump to, i.e. 0.1.1"
+        required: true
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # setting GH_TOKEN for the entire workflow
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 14
+
+      - name: Configure Git identity
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+
+      - name: Create release branch
+        run: |
+          branch_name="release/v${{ github.event.inputs.release-version }}"
+          git checkout -b $branch_name
+          git commit --allow-empty -m "Release v${{ github.event.inputs.release-version }}"
+          git push origin $branch_name
+
+          echo "::set-output name=branch_name::$branch_name"
+
+      - name: Open Pull Request
+        run: |
+          gh pr create --base ${{ github.event.inputs.base-branch }} --head "release/v${{ github.event.inputs.release-version }}" --title "Release v${{ github.event.inputs.release-version }}" --body "Automated release PR for version v${{ github.event.inputs.release-version }}"

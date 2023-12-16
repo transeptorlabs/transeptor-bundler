@@ -144,21 +144,7 @@ export class ValidationService {
         // a real error, not a result.
         throw new Error(errFullName)
       }
-      Logger.debug(
-        {
-          dumpTree: JSON.stringify(tracerResult, null, 2)
-          .replace(new RegExp(userOp.sender.toLowerCase()), '{sender}')
-          .replace(
-            new RegExp(getAddr(userOp.paymasterAndData) ?? '--no-paymaster--'),
-            '{paymaster}'
-          )
-          .replace(
-            new RegExp(getAddr(userOp.initCode) ?? '--no-initcode--'),
-            '{factory}'
-          )
-        }, 
-        '==dump tree='
-      )
+
       return [errorResult, tracerResult]
     } catch (e: any) {
       // if already parsed, throw as is
@@ -213,8 +199,7 @@ export class ValidationService {
         throw new Error('simulateValidation reverted with no revert string!')
       }
     } else {
-      Logger.debug('Running validation no storage or opcode checks')
-      // NOTE: this mode doesn't do any opcode checking and no stake checking!
+      Logger.debug('Running validation no stake or opcode checks')
       res = await this.callSimulateValidation(userOp)
     }
 
