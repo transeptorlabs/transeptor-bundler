@@ -35,7 +35,8 @@
     "geth-node": "cd packages/tools && npm run geth:start",
     "bundler-prep": "cd packages/tools && npm run bundler-prep",
     "influxdb": "cd packages/tools && npm run start:influxdb",
-    "grafana": "cd packages/tools && npm run start:grafana"
+    "grafana": "cd packages/tools && npm run start:grafana",
+    "start:docker-bundler": "cd packages/tools && npm run start:docker-bundler"
   },
   "devDependencies": {
     "@account-abstraction/contracts": "^0.6.0",
