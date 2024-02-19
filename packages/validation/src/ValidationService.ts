@@ -234,6 +234,11 @@ export class ValidationService {
       ValidationErrors.UnsupportedSignatureAggregator
     )
 
+    // check aa51
+    const verificationCost = BigNumber.from(res.returnInfo.preOpGas).sub(userOp.preVerificationGas)
+    const extraGas = BigNumber.from(userOp.verificationGasLimit).sub(verificationCost).toNumber()
+    requireCond(extraGas >= 2000, `verificationGas should have extra 2000 gas. has only ${extraGas}`, ValidationErrors.SimulateValidation)
+
     Logger.debug({ userOp }, 'UserOp passed validation')
     return {
       ...res,
