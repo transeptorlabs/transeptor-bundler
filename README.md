@@ -23,6 +23,9 @@
 > :warning: **This repository is currently under active development.**
 > See our road-map [here](https://hackmd.io/@V00D00-child/SyXKL6Kmn#Project-StatusRoadmap-)
 
+## Entrypoint version support
+- Supports Entrypoint [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7)
+
 ## 🚀 Development
 
 Everything you need to get started developing with Transeptor.
