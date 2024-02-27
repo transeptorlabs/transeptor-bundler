@@ -30,6 +30,7 @@ export function mapOf<T> (keys: Iterable<string>, mapper: (key: string) => T, fi
   return ret
 }
 
+// TODO: Update to entrypoint v0.7
 // TODO: Move all contract abis to a separate contract module
 // contract abi are taken from @account-abstraction/contracts
 export const IENTRY_POINT_ABI = [

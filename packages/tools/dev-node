@@ -1,68 +1,102 @@
 #!/bin/bash
 
-# first 3 accounts default hardhat accounts
-DEFAULT_ADDRESS_1="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-DEFAULT_ADDRESS_2="0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
-DEFAULT_ADDRESS_3="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 GETH_PORT=8545
 TRANSEPTOR_PORT=4337
 NETWORK_ID=1337
-BUNDER_CONTAINER_NAME="transeptor-dev"
-IMAGE_NAME="bundler-typescript:v-local"
+START_BUNDLER=false
+ENTRYPOINT_ADDRESS_V7=""
 
-if [ ! -f  .env ]; then
+if [ ! -f  $PWD/.env ]; then
   echo "Error: .env file not found. Please make sure the .env file exists."
   exit 1
 fi
 source .env
 
-# ########################################################
-# STAGE 0: start geth
-# ########################################################
-if docker ps -a | grep -q geth-relayer-snap; then
-  echo -e "Removing existing geth container\n"
-  docker rm -f geth-relayer-snap
+if [ "$1" == "-b" ]; then
+  START_BUNDLER=true
 fi
 
-geth_container_id=$(docker run -d --name geth-relayer-snap -p $GETH_PORT:$GETH_PORT ethereum/client-go:latest \
-  --verbosity 1 \
-  --http.vhosts '*,localhost,host.docker.internal' \
-  --http \
-  --http.api eth,net,web3,debug \
-  --http.corsdomain '*' \
-  --http.addr "0.0.0.0" \
-  --nodiscover --maxpeers 0 --mine \
-  --networkid $NETWORK_ID \
-  --dev \
-  --allow-insecure-unlock \
-  --rpc.allow-unprotected-txs \
-  --dev.gaslimit 20000000)
+start_geth() {
+  # first 3 accounts default hardhat accounts
+  DEFAULT_ADDRESS_1="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+  DEFAULT_ADDRESS_2="0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+  DEFAULT_ADDRESS_3="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 
-echo -e "Geth started with container ID: $geth_container_id\n"
+  if docker ps -a | grep -q geth-transeptor; then
+    echo -e "Removing existing geth container\n"
+    docker rm -f geth-transeptor
+  fi
 
-sleep 3
+  echo -e "Starting local eth node at http://localhost:$GETH_PORT on network $NETWORK_ID\n"
+  geth_container_id=$(docker run -d --name geth-transeptor -p $GETH_PORT:$GETH_PORT ethereum/client-go:latest \
+    --verbosity 1 \
+    --http.vhosts '*,localhost,host.docker.internal' \
+    --http \
+    --http.api eth,net,web3,debug \
+    --http.corsdomain '*' \
+    --http.addr "0.0.0.0" \
+    --nodiscover --maxpeers 0 --mine \
+    --networkid $NETWORK_ID \
+    --dev \
+    --allow-insecure-unlock \
+    --rpc.allow-unprotected-txs \
+    --dev.gaslimit 20000000)
 
-echo -e "Funding default accounts\n"
-for ACCOUNT in $DEFAULT_ADDRESS_1 $DEFAULT_ADDRESS_2 $DEFAULT_ADDRESS_3; do
-  docker exec $geth_container_id geth \
-    --exec "eth.sendTransaction({from: eth.accounts[0], to: \"$ACCOUNT\", value: web3.toWei(4337, \"ether\")})" \
-    attach http://localhost:$GETH_PORT/
-  
-  balance=$(docker exec $geth_container_id geth --exec "eth.getBalance(\"$ACCOUNT\")" attach http://localhost:$GETH_PORT/)
-  echo -e "Balance of $ACCOUNT: $balance wei\n"
-done
+  sleep 3
 
-# ########################################################
-# STAGE 1: Deploy entrypoint v0.7 
-# ########################################################
-forge script scripts/DeployEntryPoint.s.sol --rpc-url http://localhost:$GETH_PORT --broadcast
+  echo -e "Account balances:"
+  for ACCOUNT in $DEFAULT_ADDRESS_1 $DEFAULT_ADDRESS_2 $DEFAULT_ADDRESS_3; do
+    docker exec $geth_container_id geth \
+      --exec "eth.sendTransaction({from: eth.accounts[0], to: \"$ACCOUNT\", value: web3.toWei(4337, \"ether\")})" \
+      attach http://localhost:$GETH_PORT/ > /dev/null
+    
+    balance=$(docker exec $geth_container_id geth --exec "eth.getBalance(\"$ACCOUNT\")" attach http://localhost:$GETH_PORT/)
+    echo -e "  - $ACCOUNT: $balance wei"
+  done
+  echo -e "\n"
+
+  echo -e "ERC 4337 contracts:"
+  OUTPUT=$(forge script scripts/DeployEntryPoint.s.sol --rpc-url http://localhost:$GETH_PORT --broadcast) 
+  ENTRYPOINT_ADDRESS_V7=$(echo "$OUTPUT" | grep -o "EntryPoint: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
+  echo -e "EntryPoint contract v0.7 deployed at: $ENTRYPOINT_ADDRESS_V7\n"
+}
+
+start_bundler() {
+  if docker ps -a | grep -q transeptor-dev; then
+  echo -e "Removing existing transeptor container\n"
+  docker rm -f transeptor-dev
+  fi
+
+  echo -e "Starting bundler at http://localhost:$TRANSEPTOR_PORT/rpc on network $NETWORK_ID\n"
+  transeptor_container_id=$(docker run -d --name transeptor-dev -p $TRANSEPTOR_PORT:$TRANSEPTOR_PORT --env-file $PWD/.env transeptorlabs/bundler:latest \
+    --port $TRANSEPTOR_PORT \
+    --network http://host.docker.internal:$GETH_PORT \
+    --txMode base \
+    --unsafe \
+    --httpApi web3,eth,debug \
+    --entryPoint $ENTRYPOINT_ADDRESS_V7 \
+    --auto \
+    --autoBundleInterval 12000)
+}
 
 stop_all() {
-  echo -e "Stopping geth...\n"
-  docker stop $geth_container_id
-  docker rm $geth_container_id
+  echo -e "\nStopping dev-node\n"
+  docker stop $geth_container_id > /dev/null
+  docker rm $geth_container_id > /dev/null
+
+  if [ "$START_BUNDLER" = true ]; then
+    docker stop $transeptor_container_id > /dev/null
+    docker rm $transeptor_container_id > /dev/null
+  fi
+
   exit 0
 }
+
+# Start dev-node
+start_geth
+if [ "$START_BUNDLER" = true ]; then
+  start_bundler
+fi
 
 trap stop_all SIGINT 
 echo -e "Press Ctrl+C to stop the dev-node."

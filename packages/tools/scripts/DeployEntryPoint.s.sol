@@ -26,7 +26,7 @@ contract DeployEntryPoint is Script{
 
         console2.log("__DEPLOYED_CONTRACT_ADDRESSES__");
         console2.log("Successfully deployed EntryPoint v0.7");
-        console2.log("EntryPoint v0.7: %s", address(deployedEpAddress));
+        console2.log("EntryPoint: %s", address(deployedEpAddress));
         console2.log("_________________________________");
     }
 }

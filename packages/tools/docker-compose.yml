@@ -24,7 +24,7 @@ services:
       --networkid 1337
 
   bundler-typescript-local:
-    container_name: transeptor
+    container_name: transepto-dev
     image: bundler-typescript:v-local
     ports:
       - "4000:4000"
