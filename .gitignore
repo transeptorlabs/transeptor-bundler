@@ -10,12 +10,6 @@ coverage.json
 # secrets
 .env
 
-# Hardhat files
-packages/tools/cache
-packages/tools/artifacts
-packages/tools/typechain
-packages/tools/typechain-types
-
 # Misc
 .DS_Store
 .env.local

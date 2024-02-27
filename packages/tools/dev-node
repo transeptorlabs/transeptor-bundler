@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# first 3 accounts default hardhat accounts
+DEFAULT_ADDRESS_1="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+DEFAULT_ADDRESS_2="0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+DEFAULT_ADDRESS_3="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+GETH_PORT=8545
+TRANSEPTOR_PORT=4337
+NETWORK_ID=1337
+BUNDER_CONTAINER_NAME="transeptor-dev"
+IMAGE_NAME="bundler-typescript:v-local"
+
+if [ ! -f  .env ]; then
+  echo "Error: .env file not found. Please make sure the .env file exists."
+  exit 1
+fi
+source .env
+
+# ########################################################
+# STAGE 0: start geth
+# ########################################################
+if docker ps -a | grep -q geth-relayer-snap; then
+  echo -e "Removing existing geth container\n"
+  docker rm -f geth-relayer-snap
+fi
+
+geth_container_id=$(docker run -d --name geth-relayer-snap -p $GETH_PORT:$GETH_PORT ethereum/client-go:latest \
+  --verbosity 1 \
+  --http.vhosts '*,localhost,host.docker.internal' \
+  --http \
+  --http.api eth,net,web3,debug \
+  --http.corsdomain '*' \
+  --http.addr "0.0.0.0" \
+  --nodiscover --maxpeers 0 --mine \
+  --networkid $NETWORK_ID \
+  --dev \
+  --allow-insecure-unlock \
+  --rpc.allow-unprotected-txs \
+  --dev.gaslimit 20000000)
+
+echo -e "Geth started with container ID: $geth_container_id\n"
+
+sleep 3
+
+echo -e "Funding default accounts\n"
+for ACCOUNT in $DEFAULT_ADDRESS_1 $DEFAULT_ADDRESS_2 $DEFAULT_ADDRESS_3; do
+  docker exec $geth_container_id geth \
+    --exec "eth.sendTransaction({from: eth.accounts[0], to: \"$ACCOUNT\", value: web3.toWei(4337, \"ether\")})" \
+    attach http://localhost:$GETH_PORT/
+  
+  balance=$(docker exec $geth_container_id geth --exec "eth.getBalance(\"$ACCOUNT\")" attach http://localhost:$GETH_PORT/)
+  echo -e "Balance of $ACCOUNT: $balance wei\n"
+done
+
+# ########################################################
+# STAGE 1: Deploy entrypoint v0.7 
+# ########################################################
+forge script scripts/DeployEntryPoint.s.sol --rpc-url http://localhost:$GETH_PORT --broadcast
+
+stop_all() {
+  echo -e "Stopping geth...\n"
+  docker stop $geth_container_id
+  docker rm $geth_container_id
+  exit 0
+}
+
+trap stop_all SIGINT 
+echo -e "Press Ctrl+C to stop the dev-node."
+while true; do
+  sleep 1
+done

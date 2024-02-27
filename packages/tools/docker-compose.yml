@@ -1,7 +1,7 @@
 version: "3"
 services:
   geth:
-    container_name: geth
+    container_name: geth-transeptor
     image: ethereum/client-go:v1.10.26
     ports:
       - "8545:8545"

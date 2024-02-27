@@ -4,25 +4,19 @@
 ![Github workflow build status(main)](https://img.shields.io/github/actions/workflow/status/transeptorlabs/transeptor-bundler/build.yml?branch=main)
 
 
-## Installation
+## Run dev node
+
 ```bash
-npm install
+chmod +x ./dev-node
 ```
 
-## Run ETH Node
-`npm run geth:start`
+```bash
+./dev-node
+```
 
-## Stop ETH Node
-`npm run geth:stop`
+### With bundler
 
-## Bundler Development
-Run `npm run bundler-startup` to set up the bundler for development. This will:
-- deploy the entry point contract to the local eth node.
-- deploy simple account factory contract to the local eth node. 
-- Fund the bundler signer account with ETH 
-
-## ERC-4337 contracts
-This Bundler uses [Infinitism](https://github.com/eth-infinitism/account-abstraction) `@account-abstraction/contracts`(version 0.6.0) entry point contract for development. The `npm fetch:abi` script fetches abi for the contract and saves it locally at `./abi/entrypoint.js`.
+<!-- TODO: write script -->
 
 ### Entrypoint
 Deterministic address: 0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789
