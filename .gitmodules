@@ -1,10 +1,10 @@
-[submodule "packages/tools/libs/account-abstraction"]
-	path = packages/tools/libs/account-abstraction
+[submodule "contracts/libs/account-abstraction"]
+	path = contracts/libs/account-abstraction
 	url = https://github.com/eth-infinitism/account-abstraction.git
 	branch = releases/v0.7
-[submodule "packages/tools/libs/openzeppelin-contracts"]
-	path = packages/tools/libs/openzeppelin-contracts
+[submodule "contracts/libs/openzeppelin-contracts"]
+	path = contracts/libs/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
-[submodule "packages/tools/libs/forge-std"]
-	path = packages/tools/libs/forge-std
+[submodule "contracts/libs/forge-std"]
+	path = contracts/libs/forge-std
 	url = https://github.com/foundry-rs/forge-std

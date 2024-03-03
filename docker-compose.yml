@@ -1,0 +1,60 @@
+version: "3"
+services:
+  geth:
+    container_name: geth-transeptor
+    image: ethereum/client-go:v1.10.26
+    ports:
+      - "8545:8545"
+    command: >
+      --miner.gaslimit 12000000
+      --dev.gaslimit 20000000
+      --http 
+      --http.api personal,eth,net,web3,debug
+      --http.vhosts '*,localhost,host.docker.internal' 
+      --http.addr "0.0.0.0"
+      --ignore-legacy-receipts 
+      --allow-insecure-unlock 
+      --rpc.allow-unprotected-txs
+      --dev
+      --verbosity 2
+      --nodiscover 
+      --maxpeers 0 
+      --mine 
+      --miner.threads 1
+      --networkid 1337
+
+  bundler-typescript-local:
+    container_name: transeptor-dev
+    image: bundler-typescript:v-local
+    ports:
+      - "4000:4000"
+    env_file:
+      - ../../.env
+    depends_on:
+      - geth
+    command: >
+      --port 4000
+      --network http://host.docker.internal:8545
+      --txMode base
+      --httpApi web3,eth,debug
+
+  influxdb:
+    container_name: influxdb
+    image: influxdb:2.7.1
+    ports:
+      - "8086:8086"
+    command: >
+      --reporting-disabled
+    volumes:
+      - ../../influxdb-data:/var/lib/influxdb2
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana-enterprise
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    volumes:
+      - ../../grafana-data:/var/lib/grafana
+volumes:
+  grafana-data: {}
