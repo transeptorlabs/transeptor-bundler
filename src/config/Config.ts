@@ -57,35 +57,30 @@ export class Config {
     const program = new Command()
     program
     .version(`${packageJson.version}`)
-    .option('--httpApi <string>', 'rpc method name spaces', 'web3,eth')
-    .option('--network <string>', 'eth client url', `${this.DEFAULT_NETWORK}`)
-    .option('--entryPoint <string>', 'supported entry point address', this.DEFAULT_ENTRY_POINT)
-    .option('--minBalance <string>', 'below this signer balance, keep fee for itself, ignoring "beneficiary" address', '1')
-    .option('--maxBundleGas <number>', 'max gas the bundler will use in transactions', '5000000')
-    .option('--auto', 'automatic bundling', false)
-    .option('--autoBundleInterval <number>', 'auto bundler interval in (ms)', '12000')
-    .option('--bundleSize <number>', 'maximum # of pending mempool entities', '10')
-    .option('--port <number>', 'server listening port', '4000')
-    .option('--minStake <string>', 'minimum stake a entity has to have to pass reputation system(When staked, an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH)', '1') // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
-    .option('--minUnstakeDelay <number>', 'time paymaster has to wait to unlock the stake(seconds)', '0') // One day - 84600
-    .option('--txMode <string>', 'bundler transaction mode (base, conditional, searcher)', 'base')
-    .option('--unsafe', 'UNSAFE mode: no storage or opcode checks (safe mode requires debug_traceCall support on eth node. Only base and conditional txMode are supported in safe mode)')
+    .option('--httpApi <string>', 'ERC4337 rpc method name spaces to enable.', 'web3,eth')
+    .option('--network <string>', 'ETH execution client url.', `${this.DEFAULT_NETWORK}`)
+    .option('--minBalance <string>', 'Maximum ETH balance need for signer address.', '1')
+    .option('--maxBundleGas <number>', 'Max gas the bundler will use in transactions.', '5000000')
+    .option('--auto', 'Automatic bundling.', false)
+    .option('--autoBundleInterval <number>', 'Auto bundler interval in (ms).', '12000')
+    .option('--bundleSize <number>', 'Maximum number of pending mempool entities to start auto bundler.', '10')
+    .option('--port <number>', 'Bundler node listening port.', '4000')
+    .option('--minStake <string>', 'Minimum stake a entity has to have to pass reputation system.', '1') // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
+    .option('--minUnstakeDelay <number>', 'Time paymaster has to wait to unlock the stake(seconds).', '0') // One day - 84600
+    .option('--txMode <string>', 'Bundler transaction mode (base, conditional, searcher).', 'base')
+    .option('--unsafe', 'Enable no storage or opcode checks.')
     .option('--p2p', 'p2p mode enabled', false)
-    .option('--findPeers', 'search for peers when p2p enabled', false)
-    .option('--metrics', 'bundler metrics enabled', false)
-    .option('--metricsPort <number>', 'metrics server listening port', '4001')
-    .option('--influxdbUrl <string>', 'url influxdb is running on', 'http://localhost:8086')
-    .option('--influxdbOrg <string>', 'influxdb org', 'transeptor-labs')
-    .option('--influxdbBucket <string>', 'influxdb bucket', 'transeptor_metrics')
+    .option('--findPeers', 'Search for peers when p2p enabled.', false)
+    .option('--metrics', 'Bundler node metrics tracking enabled.', false)
+    .option('--metricsPort <number>', 'Metrics server listening port.', '4001')
+    .option('--influxdbUrl <string>', 'Url influxdb is running on (requires --metrics to be enabled).', 'http://localhost:8086')
+    .option('--influxdbOrg <string>', 'Influxdb org (requires --metrics to be enabled).', 'transeptor-labs')
+    .option('--influxdbBucket <string>', 'Influxdb bucket (requires --metrics to be enabled).', 'transeptor_metrics')
 
     const programOpts: OptionValues = program.parse(args).opts()
         
     if (this.SUPPORTED_MODES.indexOf(programOpts.txMode as string) === -1) {      
       throw new Error('Invalid bundler mode')
-    }
-
-    if (!isValidAddress(programOpts.entryPoint as string)) {
-      throw new Error('Entry point not a valid address')
     }
 
     if (programOpts.txMode as string === 'searcher') {
@@ -98,6 +93,16 @@ export class Config {
       this.provider = this.getNetworkProvider(programOpts.network as string)
     } 
 
+    let supportedEntryPointAddress: string
+    if (!process.env.ENTRYPOINT_ADDRESS) {
+      supportedEntryPointAddress = this.DEFAULT_ENTRY_POINT
+    } else {
+      supportedEntryPointAddress = process.env.ENTRYPOINT_ADDRESS as string
+    }
+    if (!isValidAddress(supportedEntryPointAddress)) {
+      throw new Error('Entry point not a valid address')
+    }
+
     if (!process.env.MNEMONIC) {
       throw new Error('MNEMONIC env var not set')
     }
@@ -105,7 +110,6 @@ export class Config {
     if (!process.env.BENEFICIARY) {
       throw new Error('BENEFICIARY env var not set')
     }
-
     if (!isValidAddress(process.env.BENEFICIARY as string)) {
       throw new Error('Beneficiary not a valid address')
     }
@@ -150,7 +154,7 @@ export class Config {
   
     this.connectedWallet = Wallet.fromMnemonic(process.env.MNEMONIC as string).connect(this.provider)
     this.beneficiaryAddr = process.env.BENEFICIARY as string
-    this.entryPointContract = new ethers.Contract(programOpts.entryPoint as string, IENTRY_POINT_ABI, this.connectedWallet)
+    this.entryPointContract = new ethers.Contract(supportedEntryPointAddress, IENTRY_POINT_ABI, this.connectedWallet)
 
     this.autoBundleInterval = parseInt(programOpts.autoBundleInterval as string)
     this.bundleSize = parseInt(programOpts.bundleSize as string)

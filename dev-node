@@ -60,7 +60,8 @@ start_geth() {
   forge build
   OUTPUT=$(forge script ./scripts/DeployEntryPoint.s.sol --rpc-url http://localhost:$GETH_PORT --broadcast) 
   ENTRYPOINT_ADDRESS_V7=$(echo "$OUTPUT" | grep -o "EntryPoint: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
-  echo -e "EntryPoint contract v0.7 deployed at: $ENTRYPOINT_ADDRESS_V7\n"
+  echo -e "EntryPoint contract v0.7 deployed at: $ENTRYPOINT_ADDRESS_V7. Please add to local .env.\n"
+  echo -e "ENTRYPOINT_ADDRESS=$ENTRYPOINT_ADDRESS_V7\n"
 }
 
 start_bundler() {
@@ -69,14 +70,14 @@ start_bundler() {
   docker rm -f transeptor-dev
   fi
 
+  export ENTRYPOINT_ADDRESS=$ENTRYPOINT_ADDRESS_V7
   echo -e "Starting bundler at http://localhost:$TRANSEPTOR_PORT/rpc on network $NETWORK_ID\n"
-  transeptor_container_id=$(docker run -d --name transeptor-dev -p $TRANSEPTOR_PORT:$TRANSEPTOR_PORT --env-file $PWD/.env transeptorlabs/bundler:latest \
+  transeptor_container_id=$(docker run -d --name transeptor-dev -p $TRANSEPTOR_PORT:$TRANSEPTOR_PORT --env-file $PWD/.env bundler-typescript:v-local \
     --port $TRANSEPTOR_PORT \
     --network http://host.docker.internal:$GETH_PORT \
     --txMode base \
     --unsafe \
     --httpApi web3,eth,debug \
-    --entryPoint $ENTRYPOINT_ADDRESS_V7 \
     --auto \
     --autoBundleInterval 12000)
 }

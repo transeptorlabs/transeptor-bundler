@@ -1,24 +1,36 @@
+# dependencies
 node_modules
-docker-compose.yml
-Dockerfile
-coverage
-compliance_test.sh
 
 # Docker
 Dockerfile
+docker-compose.yml
+
+# build
+dist
+
+# contracts
+contracts
+
+# docs
+docs
+
+# scripts
+dev-node
+transeptor
 
 # Metrics data
-/influxdb-data
-/grafana-data
-/packages/metrics/screen-shoots/
-/packages/metrics/dashboards/
+influxdb-data
+grafana-data
 
 # secrets
 .env
+.env.sample
 
 #Ignoring git and cache folders
 .git
 .cache
+.gitignore
+.gitmodules
 
 #Ignoring all the markdown and class files
 *.md
@@ -28,11 +40,8 @@ SECURITY.md
 CONTRIBUTING.md
 
 # Tests
-packages/**/test
-packages/**/lib
-packages/**/README.MD
-packages/**/CHANGELOG.MD
-packages/tools
+test
+coverage
 
 # Github & configs
 .github
@@ -51,4 +60,4 @@ tags.json
 .eslint.cjs
 .nvmrc
 .eslintrc.cjs
-
+jest.config.js

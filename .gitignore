@@ -6,8 +6,7 @@ coverage
 coverage.json
 
 # production
-dist/*
-dist/cjs
+dist
 
 # secrets
 .env

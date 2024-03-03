@@ -1,6 +1,6 @@
 import { BigNumber, ethers } from 'ethers'
-import { EstimateUserOpGasResult, UserOperation, UserOperationByHashResponse, UserOperationReceipt, ValidationErrors } from '../../types'
-import { RpcError, deepHexlify, requireCond, packUserOp } from '../../utils'
+import { EstimateUserOpGasResult, PackedUserOperation, UserOperation, UserOperationByHashResponse, UserOperationReceipt, ValidationErrors } from '../../types'
+import { RpcError, deepHexlify, requireCond, packUserOp, unpackUserOp } from '../../utils'
 import { ProviderService } from '../../provider'
 import { resolveProperties } from 'ethers/lib/utils'
 import { BundleManager } from '../../bundle'
@@ -17,6 +17,7 @@ export class EthAPI {
   private readonly mempoolManager: MempoolManager
   private readonly eventsManager: EventsManager
   private readonly HEX_REGEX = /^0x[a-fA-F\d]*$/i
+  private readonly addressZero = "0x0000000000000000000000000000000000000000"
 
   constructor(
     entryPointContract: ethers.Contract,
@@ -94,7 +95,7 @@ export class EthAPI {
     }
 
     const parsed = this.entryPointContract.interface.parseTransaction(tx)
-    const ops: UserOperation[] = parsed?.args.ops
+    const ops: PackedUserOperation[] = parsed?.args.ops
     if (ops == null) {
       throw new Error('failed to parse transaction')
     }
@@ -107,34 +108,8 @@ export class EthAPI {
       throw new Error('unable to find userOp in transaction')
     }
 
-    const {
-      sender,
-      nonce,
-      initCode,
-      callData,
-      callGasLimit,
-      verificationGasLimit,
-      preVerificationGas,
-      maxFeePerGas,
-      maxPriorityFeePerGas,
-      paymasterAndData,
-      signature
-    } = op
-
     return deepHexlify({
-      userOperation: {
-        sender,
-        nonce,
-        initCode,
-        callData,
-        callGasLimit,
-        verificationGasLimit,
-        preVerificationGas,
-        maxFeePerGas,
-        maxPriorityFeePerGas,
-        paymasterAndData,
-        signature
-      },
+      userOperation: unpackUserOp(op),
       entryPoint: this.entryPointContract.address,
       transactionHash: tx.hash,
       blockHash: tx.blockHash ?? '',
@@ -142,8 +117,8 @@ export class EthAPI {
     })
   }
 
-  // TODO: ep v0.7 - update to use state override with EntryPointSimulations contract
   public async estimateUserOperationGas (userOp1: UserOperation, entryPointInput: string): Promise<EstimateUserOpGasResult> {
+    // TODO: add check for state override support and use entrypoint delegateAndRevert() function when state override is not supported
     const userOp = {
       // default values for missing fields.
       paymasterAndData: '0x',
@@ -153,44 +128,32 @@ export class EthAPI {
       verificationGasLimit: 10e6,
       ...await resolveProperties(userOp1),
     }
-
-    // todo: checks the existence of parameters, but since we hexlify the inputs, it fails to validate
     await this.validateParameters(deepHexlify(userOp), entryPointInput)
 
-    const errorResult = await this.entryPointContract.callStatic.simulateValidation(packUserOp(userOp)).catch(e => e)
+    // TODO: update to use eth_call with state override swapping entrypoint code for EntryPointSimulations contract bytecode
+    const errorResult = await this.entryPointContract.callStatic.simulateHandleOp(this.entryPointContract.address, packUserOp(userOp), [this.addressZero, '0x']).catch(e => e)
     if (errorResult.errorName === 'FailedOp') {
       throw new RpcError(errorResult.errorArgs.at(-1), ValidationErrors.SimulateValidation)
     }
 
-    if (errorResult.errorName !== 'ValidationResult') {
+    if (errorResult.errorName !== 'ExecutionResult') {
       throw errorResult
     }
 
     const { returnInfo } = errorResult.errorArgs
     let {
       preOpGas,
-      validAfter,
-      validUntil
     } = returnInfo
 
+    // TODO: Use simulateHandleOp with proxy contract to estimate callGasLimit too
     const callGasLimit = await this.providerService.estimateGas(this.entryPointContract.address, userOp.sender, userOp.callData)
-    validAfter = BigNumber.from(validAfter)
-    validUntil = BigNumber.from(validUntil)
-    preOpGas = BigNumber.from(preOpGas)
-    if (validUntil === BigNumber.from(0)) {
-      validUntil = undefined
-    }
-    if (validAfter === BigNumber.from(0)) {
-      validAfter = undefined
-    }
-
     const preVerificationGas = calcPreVerificationGas(userOp)
     const verificationGasLimit = BigNumber.from(preOpGas).toNumber()
     return {
       preVerificationGas,
       verificationGasLimit,
-      validAfter,
-      validUntil,
+      // validAfter,
+      // validUntil,
       callGasLimit
     }
   }

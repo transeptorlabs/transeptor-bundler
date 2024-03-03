@@ -18,7 +18,7 @@ module.exports = {
     'no-unused-vars': 'off',
     '@typescript-eslint/no-unused-vars': 'off'
   },
-  ignorePatterns: ['node_modules', 'lib', '**/*.js', '.eslintrc.js', 'scripts' ,'deploy'],
+  ignorePatterns: ['node_modules', './src/validation/tracer.js', '.eslintrc.js', 'scripts' ],
   overrides: [
     {
       files: ['*.ts'],

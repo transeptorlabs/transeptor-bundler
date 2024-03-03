@@ -12,7 +12,7 @@ export class MetricsTracker {
 
     constructor(options: InfluxdbConnection) {
         this.options = options
-        this.startUsage = process.cpuUsage();
+        this.startUsage = process.cpuUsage()
     }
 
     public startTracker() {

@@ -7,7 +7,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "sourceMap": true,
-    "allowJs": true,
+    "allowJs": false,
     "moduleResolution": "node",
 
     "alwaysStrict": true,
@@ -27,10 +27,10 @@
   },
   "include": [
     "src/**/*.ts",
+    "src/**/*.js",
   ],
   "exclude": [
     "./src/p2p/*",
-    "./src/validation/tracer.js",
     "./contracts/*",
   ]
 }
