@@ -1,7 +1,7 @@
 import { Mutex } from 'async-mutex'
 import { BundleProcessor } from './BundleProcessor'
-import { Logger } from 'logger'
-import { SendBundleReturn } from 'types'
+import { Logger } from '../logger'
+import { SendBundleReturn } from '../types'
 
 /*
   This class act as a top-level interface to bundle UserOperations.

@@ -1,8 +1,8 @@
 import { ethers } from 'ethers'
-import { MempoolManager } from 'mempool'
-import { ProviderService } from 'provider'
-import { ReputationManager } from 'reputation'
-import { Logger } from 'logger'
+import { MempoolManager } from '../mempool'
+import { ProviderService } from '../provider'
+import { ReputationManager } from '../reputation'
+import { Logger } from '../logger'
 import { Log } from '@ethersproject/providers'
 
 /**

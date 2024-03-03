@@ -1,7 +1,6 @@
 import { hexZeroPad, hexlify } from 'ethers/lib/utils'
 import { BigNumber, BytesLike } from 'ethers'
-import { SlotMap, StorageMap, UserOperation } from 'types'
-import { PackedUserOperation } from 'types/src/userop.types'
+import { SlotMap, StorageMap, UserOperation, PackedUserOperation } from '../types'
 
 // extract address from initCode or paymasterAndData
 export function getAddr (data?: BytesLike): string | undefined {

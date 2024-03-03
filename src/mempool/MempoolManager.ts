@@ -1,9 +1,9 @@
 import { Mutex } from 'async-mutex'
-import { MempoolEntry, ReferencedCodeHashes, StakeInfo, UserOperation, ValidationErrors } from 'types'
-import { Logger } from 'logger'
+import { MempoolEntry, ReferencedCodeHashes, StakeInfo, UserOperation, ValidationErrors } from '../types'
+import { Logger } from '../logger'
 import { BigNumber, BigNumberish } from 'ethers'
-import { getAddr, requireCond } from 'utils'
-import { ReputationManager } from 'reputation'
+import { getAddr, requireCond } from '../utils'
+import { ReputationManager } from '../reputation'
 
 /* In-memory mempool with used to manage UserOperations.
   The MempoolManager class is a Hash Table data structure that provides efficient insertion, removal, and retrieval of items based on a hash string key. 

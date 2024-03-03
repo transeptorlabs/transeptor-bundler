@@ -1,7 +1,7 @@
 import { parentPort, workerData } from 'worker_threads'
 import osUtils from 'os-utils'
 import { InfluxdbClient } from '../influxdb'
-import { MeasurementName, InfluxdbConnection, WorkerMessage } from 'types'
+import { MeasurementName, InfluxdbConnection, WorkerMessage } from '../../types'
 
 
 parentPort.on('message', async (message) => {

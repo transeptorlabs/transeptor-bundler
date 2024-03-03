@@ -11,11 +11,15 @@ module.exports = {
   },
   collectCoverageFrom: [
     "./src/**/*.{js,ts}",
-    "!./src/**/index.{js,ts}"
+    "!./src/**/index.{js,ts}",
+  ],
+  testPathIgnorePatterns: [
+    '<rootDir>/contracts/',
   ],
   clearMocks: true,
   coveragePathIgnorePatterns: ["/node_modules/"],
   coverageDirectory: "./coverage",
   coverageReporters: ["json", "text", "lcov", "clover", "html"],
-  testEnvironment: "node"
+  testEnvironment: "node",
+  rootDir: './',
 };

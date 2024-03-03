@@ -6,14 +6,14 @@ import {
   StorageMap,
   UserOperation,
   ValidateUserOpResult,
-} from 'types'
-import { Logger } from 'logger'
-import { MempoolManager } from 'mempool'
-import { getAddr, mergeStorageMap, packUserOps } from 'utils'
-import { GET_USEROP_HASHES_ABI, GET_USEROP_HASHES_BYTECODE } from 'abis'
-import { ReputationManager } from 'reputation'
-import { ProviderService } from 'provider'
-import { ValidationService } from 'validation'
+} from '../types'
+import { Logger } from '../logger'
+import { MempoolManager } from '../mempool'
+import { getAddr, mergeStorageMap, packUserOps } from '../utils'
+import { GET_USEROP_HASHES_ABI, GET_USEROP_HASHES_BYTECODE } from '../abis'
+import { ReputationManager } from '../reputation'
+import { ProviderService } from '../provider'
+import { ValidationService } from '../validation'
 import { ErrorDescription } from '@ethersproject/abi/lib/interface'
 
 /*

@@ -1,8 +1,8 @@
 import { EthAPI, Web3API, DebugAPI} from './services'
-import { ProviderService } from 'provider'
-import { JsonRpcErrorResponse, JsonRpcRequest, JsonRpcResponse, JsonRpcSuccessResponse } from 'types'
-import { Logger } from 'logger'
-import { RpcError, deepHexlify } from 'utils'
+import { ProviderService } from '../provider'
+import { JsonRpcErrorResponse, JsonRpcRequest, JsonRpcResponse, JsonRpcSuccessResponse } from '../types'
+import { Logger } from '../logger'
+import { RpcError, deepHexlify } from '../utils'
 
 export class RpcMethodHandler {
   private readonly eth: EthAPI

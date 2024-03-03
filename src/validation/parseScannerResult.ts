@@ -1,6 +1,6 @@
 import { hexZeroPad, Interface, keccak256 } from 'ethers/lib/utils'
 import { BigNumber, BigNumberish, ethers } from 'ethers'
-import { requireCond, toBytes32 } from 'utils'
+import { requireCond, toBytes32 } from '../utils'
 import { 
   IENTRY_POINT_ABI,
   IPAYMASTER_ABI,
@@ -9,7 +9,7 @@ import {
   TEST_OPCODE_ACCOUNT_FACTORY_ABI, 
   TEST_STORAGE_ACCOUNT_ABI,
   IACCOUNT_ABI
-} from 'abis'
+} from '../abis'
 import { 
   StakeInfo, 
   StorageMap, 
@@ -18,7 +18,7 @@ import {
   ValidationResult, 
   BundlerCollectorReturn, 
   TopLevelCallInfo 
-} from 'types'
+} from '../types'
 import { utils} from 'ethers'
 
 interface CallEntry {

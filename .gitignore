@@ -1,11 +1,13 @@
 # Dependencies
 node_modules/
-packages/*/lib
-packages/*/coverage
 
 # test
 coverage
 coverage.json
+
+# production
+dist/*
+dist/cjs
 
 # secrets
 .env

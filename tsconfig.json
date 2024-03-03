@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "outDir": "dist",
-    "baseUrl": ".",
+    "outDir": "dist/cjs",
+    "baseUrl": "./",
     "target": "ES2021",
     "module": "commonjs",
     "esModuleInterop": true,
@@ -25,11 +25,12 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
   },
-
   "include": [
-    "src"
+    "src/**/*.ts",
   ],
   "exclude": [
-    "src/p2p/*",
+    "./src/p2p/*",
+    "./src/validation/tracer.js",
+    "./contracts/*",
   ]
 }

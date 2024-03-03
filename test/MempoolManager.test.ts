@@ -2,9 +2,9 @@ import {
   mockUserOperationFactory,
   mockEntryPointGetUserOpHash,
 } from './test-helpers'
-import { MempoolManager } from '../src/index'
-import { ReputationManager } from 'reputation'
-import { BigNumber } from 'ethers'
+import { MempoolManager } from '../src/mempool'
+import { ReputationManager } from '../src/reputation'
+import { BigNumber } from 'ethers/lib/ethers'
 
 describe('MempoolManager', () => {
   let mempoolManager: MempoolManager

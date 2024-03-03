@@ -1,7 +1,7 @@
 import { BigNumber } from 'ethers'
-import { ReputationEntry, ReputationParams, ReputationStatus, StakeInfo, ValidationErrors } from 'types'
-import { requireCond, tostr } from 'utils'
-import { Logger } from 'logger'
+import { ReputationEntry, ReputationParams, ReputationStatus, StakeInfo, ValidationErrors } from '../types'
+import { requireCond, tostr } from '../utils'
+import { Logger } from '../logger'
 
 export class ReputationManager {
   private entries: { [address: string]: ReputationEntry } = {}

@@ -1,8 +1,8 @@
-import { BundleManager } from 'bundle'
-import { EventsManager } from 'event'
-import { MempoolManager } from 'mempool'
-import { ReputationManager } from 'reputation'
-import { ReputationEntry, SendBundleReturn } from 'types'
+import { BundleManager } from '../../bundle'
+import { EventsManager } from '../../event'
+import { MempoolManager } from '../../mempool'
+import { ReputationManager } from '../../reputation'
+import { ReputationEntry, SendBundleReturn } from '../../types'
 
 export class DebugAPI {
   private readonly bundleManager: BundleManager

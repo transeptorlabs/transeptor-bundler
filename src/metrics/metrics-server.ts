@@ -2,8 +2,8 @@ import express, { Request, Response } from 'express'
 import { createServer, Server } from 'http'
 import helmet from 'helmet'
 import cors from 'cors'
-import { JsonRpcRequest } from 'types'
-import { Logger } from 'logger'
+import { JsonRpcRequest } from '../types'
+import { Logger } from '../logger'
 
 export class MetricsHttpServer {
   private app: express.Application
