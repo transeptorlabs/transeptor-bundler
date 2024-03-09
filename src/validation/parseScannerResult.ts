@@ -353,7 +353,7 @@ export function parseScannerResult(
           but during initial UserOp (where there is an initCode), it is allowed only for staked entity
         */
         if (associatedWith(slot, sender, entitySlots)) {
-          if (userOp.initCode.length > 2) {
+          if (userOp.factory != null) {
             // special case: account.validateUserOp is allowed to use assoc storage if factory is staked.
             if (
               !(entityAddr === sender && isStaked(stakeInfoEntities.factory))

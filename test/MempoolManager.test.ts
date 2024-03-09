@@ -53,7 +53,6 @@ describe('MempoolManager', () => {
     }
 
     await mempoolManager.addUserOp(userOp1, userOpHash1,
-      BigNumber.from('1'),
       {
         addr: 'x0001',
         stake: BigNumber.from('1'),
@@ -65,7 +64,6 @@ describe('MempoolManager', () => {
       },
     )
     await mempoolManager.addUserOp(userOp2, userOpHash2,
-      BigNumber.from('1'),
       {
         addr: 'x0002',
         stake: BigNumber.from('1'),
@@ -77,7 +75,6 @@ describe('MempoolManager', () => {
       },
     )
     await mempoolManager.addUserOp(userOp3, userOpHash3,
-      BigNumber.from('1'),
       {
         addr: 'x0003',
         stake: BigNumber.from('1'),
@@ -108,7 +105,6 @@ describe('MempoolManager', () => {
     const userOpHash3 =  mockEntryPointGetUserOpHash(userOp3)
 
     await mempoolManager.addUserOp(userOp1, userOpHash1,
-      BigNumber.from('1'),
       {
         addr: 'x0001',
         stake: BigNumber.from('1'),
@@ -120,7 +116,6 @@ describe('MempoolManager', () => {
       }
     )
     await mempoolManager.addUserOp(userOp2, userOpHash2,
-      BigNumber.from('1'),
       {
         addr: 'x0002',
         stake: BigNumber.from('1'),
@@ -132,7 +127,6 @@ describe('MempoolManager', () => {
       }
     )
     await mempoolManager.addUserOp(userOp3, userOpHash3,
-      BigNumber.from('1'),
       {
         addr: 'x0003',
         stake: BigNumber.from('1'),
@@ -171,7 +165,6 @@ describe('MempoolManager', () => {
     const userOpHash6 =  mockEntryPointGetUserOpHash(userOp6)
 
     await mempoolManager.addUserOp(userOp1, userOpHash1,
-      BigNumber.from('1'),
       {
         addr: 'x0001',
         stake: BigNumber.from('1'),
@@ -183,7 +176,6 @@ describe('MempoolManager', () => {
       }
     )
     await mempoolManager.addUserOp(userOp2, userOpHash2,
-      BigNumber.from('1'),
       {
         addr: 'x0002',
         stake: BigNumber.from('1'),
@@ -195,7 +187,6 @@ describe('MempoolManager', () => {
       }
     )
     await mempoolManager.addUserOp(userOp3, userOpHash3,
-      BigNumber.from('1'),
       {
         addr: 'x0003',
         stake: BigNumber.from('1'),
@@ -207,7 +198,6 @@ describe('MempoolManager', () => {
       }
     )
     await mempoolManager.addUserOp(userOp4, userOpHash4,
-      BigNumber.from('1'),
       {
         addr: 'x0004',
         stake: BigNumber.from('1'),
@@ -219,7 +209,6 @@ describe('MempoolManager', () => {
       }
     )
     await mempoolManager.addUserOp(userOp5, userOpHash5,
-      BigNumber.from('1'),
       {
         addr: 'x0005',
         stake: BigNumber.from('1'),
@@ -231,7 +220,6 @@ describe('MempoolManager', () => {
       }
     )
     await mempoolManager.addUserOp(userOp6, userOpHash6,
-      BigNumber.from('1'),
       {
         addr: 'x0006',
         stake: BigNumber.from('1'),
@@ -263,7 +251,6 @@ describe('MempoolManager', () => {
     const userOpHash3 =  mockEntryPointGetUserOpHash(userOp3)
 
     await mempoolManager.addUserOp(userOp1, userOpHash1,
-      BigNumber.from('1'),
       {
         addr: 'x0001',
         stake: BigNumber.from('1'),
@@ -275,7 +262,6 @@ describe('MempoolManager', () => {
       }
     )
     await mempoolManager.addUserOp(userOp2, userOpHash2,
-      BigNumber.from('1'),
       {
         addr: 'x0002',
         stake: BigNumber.from('1'),
@@ -287,7 +273,6 @@ describe('MempoolManager', () => {
       }
     )
     await mempoolManager.addUserOp(userOp3, userOpHash3,
-      BigNumber.from('1'),
       {
         addr: 'x0003',
         stake: BigNumber.from('1'),

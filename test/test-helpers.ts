@@ -8,15 +8,19 @@ export function mockUserOperationFactory(
   const mockUserOperation: UserOperation = {
     sender: sender,
     nonce: nonce,
-    initCode: '0x04',
+    factory: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
+    factoryData: '0x04',
     callData: '0xa9e966b7000000000000000000000000000000000000000000000000000000000010f447',
     callGasLimit: 0,
     verificationGasLimit: 0,
     preVerificationGas: 0,
     maxFeePerGas: 0,
     maxPriorityFeePerGas: 0,
-    paymasterAndData: '0x',
+    paymasterData: '0x',
     signature: '0x',
+    paymaster: '',
+    paymasterVerificationGasLimit: '',
+    paymasterPostOpGasLimit: ''
   }
   return mockUserOperation
 }

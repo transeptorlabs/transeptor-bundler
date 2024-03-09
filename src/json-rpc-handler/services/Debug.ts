@@ -1,10 +1,13 @@
+import { packUserOp } from '../../utils/bundle.utils'
 import { BundleManager } from '../../bundle'
 import { EventsManager } from '../../event'
 import { MempoolManager } from '../../mempool'
 import { ReputationManager } from '../../reputation'
-import { ReputationEntry, SendBundleReturn } from '../../types'
+import { ReputationEntry, SendBundleReturn, UserOperation } from '../../types'
+import { ethers } from 'ethers'
 
 export class DebugAPI {
+  private readonly entryPointContract: ethers.Contract
   private readonly bundleManager: BundleManager
   private readonly reputationManager: ReputationManager
   private readonly mempoolManager: MempoolManager
@@ -14,12 +17,14 @@ export class DebugAPI {
     bundleManager: BundleManager,
     reputationManager: ReputationManager,
     mempoolManager: MempoolManager,
-    eventsManager: EventsManager
+    eventsManager: EventsManager,
+    entryPointContract: ethers.Contract,
   ) {
     this.bundleManager = bundleManager
     this.reputationManager = reputationManager
     this.mempoolManager = mempoolManager
     this.eventsManager = eventsManager
+    this.entryPointContract = entryPointContract
   }
 
   async clearState(): Promise<void> {
@@ -47,6 +52,14 @@ export class DebugAPI {
 
   async setReputation(param: any[]): Promise<ReputationEntry[]> {
     return this.reputationManager.setReputation(param)
+  }
+
+  async addUserOps(userOps: UserOperation[]) {
+    // TODO: implement
+    for (const userOp of userOps) {
+      const userOpHash = await this.entryPointContract.getUserOpHash(packUserOp(userOp))
+      await this.mempoolManager.addUserOp(userOp, userOpHash, null, null)
+    }
   }
 
   dumpReputation(): ReputationEntry[] {

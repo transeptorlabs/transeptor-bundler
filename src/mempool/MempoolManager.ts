@@ -36,18 +36,28 @@ export class MempoolManager {
     Logger.info(`In-memory Mempool initialized with bundleSize=${bundleSize} and MAX_MEMPOOL_USEROPS_PER_SENDER=${this.MAX_MEMPOOL_USEROPS_PER_SENDER}`)
   }
 
+  /**
+   * Returns all addresses that are currently known to be "senders" according to the current mempool.
+  */
+  getKnownSenders (): string[] {
+    const kownSenders = []
+    for (const sender in this.entryCount) {
+      kownSenders.push(sender)
+    }
+    return kownSenders
+  }
+
   /* 
     * add userOp into the mempool, after initial validation.
     * replace existing, if any (and if new gas is higher)
     * revets if unable to add UserOp to mempool (too many UserOps with this sender)
   */ 
-  public async addUserOp(userOp: UserOperation, userOpHash: string, prefund: BigNumberish, senderInfo: StakeInfo, referencedContracts: ReferencedCodeHashes, aggregator?: string): Promise<void> {
+  public async addUserOp(userOp: UserOperation, userOpHash: string, senderInfo: StakeInfo, referencedContracts: ReferencedCodeHashes, aggregator?: string): Promise<void> {
     const release = await this.mutex.acquire()
     try {
       const entry: MempoolEntry = {
         userOp,
         userOpHash,
-        prefund,
         referencedContracts,
         aggregator,
         status: 'pending',
@@ -62,8 +72,20 @@ export class MempoolManager {
       } else {
         Logger.debug({ sender: userOp.sender, nonce: userOp.nonce, userOpHash, status: entry.status }, 'added userOp to mempool ')
         this.checkSenderCountInMempool(userOp, senderInfo)
-        this.mempool.set(userOpHash, entry)
+        // update entity entryCount
+        if (userOp.paymaster != null) {
+          this.entryCount[userOp.paymaster] = (this.entryCount[userOp.paymaster] ?? 0) + 1
+        }
+        if (userOp.factory != null) {
+          this.entryCount[userOp.factory] = (this.entryCount[userOp.factory] ?? 0) + 1
+        }
         this.entryCount[userOp.sender] = (this.entryCount[userOp.sender] ?? 0) + 1
+
+        // TODO: Add checkReputation
+        // TODO: Add checkMultipleRolesViolation
+
+        this.mempool.set(userOpHash, entry)
+
       }
       this.updateSeenStatus(aggregator, userOp)
     } finally {
@@ -83,8 +105,8 @@ export class MempoolManager {
 
   private updateSeenStatus (aggregator: string | undefined, userOp: UserOperation): void {
     this.reputationManager.updateSeenStatus(aggregator)
-    this.reputationManager.updateSeenStatus(getAddr(userOp.paymasterAndData))
-    this.reputationManager.updateSeenStatus(getAddr(userOp.initCode))
+    this.reputationManager.updateSeenStatus(userOp.paymaster)
+    this.reputationManager.updateSeenStatus(userOp.factory)
   }
 
   private checkReplaceUserOp (oldEntry: MempoolEntry, entry: MempoolEntry): void {

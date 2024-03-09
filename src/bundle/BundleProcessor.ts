@@ -63,7 +63,7 @@ export class BundleProcessor {
         userOpHashes: []
       }
     }
-
+    // TODO: Include entries based off highest fee
     // if isAuto is true, send the all pending UserOps in the mempool as a bundle
     const entries: MempoolEntry[] = isAuto
       ? await this.mempoolManager.getAllPending()
@@ -92,37 +92,40 @@ export class BundleProcessor {
     const paymasterDeposit: { [paymaster: string]: BigNumber } = {} // paymaster deposit should be enough for all UserOps in the bundle.
     const stakedEntityCount: { [addr: string]: number } = {} // throttled paymasters and deployers are allowed only small UserOps per bundle.
     const senders = new Set<string>() // each sender is allowed only once per bundle
-    const knownSenders = entries.map(it => { return it.userOp.sender.toLowerCase()}) // all entities that are known to be valid senders in the mempool
+    const knownSenders = this.mempoolManager.getKnownSenders()
 
     mainLoop:
     for (let i =0; i < entries.length; i++) {
       const entry =  entries[i]
-      const paymaster = getAddr(entry.userOp.paymasterAndData)
-      const factory = getAddr(entry.userOp.initCode)
+      const paymaster = entry.userOp.paymaster
+      const factory = entry.userOp.factory
       const paymasterStatus = this.reputationManager.getStatus(paymaster)
       const deployerStatus = this.reputationManager.getStatus(factory)
 
       // check entry reputation status
-      if (paymasterStatus === ReputationStatus.BANNED || deployerStatus === ReputationStatus.BANNED) {
-        Logger.debug(`skipping banned entry ${entry.userOpHash}`)
-        this.mempoolManager.removeUserOp(entry.userOpHash)
-        continue
+      if (
+        paymasterStatus === ReputationStatus.BANNED ||
+        deployerStatus === ReputationStatus.BANNED
+      ) {
+        Logger.debug(`skipping banned entry: ${entry.userOpHash}`);
+        await this.mempoolManager.removeUserOp(entry.userOpHash);
+        continue;
       }
 
+      // [SREP-030]
       if (paymaster != null && (paymasterStatus === ReputationStatus.THROTTLED ?? (stakedEntityCount[paymaster] ?? 0) > 1)) {
         Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce, }, 'skipping throttled paymaster')
         continue
       }
-
       if (factory != null && (deployerStatus === ReputationStatus.THROTTLED ?? (stakedEntityCount[factory] ?? 0) > 1)) {
         Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce, }, 'skipping throttled factory')
         continue
       }
 
+      // allow only a single UserOp per sender per bundle
       if (senders.has(entry.userOp.sender)) {
         Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce}, 'skipping already included sender')
-        // allow only a single UserOp per sender per bundle
-        this.mempoolManager.updateEntryStatusPending(entry.userOpHash)
+        await this.mempoolManager.updateEntryStatusPending(entry.userOpHash)
         continue
       }
 
@@ -136,12 +139,12 @@ export class BundleProcessor {
           false
         )
       } catch (e: any) {
-        Logger.error({ error: e.message, entry: entry }, 'failed 2nd validation:')
-        // failed validation. don't try anymore
-        this.mempoolManager.removeUserOp(entry.userOpHash)
+        Logger.error({ error: e.message, entry: entry }, 'failed 2nd validation, removing from mempool:')
+        await this.mempoolManager.removeUserOp(entry.userOpHash)
         continue
       }
 
+      // Check if the UserOp accesses a storage of another known sender
       for (const storageAddress of Object.keys(validationResult.storageMap)) {
         if (
           storageAddress.toLowerCase() !== entry.userOp.sender.toLowerCase() &&
@@ -152,44 +155,52 @@ export class BundleProcessor {
         }
       }
 
-      // TODO: we take UserOp's callGasLimit, even though it will probably require less (but we don't
-      // attempt to estimate it to check)
-      // which means we could "cram" more UserOps into a bundle.
+      // TODO: we could "cram" more UserOps into a bundle.
       const userOpGasCost = BigNumber.from(validationResult.returnInfo.preOpGas).add(entry.userOp.callGasLimit)
       const newTotalGas = totalGas.add(userOpGasCost)
       if (newTotalGas.gt(this.maxBundleGas)) {
         Logger.debug({stopIndex: i, entriesLength: entries.length}, 'Bundle is full sending user ops back to mempool with status pending')
-        // TODO: bundle is full set the remaining UserOps back to pending or they will be lost is mempool with status 'bundling'
+        // bundle is full set the remaining UserOps back to pending
+        for (let j = i; j < entries.length; j++) {
+          await this.mempoolManager.updateEntryStatusPending(entries[j].userOpHash)
+        }
         break
       }
 
+      // get paymaster deposit and stakedEntityCount
       if (paymaster != null) {
         if (paymasterDeposit[paymaster] == null) {
-          paymasterDeposit[paymaster] = await this.entryPointContract.balanceOf(paymaster)
+          paymasterDeposit[paymaster] = await this.entryPointContract.balanceOf(
+            paymaster
+          );
         }
-        if (paymasterDeposit[paymaster].lt(validationResult.returnInfo.prefund)) {
-          // TODO: bundle is full set the UserOp back to pending
+        if (
+          paymasterDeposit[paymaster].lt(validationResult.returnInfo.prefund)
+        ) {
           // not enough balance in paymaster to pay for all UserOp
           // (but it passed validation, so it can sponsor them separately
-          Logger.debug(`paymaster ${paymaster} does not have not enough balance to pay for UserOp, sending user ops back to mempool with status pending`)
-          continue
+          continue;
         }
-        stakedEntityCount[paymaster] = (stakedEntityCount[paymaster] ?? 0) + 1
-        paymasterDeposit[paymaster] = paymasterDeposit[paymaster].sub(validationResult.returnInfo.prefund)
+        stakedEntityCount[paymaster] = (stakedEntityCount[paymaster] ?? 0) + 1;
+        paymasterDeposit[paymaster] = paymasterDeposit[paymaster].sub(
+          validationResult.returnInfo.prefund
+        );
       }
 
+      // get factory stakedEntityCount
       if (factory != null) {
         stakedEntityCount[factory] = (stakedEntityCount[factory] ?? 0) + 1
       }
 
       // If sender's account already exist: replace with its storage root hash
-      if (this.txMode === 'conditional' && entry.userOp.initCode.length <= 2) {
+      if (this.txMode === 'conditional' && entry.userOp.factory === '0x') {
         // in conditionalRpc: always put root hash (not specific storage slots) for "sender" entries
         const { storageHash } = await this.providerService.send('eth_getProof',[entry.userOp.sender, [], 'latest'])
         storageMap[entry.userOp.sender.toLowerCase()] = storageHash
       }
       mergeStorageMap(storageMap, validationResult.storageMap)
 
+      // add UserOp to bundle
       senders.add(entry.userOp.sender)
       bundle.push(entry.userOp)
       totalGas = newTotalGas
@@ -224,7 +235,6 @@ export class BundleProcessor {
         ])
         Logger.debug({ret, length: userOps.length}, 'eth_sendRawTransactionConditional ret=')
       } else {
-        // ret = await this.signer.sendTransaction(tx)
         ret = await this.providerService.send('eth_sendRawTransaction', [signedTx])
         Logger.debug({ret, length: userOps.length}, 'eth_sendRawTransaction ret=')
       }
@@ -250,20 +260,19 @@ export class BundleProcessor {
         }
       }
       
-      // parse Error
+      // update entity reputation staus if it cause handleOps to fail
       const { opIndex, reason } = parsedError.args
       const userOp = userOps[opIndex]
       const reasonStr: string = reason.toString()
       
       if (reasonStr.startsWith('AA3')) {
-        this.reputationManager.crashedHandleOps(getAddr(userOp.paymasterAndData))
+        this.reputationManager.crashedHandleOps(getAddr(userOp.paymaster))
       } else if (reasonStr.startsWith('AA2')) {
         this.reputationManager.crashedHandleOps(userOp.sender)
       } else if (reasonStr.startsWith('AA1')) {
-        this.reputationManager.crashedHandleOps(getAddr(userOp.initCode))
+        this.reputationManager.crashedHandleOps(getAddr(userOp.factory))
       } else {
-        // TODO: add support to mempoolManager to remove by userOp
-        this.mempoolManager.removeUserOp(userOp)
+        await this.mempoolManager.removeUserOp(userOp)
         Logger.warn(`Failed handleOps sender=${userOp.sender} reason=${reasonStr}`)
       }
       return {

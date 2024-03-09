@@ -28,7 +28,7 @@
     "test": "jest --coverage --config ./jest.config.js",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
-    "local-geth": "./dev-node",
+    "local-eth": "./dev-node",
     "///cK": "________________________DOCKER CONTAINERS______________________________",
     "build:image": "docker build -t bundler-typescript:v-local .",
     "influxdb": "docker-compose up influxdb",

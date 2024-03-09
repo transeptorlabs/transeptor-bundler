@@ -1,6 +1,6 @@
 import { BigNumber, ethers } from 'ethers'
 import { EstimateUserOpGasResult, PackedUserOperation, UserOperation, UserOperationByHashResponse, UserOperationReceipt, ValidationErrors } from '../../types'
-import { RpcError, deepHexlify, requireCond, packUserOp, unpackUserOp } from '../../utils'
+import { RpcError, deepHexlify, requireCond, packUserOp, unpackUserOp, requireAddressAndFields } from '../../utils'
 import { ProviderService } from '../../provider'
 import { resolveProperties } from 'ethers/lib/utils'
 import { BundleManager } from '../../bundle'
@@ -35,10 +35,10 @@ export class EthAPI {
     this.eventsManager = eventsManager
   }
 
-  public async sendUserOperation(userOp: UserOperation, supportedEntryPoints: string) {
-    await this.validateParameters(userOp, supportedEntryPoints)
+  public async sendUserOperation(userOp: UserOperation, entryPointInput: string) {
+    await this.validateParameters(userOp, entryPointInput)
     const userOpReady = await resolveProperties(userOp)
-    this.validationService.validateInputParameters(userOp, supportedEntryPoints)
+    this.validationService.validateInputParameters(userOp, entryPointInput)
     const validationResult = await this.validationService.validateUserOp(userOp, undefined)
 
     const userOpHash = await this.entryPointContract.getUserOpHash(packUserOp(userOpReady))
@@ -46,7 +46,6 @@ export class EthAPI {
     await this.mempoolManager.addUserOp(
       userOp,
       userOpHash,
-      validationResult.returnInfo.prefund,
       validationResult.senderInfo,
       validationResult.referencedContracts,
       validationResult.aggregatorInfo?.addr
@@ -117,18 +116,17 @@ export class EthAPI {
     })
   }
 
-  public async estimateUserOperationGas (userOp1: UserOperation, entryPointInput: string): Promise<EstimateUserOpGasResult> {
+  public async estimateUserOperationGas (userOpInput: UserOperation, entryPointInput: string): Promise<EstimateUserOpGasResult> {
     // TODO: add check for state override support and use entrypoint delegateAndRevert() function when state override is not supported
     const userOp = {
-      // default values for missing fields.
-      paymasterAndData: '0x',
-      maxFeePerGas: 0,
-      maxPriorityFeePerGas: 0,
-      preVerificationGas: 0,
-      verificationGasLimit: 10e6,
-      ...await resolveProperties(userOp1),
+      ...userOpInput,
+      // Override gas params to estimate gas defaults
+      maxFeePerGas: BigNumber.from(0),
+      maxPriorityFeePerGas: BigNumber.from(0),
+      preVerificationGas: BigNumber.from(0),
+      verificationGasLimit: BigNumber.from(10e6),
     }
-    await this.validateParameters(deepHexlify(userOp), entryPointInput)
+    await this.validateParameters(userOp, entryPointInput);
 
     // TODO: update to use eth_call with state override swapping entrypoint code for EntryPointSimulations contract bytecode
     const errorResult = await this.entryPointContract.callStatic.simulateHandleOp(this.entryPointContract.address, packUserOp(userOp), [this.addressZero, '0x']).catch(e => e)
@@ -147,7 +145,7 @@ export class EthAPI {
 
     // TODO: Use simulateHandleOp with proxy contract to estimate callGasLimit too
     const callGasLimit = await this.providerService.estimateGas(this.entryPointContract.address, userOp.sender, userOp.callData)
-    const preVerificationGas = calcPreVerificationGas(userOp)
+    const preVerificationGas = calcPreVerificationGas(userOpInput)
     const verificationGasLimit = BigNumber.from(preOpGas).toNumber()
     return {
       preVerificationGas,
@@ -162,7 +160,7 @@ export class EthAPI {
     userOp1: UserOperation,
     entryPointInput: string,
     requireSignature = true, 
-    requireGasParams = true
+    requireGasParams = true,
   ): Promise<void> {
     requireCond(entryPointInput != null, 'No entryPoint param', -32602)
 
@@ -173,9 +171,9 @@ export class EthAPI {
     requireCond(userOp1 != null, 'No UserOperation param')
     const userOp = await resolveProperties(userOp1) as any
 
-    const fields = ['sender', 'nonce', 'initCode', 'callData', 'paymasterAndData']
+    const fields = ["sender", "nonce", "callData"];
     if (requireSignature) {
-      fields.push('signature')
+      fields.push("signature");
     }
     if (requireGasParams) {
       fields.push('preVerificationGas', 'verificationGasLimit', 'callGasLimit', 'maxFeePerGas', 'maxPriorityFeePerGas')
@@ -185,6 +183,9 @@ export class EthAPI {
       const value: string = userOp[key].toString()
       requireCond(value.match(this.HEX_REGEX) != null, `Invalid hex value for property ${key}:${value} in UserOp`, -32602)
     })
+
+    requireAddressAndFields(userOp, 'paymaster', ['paymasterPostOpGasLimit', 'paymasterVerificationGasLimit'], ['paymasterData'])
+    requireAddressAndFields(userOp, 'factory', ['factoryData'])
   }
 }
 

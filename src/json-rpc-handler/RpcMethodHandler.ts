@@ -83,6 +83,10 @@ export class RpcMethodHandler {
         case 'debug_bundler_dumpReputation':
           result = this.debug.dumpReputation()
           break
+        case 'debug_bundler_addUserOps':
+          await this.debug.addUserOps(params[0])
+          result = 'ok'
+          break
         default:
           throw new RpcError( `Method ${method} is not supported`, -32601)
       }

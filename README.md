@@ -24,11 +24,11 @@
 > See our road-map [here](https://hackmd.io/@V00D00-child/SyXKL6Kmn#Project-StatusRoadmap-)
 
 ## ✨ Features
-- **Full Validation** - Uses geth `debug_traceCall` method to enforce the full spec storage access rules and opcode banning. 
-- **Partial Validation** - Standard call to entry Point Contract `simulateValidation()`. No storage access rules and opcode banning. User `--unsafe` flag to enable.
+- **Full Validation** - Full spec storage access rules and opcode banning. Requires a connection to a geth node that supports `debug_traceCall` method.
+- **Partial Validation** - No storage access rules and opcode banning. Use `--unsafe` flag to enable.
 - **Metrics** - Metrics gives insight into the bundler node to allow for performance tuning and debugging. Transeptor bundler can be be configure to store metrics using a push(InfluxDB) and pull(Prometheus) metrics system. Grafana is used to visualize all the metrics. Use `--metrics` flag to enable.
-- **Entrypoint** - Supports Entrypoint [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7)
 - **Entity Reputation System** - When staked(i.e with entrypoint contract), an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH. Node can be pre-configured to blacklist and whitelist entities on startup.
+- **Entrypoint contract** - Supports Entrypoint contract [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7)
 
 ## 🚀 Development
 
@@ -38,7 +38,7 @@ Everything you need to get started developing with Transeptor.
 1. Use correct node version `nvm use`
 2. Install dependencies `npm install`
 3. Build all packages `npm run build`
-4. Start local geth node `npm run local-geth` - Will also deploy the entrypoint contract please wait for the contract address to be printed in the console and copy it to the `.env` file.
+4. Start local eth node `npm run local-eth` - Will also deploy the entrypoint contract please wait for the contract address to be printed in the console and copy it to the `.env` file.
 5. Copy values in `.env.sample` into `.env` and fill in the values with your own.
 6. Now let's start the bundler node. `npm run start:dev`
 
