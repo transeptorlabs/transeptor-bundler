@@ -6,17 +6,17 @@
 ## Run dev node
 
 ```bash
-chmod +x ./dev-node
+chmod +x ./eth-node
 ```
 
 ```bash
-./dev-node
+./eth-node
 ```
 
 with transeptor-bundler
 
 ```bash
-./dev-node -b
+./eth-node -b
 ```
 
 You can recursively delete all package.json files within a directory

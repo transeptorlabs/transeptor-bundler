@@ -59,7 +59,7 @@ export class JsonrpcHttpServer {
       if (chainId === 31337 || chainId === 1337) {
         const isDeployed = await this.providerService.checkContractDeployment(this.entryPointContract.address)
         if (!isDeployed) {
-          throw new Error('Entry point contract is not deployed to the network run - `npm run deploy:local` to deploy it locally.')
+          throw new Error('Entry point contract is not deployed to the network. Please use a pre-deployed contract or deploy the contract first if you are using a local network.')
         }
       }
       

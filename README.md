@@ -37,12 +37,12 @@ Everything you need to get started developing with Transeptor.
 ### Run local development
 1. Use correct node version `nvm use`
 2. Install dependencies `npm install`
-3. Build all packages `npm run build`
-4. Start local eth node `npm run local-eth` - Will also deploy the entrypoint contract please wait for the contract address to be printed in the console and copy it to the `.env` file.
-5. Copy values in `.env.sample` into `.env` and fill in the values with your own.
-6. Now let's start the bundler node. `npm run start:dev`
+3. Start local eth node `npm run local-eth` - Will also deploy the entrypoint contract please wait for the contract address to be printed in the console and copy it to the `.env` file.
+4. Copy values in `.env.sample` into `.env` and fill in the values with your own.
+5. Now let's start the bundler node with live watch for local dev. `npm start`
+6. Once the bundler node is running, you can use the `run-op` script to send a userOp through the bundler. `npm run run-op`
 
-The bundler will start on `http://localhost:3001/rpc`.
+The bundler will start on `http://localhost:4337/rpc`. You can now make changes to the code and the bundler will automatically restart. Happy hacking!
 
 ### Test
 
@@ -64,7 +64,7 @@ npm run lint:fix
 
 ## Build
 
-You can build the project using the following command:
+You can build Transeptor from source or use the Docker image.
 
 ### 🔧 Run from source
 1. Use correct node version `nvm use`

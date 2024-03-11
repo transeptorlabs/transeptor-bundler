@@ -64,7 +64,7 @@ export class Config {
     .option('--auto', 'Automatic bundling.', false)
     .option('--autoBundleInterval <number>', 'Auto bundler interval in (ms).', '12000')
     .option('--bundleSize <number>', 'Maximum number of pending mempool entities to start auto bundler.', '10')
-    .option('--port <number>', 'Bundler node listening port.', '4000')
+    .option('--port <number>', 'Bundler node listening port.', '4337')
     .option('--minStake <string>', 'Minimum stake a entity has to have to pass reputation system.', '1') // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
     .option('--minUnstakeDelay <number>', 'Time paymaster has to wait to unlock the stake(seconds).', '0') // One day - 84600
     .option('--txMode <string>', 'Bundler transaction mode (base, conditional, searcher).', 'base')

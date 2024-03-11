@@ -1,15 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { BigNumber, BytesLike, ContractFactory, ethers, utils } from 'ethers'
+import { BigNumber, ContractFactory, ethers, utils } from 'ethers'
 import { ReferencedCodeHashes, StakeInfo, StorageMap, UserOperation, ValidateUserOpResult, ValidationErrors, ValidationResult, BundlerCollectorReturn, ExitInfo } from '../types'
-import {  RpcError, getAddr, requireCond, packUserOp, requireAddressAndFields, mergeValidationDataValues } from '../utils'
+import {  RpcError, requireCond, packUserOp, requireAddressAndFields, mergeValidationDataValues, calcPreVerificationGas, decodeErrorReason } from '../utils'
 import { EntryPointSimulationsDeployedBytecode, GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE, I_ENTRY_POINT_SIMULATIONS } from '../abis'
 import { ProviderService } from '../provider'
-import { decodeErrorReason } from '../utils'
 import { ReputationManager } from '../reputation'
 import { parseScannerResult } from './parseScannerResult'
 import { Logger } from '../logger'
-import { calcPreVerificationGas } from '@account-abstraction/sdk'
 
 export class ValidationService {
   private readonly providerService: ProviderService
@@ -100,8 +98,15 @@ export class ValidationService {
       userOp.verificationGasLimit
     )
 
-    const jsFilePath = join(__dirname, '../tracer.js')
-    const tracer = readFileSync(jsFilePath).toString()
+    const jsFilePath = join(__dirname, './tracer.js')
+    let tracer: string
+    try {
+      tracer = readFileSync(jsFilePath).toString()
+    } catch (error: any) {
+      Logger.error({ path: jsFilePath }, 'Tracer file path not found')
+      throw new Error('Tracer not found')
+    }
+    
     if (tracer == null) {
       Logger.error({ path: jsFilePath }, 'Tracer not found')
       throw new Error('Tracer not found')

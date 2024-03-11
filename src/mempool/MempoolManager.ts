@@ -2,7 +2,7 @@ import { Mutex } from 'async-mutex'
 import { MempoolEntry, ReferencedCodeHashes, StakeInfo, UserOperation, ValidationErrors } from '../types'
 import { Logger } from '../logger'
 import { BigNumber, BigNumberish } from 'ethers'
-import { getAddr, requireCond } from '../utils'
+import { requireCond } from '../utils'
 import { ReputationManager } from '../reputation'
 
 /* In-memory mempool with used to manage UserOperations.

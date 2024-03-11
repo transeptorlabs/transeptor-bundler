@@ -9,7 +9,7 @@ import {
 } from '../types'
 import { Logger } from '../logger'
 import { MempoolManager } from '../mempool'
-import { getAddr, mergeStorageMap, packUserOps } from '../utils'
+import { mergeStorageMap, packUserOps } from '../utils'
 import { GET_USEROP_HASHES_ABI, GET_USEROP_HASHES_BYTECODE } from '../abis'
 import { ReputationManager } from '../reputation'
 import { ProviderService } from '../provider'
@@ -266,11 +266,11 @@ export class BundleProcessor {
       const reasonStr: string = reason.toString()
       
       if (reasonStr.startsWith('AA3')) {
-        this.reputationManager.crashedHandleOps(getAddr(userOp.paymaster))
+        this.reputationManager.crashedHandleOps(userOp.paymaster)
       } else if (reasonStr.startsWith('AA2')) {
         this.reputationManager.crashedHandleOps(userOp.sender)
       } else if (reasonStr.startsWith('AA1')) {
-        this.reputationManager.crashedHandleOps(getAddr(userOp.factory))
+        this.reputationManager.crashedHandleOps(userOp.factory)
       } else {
         await this.mempoolManager.removeUserOp(userOp)
         Logger.warn(`Failed handleOps sender=${userOp.sender} reason=${reasonStr}`)

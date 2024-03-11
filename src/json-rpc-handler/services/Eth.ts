@@ -1,13 +1,12 @@
 import { BigNumber, ethers } from 'ethers'
 import { EstimateUserOpGasResult, PackedUserOperation, UserOperation, UserOperationByHashResponse, UserOperationReceipt, ValidationErrors } from '../../types'
-import { RpcError, deepHexlify, requireCond, packUserOp, unpackUserOp, requireAddressAndFields } from '../../utils'
+import { RpcError, deepHexlify, requireCond, packUserOp, unpackUserOp, requireAddressAndFields, calcPreVerificationGas } from '../../utils'
 import { ProviderService } from '../../provider'
 import { resolveProperties } from 'ethers/lib/utils'
 import { BundleManager } from '../../bundle'
 import { MempoolManager } from '../../mempool'
 import { ValidationService } from '../../validation'
 import { EventsManager } from '../../event'
-import { calcPreVerificationGas } from '@account-abstraction/sdk'
 
 export class EthAPI {
   private readonly entryPointContract: ethers.Contract

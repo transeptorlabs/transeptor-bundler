@@ -12,8 +12,8 @@ fi
 
 start_geth() {
   # first 3 accounts default hardhat accounts
-  DEFAULT_ADDRESS_1="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-  DEFAULT_ADDRESS_2="0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+  DEFAULT_ADDRESS_1="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" # bundler signer
+  DEFAULT_ADDRESS_2="0x70997970C51812dc3A010C7d01b50e0d17dc79C8" # local e2e runner
   DEFAULT_ADDRESS_3="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 
   if docker ps -a | grep -q geth-transeptor; then
@@ -57,9 +57,11 @@ start_geth() {
   echo -e "ERC 4337 contracts:"
   cd ./contracts
   forge build
-  OUTPUT=$(forge script ./scripts/DeployEntryPoint.s.sol --rpc-url http://localhost:$GETH_PORT --broadcast) 
+  OUTPUT=$(forge script ./scripts/DeployBundlerDev.s.sol --rpc-url http://localhost:$GETH_PORT --broadcast) 
   ENTRYPOINT_ADDRESS_V7=$(echo "$OUTPUT" | grep -o "EntryPoint: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
-  echo -e "$(tput setaf 4)▼▼▼ $(tput setaf 7)Please add to local .env$(tput setaf 4) ▼▼▼$(tput sgr0)\n\nMNEMONIC=test test test test test test test test test test test junk\nENTRYPOINT_ADDRESS=$ENTRYPOINT_ADDRESS_V7\n\n$(tput setaf 6)────────────────────────────────────────────────────────$(tput sgr0)"
+  TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$(echo "$OUTPUT" | grep -o "SimpleAccountFactory: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
+  TRANSEPTOR_E2E_GLOBAL_COUNTER=$(echo "$OUTPUT" | grep -o "GlobalCounter: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
+  echo -e "$(tput setaf 4)▼▼▼ $(tput setaf 7)Please add to local .env$(tput setaf 4) ▼▼▼$(tput sgr0)\n\nMNEMONIC=test test test test test test test test test test test junk\nENTRYPOINT_ADDRESS=$ENTRYPOINT_ADDRESS_V7\nTRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY\nTRANSEPTOR_E2E_GLOBAL_COUNTER=$TRANSEPTOR_E2E_GLOBAL_COUNTER\n\n$(tput setaf 6)────────────────────────────────────────────────────────$(tput sgr0)"
 }
 
 start_bundler() {
@@ -92,14 +94,14 @@ stop_all() {
   exit 0
 }
 
-# Start dev-node
+# Start eth-node
 start_geth
 if [ "$START_BUNDLER" = true ]; then
   start_bundler
 fi
 
 trap stop_all SIGINT 
-echo -e "Press Ctrl+C to stop the dev-node."
+echo -e "Press Ctrl+C to stop the eth-node."
 while true; do
   sleep 1
 done
