@@ -107,9 +107,9 @@ export class BundleProcessor {
         paymasterStatus === ReputationStatus.BANNED ||
         deployerStatus === ReputationStatus.BANNED
       ) {
-        Logger.debug(`skipping banned entry: ${entry.userOpHash}`);
-        await this.mempoolManager.removeUserOp(entry.userOpHash);
-        continue;
+        Logger.debug(`skipping banned entry: ${entry.userOpHash}`)
+        await this.mempoolManager.removeUserOp(entry.userOpHash)
+        continue
       }
 
       // [SREP-030]
@@ -172,19 +172,19 @@ export class BundleProcessor {
         if (paymasterDeposit[paymaster] == null) {
           paymasterDeposit[paymaster] = await this.entryPointContract.balanceOf(
             paymaster
-          );
+          )
         }
         if (
           paymasterDeposit[paymaster].lt(validationResult.returnInfo.prefund)
         ) {
           // not enough balance in paymaster to pay for all UserOp
           // (but it passed validation, so it can sponsor them separately
-          continue;
+          continue
         }
-        stakedEntityCount[paymaster] = (stakedEntityCount[paymaster] ?? 0) + 1;
+        stakedEntityCount[paymaster] = (stakedEntityCount[paymaster] ?? 0) + 1
         paymasterDeposit[paymaster] = paymasterDeposit[paymaster].sub(
           validationResult.returnInfo.prefund
-        );
+        )
       }
 
       // get factory stakedEntityCount
