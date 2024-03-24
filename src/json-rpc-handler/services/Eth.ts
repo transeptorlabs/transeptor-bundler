@@ -1,12 +1,13 @@
 import { BigNumber, ethers } from 'ethers'
-import { EstimateUserOpGasResult, PackedUserOperation, UserOperation, UserOperationByHashResponse, UserOperationReceipt, ValidationErrors } from '../../types'
-import { RpcError, deepHexlify, requireCond, packUserOp, unpackUserOp, requireAddressAndFields, calcPreVerificationGas } from '../../utils'
+import { EstimateUserOpGasResult, PackedUserOperation, UserOperation, UserOperationByHashResponse, UserOperationReceipt } from '../../types'
+import { deepHexlify, requireCond, packUserOp, unpackUserOp, requireAddressAndFields, calcPreVerificationGas } from '../../utils'
 import { ProviderService } from '../../provider'
 import { resolveProperties } from 'ethers/lib/utils'
 import { BundleManager } from '../../bundle'
 import { MempoolManager } from '../../mempool'
 import { ValidationService } from '../../validation'
 import { EventsManager } from '../../event'
+import { simulateHandleOp } from '../../entrypoint'
 
 export class EthAPI {
   private readonly entryPointContract: ethers.Contract
@@ -16,7 +17,6 @@ export class EthAPI {
   private readonly mempoolManager: MempoolManager
   private readonly eventsManager: EventsManager
   private readonly HEX_REGEX = /^0x[a-fA-F\d]*$/i
-  private readonly addressZero = "0x0000000000000000000000000000000000000000"
 
   constructor(
     entryPointContract: ethers.Contract,
@@ -34,7 +34,34 @@ export class EthAPI {
     this.eventsManager = eventsManager
   }
 
+  public async estimateUserOperationGas (userOpInput: UserOperation, entryPointInput: string): Promise<EstimateUserOpGasResult> {
+    const userOp = {
+      ...userOpInput,
+      // Override gas params to estimate gas defaults
+      maxFeePerGas: BigNumber.from(0),
+      maxPriorityFeePerGas: BigNumber.from(0),
+      preVerificationGas: BigNumber.from(0),
+      verificationGasLimit: BigNumber.from(10e6),
+    }
+    await this.validateParameters(userOp, entryPointInput);
+
+    const result = await simulateHandleOp(this.entryPointContract.address, this.providerService, userOp)
+   
+    // TODO: Use simulateHandleOp with proxy contract to estimate callGasLimit too
+    const callGasLimit = await this.providerService.estimateGas(this.entryPointContract.address, userOp.sender, userOp.callData)
+    const preVerificationGas = calcPreVerificationGas(userOpInput)
+    const verificationGasLimit = BigNumber.from(result.preOpGas).toNumber()
+    return {
+      preVerificationGas,
+      verificationGasLimit,
+      // validAfter,
+      // validUntil,
+      callGasLimit
+    }
+  }
+
   public async sendUserOperation(userOp: UserOperation, entryPointInput: string) {
+    // TODO: This looks like a duplicate of the userOp validateParameters function
     await this.validateParameters(userOp, entryPointInput)
     const userOpReady = await resolveProperties(userOp)
     this.validationService.validateInputParameters(userOp, entryPointInput)
@@ -50,6 +77,7 @@ export class EthAPI {
       validationResult.aggregatorInfo?.addr
     )
 
+    // TODO: This code is blocking request since the userOp is added to the mempool. Offload to a separate process to avoid blocking
     if (this.mempoolManager.isMempoolOverloaded()) {
       await this.bundleManager.doAttemptAutoBundle(true)
     }
@@ -113,46 +141,6 @@ export class EthAPI {
       blockHash: tx.blockHash ?? '',
       blockNumber: tx.blockNumber ?? 0
     })
-  }
-
-  public async estimateUserOperationGas (userOpInput: UserOperation, entryPointInput: string): Promise<EstimateUserOpGasResult> {
-    // TODO: add check for state override support and use entrypoint delegateAndRevert() function when state override is not supported
-    const userOp = {
-      ...userOpInput,
-      // Override gas params to estimate gas defaults
-      maxFeePerGas: BigNumber.from(0),
-      maxPriorityFeePerGas: BigNumber.from(0),
-      preVerificationGas: BigNumber.from(0),
-      verificationGasLimit: BigNumber.from(10e6),
-    }
-    await this.validateParameters(userOp, entryPointInput);
-
-    // TODO: update to use eth_call with state override swapping entrypoint code for EntryPointSimulations contract bytecode
-    const errorResult = await this.entryPointContract.callStatic.simulateHandleOp(this.entryPointContract.address, packUserOp(userOp), [this.addressZero, '0x']).catch(e => e)
-    if (errorResult.errorName === 'FailedOp') {
-      throw new RpcError(errorResult.errorArgs.at(-1), ValidationErrors.SimulateValidation)
-    }
-
-    if (errorResult.errorName !== 'ExecutionResult') {
-      throw errorResult
-    }
-
-    const { returnInfo } = errorResult.errorArgs
-    let {
-      preOpGas,
-    } = returnInfo
-
-    // TODO: Use simulateHandleOp with proxy contract to estimate callGasLimit too
-    const callGasLimit = await this.providerService.estimateGas(this.entryPointContract.address, userOp.sender, userOp.callData)
-    const preVerificationGas = calcPreVerificationGas(userOpInput)
-    const verificationGasLimit = BigNumber.from(preOpGas).toNumber()
-    return {
-      preVerificationGas,
-      verificationGasLimit,
-      // validAfter,
-      // validUntil,
-      callGasLimit
-    }
   }
 
   private async validateParameters(

@@ -1,6 +1,5 @@
 export * from './common.utils'
 export * from './bundle.utils'
 export * from './rpc.utils'
-export * from './revert.utils'
 export * from './validation.utils'
 export * from './gas.utils'
