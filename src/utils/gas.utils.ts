@@ -1,6 +1,8 @@
 import { arrayify, hexlify } from 'ethers/lib/utils'
 import { UserOperation } from '../types'
 import { packUserOp, encodeUserOp } from './bundle.utils'
+import { Logger } from '../logger'
+import { BigNumber } from 'ethers'
 
 export const DefaultGasOverheads: GasOverheads = {
   fixed: 21000,
@@ -55,24 +57,23 @@ export function calcPreVerificationGas(
   userOp: Partial<UserOperation>,
   overheads?: Partial<GasOverheads>
 ): number {
+  Logger.debug('Running calcPreVerificationGas on userOp')
   const ov = { ...DefaultGasOverheads, ...(overheads ?? {}) }
   const p: UserOperation = {
     // dummy value for incomplete userops
-    preVerificationGas: 21000,
+    preVerificationGas: BigNumber.from(21000).toHexString(),
     signature: hexlify(Buffer.alloc(ov.sigSize, 1)),
     ...userOp,
   } as any
 
   const packed = arrayify(encodeUserOp(packUserOp(p), false))
   const lengthInWord = (packed.length + 31) / 32
-  const callDataCost = packed
-    .map((x) => (x === 0 ? ov.zeroByte : ov.nonZeroByte))
-    .reduce((sum, x) => sum + x)
+  const callDataCost = packed.map(x => x === 0 ? ov.zeroByte : ov.nonZeroByte).reduce((sum, x) => sum + x)
   const ret = Math.round(
     callDataCost +
-      ov.fixed / ov.bundleSize +
-      ov.perUserOp +
-      ov.perUserOpWord * lengthInWord
+    ov.fixed / ov.bundleSize +
+    ov.perUserOp +
+    ov.perUserOpWord * lengthInWord
   )
   return ret
 }

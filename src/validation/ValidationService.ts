@@ -212,7 +212,7 @@ export class ValidationService {
       BigNumber.from(userOp.preVerificationGas).gte(
         BigNumber.from(calcPreVerificationGas1)
       ),
-      `preVerificationGas too low: expected at least ${calcPreVerificationGas1}`,
+      `preVerificationGas ${BigNumber.from(userOp.preVerificationGas)} too low: expected at least ${calcPreVerificationGas1}`,
       ValidationErrors.InvalidFields
     )
   }

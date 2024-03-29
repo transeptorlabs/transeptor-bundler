@@ -194,23 +194,23 @@ export function encodeUserOp(
   forSignature = true
 ): string {
   // if "op" is unpacked UserOperation, then pack it first, before we ABI-encode it.
-  let op: PackedUserOperation
-  if ('callGasLimit' in op1) {
-    op = packUserOp(op1)
+  let op: PackedUserOperation;
+  if ("callGasLimit" in op1) {
+    op = packUserOp(op1);
   } else {
-    op = op1
+    op = op1;
   }
   if (forSignature) {
     return defaultAbiCoder.encode(
       [
-        'address',
-        'uint256',
-        'bytes32',
-        'bytes32',
-        'bytes32',
-        'uint256',
-        'bytes32',
-        'bytes32',
+        "address",
+        "uint256",
+        "bytes32",
+        "bytes32",
+        "bytes32",
+        "uint256",
+        "bytes32",
+        "bytes32",
       ],
       [
         op.sender,
@@ -222,20 +222,20 @@ export function encodeUserOp(
         op.gasFees,
         keccak256(op.paymasterAndData),
       ]
-    )
+    );
   } else {
     // for the purpose of calculating gas cost encode also signature (and no keccak of bytes)
     return defaultAbiCoder.encode(
       [
-        'address',
-        'uint256',
-        'bytes',
-        'bytes',
-        'bytes32',
-        'uint256',
-        'bytes32',
-        'bytes',
-        'bytes',
+        "address",
+        "uint256",
+        "bytes",
+        "bytes",
+        "bytes32",
+        "uint256",
+        "bytes32",
+        "bytes",
+        "bytes",
       ],
       [
         op.sender,
@@ -248,6 +248,6 @@ export function encodeUserOp(
         op.paymasterAndData,
         op.signature,
       ]
-    )
+    );
   }
 }

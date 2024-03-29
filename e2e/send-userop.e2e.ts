@@ -9,6 +9,7 @@ dotenv.config()
 
 const provider = new providers.StaticJsonRpcProvider('http://localhost:8545')
 const bundlerProvider = new ethers.providers.StaticJsonRpcProvider('http://localhost:4337/rpc')
+const dummySig = '0xfffffffffffffffffffffffffffffff0000000000000000000000000000000007aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1c'
 
 // Derive the second account from the HDNode and create a new wallet for the second account
 const hdNode = ethers.utils.HDNode.fromMnemonic(process.env.MNEMONIC as string)
@@ -30,6 +31,7 @@ const simpleAccountFactory = new ethers.Contract(
     simpleAccountFatoryAddreess,
     simpleAccountFactoryABI
 )
+const simpleAccountInterface = new utils.Interface(simpleAccountABI)
 
 // Helper functions
 const ethNodeUp = async () => {
@@ -54,10 +56,10 @@ const bundlerNodeUp = async () => {
 
 const getCfFactoryData = (owner: string) => {
     const salt = BigNumber.from(Math.floor(Math.random() * 10000000)).toNumber() // a random salt 
-    Logger.info(`Salt: ${salt}`)
     return {
         factory: simpleAccountFactory.address,
         factoryData: simpleAccountFactory.interface.encodeFunctionData('createAccount', [owner, salt]),
+        salt,
     }
 }
 
@@ -127,46 +129,83 @@ const getDeposit = async (accountAddr: string): Promise<BigNumber> => {
     return epContract.balanceOf(accountAddr)
 }
 
+const decodeSCAccountRevertReason = (error: string): any => {
+  const parseError = simpleAccountInterface.parseError(error)
+  const ECDSAInvalidSignatureLengthSig = (0, utils.keccak256)(Buffer.from('ECDSAInvalidSignatureLength(uint256)')).slice(0, 10)
+  const dataParams = '0x' + error.substring(10)
+
+  console.log(parseError)
+
+  if (parseError.sighash === ECDSAInvalidSignatureLengthSig) {
+    const [res] = utils.defaultAbiCoder.decode(['uint256'], dataParams)
+    return {
+      message: 'The signature has an invalid length.',
+      name:parseError.name,
+      signature: parseError.signature,
+      length: BigNumber.from(res).toNumber()
+    }
+  }  
+  return null
+}
+
 // Run user operation through bundler
 async function main() {
     Logger.info('Sending user operation...')
-    if (!await ethNodeUp() || !await bundlerNodeUp()) {
-      return
-    }
-
-    const senderBalance = await provider.getBalance(secondWallet.address)
-    Logger.info({balance: `${senderBalance.toString()} wei`, address: secondWallet.address}, 'Owner')
-
-    const {factory, factoryData} = getCfFactoryData(secondWallet.address)
+    const {factory, factoryData, salt} = getCfFactoryData(secondWallet.address)
     const senderCfAddress = await getSenderCfAddress(ethers.utils.hexConcat([factory,factoryData]))
-    Logger.info(`Sender CF address: ${senderCfAddress}`)
+
+    const ownerBalance = await provider.getBalance(secondWallet.address)
+    const smartActBalance = await provider.getBalance(senderCfAddress)
+    Logger.info({
+      owner: {
+        address: secondWallet.address,
+        balance: `${ownerBalance.toString()} wei`, 
+      },
+      senderCfAddress: senderCfAddress,
+      balance: `${smartActBalance.toString()} wei`,
+      salt,
+    },
+    `Smart Account details:`)
 
     // Deposit to the sender CF address
     const feeData = await provider.getFeeData()
     await sendDeposit(senderCfAddress, feeData)
 
-    // build and sign userOp 
+    // build userOp
     const userOp = {
       sender: senderCfAddress,
-      nonce: BigNumber.from(0),
+      nonce: BigNumber.from(0).toHexString(),
       factory: factory,
       factoryData:factoryData,
       callData: getUserOpCallData(senderCfAddress),
-      callGasLimit: BigNumber.from(1000000),
-      verificationGasLimit: BigNumber.from(1000000),
-      preVerificationGas: BigNumber.from(1000000),
-      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas?.toHexString() ?? BigNumber.from(0).toHexString(),
-      maxFeePerGas: feeData.maxFeePerGas?.toHexString() ?? BigNumber.from(0).toHexString(),
-      signature: '0x',
+      signature: dummySig,
     } as UserOperation
 
-    const userOpHashTodSign = ethers.utils.arrayify(
+    // Estimate gas
+    const gasEstimate = await bundlerProvider.send('eth_estimateUserOperationGas', [userOp, epAddress]).catch((error: any) => {
+      const parseJson = JSON.parse(error.body)
+      Logger.error({
+        ...parseJson,
+        parsedErrorData: decodeSCAccountRevertReason(parseJson.error.data)
+      }, 'Failed to Estimate gas')
+      throw new Error('Failed to estimate gas.')
+    })
+    Logger.info(gasEstimate, 'Gas Estimate')
+    userOp.callGasLimit = BigNumber.from(gasEstimate.callGasLimit).toHexString()
+    userOp.verificationGasLimit = BigNumber.from(gasEstimate.verificationGasLimit).toHexString()
+    userOp.preVerificationGas = BigNumber.from(gasEstimate.preVerificationGas).toHexString()
+    userOp.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas?.toHexString() ?? BigNumber.from(0).toHexString()
+    userOp.maxFeePerGas = feeData.maxFeePerGas?.toHexString() ?? BigNumber.from(0).toHexString()
+
+    // Sign userOp
+    const userOpHashToSign = ethers.utils.arrayify(
         await epContract.getUserOpHash(packUserOp(userOp)),
     )
-    const signature = await secondWallet.signMessage(userOpHashTodSign)
+    const signature = await secondWallet.signMessage(userOpHashToSign)
     const signedUserOp = deepHexlify({ ...userOp, signature })
 
     // Send userOp
+    Logger.info('Sending UserOp')
     const userOpHash = await bundlerProvider.send('eth_sendUserOperation', [signedUserOp, epAddress]).catch((error: any) => {
       const parseJson = JSON.parse(error.body)
       Logger.error(parseJson, 'Failed to send user operation.')

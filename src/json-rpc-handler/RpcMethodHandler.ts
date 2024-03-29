@@ -36,7 +36,7 @@ export class RpcMethodHandler {
       const params = request.params
       let result: any
 
-      Logger.debug( {method, params}, 'Handling incoming request')
+      Logger.debug( {method}, 'Handling incoming request')
       switch (method) {
         case 'eth_chainId':
           result = await this.providerService.getChainId()
@@ -94,7 +94,7 @@ export class RpcMethodHandler {
       return this.createSuccessResponse(request.id, result)
     } catch (error: any) {
       Logger.error({error: error.message}, `Error calling method ${request.method}`)
-      return this.createErrorResponse(request.id, error.code ? error.code : -32000, error.message)
+      return this.createErrorResponse(request.id, error.code ? error.code : -32000, error.message, error.data ? error.data : undefined)
     }
   }
 
@@ -150,7 +150,7 @@ export class RpcMethodHandler {
     id: number | string,
     code: number,
     message: string,
-    data?: any
+    data: any = undefined
   ): JsonRpcErrorResponse {
     const errorResponse: JsonRpcErrorResponse = {
       jsonrpc: '2.0',

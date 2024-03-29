@@ -84,10 +84,21 @@ export interface EstimateUserOpGasResult {
      * the deadline after which this UserOperation is invalid (not a gas estimation parameter, but returned by validation
      */
     validUntil?: BigNumberish
+    
     /**
      * estimated cost of calling the account with the given callData
      */
     callGasLimit: BigNumberish
+
+    /**
+     * value used for paymaster verification (if paymaster exists in the UserOperation)
+     */
+    paymasterVerificationGasLimit?: BigNumberish
+
+    /**
+     * value used for paymaster post op execution (if paymaster exists in the UserOperation)
+     */
+    paymasterPostOpGasLimit?: BigNumberish
 }
 
 

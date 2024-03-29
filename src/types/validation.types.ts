@@ -1,4 +1,4 @@
-import { BigNumberish } from 'ethers'
+import { BigNumberish, BytesLike } from 'ethers'
 import { StorageMap } from './bundle.types'
 
 /**
@@ -17,6 +17,14 @@ export interface ValidationResult {
     factoryInfo?: StakeInfo
     paymasterInfo?: StakeInfo
     aggregatorInfo?: StakeInfo
+}
+
+export interface ExecutionResult {
+    validAfter: number
+    validUntil: number,
+    preOpGas: BigNumberish;
+    targetSuccess: boolean;
+    targetResult: BytesLike;
 }
 
 export interface ReferencedCodeHashes {
