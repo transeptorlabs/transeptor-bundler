@@ -165,7 +165,7 @@ async function main() {
       balance: `${smartActBalance.toString()} wei`,
       salt,
     },
-    `Smart Account details:`)
+    'Smart Account details:')
 
     // Deposit to the sender CF address
     const feeData = await provider.getFeeData()

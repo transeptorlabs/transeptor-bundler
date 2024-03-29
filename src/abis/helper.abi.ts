@@ -1,33 +1,33 @@
 export const GET_CODE_HASH_ABI = [
   {
-    "type": "constructor",
-    "inputs": [
+    'type': 'constructor',
+    'inputs': [
       {
-        "name": "addresses",
-        "type": "address[]",
-        "internalType": "address[]"
+        'name': 'addresses',
+        'type': 'address[]',
+        'internalType': 'address[]'
       }
     ],
-    "stateMutability": "nonpayable"
+    'stateMutability': 'nonpayable'
   },
   {
-    "type": "function",
-    "name": "getCodeHashes",
-    "inputs": [
+    'type': 'function',
+    'name': 'getCodeHashes',
+    'inputs': [
       {
-        "name": "addresses",
-        "type": "address[]",
-        "internalType": "address[]"
+        'name': 'addresses',
+        'type': 'address[]',
+        'internalType': 'address[]'
       }
     ],
-    "outputs": [{ "name": "", "type": "bytes32", "internalType": "bytes32" }],
-    "stateMutability": "view"
+    'outputs': [{ 'name': '', 'type': 'bytes32', 'internalType': 'bytes32' }],
+    'stateMutability': 'view'
   },
   {
-    "type": "error",
-    "name": "CodeHashesResult",
-    "inputs": [
-      { "name": "hash", "type": "bytes32", "internalType": "bytes32" }
+    'type': 'error',
+    'name': 'CodeHashesResult',
+    'inputs': [
+      { 'name': 'hash', 'type': 'bytes32', 'internalType': 'bytes32' }
     ]
   }
 ]
@@ -37,95 +37,95 @@ export const GET_CODE_HASH_BYTECODE =
 
 export const GET_USEROP_HASHES_ABI = [
   {
-    "type": "constructor",
-    "inputs": [
+    'type': 'constructor',
+    'inputs': [
       {
-        "name": "entryPoint",
-        "type": "address",
-        "internalType": "contract IEntryPoint"
+        'name': 'entryPoint',
+        'type': 'address',
+        'internalType': 'contract IEntryPoint'
       },
       {
-        "name": "packedUserOps",
-        "type": "tuple[]",
-        "internalType": "struct PackedUserOperation[]",
-        "components": [
-          { "name": "sender", "type": "address", "internalType": "address" },
-          { "name": "nonce", "type": "uint256", "internalType": "uint256" },
-          { "name": "initCode", "type": "bytes", "internalType": "bytes" },
-          { "name": "callData", "type": "bytes", "internalType": "bytes" },
+        'name': 'packedUserOps',
+        'type': 'tuple[]',
+        'internalType': 'struct PackedUserOperation[]',
+        'components': [
+          { 'name': 'sender', 'type': 'address', 'internalType': 'address' },
+          { 'name': 'nonce', 'type': 'uint256', 'internalType': 'uint256' },
+          { 'name': 'initCode', 'type': 'bytes', 'internalType': 'bytes' },
+          { 'name': 'callData', 'type': 'bytes', 'internalType': 'bytes' },
           {
-            "name": "accountGasLimits",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            'name': 'accountGasLimits',
+            'type': 'bytes32',
+            'internalType': 'bytes32'
           },
           {
-            "name": "preVerificationGas",
-            "type": "uint256",
-            "internalType": "uint256"
+            'name': 'preVerificationGas',
+            'type': 'uint256',
+            'internalType': 'uint256'
           },
-          { "name": "gasFees", "type": "bytes32", "internalType": "bytes32" },
+          { 'name': 'gasFees', 'type': 'bytes32', 'internalType': 'bytes32' },
           {
-            "name": "paymasterAndData",
-            "type": "bytes",
-            "internalType": "bytes"
+            'name': 'paymasterAndData',
+            'type': 'bytes',
+            'internalType': 'bytes'
           },
-          { "name": "signature", "type": "bytes", "internalType": "bytes" }
+          { 'name': 'signature', 'type': 'bytes', 'internalType': 'bytes' }
         ]
       }
     ],
-    "stateMutability": "nonpayable"
+    'stateMutability': 'nonpayable'
   },
   {
-    "type": "function",
-    "name": "getUserOpHashes",
-    "inputs": [
+    'type': 'function',
+    'name': 'getUserOpHashes',
+    'inputs': [
       {
-        "name": "entryPoint",
-        "type": "address",
-        "internalType": "contract IEntryPoint"
+        'name': 'entryPoint',
+        'type': 'address',
+        'internalType': 'contract IEntryPoint'
       },
       {
-        "name": "packedUserOps",
-        "type": "tuple[]",
-        "internalType": "struct PackedUserOperation[]",
-        "components": [
-          { "name": "sender", "type": "address", "internalType": "address" },
-          { "name": "nonce", "type": "uint256", "internalType": "uint256" },
-          { "name": "initCode", "type": "bytes", "internalType": "bytes" },
-          { "name": "callData", "type": "bytes", "internalType": "bytes" },
+        'name': 'packedUserOps',
+        'type': 'tuple[]',
+        'internalType': 'struct PackedUserOperation[]',
+        'components': [
+          { 'name': 'sender', 'type': 'address', 'internalType': 'address' },
+          { 'name': 'nonce', 'type': 'uint256', 'internalType': 'uint256' },
+          { 'name': 'initCode', 'type': 'bytes', 'internalType': 'bytes' },
+          { 'name': 'callData', 'type': 'bytes', 'internalType': 'bytes' },
           {
-            "name": "accountGasLimits",
-            "type": "bytes32",
-            "internalType": "bytes32"
+            'name': 'accountGasLimits',
+            'type': 'bytes32',
+            'internalType': 'bytes32'
           },
           {
-            "name": "preVerificationGas",
-            "type": "uint256",
-            "internalType": "uint256"
+            'name': 'preVerificationGas',
+            'type': 'uint256',
+            'internalType': 'uint256'
           },
-          { "name": "gasFees", "type": "bytes32", "internalType": "bytes32" },
+          { 'name': 'gasFees', 'type': 'bytes32', 'internalType': 'bytes32' },
           {
-            "name": "paymasterAndData",
-            "type": "bytes",
-            "internalType": "bytes"
+            'name': 'paymasterAndData',
+            'type': 'bytes',
+            'internalType': 'bytes'
           },
-          { "name": "signature", "type": "bytes", "internalType": "bytes" }
+          { 'name': 'signature', 'type': 'bytes', 'internalType': 'bytes' }
         ]
       }
     ],
-    "outputs": [
-      { "name": "ret", "type": "bytes32[]", "internalType": "bytes32[]" }
+    'outputs': [
+      { 'name': 'ret', 'type': 'bytes32[]', 'internalType': 'bytes32[]' }
     ],
-    "stateMutability": "view"
+    'stateMutability': 'view'
   },
   {
-    "type": "error",
-    "name": "UserOpHashesResult",
-    "inputs": [
+    'type': 'error',
+    'name': 'UserOpHashesResult',
+    'inputs': [
       {
-        "name": "userOpHashes",
-        "type": "bytes32[]",
-        "internalType": "bytes32[]"
+        'name': 'userOpHashes',
+        'type': 'bytes32[]',
+        'internalType': 'bytes32[]'
       }
     ]
   }
