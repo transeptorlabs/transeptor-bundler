@@ -4,14 +4,12 @@ import { ReferencedCodeHashes, StorageMap, UserOperation, ValidateUserOpResult, 
 import {  requireCond, requireAddressAndFields, calcPreVerificationGas } from '../utils'
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from '../abis'
 import { ProviderService } from '../provider'
-import { ReputationManager } from '../reputation'
 import { parseScannerResult } from './parseScannerResult'
 import { Logger } from '../logger'
 import { fullSimulateValidation, partialSimulateValidation } from '../entrypoint'
 
 export class ValidationService {
   private readonly providerService: ProviderService
-  private readonly reputationManager: ReputationManager
   private readonly entryPointContract: ethers.Contract
   private readonly isUnsafeMode: boolean
   private readonly HEX_REGEX = /^0x[a-fA-F\d]*$/i
@@ -19,12 +17,10 @@ export class ValidationService {
 
   constructor(
     providerService: ProviderService,
-    reputationManager: ReputationManager,
     entryPointContract: ethers.Contract,
     isUnsafeMode: boolean
   ) {
     this.providerService = providerService
-    this.reputationManager = reputationManager
     this.entryPointContract = entryPointContract
     this.isUnsafeMode = isUnsafeMode
   }
@@ -46,6 +42,8 @@ export class ValidationService {
       const { hash: codeHashes } = await this.getCodeHashes(
         previousCodeHashes.addresses
       )
+
+      // [COD-010]
       requireCond(
         codeHashes === previousCodeHashes.hash,
         'modified code after first validation',
@@ -60,11 +58,14 @@ export class ValidationService {
     }
     let storageMap: StorageMap = {}
 
+    // if we are in unsafe mode, we skip the full validation with custom tracer and only run the partial validation with no stake or opcode checks
     if (!this.isUnsafeMode) {
       let tracerResult: BundlerCollectorReturn;
-      [res, tracerResult] = await fullSimulateValidation(this.entryPointContract.address, this.providerService, userOp)
-      let contractAddresses: string[];
+      [res, tracerResult] = await fullSimulateValidation(this.entryPointContract.address, this.providerService, userOp).catch(e => {
+        throw e
+      })
 
+      let contractAddresses: string[];
       [contractAddresses, storageMap] = parseScannerResult(
         userOp,
         tracerResult,
@@ -72,7 +73,6 @@ export class ValidationService {
         this.entryPointContract
       )
 
-      // if no previous contract hashes, then calculate hashes of contracts
       if (previousCodeHashes == null) {
         codeHashes = await this.getCodeHashes(contractAddresses)
       }
@@ -110,9 +110,6 @@ export class ValidationService {
       ValidationErrors.NotInTimeRange
     )
 
-    if (res.aggregatorInfo != null) {
-      this.reputationManager.checkStake('aggregator', res.aggregatorInfo)
-    }
     requireCond(
       res.aggregatorInfo == null,
       'Currently not supporting aggregator',

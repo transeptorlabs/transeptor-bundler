@@ -75,7 +75,7 @@ influx auth create \
   --user transeptor   
 ```
 
-Copy the token value and save it for later use. The token value is used to configure a data source in Grafana and used in `.env` file for `INFLUX_TOKEN` value.
+Copy the token value and save it for later use. The token value is used to configure a data source in Grafana and used in `.env` file for `TRANSEPTOR_INFLUX_TOKEN` value.
 
 Leave InfluxDB shell.
 ```bash

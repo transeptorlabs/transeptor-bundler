@@ -133,8 +133,8 @@ export class EventsManager {
     if (!foundEvent) {
       throw new Error('fatal: no BeforeExecution event found')
     }
-    const beforeExecutionTopic = this.entryPointContract.interface.getEventTopic(foundEvent)
     
+    const beforeExecutionTopic = this.entryPointContract.interface.getEventTopic(foundEvent)
     logs.forEach((log, index) => {
       if (log?.topics[0] === beforeExecutionTopic) {
         // all UserOp execution events start after the "BeforeExecution" event.

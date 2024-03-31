@@ -2,7 +2,7 @@ import { Mutex } from 'async-mutex'
 import { MempoolEntry, ReferencedCodeHashes, StakeInfo, UserOperation, ValidationErrors } from '../types'
 import { Logger } from '../logger'
 import { BigNumber, BigNumberish } from 'ethers'
-import { requireCond } from '../utils'
+import { RpcError, isValidAddress, requireCond } from '../utils'
 import { ReputationManager } from '../reputation'
 
 /* In-memory mempool with used to manage UserOperations.
@@ -23,6 +23,7 @@ export class MempoolManager {
   private readonly mempool: Map<string, MempoolEntry>
   private readonly mutex: Mutex
   private readonly MAX_MEMPOOL_USEROPS_PER_SENDER = 4 // max # of pending mempool entities per sender
+  private readonly THROTTLED_ENTITY_MEMPOOL_COUNT = 4
   private readonly bundleSize: number // maximum # of pending mempool entities
   private readonly reputationManager: ReputationManager
 
@@ -33,95 +34,233 @@ export class MempoolManager {
     this.mutex = new Mutex()
     this.bundleSize = bundleSize
     this.reputationManager = reputationManager
-    Logger.info(`In-memory Mempool initialized with bundleSize=${bundleSize} and MAX_MEMPOOL_USEROPS_PER_SENDER=${this.MAX_MEMPOOL_USEROPS_PER_SENDER}`)
+    Logger.info(
+      `In-memory Mempool initialized with bundleSize=${bundleSize} and MAX_MEMPOOL_USEROPS_PER_SENDER=${this.MAX_MEMPOOL_USEROPS_PER_SENDER}`
+    )
   }
 
   /**
    * Returns all addresses that are currently known to be "senders" according to the current mempool.
-  */
-  getKnownSenders (): string[] {
-    const kownSenders = []
-    for (const sender in this.entryCount) {
-      kownSenders.push(sender)
-    }
-    return kownSenders
+   */
+  public getKnownSenders(): string[] {
+    const userOps = Array.from(this.mempool.values()).map(
+      (mempoolEntry) => mempoolEntry.userOp
+    )
+
+    return userOps.map(op => {
+      return op.sender.toLowerCase()
+    })
   }
 
-  /* 
-    * add userOp into the mempool, after initial validation.
-    * replace existing, if any (and if new gas is higher)
-    * revets if unable to add UserOp to mempool (too many UserOps with this sender)
-  */ 
-  public async addUserOp(userOp: UserOperation, userOpHash: string, senderInfo: StakeInfo, referencedContracts: ReferencedCodeHashes, aggregator?: string): Promise<void> {
+  /**
+   * Returns all addresses that are currently known to be any kind of entity according to the current mempool.
+   * Note that "sender" addresses are not returned by this function. Use {@link getKnownSenders} instead.
+   */
+  public getKnownEntities (): string[] {
+    const res = []
+    const userOps = Array.from(this.mempool.values()).map(
+      (mempoolEntry) => mempoolEntry.userOp
+    )
+    res.push(
+      ...userOps.map(op => op.paymaster)
+    )
+    res.push(
+      ...userOps.map(op => op.factory)
+    )
+
+    return res.filter(entryAddress => entryAddress != null && entryAddress != '0x').map(it => (it as string).toLowerCase())
+  }
+
+  private incrementEntryCount(address?: string): void {
+    address = address?.toLowerCase()
+    if (address == null) {
+      return
+    }
+
+    if(address === '0x') {
+      return
+    }
+
+    this.entryCount[address] = (this.entryCount[address] ?? 0) + 1
+  }
+
+  /*
+   * add userOp into the mempool, after initial validation.
+   * replace existing, if any (and if new gas is higher)
+   * revets if unable to add UserOp to mempool (too many UserOps with this sender)
+   */
+  public async addUserOp(
+    userOp: UserOperation,
+    userOpHash: string,
+    prefund: BigNumberish,
+    referencedContracts: ReferencedCodeHashes,
+    senderInfo: StakeInfo,
+    paymasterInfo?: StakeInfo,
+    factoryInfo?: StakeInfo,
+    aggregatorInfo?: StakeInfo
+  ): Promise<void> {
     const release = await this.mutex.acquire()
     try {
       const entry: MempoolEntry = {
         userOp,
         userOpHash,
+        prefund,
         referencedContracts,
-        aggregator,
         status: 'pending',
+        aggregator: aggregatorInfo?.addr
       }
 
       const oldEntry = this.findBySenderNonce(userOp.sender, userOp.nonce)
       if (oldEntry) {
         this.checkReplaceUserOp(oldEntry, entry)
-        Logger.debug({ sender: userOp.sender, nonce: userOp.nonce, userOpHash, status: entry.status }, 'replace userOp in mempool')
         this.mempool.delete(oldEntry.userOpHash)
         this.mempool.set(userOpHash, entry)
+        Logger.debug(
+          {
+            sender: userOp.sender,
+            nonce: userOp.nonce,
+            userOpHash,
+            status: entry.status,
+          },
+          'replace userOp in mempool'
+        )
       } else {
-        Logger.debug({ sender: userOp.sender, nonce: userOp.nonce, userOpHash, status: entry.status }, 'added userOp to mempool ')
-        this.checkSenderCountInMempool(userOp, senderInfo)
-        // update entity entryCount
+        this.checkReputation(senderInfo, paymasterInfo, factoryInfo, aggregatorInfo)
+        this.checkMultipleRolesViolation(userOp)
+
+        // update entity entryCount and add to mempool if all checks passed
+        this.mempool.set(userOpHash, entry)
+        this.incrementEntryCount(userOp.sender)
         if (userOp.paymaster != null) {
-          this.entryCount[userOp.paymaster] = (this.entryCount[userOp.paymaster] ?? 0) + 1
+          this.incrementEntryCount(userOp.paymaster)
         }
         if (userOp.factory != null) {
-          this.entryCount[userOp.factory] = (this.entryCount[userOp.factory] ?? 0) + 1
+          this.incrementEntryCount(userOp.factory)
         }
-        this.entryCount[userOp.sender] = (this.entryCount[userOp.sender] ?? 0) + 1
-
-        // TODO: Add checkReputation
-        // TODO: Add checkMultipleRolesViolation
-
-        this.mempool.set(userOpHash, entry)
-
       }
-      this.updateSeenStatus(aggregator, userOp)
+      this.updateSeenStatus(aggregatorInfo?.addr, userOp, senderInfo)
+      Logger.debug(
+        {
+          sender: userOp.sender,
+          nonce: userOp.nonce,
+          userOpHash,
+          status: entry.status,
+        },
+        'added userOp to mempool'
+      )
     } finally {
       release()
     }
   }
 
-  /*
-   * check if there are already too many entries in mempool for that sender.
-    (allow 4 entities if unstaked, or any number if staked)
-  */
-  private checkSenderCountInMempool (userOp: UserOperation, senderInfo: StakeInfo): void {
-    if ((this.entryCount[userOp.sender] ?? 0) === this.MAX_MEMPOOL_USEROPS_PER_SENDER) {
-      this.reputationManager.checkStake('account', senderInfo)
+  private checkReputation (
+    senderInfo: StakeInfo,
+    paymasterInfo?: StakeInfo,
+    factoryInfo?: StakeInfo,
+    aggregatorInfo?: StakeInfo): void {
+    this.checkReputationStatus('account', senderInfo, this.MAX_MEMPOOL_USEROPS_PER_SENDER)
+
+    if (paymasterInfo != null) {
+      this.checkReputationStatus('paymaster', paymasterInfo)
+    }
+
+    if (factoryInfo != null) {
+      this.checkReputationStatus('deployer', factoryInfo)
+    }
+
+    if (aggregatorInfo != null) {
+      this.checkReputationStatus('aggregator', aggregatorInfo)
     }
   }
 
-  private updateSeenStatus (aggregator: string | undefined, userOp: UserOperation): void {
+  private checkMultipleRolesViolation (userOp: UserOperation): void {
+    const knownEntities = this.getKnownEntities()
+    requireCond(
+      !knownEntities.includes(userOp.sender.toLowerCase()),
+      `The sender address "${userOp.sender}" is used as a different entity in another UserOperation currently in mempool`,
+      ValidationErrors.OpcodeValidation
+    )
+
+    const knownSenders = this.getKnownSenders()
+    const paymaster = userOp.paymaster
+    const factory = userOp.factory
+
+    const isPaymasterSenderViolation = knownSenders.includes(paymaster?.toLowerCase() ?? '')
+    const isFactorySenderViolation = knownSenders.includes(factory?.toLowerCase() ?? '')
+
+    requireCond(
+      !isPaymasterSenderViolation,
+      `A Paymaster at ${paymaster as string} in this UserOperation is used as a sender entity in another UserOperation currently in mempool.`,
+      ValidationErrors.OpcodeValidation
+    )
+    requireCond(
+      !isFactorySenderViolation,
+      `A Factory at ${factory as string} in this UserOperation is used as a sender entity in another UserOperation currently in mempool.`,
+      ValidationErrors.OpcodeValidation
+    )
+  }
+
+  private checkReputationStatus (
+    title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
+    stakeInfo: StakeInfo,
+    maxTxMempoolAllowedOverride?: number
+  ): void {
+    const maxTxMempoolAllowedEntity = maxTxMempoolAllowedOverride ??
+      this.reputationManager.calculateMaxAllowedMempoolOpsUnstaked(stakeInfo.addr)
+    this.reputationManager.checkBanned(title, stakeInfo)
+    const entryCount = this.entryCount[stakeInfo.addr.toLowerCase()] ?? 0
+    if (entryCount > this.THROTTLED_ENTITY_MEMPOOL_COUNT) {
+      this.reputationManager.checkThrottled(title, stakeInfo)
+    }
+    if (entryCount > maxTxMempoolAllowedEntity) {
+      this.reputationManager.checkStake(title, stakeInfo)
+    }
+  }
+
+  private updateSeenStatus (aggregator: string | undefined, userOp: UserOperation, senderInfo: StakeInfo): void {
+    try {
+      this.reputationManager.checkStake('account', senderInfo)
+      this.reputationManager.updateSeenStatus(userOp.sender)
+    } catch (e: any) {
+      if (!(e instanceof RpcError)) throw e
+    }
     this.reputationManager.updateSeenStatus(aggregator)
     this.reputationManager.updateSeenStatus(userOp.paymaster)
     this.reputationManager.updateSeenStatus(userOp.factory)
   }
 
-  private checkReplaceUserOp (oldEntry: MempoolEntry, entry: MempoolEntry): void {
-    const oldMaxPriorityFeePerGas = BigNumber.from(oldEntry.userOp.maxPriorityFeePerGas).toNumber()
-    const newMaxPriorityFeePerGas = BigNumber.from(entry.userOp.maxPriorityFeePerGas).toNumber()
-    const oldMaxFeePerGas = BigNumber.from(oldEntry.userOp.maxFeePerGas).toNumber()
-    const newMaxFeePerGas = BigNumber.from(entry.userOp.maxFeePerGas).toNumber()
+  private checkReplaceUserOp(
+    oldEntry: MempoolEntry,
+    entry: MempoolEntry
+  ): void {
+    const oldMaxPriorityFeePerGas = BigNumber.from(
+      oldEntry.userOp.maxPriorityFeePerGas
+    ).toNumber()
+    const newMaxPriorityFeePerGas = BigNumber.from(
+      entry.userOp.maxPriorityFeePerGas
+    ).toNumber()
+    const oldMaxFeePerGas = BigNumber.from(
+      oldEntry.userOp.maxFeePerGas
+    ).toNumber()
+    const newMaxFeePerGas = BigNumber.from(
+      entry.userOp.maxFeePerGas
+    ).toNumber()
     // the error is "invalid fields", even though it is detected only after validation
-    requireCond(newMaxPriorityFeePerGas >= oldMaxPriorityFeePerGas * 1.1,
-      `Replacement UserOperation must have higher maxPriorityFeePerGas (old=${oldMaxPriorityFeePerGas} new=${newMaxPriorityFeePerGas}) `, ValidationErrors.InvalidFields)
-    requireCond(newMaxFeePerGas >= oldMaxFeePerGas * 1.1,
-      `Replacement UserOperation must have higher maxFeePerGas (old=${oldMaxFeePerGas} new=${newMaxFeePerGas}) `, ValidationErrors.InvalidFields)
+    requireCond(
+      newMaxPriorityFeePerGas >= oldMaxPriorityFeePerGas * 1.1,
+      `Replacement UserOperation must have higher maxPriorityFeePerGas (old=${oldMaxPriorityFeePerGas} new=${newMaxPriorityFeePerGas}) `,
+      ValidationErrors.InvalidFields
+    )
+    requireCond(
+      newMaxFeePerGas >= oldMaxFeePerGas * 1.1,
+      `Replacement UserOperation must have higher maxFeePerGas (old=${oldMaxFeePerGas} new=${newMaxFeePerGas}) `,
+      ValidationErrors.InvalidFields
+    )
   }
 
-  public async findByHash(userOpHash: string): Promise<MempoolEntry | undefined> {
+  public async findByHash(
+    userOpHash: string
+  ): Promise<MempoolEntry | undefined> {
     const release = await this.mutex.acquire()
     try {
       return this.mempool.get(userOpHash)
@@ -130,17 +269,22 @@ export class MempoolManager {
     }
   }
 
-  private findBySenderNonce(sender: string, nonce: BigNumberish): MempoolEntry | undefined{
+  private findBySenderNonce(
+    sender: string,
+    nonce: BigNumberish
+  ): MempoolEntry | undefined {
     for (const [key, value] of this.mempool.entries()) {
       if (value.userOp.sender === sender && value.userOp.nonce === nonce) {
         return value
       }
     }
 
-    return  undefined
+    return undefined
   }
 
-  public async removeUserOp(userOpOrHash: string | UserOperation): Promise<boolean> {
+  public async removeUserOp(
+    userOpOrHash: string | UserOperation
+  ): Promise<boolean> {
     const release = await this.mutex.acquire()
     try {
       let entry: MempoolEntry | undefined
@@ -158,7 +302,9 @@ export class MempoolManager {
       const result = this.mempool.delete(userOpHash)
       if (result) {
         const count = (this.entryCount[entry.userOp.sender] ?? 0) - 1
-        count <= 0 ? delete this.entryCount[entry.userOp.sender] : this.entryCount[entry.userOp.sender] = count
+        count <= 0
+          ? delete this.entryCount[entry.userOp.sender]
+          : (this.entryCount[entry.userOp.sender] = count)
       }
 
       return result
@@ -167,7 +313,7 @@ export class MempoolManager {
     }
   }
 
-  public async getNextPending(): Promise< MempoolEntry[]> {
+  public async getNextPending(): Promise<MempoolEntry[]> {
     const release = await this.mutex.acquire()
     try {
       const entries: MempoolEntry[] = []
@@ -191,7 +337,7 @@ export class MempoolManager {
     }
   }
 
-  public async getAllPending(): Promise< MempoolEntry[]> {
+  public async getAllPending(): Promise<MempoolEntry[]> {
     const release = await this.mutex.acquire()
     try {
       const entries: MempoolEntry[] = []
@@ -238,13 +384,19 @@ export class MempoolManager {
   }
 
   public dump(): Array<UserOperation> {
-    Logger.debug('_______________________________MEMPOOL DUMP____________________________________________')
+    Logger.debug(
+      '_______________________________MEMPOOL DUMP____________________________________________'
+    )
     Logger.debug(`Mempool size: ${this.mempool.size}`)
-    Logger.debug({entryCount:this.entryCount }, 'Mempool entryCount')
+    Logger.debug({ entryCount: this.entryCount }, 'Mempool entryCount')
     for (const [key, value] of this.mempool.entries()) {
-      Logger.debug({uop: value }, `Key: ${key}`)
+      Logger.debug({ uop: value }, `Key: ${key}`)
     }
-    Logger.debug('________________________________________________________________________________________')
-    return Array.from(this.mempool.values()).map((mempoolEntry) => mempoolEntry.userOp)
+    Logger.debug(
+      '________________________________________________________________________________________'
+    )
+    return Array.from(this.mempool.values()).map(
+      (mempoolEntry) => mempoolEntry.userOp
+    )
   }
 }

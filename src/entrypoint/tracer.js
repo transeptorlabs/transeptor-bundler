@@ -11,9 +11,11 @@ function bundlerCollectorTracer() {
     stopCollectingTopic: 'bb47ee3e183a558b1a2ff0874b079f3fc5478b7454eacf2bfc5af2ff5878f972',
     stopCollecting: false,
     topLevelCallCounter: 0,
+    
     fault: function (log, db) {
       this.debug.push('fault depth=', log.getDepth(), ' gas=', log.getGas(), ' cost=', log.getCost(), ' err=', log.getError());
     },
+
     result: function (ctx, db) {
       return {
         callsFromEntryPoint: this.callsFromEntryPoint,
@@ -23,6 +25,7 @@ function bundlerCollectorTracer() {
         debug: this.debug
       };
     },
+
     enter: function (frame) {
       if (this.stopCollecting) {
         return;
@@ -36,6 +39,7 @@ function bundlerCollectorTracer() {
         value: frame.getValue()
       });
     },
+
     exit: function (frame) {
       if (this.stopCollecting) {
         return;
@@ -46,14 +50,17 @@ function bundlerCollectorTracer() {
         data: toHex(frame.getOutput()).slice(0, 4000)
       });
     },
+
     countSlot: function (list, key) {
       list[key] = (list[key] !== null && list[key] !== undefined ? list[key] : 0) + 1;
     },
+    
     step: function (log, db) {
       if (this.stopCollecting) {
         return;
       }
       var opcode = log.op.toString();
+      
       var stackSize = log.stack.length();
       var stackTop3 = [];
       for (var i = 0; i < 3 && i < stackSize; i++) {

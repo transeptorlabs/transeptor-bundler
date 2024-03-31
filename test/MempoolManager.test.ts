@@ -1,17 +1,23 @@
 import {
   mockUserOperationFactory,
   mockEntryPointGetUserOpHash,
+  testWallet,
 } from './test-helpers'
 import { MempoolManager } from '../src/mempool'
 import { ReputationManager } from '../src/reputation'
-import { BigNumber } from 'ethers/lib/ethers'
+import { BigNumber, providers, Wallet } from 'ethers'
+import { ProviderService } from '../src/provider'
 
 describe('MempoolManager', () => {
   let mempoolManager: MempoolManager
   let rm: ReputationManager
 
   beforeEach(() => {
-    rm = new ReputationManager(BigNumber.from('1'), 84600)
+    rm = new ReputationManager(
+      BigNumber.from('1'),
+      84600,
+      new ProviderService(new providers.JsonRpcProvider(''), testWallet)
+    )
     mempoolManager = new MempoolManager(rm, 5)
   })
 
@@ -20,16 +26,16 @@ describe('MempoolManager', () => {
     const userOp2 = mockUserOperationFactory('x0002', 1)
     const userOp3 = mockUserOperationFactory('x0003', 1)
 
-    const userOpHash1 =  mockEntryPointGetUserOpHash(userOp1)
-    const userOpHash2 =  mockEntryPointGetUserOpHash(userOp2)
-    const userOpHash3 =  mockEntryPointGetUserOpHash(userOp3)
+    const userOpHash1 = mockEntryPointGetUserOpHash(userOp1)
+    const userOpHash2 = mockEntryPointGetUserOpHash(userOp2)
+    const userOpHash3 = mockEntryPointGetUserOpHash(userOp3)
 
     const mempoolEntry1 = {
       userOp: userOp1,
       userOpHash: userOpHash1,
       referencedContracts: {
         addresses: [],
-        hash: ''
+        hash: '',
       },
       status: 'pending',
     }
@@ -38,7 +44,7 @@ describe('MempoolManager', () => {
       userOpHash: userOpHash2,
       referencedContracts: {
         addresses: [],
-        hash: ''
+        hash: '',
       },
       status: 'pending',
     }
@@ -47,42 +53,51 @@ describe('MempoolManager', () => {
       userOpHash: userOpHash3,
       referencedContracts: {
         addresses: [],
-        hash: ''
+        hash: '',
       },
       status: 'pending',
     }
 
-    await mempoolManager.addUserOp(userOp1, userOpHash1,
+    await mempoolManager.addUserOp(
+      userOp1,
+      userOpHash1,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0001',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
+        unstakeDelaySec: BigNumber.from('8600'),
+      }
+    )
+    await mempoolManager.addUserOp(
+      userOp2,
+      userOpHash2,
+      BigNumber.from('1'),
       {
         addresses: [],
-        hash: ''
+        hash: '',
       },
-    )
-    await mempoolManager.addUserOp(userOp2, userOpHash2,
       {
         addr: 'x0002',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
+        unstakeDelaySec: BigNumber.from('8600'),
+      }
+    )
+    await mempoolManager.addUserOp(
+      userOp3,
+      userOpHash3,
+      BigNumber.from('1'),
       {
         addresses: [],
-        hash: ''
+        hash: '',
       },
-    )
-    await mempoolManager.addUserOp(userOp3, userOpHash3,
       {
         addr: 'x0003',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
 
@@ -100,41 +115,50 @@ describe('MempoolManager', () => {
     const userOp2 = mockUserOperationFactory('x0002', 1)
     const userOp3 = mockUserOperationFactory('x0003', 1)
 
-    const userOpHash1 =  mockEntryPointGetUserOpHash(userOp1)
-    const userOpHash2 =  mockEntryPointGetUserOpHash(userOp2)
-    const userOpHash3 =  mockEntryPointGetUserOpHash(userOp3)
+    const userOpHash1 = mockEntryPointGetUserOpHash(userOp1)
+    const userOpHash2 = mockEntryPointGetUserOpHash(userOp2)
+    const userOpHash3 = mockEntryPointGetUserOpHash(userOp3)
 
-    await mempoolManager.addUserOp(userOp1, userOpHash1,
+    await mempoolManager.addUserOp(
+      userOp1,
+      userOpHash1,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0001',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
-    await mempoolManager.addUserOp(userOp2, userOpHash2,
+    await mempoolManager.addUserOp(
+      userOp2,
+      userOpHash2,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0002',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
-    await mempoolManager.addUserOp(userOp3, userOpHash3,
+    await mempoolManager.addUserOp(
+      userOp3,
+      userOpHash3,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0003',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
 
@@ -157,77 +181,95 @@ describe('MempoolManager', () => {
     const userOp5 = mockUserOperationFactory('x0005', 1)
     const userOp6 = mockUserOperationFactory('x0006', 1)
 
-    const userOpHash1 =  mockEntryPointGetUserOpHash(userOp1)
-    const userOpHash2 =  mockEntryPointGetUserOpHash(userOp2)
-    const userOpHash3 =  mockEntryPointGetUserOpHash(userOp3)
-    const userOpHash4 =  mockEntryPointGetUserOpHash(userOp4)
-    const userOpHash5 =  mockEntryPointGetUserOpHash(userOp5)
-    const userOpHash6 =  mockEntryPointGetUserOpHash(userOp6)
+    const userOpHash1 = mockEntryPointGetUserOpHash(userOp1)
+    const userOpHash2 = mockEntryPointGetUserOpHash(userOp2)
+    const userOpHash3 = mockEntryPointGetUserOpHash(userOp3)
+    const userOpHash4 = mockEntryPointGetUserOpHash(userOp4)
+    const userOpHash5 = mockEntryPointGetUserOpHash(userOp5)
+    const userOpHash6 = mockEntryPointGetUserOpHash(userOp6)
 
-    await mempoolManager.addUserOp(userOp1, userOpHash1,
+    await mempoolManager.addUserOp(
+      userOp1,
+      userOpHash1,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0001',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
-    await mempoolManager.addUserOp(userOp2, userOpHash2,
+    await mempoolManager.addUserOp(
+      userOp2,
+      userOpHash2,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0002',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
-    await mempoolManager.addUserOp(userOp3, userOpHash3,
+    await mempoolManager.addUserOp(
+      userOp3,
+      userOpHash3,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0003',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
-    await mempoolManager.addUserOp(userOp4, userOpHash4,
+    await mempoolManager.addUserOp(
+      userOp4,
+      userOpHash4,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0004',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
-    await mempoolManager.addUserOp(userOp5, userOpHash5,
+    await mempoolManager.addUserOp(
+      userOp5,
+      userOpHash5,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0005',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
-    await mempoolManager.addUserOp(userOp6, userOpHash6,
+    await mempoolManager.addUserOp(
+      userOp6,
+      userOpHash6,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0006',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
 
@@ -246,41 +288,50 @@ describe('MempoolManager', () => {
     const userOp2 = mockUserOperationFactory('x0002', 1)
     const userOp3 = mockUserOperationFactory('x0003', 1)
 
-    const userOpHash1 =  mockEntryPointGetUserOpHash(userOp1)
-    const userOpHash2 =  mockEntryPointGetUserOpHash(userOp2)
-    const userOpHash3 =  mockEntryPointGetUserOpHash(userOp3)
+    const userOpHash1 = mockEntryPointGetUserOpHash(userOp1)
+    const userOpHash2 = mockEntryPointGetUserOpHash(userOp2)
+    const userOpHash3 = mockEntryPointGetUserOpHash(userOp3)
 
-    await mempoolManager.addUserOp(userOp1, userOpHash1,
+    await mempoolManager.addUserOp(
+      userOp1,
+      userOpHash1,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0001',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
-    await mempoolManager.addUserOp(userOp2, userOpHash2,
+    await mempoolManager.addUserOp(
+      userOp2,
+      userOpHash2,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0002',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
-    await mempoolManager.addUserOp(userOp3, userOpHash3,
+    await mempoolManager.addUserOp(
+      userOp3,
+      userOpHash3,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
       {
         addr: 'x0003',
         stake: BigNumber.from('1'),
-        unstakeDelaySec: BigNumber.from('8600')
-      },
-      {
-        addresses: [],
-        hash: ''
+        unstakeDelaySec: BigNumber.from('8600'),
       }
     )
 
@@ -292,5 +343,124 @@ describe('MempoolManager', () => {
 
     expect(size1).toEqual(3)
     expect(size2).toEqual(2)
+  })
+
+  it('should return all addresses that are currently known to be "senders" according to the current mempool', async () => {
+    const userOp1 = mockUserOperationFactory('x0001', 1)
+    const userOp2 = mockUserOperationFactory('x0002', 1)
+    const userOp3 = mockUserOperationFactory('x0003', 1)
+
+    const userOpHash1 = mockEntryPointGetUserOpHash(userOp1)
+    const userOpHash2 = mockEntryPointGetUserOpHash(userOp2)
+    const userOpHash3 = mockEntryPointGetUserOpHash(userOp3)
+
+    await mempoolManager.addUserOp(
+      userOp1,
+      userOpHash1,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
+      {
+        addr: 'x0001',
+        stake: BigNumber.from('1'),
+        unstakeDelaySec: BigNumber.from('8600'),
+      }
+    )
+    await mempoolManager.addUserOp(
+      userOp2,
+      userOpHash2,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
+      {
+        addr: 'x0002',
+        stake: BigNumber.from('1'),
+        unstakeDelaySec: BigNumber.from('8600'),
+      }
+    )
+    await mempoolManager.addUserOp(
+      userOp3,
+      userOpHash3,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
+      {
+        addr: 'x0003',
+        stake: BigNumber.from('1'),
+        unstakeDelaySec: BigNumber.from('8600'),
+      }
+    )
+
+    const knownSenders = mempoolManager.getKnownSenders()
+    expect(knownSenders).toEqual(['x0001', 'x0002', 'x0003'])
+    expect(knownSenders.length).toEqual(3)
+  })
+
+  it('should return addresses that are currently known to be any kind of entity according to the current mempool exculding "sender"', async () => {
+    const userOp1 = mockUserOperationFactory('x0001', 1)
+    const userOp2 = mockUserOperationFactory('x0002', 1)
+    const userOp3 = mockUserOperationFactory('x0003', 1,
+    {
+      paymaster: 'x0004',
+      paymasterData: '0x',
+      paymasterPostOpGasLimit: BigNumber.from('1'),
+    }
+    )
+
+    const userOpHash1 = mockEntryPointGetUserOpHash(userOp1)
+    const userOpHash2 = mockEntryPointGetUserOpHash(userOp2)
+    const userOpHash3 = mockEntryPointGetUserOpHash(userOp3)
+
+    await mempoolManager.addUserOp(
+      userOp1,
+      userOpHash1,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
+      {
+        addr: 'x0001',
+        stake: BigNumber.from('1'),
+        unstakeDelaySec: BigNumber.from('8600'),
+      }
+    )
+    await mempoolManager.addUserOp(
+      userOp2,
+      userOpHash2,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
+      {
+        addr: 'x0002',
+        stake: BigNumber.from('1'),
+        unstakeDelaySec: BigNumber.from('8600'),
+      }
+    )
+    await mempoolManager.addUserOp(
+      userOp3,
+      userOpHash3,
+      BigNumber.from('1'),
+      {
+        addresses: [],
+        hash: '',
+      },
+      {
+        addr: 'x0003',
+        stake: BigNumber.from('1'),
+        unstakeDelaySec: BigNumber.from('8600'),
+      }
+    )
+
+    const knownEntities = mempoolManager.getKnownEntities()
+    expect(knownEntities.length).toEqual(4)
   })
 })

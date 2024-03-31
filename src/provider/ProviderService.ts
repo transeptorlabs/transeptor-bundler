@@ -2,9 +2,9 @@ import { ContractFactory, Wallet, ethers, providers } from 'ethers'
 import { TransactionRequest } from '@ethersproject/providers'
 import { Deferrable } from '@ethersproject/properties'
 import { Result, resolveProperties } from 'ethers/lib/utils'
-import { TraceOptions, TraceResult, BundlerCollectorReturn } from '../types'
+import { TraceOptions, TraceResult, BundlerCollectorReturn, ValidationErrors } from '../types'
 import { Logger } from '../logger'
-import { ExecutionErrors, RpcError } from '../utils'
+import { RpcError } from '../utils'
 
 export class ProviderService {
     private readonly provider: providers.JsonRpcProvider
@@ -13,6 +13,10 @@ export class ProviderService {
     constructor(provider: providers.JsonRpcProvider, connectedWallet: Wallet) {
         this.provider = provider
         this.connectedWallet = connectedWallet
+    }
+    
+    getPovider(): providers.JsonRpcProvider {
+        return this.provider
     }
 
     async getNetwork(): Promise<ethers.providers.Network> {
@@ -38,11 +42,11 @@ export class ProviderService {
         if (ret.url && ret.body && ret.url.includes('alchemy.com')) {
             const alchemyRet = JSON.parse(ret.body)
             // code = alchemyRet.error?.code ?? alchemyRet.code
-            code === -32602 // wrong params (meaning, method exists) alchemy can not support full validation
+            code === ValidationErrors.InvalidFields // wrong params (meaning, method exists) alchemy can not support full validation
         } else {
             code = ret.error?.code ?? ret.code
         }
-        return code === -32602 // wrong params (meaning, method exists)
+        return code === ValidationErrors.InvalidFields // wrong params (meaning, method exists)
     }
 
     public async clientVerion(): Promise<string> {
@@ -87,7 +91,7 @@ export class ProviderService {
             data
         }).catch(err => {
             const message = err.message.match(/reason="(.*?)"/)?.at(1) ?? 'execution reverted'
-            throw new RpcError(message, ExecutionErrors.UserOperationReverted)
+            throw new RpcError(message, ValidationErrors.UserOperationReverted)
         })
 
         return gasLimit.toNumber()

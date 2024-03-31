@@ -4,7 +4,7 @@ import { Command, OptionValues } from 'commander'
 import { BigNumber, Wallet, ethers, providers } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import { isValidAddress } from '../utils'
-import { IENTRY_POINT_ABI} from '../abis'
+import { IENTRY_POINT_ABI } from '../abis'
 import { Logger } from '../logger'
 import { InfluxdbConnection } from '../types'
 dotenv.config()
@@ -84,33 +84,33 @@ export class Config {
     }
 
     if (programOpts.txMode as string === 'searcher') {
-      if (!process.env.ALCHEMY_API_KEY) {
-        throw new Error('ALCHEMY_API_KEY env var not set')
+      if (!process.env.TRANSEPTOR_ALCHEMY_API_KEY) {
+        throw new Error('TRANSEPTOR_ALCHEMY_API_KEY env var not set')
       }
       
-      this.provider = this.getNetworkProvider(programOpts.network as string, process.env.ALCHEMY_API_KEY as string)
+      this.provider = this.getNetworkProvider(programOpts.network as string, process.env.TRANSEPTOR_ALCHEMY_API_KEY as string)
     } else {
       this.provider = this.getNetworkProvider(programOpts.network as string)
     } 
 
     let supportedEntryPointAddress: string
-    if (!process.env.ENTRYPOINT_ADDRESS) {
+    if (!process.env.TRANSEPTOR_ENTRYPOINT_ADDRESS) {
       supportedEntryPointAddress = this.DEFAULT_ENTRY_POINT
     } else {
-      supportedEntryPointAddress = process.env.ENTRYPOINT_ADDRESS as string
+      supportedEntryPointAddress = process.env.TRANSEPTOR_ENTRYPOINT_ADDRESS as string
     }
     if (!isValidAddress(supportedEntryPointAddress)) {
       throw new Error('Entry point not a valid address')
     }
 
-    if (!process.env.MNEMONIC) {
-      throw new Error('MNEMONIC env var not set')
+    if (!process.env.TRANSEPTOR_MNEMONIC) {
+      throw new Error('TRANSEPTOR_MNEMONIC env var not set')
     }
 
-    if (!process.env.BENEFICIARY) {
-      throw new Error('BENEFICIARY env var not set')
+    if (!process.env.TRANSEPTOR_BENEFICIARY) {
+      throw new Error('TRANSEPTOR_BENEFICIARY env var not set')
     }
-    if (!isValidAddress(process.env.BENEFICIARY as string)) {
+    if (!isValidAddress(process.env.TRANSEPTOR_BENEFICIARY as string)) {
       throw new Error('Beneficiary not a valid address')
     }
 
@@ -139,12 +139,12 @@ export class Config {
 
     this.isMetricsEnabled = programOpts.metrics as boolean
     if (this.isMetricsEnabled) {
-      if (!process.env.INFLUX_TOKEN) {
-        throw new Error('INFLUX_TOKEN env var not set')
+      if (!process.env.TRANSEPTOR_INFLUX_TOKEN) {
+        throw new Error('TRANSEPTOR_INFLUX_TOKEN env var not set')
       }
       this.influxdbConnection = {
         url: programOpts.influxdbUrl as string,
-        token: process.env.INFLUX_TOKEN as string,
+        token: process.env.TRANSEPTOR_INFLUX_TOKEN as string,
         org: programOpts.influxdbOrg as string,
         bucket: programOpts.influxdbBucket as string
       }
@@ -152,8 +152,8 @@ export class Config {
       Logger.info(`Metrics enabled, connecting to influxdb at ${this.influxdbConnection.url} with org ${this.influxdbConnection.org} and bucket ${this.influxdbConnection.bucket}`)
     }
   
-    this.connectedWallet = Wallet.fromMnemonic(process.env.MNEMONIC as string).connect(this.provider)
-    this.beneficiaryAddr = process.env.BENEFICIARY as string
+    this.connectedWallet = Wallet.fromMnemonic(process.env.TRANSEPTOR_MNEMONIC as string).connect(this.provider)
+    this.beneficiaryAddr = process.env.TRANSEPTOR_BENEFICIARY as string
     this.entryPointContract = new ethers.Contract(supportedEntryPointAddress, IENTRY_POINT_ABI, this.connectedWallet)
 
     this.autoBundleInterval = parseInt(programOpts.autoBundleInterval as string)

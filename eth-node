@@ -4,7 +4,8 @@ GETH_PORT=8545
 TRANSEPTOR_PORT=4337
 NETWORK_ID=1337
 START_BUNDLER=false
-ENTRYPOINT_ADDRESS_V7=""
+TRANSEPTOR_ENTRYPOINT_ADDRESS_V7=""
+TRANSEPTOR_BENEFICIARY="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 
 if [ "$1" == "-b" ]; then
   START_BUNDLER=true
@@ -14,7 +15,7 @@ start_geth() {
   # first 3 accounts default hardhat accounts
   DEFAULT_ADDRESS_1="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" # bundler signer
   DEFAULT_ADDRESS_2="0x70997970C51812dc3A010C7d01b50e0d17dc79C8" # local e2e runner
-  DEFAULT_ADDRESS_3="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+  DEFAULT_ADDRESS_3="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" # bundler beneficiary
 
   if docker ps -a | grep -q geth-transeptor; then
     echo -e "Removing existing geth container\n"
@@ -34,7 +35,7 @@ start_geth() {
     --dev \
     --allow-insecure-unlock \
     --rpc.allow-unprotected-txs \
-    --dev.gaslimit 20000000)
+    --dev.gaslimit 12000000)
 
   sleep 3
 
@@ -58,10 +59,10 @@ start_geth() {
   cd ./contracts
   forge build
   OUTPUT=$(forge script ./scripts/DeployBundlerDev.s.sol --rpc-url http://localhost:$GETH_PORT --broadcast) 
-  ENTRYPOINT_ADDRESS_V7=$(echo "$OUTPUT" | grep -o "EntryPoint: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
+  TRANSEPTOR_ENTRYPOINT_ADDRESS_V7=$(echo "$OUTPUT" | grep -o "EntryPoint: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
   TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$(echo "$OUTPUT" | grep -o "SimpleAccountFactory: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
   TRANSEPTOR_E2E_GLOBAL_COUNTER=$(echo "$OUTPUT" | grep -o "GlobalCounter: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
-  echo -e "$(tput setaf 4)▼▼▼ $(tput setaf 7)Please add to local .env$(tput setaf 4) ▼▼▼$(tput sgr0)\n\nMNEMONIC=test test test test test test test test test test test junk\nENTRYPOINT_ADDRESS=$ENTRYPOINT_ADDRESS_V7\nTRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY\nTRANSEPTOR_E2E_GLOBAL_COUNTER=$TRANSEPTOR_E2E_GLOBAL_COUNTER\n\n$(tput setaf 6)────────────────────────────────────────────────────────$(tput sgr0)"
+  echo -e "$(tput setaf 4)▼▼▼ $(tput setaf 7)Please add to local .env$(tput setaf 4) ▼▼▼$(tput sgr0)\n\nTRANSEPTOR_MNEMONIC=test test test test test test test test test test test junk\nTRANSEPTOR_ENTRYPOINT_ADDRESS=$TRANSEPTOR_ENTRYPOINT_ADDRESS_V7\nTRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY\nTRANSEPTOR_E2E_GLOBAL_COUNTER=$TRANSEPTOR_E2E_GLOBAL_COUNTER\nTRANSEPTOR_BENEFICIARY=$TRANSEPTOR_BENEFICIARY\n\n$(tput setaf 6)────────────────────────────────────────────────────────$(tput sgr0)"
 }
 
 start_bundler() {
@@ -70,7 +71,7 @@ start_bundler() {
   docker rm -f transeptor-dev
   fi
 
-  export ENTRYPOINT_ADDRESS=$ENTRYPOINT_ADDRESS_V7
+  export TRANSEPTOR_ENTRYPOINT_ADDRESS=$TRANSEPTOR_ENTRYPOINT_ADDRESS_V7
   echo -e "Starting bundler at http://localhost:$TRANSEPTOR_PORT/rpc on network $NETWORK_ID\n"
   transeptor_container_id=$(docker run -d --name transeptor-dev -p $TRANSEPTOR_PORT:$TRANSEPTOR_PORT --env-file $PWD/.env bundler-typescript:v-local \
     --port $TRANSEPTOR_PORT \

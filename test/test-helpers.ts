@@ -1,9 +1,10 @@
-import { BigNumber, Wallet } from 'ethers'
+import { BigNumber, Wallet, BigNumberish } from 'ethers'
 import { UserOperation } from '../src/types'
 
 export function mockUserOperationFactory(
   sender: string,
-  nonce: number
+  nonce: number,
+  paymaster?:{paymaster: string, paymasterData: string, paymasterPostOpGasLimit: BigNumberish}
 ): UserOperation {
   const mockUserOperation: UserOperation = {
     sender: sender,
@@ -16,11 +17,11 @@ export function mockUserOperationFactory(
     preVerificationGas: 0,
     maxFeePerGas: 0,
     maxPriorityFeePerGas: 0,
-    paymasterData: '0x',
+    paymasterData: paymaster ? paymaster.paymasterData : '0x',
     signature: '0x',
-    paymaster: '',
+    paymaster: paymaster ? paymaster.paymaster : '0x',
     paymasterVerificationGasLimit: '',
-    paymasterPostOpGasLimit: ''
+    paymasterPostOpGasLimit: paymaster ? paymaster.paymasterPostOpGasLimit : 0,
   }
   return mockUserOperation
 }
@@ -89,8 +90,8 @@ export const MOCK_USER_OPERATION_EVENT = [
 export function setTestConfig() {
   process.env = {
     ...process.env,
-    MNEMONIC: 'test '.repeat(11) + 'junk',
-    BENEFICIARY: '0xd21934eD8eAf27a67f0A70042Af50A1D6d195E81'
+    TRANSEPTOR_MNEMONIC: 'test '.repeat(11) + 'junk',
+    TRANSEPTOR_BENEFICIARY: '0xd21934eD8eAf27a67f0A70042Af50A1D6d195E81'
   }
   return {
     args: ['--network', 'hardhat']

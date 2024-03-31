@@ -66,6 +66,10 @@ export class RpcMethodHandler {
         case 'debug_bundler_dumpMempool':
           result = this.debug.dumpMempool()
           break
+        case 'debug_bundler_clearMempool':
+          // TODO: implement
+          result = null
+          break
         case 'debug_bundler_sendBundleNow':
           result = await this.debug.sendBundleNow()
           if (result.transactionHash === '' && result.userOpHashes.length === 0) {
@@ -76,6 +80,10 @@ export class RpcMethodHandler {
           this.debug.setBundlingMode(params[0])
           result = 'ok'
           break
+        case 'debug_bundler_setBundleInterval':
+          // TODO: implement
+          result = 'ok'
+          break
         case 'debug_bundler_setReputation':
           await this.debug.setReputation(params[0])
           result = 'ok'
@@ -83,9 +91,16 @@ export class RpcMethodHandler {
         case 'debug_bundler_dumpReputation':
           result = this.debug.dumpReputation()
           break
+        case 'debug_bundler_clearReputation':
+          result = null
+          break
         case 'debug_bundler_addUserOps':
           await this.debug.addUserOps(params[0])
           result = 'ok'
+          break
+        case 'debug_bundler_getStakeStatus':
+          // TODO: implement
+          result = null
           break
         default:
           throw new RpcError( `Method ${method} is not supported`, -32601)

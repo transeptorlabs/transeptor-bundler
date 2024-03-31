@@ -25,6 +25,7 @@
     "build:contracts": "cd contracts && forge build",
     "dev": "nodemon",
     "start": "ts-node ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "start:unsafe": "ts-node ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
     "start:metrics": "npm run build && node dist/cjs/src/index.js --httpApi web3,eth,debug --txMode base --metrics | pino-pretty",
     "start:prod": "npm run build && node dist/cjs/src/index.js --httpApi web3,eth,debug --txMode base | pino-pretty",
     "test": "jest --coverage --config ./jest.config.js",

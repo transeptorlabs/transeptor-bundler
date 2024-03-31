@@ -15,7 +15,7 @@ async function runBundler() {
   const providerService = new ProviderService(config.provider, config.connectedWallet)
 
   // erc-4337 entity reputation components
-  const reputationManager = new ReputationManager(config.minStake, config.minUnstakeDelay)
+  const reputationManager = new ReputationManager(config.minStake, config.minUnstakeDelay, providerService)
   reputationManager.addWhitelist(config.whitelist)
   reputationManager.addBlacklist(config.blacklist)
   reputationManager.startHourlyCron()
@@ -26,7 +26,6 @@ async function runBundler() {
   // erc-4337 user operation bundle components
   const validationService = new ValidationService(
     providerService,
-    reputationManager,
     config.entryPointContract,
     config.isUnsafeMode
   )

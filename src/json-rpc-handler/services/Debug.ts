@@ -4,7 +4,7 @@ import { EventsManager } from '../../event'
 import { MempoolManager } from '../../mempool'
 import { ReputationManager } from '../../reputation'
 import { ReputationEntry, SendBundleReturn, UserOperation } from '../../types'
-import { ethers } from 'ethers'
+import { ethers, BigNumber } from 'ethers'
 
 export class DebugAPI {
   private readonly entryPointContract: ethers.Contract
@@ -58,7 +58,7 @@ export class DebugAPI {
     // TODO: implement
     for (const userOp of userOps) {
       const userOpHash = await this.entryPointContract.getUserOpHash(packUserOp(userOp))
-      await this.mempoolManager.addUserOp(userOp, userOpHash, null, null)
+      await this.mempoolManager.addUserOp(userOp, userOpHash, BigNumber.from(0), null, null)
     }
   }
 

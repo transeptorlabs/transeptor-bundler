@@ -34,7 +34,3 @@ export const deepHexlify = (obj: any): any =>{
     return Object.keys(obj)
         .reduce((set, key) => (Object.assign(Object.assign({}, set), { [key]: deepHexlify(obj[key]) })), {})
 }
-
-export enum ExecutionErrors {
-    UserOperationReverted = -32521
-}

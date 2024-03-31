@@ -1,5 +1,5 @@
 import { BigNumber, ethers } from 'ethers'
-import { EstimateUserOpGasResult, PackedUserOperation, UserOperation, UserOperationByHashResponse, UserOperationReceipt } from '../../types'
+import { EstimateUserOpGasResult, PackedUserOperation, UserOperation, UserOperationByHashResponse, UserOperationReceipt, ValidationErrors } from '../../types'
 import { deepHexlify, requireCond, packUserOp, unpackUserOp, requireAddressAndFields, calcPreVerificationGas } from '../../utils'
 import { ProviderService } from '../../provider'
 import { resolveProperties } from 'ethers/lib/utils'
@@ -40,7 +40,7 @@ export class EthAPI {
     requireSignature = true, 
     requireGasParams = true,
   ): Promise<void> {
-    requireCond(entryPointInput != null, 'No entryPoint param', -32602)
+    requireCond(entryPointInput != null, 'No entryPoint param', ValidationErrors.InvalidFields)
 
     if (entryPointInput?.toString().toLowerCase() !== this.entryPointContract.address.toLowerCase()) {
       throw new Error(`The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${this.entryPointContract.address}`)
@@ -57,9 +57,9 @@ export class EthAPI {
       fields.push('preVerificationGas', 'verificationGasLimit', 'callGasLimit', 'maxFeePerGas', 'maxPriorityFeePerGas')
     }
     fields.forEach(key => {
-      requireCond(userOp[key] != null, 'Missing userOp field: ' + key, -32602, userOp)
+      requireCond(userOp[key] != null, 'Missing userOp field: ' + key, ValidationErrors.InvalidFields, userOp)
       const value: string = userOp[key].toString()
-      requireCond(value.match(this.HEX_REGEX) != null, `Invalid hex value for property ${key} in UserOp`, -32602, userOp[key])
+      requireCond(value.match(this.HEX_REGEX) != null, `Invalid hex value for property ${key} in UserOp`, ValidationErrors.InvalidFields, userOp[key])
     })
 
     requireAddressAndFields(userOp, 'paymaster', ['paymasterPostOpGasLimit', 'paymasterVerificationGasLimit'], ['paymasterData'])
@@ -118,9 +118,12 @@ export class EthAPI {
     await this.mempoolManager.addUserOp(
       userOp,
       userOpHash,
-      validationResult.senderInfo,
+      validationResult.returnInfo.prefund,
       validationResult.referencedContracts,
-      validationResult.aggregatorInfo?.addr
+      validationResult.senderInfo,
+      validationResult.paymasterInfo,
+      validationResult.factoryInfo,
+      validationResult.aggregatorInfo
     )
 
     // TODO: This code is blocking request since the userOp is added to the mempool. Offload to a separate process to avoid blocking
@@ -136,27 +139,27 @@ export class EthAPI {
   }
 
   public async getUserOperationReceipt(userOpHash: string): Promise<UserOperationReceipt | null> {
-    requireCond(userOpHash?.toString()?.match(this.HEX_REGEX) != null, 'Missing/invalid userOpHash', -32601)
+    requireCond(userOpHash?.toString()?.match(this.HEX_REGEX) != null, 'Missing/invalid userOpHash', ValidationErrors.InvalidFields)
     const event = await this.eventsManager.getUserOperationEvent(userOpHash)
     if (event == null) {
       return null
     }
     const receipt = await event.getTransactionReceipt()
     const logs = this.eventsManager.filterLogs(event, receipt.logs)
-    return {
+    return deepHexlify({
       userOpHash,
-      sender: event.args?.sender,
-      nonce: event.args?.nonce,
-      actualGasCost: event.args?.actualGasCost,
-      actualGasUsed: event.args?.actualGasUsed,
-      success: event.args?.success,
+      sender: event.args.sender,
+      nonce: event.args.nonce,
+      actualGasCost: event.args.actualGasCost,
+      actualGasUsed: event.args.actualGasUsed,
+      success: event.args.success,
       logs,
       receipt
-    }
+    })
   }
 
   public async getUserOperationByHash(userOpHash: string): Promise<UserOperationByHashResponse | null> {
-    requireCond(userOpHash?.toString()?.match(this.HEX_REGEX) != null, 'Missing/invalid userOpHash', -32601)
+    requireCond(userOpHash?.toString()?.match(this.HEX_REGEX) != null, 'Missing/invalid userOpHash', ValidationErrors.InvalidFields)
     const event = await this.eventsManager.getUserOperationEvent(userOpHash)
     if (event == null) {
       return null

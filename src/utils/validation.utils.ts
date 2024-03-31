@@ -1,7 +1,7 @@
 import { UserOperation, ValidationErrors } from '../types'
 import { requireCond } from './rpc.utils'
 import { hexDataSlice, hexZeroPad } from 'ethers/lib/utils'
-import { BigNumber, BigNumberish } from 'ethers'
+import { BigNumber, BigNumberish, ethers } from 'ethers'
 
 export const maxUint48 = (2 ** 48) - 1
 export const SIG_VALIDATION_FAILED = hexZeroPad('0x01', 20)
@@ -41,9 +41,8 @@ export function requireAddressAndFields(
 }
 
 export function mergeValidationData (accountValidationData: any, paymasterValidationData: any): any {
-  const addressZero = '0x0000000000000000000000000000000000000000'
   return {
-    aggregator: paymasterValidationData.aggregator !== addressZero ? SIG_VALIDATION_FAILED : accountValidationData.aggregator,
+    aggregator: paymasterValidationData.aggregator !== ethers.constants.AddressZero ? SIG_VALIDATION_FAILED : accountValidationData.aggregator,
     validAfter: Math.max(accountValidationData.validAfter, paymasterValidationData.validAfter),
     validUntil: Math.min(accountValidationData.validUntil, paymasterValidationData.validUntil)
   }

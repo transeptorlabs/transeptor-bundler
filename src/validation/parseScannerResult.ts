@@ -4,10 +4,7 @@ import { requireCond, toBytes32 } from '../utils'
 import { 
   IENTRY_POINT_ABI,
   IPAYMASTER_ABI,
-  SENDER_CREATOR_ABI, 
-  TEST_OPCODE_ACCOUNT_ABI, 
-  TEST_OPCODE_ACCOUNT_FACTORY_ABI, 
-  TEST_STORAGE_ACCOUNT_ABI,
+  SENDER_CREATOR_ABI,
   IACCOUNT_ABI
 } from '../abis'
 import { 
@@ -31,6 +28,18 @@ interface CallEntry {
   value?: BigNumberish
 }
 
+const abi = Object.values([
+  ...SENDER_CREATOR_ABI,
+  ...IENTRY_POINT_ABI,
+  ...IPAYMASTER_ABI
+].reduce((set, entry) => {
+  const key = `${entry.name}(${entry.inputs?.map(i => i.type).join(',')})`
+  return {
+    ...set,
+    [key]: entry
+  }
+}, {})) as any
+
 /**
  * parse all call operation in the trace.
  * notes:
@@ -39,22 +48,6 @@ interface CallEntry {
  * @param tracerResults
  */
 function parseCallStack (tracerResults: BundlerCollectorReturn): CallEntry[] {
-  const abi = Object.values([
-    ...TEST_OPCODE_ACCOUNT_ABI,
-    ...TEST_OPCODE_ACCOUNT_FACTORY_ABI,
-    ...TEST_STORAGE_ACCOUNT_ABI,
-    ...SENDER_CREATOR_ABI,
-    ...IENTRY_POINT_ABI,
-    ...IPAYMASTER_ABI
-  ].reduce((set, entry) => {
-    const key = `${entry.name}(${entry.inputs?.map(i => i.type).join(',')})`
-    // console.log('key=', key, keccak256(Buffer.from(key)).slice(0,10))
-    return {
-      ...set,
-      [key]: entry
-    }
-  }, {})) as any
-
   const xfaces = new Interface(abi)
 
   function callCatch<T, T1> (x: () => T, def: T1): T | T1 {
@@ -200,25 +193,6 @@ function extractStorageMap(callsFromEntryPoint: TopLevelCallInfo[]): StorageMap 
   return storageMap
 }
 
-const bannedOpCodes = new Set([
-  'GASPRICE',
-  'GASLIMIT',
-  'DIFFICULTY',
-  'TIMESTAMP',
-  'BASEFEE',
-  'BLOCKHASH',
-  'NUMBER',
-  'SELFBALANCE',
-  'BALANCE',
-  'ORIGIN',
-  'GAS',
-  'CREATE',
-  'COINBASE',
-  'SELFDESTRUCT',
-  'RANDOM',
-  'PREVRANDAO',
-])
-
 /**
  * parse collected simulation traces and revert if they break our rules
  * @param userOp the userOperation that was used in this simulation
@@ -234,13 +208,35 @@ export function parseScannerResult(
   entryPoint: ethers.Contract
 ): [string[], StorageMap] {
   const entryPointAddress = entryPoint.address.toLowerCase()
+  
+  // banned opcodes from [OP-011]
+  const bannedOpCodes = new Set([
+    'GASPRICE',
+    'GASLIMIT',
+    'DIFFICULTY',
+    'TIMESTAMP',
+    'BASEFEE',
+    'BLOCKHASH',
+    'NUMBER',
+    'SELFBALANCE',
+    'BALANCE',
+    'ORIGIN',
+    'GAS',
+    'CREATE',
+    'COINBASE',
+    'SELFDESTRUCT',
+    'RANDOM',
+    'PREVRANDAO',
+    'INVALID',
+  ])
 
   if (Object.values(tracerResults.callsFromEntryPoint).length < 1) {
     throw new Error('Unexpected traceCall result: no calls from entrypoint.')
   }
 
   const callStack = parseCallStack(tracerResults)
-
+  
+  // [OP-052], [OP-053]
   const callInfoEntryPoint = findCallInfoEntryPoint(callStack, entryPointAddress)
   requireCond(
     callInfoEntryPoint == null,
@@ -248,6 +244,7 @@ export function parseScannerResult(
     ValidationErrors.OpcodeValidation
   )
 
+  // [OP-061]
   const illegalNonZeroValueCall = findIllegalNonZeroValueCall(callStack, entryPointAddress)
   requireCond(
     illegalNonZeroValueCall == null,
@@ -283,8 +280,10 @@ export function parseScannerResult(
 
     const { opcodes, access } = currentNumLevel
 
-    // check for baned opcodes
+    // [OP-020]
     requireCond(!(currentNumLevel.oog ?? false),`${entityTitle} internally reverts on oog`, ValidationErrors.OpcodeValidation)
+    
+    // opcodes from [OP-011]
     Object.keys(opcodes).forEach((opcode) =>
       requireCond(
         !bannedOpCodes.has(opcode),
@@ -293,7 +292,7 @@ export function parseScannerResult(
       )
     )
 
-    // Check CREATE2 opcode for factories
+    // [OP-031] - Check CREATE2 opcode for factories
     if (entityTitle === 'factory') {
       requireCond((opcodes.CREATE2 ?? 0) <= 1, `${entityTitle} with too many CREATE2`, ValidationErrors.OpcodeValidation)
     } else {
@@ -304,6 +303,7 @@ export function parseScannerResult(
     Object.entries(access).forEach(([addr, { reads, writes }]) => {
       if (addr === sender) {
         // allowed to access sender's storage
+        // [STO-010]
         return
       }
       if (addr === entryPointAddress) {
@@ -355,6 +355,7 @@ export function parseScannerResult(
         if (associatedWith(slot, sender, entitySlots)) {
           if (userOp.factory != null) {
             // special case: account.validateUserOp is allowed to use assoc storage if factory is staked.
+            // [STO-022], [STO-021]
             if (
               !(entityAddr === sender && isStaked(stakeInfoEntities.factory))
             ) {
@@ -362,10 +363,15 @@ export function parseScannerResult(
             }
           }
         } else if (associatedWith(slot, entityAddr, entitySlots)) {
+          // [STO-032]
           // accessing a slot associated with entityAddr (e.g. token.balanceOf(paymaster)
           requireStakeSlot = slot
         } else if (addr === entityAddr) {
+          // [STO-031]
           // accessing storage member of entity itself requires stake.
+          requireStakeSlot = slot
+        } else if (writes[slot] == null) {
+          // [STO-033]: staked entity have read-only access to any storage in non-entity contract.
           requireStakeSlot = slot
         } else {
           // accessing arbitrary storage of another contract is not allowed
@@ -407,6 +413,7 @@ export function parseScannerResult(
       )
     })
 
+    // [EREP-050]
     if (entityTitle === 'paymaster') {
       const validatePaymasterUserOp = callStack.find(
         (call) =>
@@ -420,7 +427,7 @@ export function parseScannerResult(
       )
     }
 
-    // check if the given entity is staked
+    // check if the given entity is staked 
     function isStaked (entStake?: StakeInfo): boolean {
       return entStake != null && BigNumber.from(1).lte(entStake.stake) && BigNumber.from(1).lte(entStake.unstakeDelaySec)
     }
@@ -436,18 +443,21 @@ export function parseScannerResult(
       requireCond(isStaked(entStake),
         failureMessage, ValidationErrors.OpcodeValidation, { [entityTitle]: entStakes?.addr })
 
-      // TODO: check real minimum stake values
+      // TODO: Check the minimum stake value passed in config rather than defaulting to 1
     }
 
     // the only contract we allow to access before its deployment is the "sender" itself, which gets created.
     let illegalZeroCodeAccess: any
     for (const addr of Object.keys(currentNumLevel.contractSize)) {
+      // [OP-042]
       if (addr !== sender && currentNumLevel.contractSize[addr].contractSize <= 2) {
         illegalZeroCodeAccess = currentNumLevel.contractSize[addr]
         illegalZeroCodeAccess.address = addr
         break
       }
     }
+    
+    // [OP-041]
     requireCond(
       illegalZeroCodeAccess == null,
       `${entityTitle} accesses un-deployed contract address ${illegalZeroCodeAccess?.address as string} with opcode ${illegalZeroCodeAccess?.opcode as string}`, ValidationErrors.OpcodeValidation)
@@ -464,6 +474,7 @@ export function parseScannerResult(
       `${entityTitle} accesses EntryPoint contract address ${entryPointAddress} with opcode ${illegalEntryPointCodeAccess}`, ValidationErrors.OpcodeValidation)
   })
   
+  // get the list of contract addresses and storage map for the user operation
   const addresses = extractAddresses(tracerResults.callsFromEntryPoint)
   const storageMap: StorageMap = extractStorageMap(tracerResults.callsFromEntryPoint)
 

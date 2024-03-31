@@ -12,13 +12,13 @@ const bundlerProvider = new ethers.providers.StaticJsonRpcProvider('http://local
 const dummySig = '0xfffffffffffffffffffffffffffffff0000000000000000000000000000000007aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1c'
 
 // Derive the second account from the HDNode and create a new wallet for the second account
-const hdNode = ethers.utils.HDNode.fromMnemonic(process.env.MNEMONIC as string)
+const hdNode = ethers.utils.HDNode.fromMnemonic(process.env.TRANSEPTOR_MNEMONIC as string)
 const secondAccount = hdNode.derivePath('m/44\'/60\'/0\'/0/1')
 const secondAccountPrivateKey = secondAccount.privateKey
 const secondWallet = new Wallet(secondAccountPrivateKey, provider).connect(provider)
 
 // contract instances
-const epAddress = process.env.ENTRYPOINT_ADDRESS as string
+const epAddress = process.env.TRANSEPTOR_ENTRYPOINT_ADDRESS as string
 const simpleAccountFatoryAddreess = process.env.TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY as string
 const globalCounterAddress = process.env.TRANSEPTOR_E2E_GLOBAL_COUNTER as string
 
