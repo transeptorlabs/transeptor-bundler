@@ -10,8 +10,8 @@ import { InfluxdbConnection } from '../types'
 dotenv.config()
 
 export class Config {
-  private DEFAULT_NETWORK = 'http://localhost:8545'
-  private DEFAULT_ENTRY_POINT = '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789'
+  private DEFAULT_NETWORK = 'http://localhost:8545' 
+  private DEFAULT_ENTRY_POINT = '0x0000000071727De22E5E9d8BAf0edAc6f37da032'
   private SUPPORTED_MODES = ['base', 'conditional', 'searcher']
   private SUPPORTED_NAMESPACES = ['web3', 'eth', 'debug']
 
