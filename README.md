@@ -125,6 +125,22 @@ Options:
   -h, --help                     display help for command
 ```
 
+## Environment variables
+
+List of all environment variables supported by the bundler.
+
+```bash
+# Required for production
+TRANSEPTOR_MNEMONIC=<your-mnemonic>
+TRANSEPTOR_ENTRYPOINT_ADDRESS=0x
+TRANSEPTOR_BENEFICIARY=<address_to_receive_funds>
+
+# Optional
+TRANSEPTOR_WHITE_LIST=<address_to_whitelist_SEPARATEDBY_COMMA>
+TRANSEPTOR_BLACK_LIST=<address_to_blacklist_SEPARATEDBY_COMMA>
+TRANSEPTOR_INFLUX_TOKEN=DEV_TOKEN
+```
+
 ## Contribute
 
 We welcome contributions to enhance our ERC-4337 Bundler. If you would like to contribute, please follow these guidelines [here](https://github.com/transeptorlabs/transeptor-bundler/blob/main/CONTRIBUTING.md). There are a few things you can do right now to help out:

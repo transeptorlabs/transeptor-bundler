@@ -37,9 +37,7 @@ export class ReputationManager {
    * debug: dump reputation map (with updated "status" for each entry)
    */
   dump(): ReputationEntry[] {
-    Object.values(this.entries).forEach((entry) => {
-      entry.status = this.getStatus(entry.address)
-    })
+    Object.values(this.entries).forEach(entry => { entry.status = this.getStatus(entry.address) })
     return Object.values(this.entries)
   }
 
@@ -146,19 +144,10 @@ export class ReputationManager {
     if (entry == null) {
       return ReputationStatus.OK
     }
-
-    const minExpectedIncluded = Math.floor(
-      entry.opsSeen / this.bundlerReputationParams.minInclusionDenominator
-    )
-    if (
-      minExpectedIncluded <=
-      entry.opsIncluded + this.bundlerReputationParams.throttlingSlack
-    ) {
+    const minExpectedIncluded = Math.floor(entry.opsSeen / this.bundlerReputationParams.minInclusionDenominator)
+    if (minExpectedIncluded <= entry.opsIncluded + this.bundlerReputationParams.throttlingSlack) {
       return ReputationStatus.OK
-    } else if (
-      minExpectedIncluded <=
-      entry.opsIncluded + this.bundlerReputationParams.banSlack
-    ) {
+    } else if (minExpectedIncluded <= entry.opsIncluded + this.bundlerReputationParams.banSlack) {
       return ReputationStatus.THROTTLED
     } else {
       return ReputationStatus.BANNED
@@ -216,7 +205,7 @@ export class ReputationManager {
    */
   public setReputation(reputations: ReputationEntry[]): ReputationEntry[] {
     reputations.forEach((rep) => {
-      this.entries[rep.address] = {
+      this.entries[rep.address.toLowerCase()] = {
         address: rep.address,
         opsSeen: rep.opsSeen,
         opsIncluded: rep.opsIncluded,

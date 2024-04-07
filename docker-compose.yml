@@ -4,15 +4,14 @@ services:
     container_name: transeptor-dev
     image: bundler-typescript:v-local
     ports:
-      - "4000:4000"
+      - "4337:4337"
     env_file:
       - ./.env
     command: >
-      --port 4000
+      --port 4337
       --network http://host.docker.internal:8545
       --txMode base
       --httpApi web3,eth,debug
-      --entryPoint 0x5FbDB2315678afecb367f032d93F642f64180aa3
 
   influxdb:
     container_name: influxdb

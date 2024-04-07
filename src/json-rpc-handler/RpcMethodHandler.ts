@@ -67,8 +67,8 @@ export class RpcMethodHandler {
           result = this.debug.dumpMempool()
           break
         case 'debug_bundler_clearMempool':
-          // TODO: implement
-          result = null
+          await this.debug.clearMempool()
+          result = 'ok'
           break
         case 'debug_bundler_sendBundleNow':
           result = await this.debug.sendBundleNow()
@@ -92,14 +92,15 @@ export class RpcMethodHandler {
           result = this.debug.dumpReputation()
           break
         case 'debug_bundler_clearReputation':
-          result = null
+          this.debug.clearReputation()
+          result = 'ok'
           break
         case 'debug_bundler_addUserOps':
           await this.debug.addUserOps(params[0])
           result = 'ok'
           break
         case 'debug_bundler_getStakeStatus':
-          // TODO: implement
+          result = await this.debug.getStakeStatus(params[0], params[1])
           result = null
           break
         default:
@@ -122,10 +123,12 @@ export class RpcMethodHandler {
       return this.createErrorResponse(request.id, -32600, 'Invalid Request, method must be a string')
     }
 
-    if (
-      !request.id ||
-      (typeof request.id !== 'number' && typeof request.id !== 'string')
-    ) {
+    if (request.id === undefined) {
+      return this.createErrorResponse(request.id, -32600, 'Invalid Request, id is missing')
+    }
+
+    const idType = typeof request.id
+    if (idType !== 'number' && idType !== 'string') {
       return this.createErrorResponse(request.id, -32600, 'Invalid Request, id must be a number or string')
     }
 

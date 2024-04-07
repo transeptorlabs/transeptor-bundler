@@ -8,6 +8,7 @@ import { MempoolManager } from '../../mempool'
 import { ValidationService } from '../../validation'
 import { EventsManager } from '../../event'
 import { simulateHandleOp } from '../../entrypoint'
+import { Logger } from '../../logger'
 
 export class EthAPI {
   private readonly entryPointContract: ethers.Contract
@@ -107,6 +108,7 @@ export class EthAPI {
   }
 
   public async sendUserOperation(userOp: UserOperation, entryPointInput: string) {
+    Logger.debug('Running checks on userOp')
     // TODO: This looks like a duplicate of the userOp validateParameters function
     await this.validateParameters(userOp, entryPointInput)
     const userOpReady = await resolveProperties(userOp)

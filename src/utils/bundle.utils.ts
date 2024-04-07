@@ -50,33 +50,20 @@ export function mergeStorageMap(
   return mergedStorageMap
 }
 
-export function packUint(high128: BigNumberish, low128: BigNumberish): string {
-  return hexZeroPad(
-    BigNumber.from(high128).shl(128).add(low128).toHexString(),
-    32
-  )
+export function packUint (high128: BigNumberish, low128: BigNumberish): string {
+  return hexZeroPad(BigNumber.from(high128).shl(128).add(low128).toHexString(), 32)
 }
 
-export function unpackUint(
-  packed: BytesLike
-): [high128: BigNumber, low128: BigNumber] {
+export function unpackUint (packed: BytesLike): [high128: BigNumber, low128: BigNumber] {
   const packedNumber: BigNumber = BigNumber.from(packed)
-  return [
-    packedNumber.shr(128),
-    packedNumber.and(BigNumber.from(1).shl(128).sub(1)),
-  ]
+  return [packedNumber.shr(128), packedNumber.and(BigNumber.from(1).shl(128).sub(1))]
 }
 
-export function packPaymasterData(
-  paymaster: string,
-  paymasterVerificationGasLimit: BigNumberish,
-  postOpGasLimit: BigNumberish,
-  paymasterData?: BytesLike
-): BytesLike {
+export function packPaymasterData (paymaster: string, paymasterVerificationGasLimit: BigNumberish, postOpGasLimit: BigNumberish, paymasterData?: BytesLike): BytesLike {
   return ethers.utils.hexConcat([
     paymaster,
     packUint(paymasterVerificationGasLimit, postOpGasLimit),
-    paymasterData ?? '0x',
+    paymasterData ?? '0x'
   ])
 }
 
@@ -162,7 +149,7 @@ export function unpackUserOp(packedUserOp: PackedUserOperation): UserOperation {
     const factoryData = hexDataSlice(packedUserOp.initCode, 20)
     ret = {
       ...ret,
-      factory: factory,
+      factory,
       factoryData,
     }
   }
@@ -173,7 +160,7 @@ export function unpackUserOp(packedUserOp: PackedUserOperation): UserOperation {
       paymaster: pmData.paymaster,
       paymasterVerificationGasLimit: pmData.paymasterVerificationGas,
       paymasterPostOpGasLimit: pmData.postOpGasLimit,
-      paymasterData: pmData.paymasterData,
+      paymasterData: pmData.paymasterData
     }
   }
   return ret

@@ -30,6 +30,7 @@ export class BundleProcessor {
   private readonly txMode: string
   private readonly beneficiary: string
   public readonly minSignerBalance: BigNumber
+  private readonly THROTTLED_ENTITY_BUNDLE_COUNT = 4
 
   constructor(
     providerService: ProviderService,
@@ -70,7 +71,7 @@ export class BundleProcessor {
       : await this.mempoolManager.getNextPending()
     
     const [bundle, storageMap] = await this.createBundle(entries)
-    Logger.debug({ length: bundle.length, bundle }, 'bundle created')
+    Logger.debug({ length: bundle.length }, 'bundle created(ready to send)')
 
     if (bundle.length === 0) {
       return {
@@ -85,7 +86,7 @@ export class BundleProcessor {
   }
 
   private async createBundle(entries: MempoolEntry[]): Promise<[UserOperation[], StorageMap]> {
-    Logger.debug('Attepting to create bundle for entries', entries.length)
+    Logger.debug({total: entries.length}, 'Attepting to create bundle for entries')
     const bundle: UserOperation[] = []
     const storageMap: StorageMap = {}
     let totalGas = BigNumber.from(0)
@@ -93,6 +94,7 @@ export class BundleProcessor {
     const stakedEntityCount: { [addr: string]: number } = {} // throttled paymasters and deployers are allowed only small UserOps per bundle.
     const senders = new Set<string>() // each sender is allowed only once per bundle
     const knownSenders = this.mempoolManager.getKnownSenders()
+    const notIncludedUserOpsHashes = []
 
     mainLoop:
     for (let i =0; i < entries.length; i++) {
@@ -102,33 +104,30 @@ export class BundleProcessor {
       const paymasterStatus = this.reputationManager.getStatus(paymaster)
       const deployerStatus = this.reputationManager.getStatus(factory)
 
-      // check entry reputation status
-      if (
-        paymasterStatus === ReputationStatus.BANNED ||
-        deployerStatus === ReputationStatus.BANNED
-      ) {
-        Logger.debug(`skipping banned entry: ${entry.userOpHash}`)
-        await this.mempoolManager.removeUserOp(entry.userOpHash)
+      if (paymasterStatus === ReputationStatus.BANNED || deployerStatus === ReputationStatus.BANNED) {
+        this.mempoolManager.removeUserOp(entry.userOp)
         continue
       }
 
       // [SREP-030]
-      if (paymaster != null && (paymasterStatus === ReputationStatus.THROTTLED ?? (stakedEntityCount[paymaster] ?? 0) > 1)) {
-        Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce, }, 'skipping throttled paymaster')
+      if (paymaster != null && (paymasterStatus === ReputationStatus.THROTTLED ?? (stakedEntityCount[paymaster] ?? 0) > this.THROTTLED_ENTITY_BUNDLE_COUNT)) {
+        Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce}, 'skipping throttled paymaster')
+        notIncludedUserOpsHashes.push(entry.userOpHash)
         continue
       }
-      if (factory != null && (deployerStatus === ReputationStatus.THROTTLED ?? (stakedEntityCount[factory] ?? 0) > 1)) {
-        Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce, }, 'skipping throttled factory')
+      // [SREP-030]
+      if (factory != null && (deployerStatus === ReputationStatus.THROTTLED ?? (stakedEntityCount[factory] ?? 0) > this.THROTTLED_ENTITY_BUNDLE_COUNT)) {
+        Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce}, 'skipping throttled factory')
+        notIncludedUserOpsHashes.push(entry.userOpHash)
         continue
       }
-
-      // allow only a single UserOp per sender per bundle
       if (senders.has(entry.userOp.sender)) {
-        Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce}, 'skipping already included sender')
-        await this.mempoolManager.updateEntryStatusPending(entry.userOpHash)
+        // allow only a single UserOp per sender per bundle
+        Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce},'skipping already included sender')
+        notIncludedUserOpsHashes.push(entry.userOpHash)
         continue
       }
-
+    
       // validate UserOp and remove from mempool if failed
       let validationResult: ValidateUserOpResult
       try {
@@ -160,9 +159,10 @@ export class BundleProcessor {
       const newTotalGas = totalGas.add(userOpGasCost)
       if (newTotalGas.gt(this.maxBundleGas)) {
         Logger.debug({stopIndex: i, entriesLength: entries.length}, 'Bundle is full sending user ops back to mempool with status pending')
+
         // bundle is full set the remaining UserOps back to pending
         for (let j = i; j < entries.length; j++) {
-          await this.mempoolManager.updateEntryStatusPending(entries[j].userOpHash)
+          notIncludedUserOpsHashes.push(entries[j].userOpHash)
         }
         break
       }
@@ -193,7 +193,7 @@ export class BundleProcessor {
       }
 
       // If sender's account already exist: replace with its storage root hash
-      if (this.txMode === 'conditional' && entry.userOp.factory === '0x') {
+      if (this.txMode === 'conditional' && entry.userOp.factory === null) {
         // in conditionalRpc: always put root hash (not specific storage slots) for "sender" entries
         const { storageHash } = await this.providerService.send('eth_getProof',[entry.userOp.sender, [], 'latest'])
         storageMap[entry.userOp.sender.toLowerCase()] = storageHash
@@ -201,10 +201,18 @@ export class BundleProcessor {
       mergeStorageMap(storageMap, validationResult.storageMap)
 
       // add UserOp to bundle
+      Logger.debug({sender: entry.userOp.sender, nonce: entry.userOp.nonce, index: i}, 'adding to bundle')
       senders.add(entry.userOp.sender)
       bundle.push(entry.userOp)
       totalGas = newTotalGas
-      Logger.debug(entry, 'added user op entry to bundle')
+    }
+
+    // send ops that back to mempool that were not included in the bundle
+    if (notIncludedUserOpsHashes.length > 0) {
+      Logger.debug({total: notIncludedUserOpsHashes.length}, 'Sending UserOps back to mempool with status pending')
+      for (let i = 0; i < notIncludedUserOpsHashes.length; i++) {
+        await this.mempoolManager.updateEntryStatusPending(entries[i].userOpHash)
+      }
     }
 
     return [bundle, storageMap]

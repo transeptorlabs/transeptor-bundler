@@ -4,7 +4,7 @@ import { ReferencedCodeHashes, StorageMap, UserOperation, ValidateUserOpResult, 
 import {  requireCond, requireAddressAndFields, calcPreVerificationGas } from '../utils'
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from '../abis'
 import { ProviderService } from '../provider'
-import { parseScannerResult } from './parseScannerResult'
+import { tracerResultParser } from './parseScannerResult'
 import { Logger } from '../logger'
 import { fullSimulateValidation, partialSimulateValidation } from '../entrypoint'
 
@@ -66,13 +66,14 @@ export class ValidationService {
       })
 
       let contractAddresses: string[];
-      [contractAddresses, storageMap] = parseScannerResult(
+      [contractAddresses, storageMap] = tracerResultParser(
         userOp,
         tracerResult,
         res,
         this.entryPointContract
       )
 
+      // if no previous contract hashes, then calculate hashes of contracts
       if (previousCodeHashes == null) {
         codeHashes = await this.getCodeHashes(contractAddresses)
       }
@@ -84,50 +85,30 @@ export class ValidationService {
       res = await partialSimulateValidation(this.entryPointContract.address, this.providerService, userOp)
     }
 
-    requireCond(
-      !res.returnInfo.sigFailed,
+    requireCond(!res.returnInfo.sigFailed,
       'Invalid UserOp signature or paymaster signature',
-      ValidationErrors.InvalidSignature
-    )
+      ValidationErrors.InvalidSignature)
 
     const now = Math.floor(Date.now() / 1000)
-    requireCond(
-      res.returnInfo.validAfter <= now,
-      'time-range in the future time',
-      ValidationErrors.NotInTimeRange
-    )
+    requireCond(res.returnInfo.validAfter <= now,
+      `time-range in the future time ${res.returnInfo.validAfter}, now=${now}`,
+      ValidationErrors.NotInTimeRange)
 
-    requireCond(
-      res.returnInfo.validUntil == null || res.returnInfo.validUntil >= now,
+    requireCond(res.returnInfo.validUntil == null || res.returnInfo.validUntil >= now,
       'already expired',
-      ValidationErrors.NotInTimeRange
-    )
+      ValidationErrors.NotInTimeRange)
 
-    requireCond(
-      res.returnInfo.validUntil == null ||
-        res.returnInfo.validUntil > now + this.VALID_UNTIL_FUTURE_SECONDS,
+    requireCond(res.returnInfo.validUntil == null || res.returnInfo.validUntil > now + this.VALID_UNTIL_FUTURE_SECONDS,
       'expires too soon',
-      ValidationErrors.NotInTimeRange
-    )
+      ValidationErrors.NotInTimeRange)
 
-    requireCond(
-      res.aggregatorInfo == null,
+    requireCond(res.aggregatorInfo == null,
       'Currently not supporting aggregator',
-      ValidationErrors.UnsupportedSignatureAggregator
-    )
+      ValidationErrors.UnsupportedSignatureAggregator)
 
-    // check aa51
-    const verificationCost = BigNumber.from(res.returnInfo.preOpGas).sub(
-      userOp.preVerificationGas
-    )
-    const extraGas = BigNumber.from(userOp.verificationGasLimit)
-      .sub(verificationCost)
-      .toNumber()
-    requireCond(
-      extraGas >= 2000,
-      `verificationGas should have extra 2000 gas. has only ${extraGas}`,
-      ValidationErrors.SimulateValidation
-    )
+    const verificationCost = BigNumber.from(res.returnInfo.preOpGas).sub(userOp.preVerificationGas)
+    const extraGas = BigNumber.from(userOp.verificationGasLimit).sub(verificationCost).toNumber()
+    requireCond(extraGas >= 2000, `verificationGas should have extra 2000 gas. has only ${extraGas}`, ValidationErrors.SimulateValidation)
 
     Logger.debug('UserOp passed validation')
     return {

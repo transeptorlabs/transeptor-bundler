@@ -52,7 +52,8 @@ function bundlerCollectorTracer() {
     },
 
     countSlot: function (list, key) {
-      list[key] = (list[key] !== null && list[key] !== undefined ? list[key] : 0) + 1;
+      // list[key] = (list[key] !== null && list[key] !== undefined ? list[key] : 0) + 1;
+      list[key] = (list[key] ?? 0) + 1
     },
     
     step: function (log, db) {

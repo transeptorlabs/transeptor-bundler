@@ -134,8 +134,6 @@ const decodeSCAccountRevertReason = (error: string): any => {
   const ECDSAInvalidSignatureLengthSig = (0, utils.keccak256)(Buffer.from('ECDSAInvalidSignatureLength(uint256)')).slice(0, 10)
   const dataParams = '0x' + error.substring(10)
 
-  console.log(parseError)
-
   if (parseError.sighash === ECDSAInvalidSignatureLengthSig) {
     const [res] = utils.defaultAbiCoder.decode(['uint256'], dataParams)
     return {

@@ -125,6 +125,7 @@ export class MempoolManager {
           'replace userOp in mempool'
         )
       } else {
+        // check reputation and throttling
         this.checkReputation(senderInfo, paymasterInfo, factoryInfo, aggregatorInfo)
         this.checkMultipleRolesViolation(userOp)
 
@@ -389,9 +390,6 @@ export class MempoolManager {
     )
     Logger.debug(`Mempool size: ${this.mempool.size}`)
     Logger.debug({ entryCount: this.entryCount }, 'Mempool entryCount')
-    for (const [key, value] of this.mempool.entries()) {
-      Logger.debug({ uop: value }, `Key: ${key}`)
-    }
     Logger.debug(
       '________________________________________________________________________________________'
     )

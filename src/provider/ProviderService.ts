@@ -114,7 +114,7 @@ export class ProviderService {
             Logger.error({error: e.message}, 'error in debug_traceCall')
             throw e
         })
-        return ret as BundlerCollectorReturn
+        return ret
     }
 
     // a hack for network that doesn't have traceCall: mine the transaction, and use debug_traceTransaction

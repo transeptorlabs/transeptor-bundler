@@ -201,7 +201,7 @@ function extractStorageMap(callsFromEntryPoint: TopLevelCallInfo[]): StorageMap 
  * @param entryPoint the entryPoint that hosted the "simulatedValidation" traced call.
  * @return list of contract addresses referenced by this UserOp
  */
-export function parseScannerResult(
+export function tracerResultParser(
   userOp: UserOperation,
   tracerResults: BundlerCollectorReturn,
   validationResult: ValidationResult,

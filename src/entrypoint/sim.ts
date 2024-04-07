@@ -5,7 +5,7 @@ import { Interface} from 'ethers/lib/utils'
 import { BundlerCollectorReturn, ExecutionResult, ExitInfo, StakeInfo as StakeInfoWithAddr, UserOperation, ValidationErrors, ValidationResult } from '../types'
 import { ProviderService } from '../provider'
 import { BigNumber, BigNumberish, BytesLike, ethers, utils } from 'ethers'
-import { EntryPointSimulationsDeployedBytecode, I_ENTRY_POINT_SIMULATIONS } from '../abis'
+import { EntryPointSimulationsDeployedBytecode, IENTRY_POINT_ABI, I_ENTRY_POINT_SIMULATIONS, I_TestERC20_factory_ABI, I_TestPaymasterRevertCustomError_abi } from '../abis'
 import { RpcError, mergeValidationDataValues, packUserOp } from '../utils'
 import { Logger } from '../logger'
 
@@ -107,9 +107,8 @@ const getTracerString = () => {
 
 const decodeErrorReason = (error: string| Error): {
     reason: string; //Revert reason. see FailedOp(uint256,string), above
-    opIndex?: any;  //Index into the array of ops to the failed one (in simulateValidation, this is always zero).
-    inner?: string; // data from inner cought revert reason
-} => {
+    opIndex?: number;  //Index into the array of ops to the failed one (in simulateValidation, this is always zero).
+}| undefined  => {
     if (typeof error !== 'string') {
         const err = error as any
         error = (err.data ?? err.error.data) as string
@@ -117,7 +116,6 @@ const decodeErrorReason = (error: string| Error): {
     
     const ErrorSig = (0, utils.keccak256)(Buffer.from('Error(string)')).slice(0, 10)
     const FailedOpSig = (0, utils.keccak256)(Buffer.from('FailedOp(uint256,string)')).slice(0, 10)
-    const FailedOpWithRevertSig = (0, utils.keccak256)(Buffer.from('FailedOpWithRevert(uint256,string,bytes)')).slice(0, 10)    
     const dataParams = '0x' + error.substring(10)
 
     if (error.startsWith(ErrorSig)) {
@@ -130,24 +128,14 @@ const decodeErrorReason = (error: string| Error): {
         reason: errorMessage,
         opIndex
       }
-    } else if (error.startsWith(FailedOpWithRevertSig)) {
-        const [opIndex, message, inner] = utils.defaultAbiCoder.decode(['uint256', 'string', 'bytes'], dataParams)
-        const errorMessage = `FailedOp: ${message as string}`
-        return {
-            reason: errorMessage,
-            opIndex,
-            inner
-        }
-    } else {
-        return null
     }
 }
 
-const  decodeRevertReason = (data: string | Error, nullIfNoMatch = true): string | null => {
+const decodeRevertReason = (data: string | Error, nullIfNoMatch = true): string | null => {
     const decodeRevertReasonContracts = new Interface([
-        // ...EntryPoint__factory.createInterface().fragments,
-        // ...TestPaymasterRevertCustomError__factory.createInterface().fragments,
-        // ...TestERC20__factory.createInterface().fragments, // for OZ errors,
+        ...new utils.Interface(IENTRY_POINT_ABI).fragments,
+        ...new utils.Interface(I_TestPaymasterRevertCustomError_abi).fragments,
+        ...new utils.Interface(I_TestERC20_factory_ABI).fragments, // for OZ errors,
         'error ECDSAInvalidSignature()'
     ])
 
@@ -278,7 +266,7 @@ export const fullSimulateValidation = async (epAddress: string, provider: Provid
     try {
         const [decodedSimulations] = epSimsInterface.decodeFunctionResult('simulateValidation', exitInfoData)
         const validationResult = parseValidationResult(userOp, decodedSimulations)
-    
+
         return [validationResult, tracerResult]
     } catch (e) {
         // if already parsed, throw as is

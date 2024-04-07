@@ -3,7 +3,7 @@ import { BundleManager } from '../../bundle'
 import { EventsManager } from '../../event'
 import { MempoolManager } from '../../mempool'
 import { ReputationManager } from '../../reputation'
-import { ReputationEntry, SendBundleReturn, UserOperation } from '../../types'
+import { ReputationEntry, SendBundleReturn, StakeInfo, UserOperation } from '../../types'
 import { ethers, BigNumber } from 'ethers'
 
 export class DebugAPI {
@@ -36,6 +36,10 @@ export class DebugAPI {
     return this.mempoolManager.dump()
   }
 
+  async clearMempool(): Promise<void> {
+    await this.mempoolManager.clearState()
+  }
+
   setBundlingMode(mode: string): boolean {
     if (mode !== 'auto' && mode !== 'manual') {
       throw new Error('Invalid bundling mode')
@@ -50,12 +54,11 @@ export class DebugAPI {
     return result
   }
 
-  async setReputation(param: any[]): Promise<ReputationEntry[]> {
+  async setReputation(param: any): Promise<ReputationEntry[]> {
     return this.reputationManager.setReputation(param)
   }
 
   async addUserOps(userOps: UserOperation[]) {
-    // TODO: implement
     for (const userOp of userOps) {
       const userOpHash = await this.entryPointContract.getUserOpHash(packUserOp(userOp))
       await this.mempoolManager.addUserOp(userOp, userOpHash, BigNumber.from(0), null, null)
@@ -64,5 +67,19 @@ export class DebugAPI {
 
   dumpReputation(): ReputationEntry[] {
     return this.reputationManager.dump()
+  }
+
+  clearReputation (): void {
+    this.reputationManager.clearState()
+  }
+
+  async getStakeStatus (
+    address: string,
+    entryPoint: string
+  ): Promise<{
+      stakeInfo: StakeInfo
+      isStaked: boolean
+    }> {
+    return await this.reputationManager.getStakeStatus(address, entryPoint)
   }
 }
