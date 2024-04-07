@@ -1,6 +1,6 @@
 {
   "name": "transeptor-bundler",
-  "version": "0.5.3-alpha.0",
+  "version": "0.6.0-alpha.0",
   "description": "A lightweight ERC4337 bundler node designed specifically for Node.js environment; with a focus on minimal resource consumption, high performance, and minimal dependencies.",
   "author": {
     "name": "Transeptor Labs",
