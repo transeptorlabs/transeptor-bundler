@@ -1,29 +1,12 @@
-# tools
+# contracts
+Set of helper contracts for the Transeptor bundler.
 
-![Node Version](https://img.shields.io/badge/node-18.x-green)
-![Github workflow build status(main)](https://img.shields.io/github/actions/workflow/status/transeptorlabs/transeptor-bundler/build.yml?branch=main)
+## Setup
 
-## Run dev node
+1. Add `PRIVATE_KEY` to `contracts/.env` file to deploy the entrypoint contract locally.
 
-```bash
-chmod +x ./eth-node
-```
+## Compile
 
 ```bash
-./eth-node
+npm run build:contracts
 ```
-
-with transeptor-bundler
-
-```bash
-./eth-node -b
-```
-
-You can recursively delete all package.json files within a directory
-```bash
-find ./packages -name 'package.json' -type f -delete
-find ./packages -name './test' -type d -delete
-
-```
-
-find ./packages -type d -name 'test' -exec rm -rf {} +
