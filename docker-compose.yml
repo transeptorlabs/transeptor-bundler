@@ -1,0 +1,35 @@
+version: "3"
+services:
+  bundler-typescript-local:
+    container_name: transeptor-dev
+    image: bundler-typescript:v-local
+    ports:
+      - "4337:4337"
+    env_file:
+      - ./.env
+    command: >
+      --port 4337
+      --network http://host.docker.internal:8545
+      --txMode base
+      --httpApi web3,eth,debug
+
+  influxdb:
+    container_name: influxdb
+    image: influxdb:2.7.1
+    ports:
+      - "8086:8086"
+    command: >
+      --reporting-disabled
+    volumes:
+      - ./influxdb-data:/var/lib/influxdb2
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana-enterprise
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./grafana-data:/var/lib/grafana
+volumes:
+  grafana-data: {}

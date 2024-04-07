@@ -1,0 +1,9 @@
+[profile.default]
+auto_detect_solc = false
+src = "src"
+out = "out"
+libs = ["submodules"]
+solc = "0.8.23"
+
+[fmt]
+  bracket_spacing = true

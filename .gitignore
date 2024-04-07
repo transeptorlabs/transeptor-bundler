@@ -1,20 +1,15 @@
 # Dependencies
 node_modules/
-packages/*/lib
-packages/*/coverage
 
 # test
 coverage
 coverage.json
 
+# production
+dist
+
 # secrets
 .env
-
-# Hardhat files
-packages/tools/cache
-packages/tools/artifacts
-packages/tools/typechain
-packages/tools/typechain-types
 
 # Misc
 .DS_Store

@@ -1,6 +1,7 @@
 {
-  "name": "root",
+  "name": "transeptor-bundler",
   "version": "0.5.3-alpha.0",
+  "description": "A lightweight ERC4337 bundler node designed specifically for Node.js environment; with a focus on minimal resource consumption, high performance, and minimal dependencies.",
   "author": {
     "name": "Transeptor Labs",
     "email": "transeptorhq@gmail.com",
@@ -19,44 +20,56 @@
     "///ab": "_____________________________________________________________________",
     "///cv": "________________________WELCOME BUILDERS______________________________",
     "///tu": "_____________________________________________________________________",
-    "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
-    "clean:deps": "rm -rf ./node_modules ./packages/*/node_modules",
-    "clean:coverage": "rm -rf ./coverage ./packages/*/coverage",
-    "lerna-clean": "npx lerna run clean",
-    "build": "cd packages/types && npm run build && npx lerna run build --concurrency 3",
-    "watch:dev": "npx lerna watch -- lerna run build",
-    "start:dev": "test -n \"$(find packages/*/lib -type f)\" || npm run build && node packages/cli/lib/src/cli.js --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "start:dev-metrics": "test -n \"$(find packages/*/lib -type f)\" || npm run build && node packages/cli/lib/src/cli.js --httpApi web3,eth,debug --txMode base --metrics | pino-pretty",
-    "test": "npx lerna run test --concurrency 2",
-    "lint": "npx lerna run lint --concurrency 2",
-    "lint:fix": "npx lerna run lint:fix --concurrency 2",
-    "version": "npx lerna version --no-private",
+    "clean": "rm -rf dist",
+    "build": "tsc -p ./tsconfig.json && cp ./src/entrypoint/tracer.js dist/cjs/src/entrypoint",
+    "build:contracts": "cd contracts && forge build",
+    "dev": "nodemon",
+    "start": "ts-node ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "start:unsafe": "ts-node ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
+    "start:metrics": "npm run build && node dist/cjs/src/index.js --httpApi web3,eth,debug --txMode base --metrics | pino-pretty",
+    "start:prod": "npm run build && node dist/cjs/src/index.js --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "test": "jest --coverage --config ./jest.config.js",
+    "lint": "eslint src/**/*.ts test/**/*.ts e2e/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts test/**/*.ts e2e/**/*.ts --fix",
+    "local-eth": "./eth-node",
+    "op": "ts-node ./e2e/send-userop.e2e.ts | pino-pretty",
     "///cK": "________________________DOCKER CONTAINERS______________________________",
-    "geth-node": "cd packages/tools && npm run geth:start",
-    "bundler-prep": "cd packages/tools && npm run bundler-prep",
-    "influxdb": "cd packages/tools && npm run start:influxdb",
-    "grafana": "cd packages/tools && npm run start:grafana",
-    "start:docker-bundler": "cd packages/tools && npm run start:docker-bundler"
+    "build:image": "docker build -t bundler-typescript:v-local .",
+    "influxdb": "docker-compose up influxdb",
+    "grafana": "docker-compose up grafana",
+    "start:docker-bundler": "docker-compose up bundler-typescript-local"
+  },
+  "dependencies": {
+    "@chainsafe/libp2p-noise": "^12.0.2",
+    "@influxdata/influxdb-client": "1.33.2",
+    "@libp2p/mplex": "^8.0.4",
+    "@libp2p/tcp": "^7.0.3",
+    "@multiformats/multiaddr": "^12.1.5",
+    "async-mutex": "0.4.0",
+    "commander": "10.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "16.0.3",
+    "ethers": "^5.7.1",
+    "express": "^4.18.3",
+    "helmet": "^7.1.0",
+    "libp2p": "^0.45.9",
+    "os-utils": "0.0.14",
+    "pino": "^8.14.1"
   },
   "devDependencies": {
-    "@account-abstraction/contracts": "^0.6.0",
     "@types/jest": "^29.5.2",
     "@types/node": "18.16.3",
     "@typescript-eslint/eslint-plugin": "5.59.2",
     "@typescript-eslint/parser": "5.59.2",
     "eslint": "8.39.0",
     "jest": "^29.5.0",
-    "lerna": "^7.3.0",
+    "nodemon": "^3.1.0",
     "pino-pretty": "^10.0.0",
     "ts-jest": "^29.1.0",
     "ts-node": "10.9.1",
     "typescript": "5.0.4"
   },
   "engines": {
-    "node": ">=18.0.0"
-  },
-  "workspaces": [
-    "packages/*"
-  ],
-  "dependencies": {}
+    "node": ">=20.11.1"
+  }
 }
