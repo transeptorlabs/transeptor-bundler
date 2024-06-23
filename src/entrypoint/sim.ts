@@ -1,13 +1,29 @@
 import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { Interface} from 'ethers/lib/utils'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'url'
 
-import { BundlerCollectorReturn, ExecutionResult, ExitInfo, StakeInfo as StakeInfoWithAddr, UserOperation, ValidationErrors, ValidationResult } from '../types'
-import { ProviderService } from '../provider'
 import { BigNumber, BigNumberish, BytesLike, ethers, utils } from 'ethers'
-import { EntryPointSimulationsDeployedBytecode, IENTRY_POINT_ABI, I_ENTRY_POINT_SIMULATIONS, I_TestERC20_factory_ABI, I_TestPaymasterRevertCustomError_abi } from '../abis'
-import { RpcError, mergeValidationDataValues, packUserOp } from '../utils'
-import { Logger } from '../logger'
+import { Interface} from 'ethers/lib/utils.js'
+
+import {
+  EntryPointSimulationsDeployedBytecode,
+  IENTRY_POINT_ABI,
+  I_ENTRY_POINT_SIMULATIONS,
+  I_TestERC20_factory_ABI,
+  I_TestPaymasterRevertCustomError_abi,
+} from '../abis/index.js'
+import { Logger } from '../logger/index.js'
+import { ProviderService } from '../provider/index.js'
+import {
+  BundlerCollectorReturn,
+  ExecutionResult,
+  ExitInfo,
+  StakeInfo as StakeInfoWithAddr,
+  UserOperation,
+  ValidationErrors,
+  ValidationResult,
+} from '../types/index.js'
+import { RpcError, mergeValidationDataValues, packUserOp } from '../utils/index.js'
 
 const epSimsInterface = new utils.Interface(I_ENTRY_POINT_SIMULATIONS)
 
@@ -86,6 +102,9 @@ const parseExecutionResult = (res: ExecutionResultStruct): ExecutionResult => {
 }
 
 const getTracerString = () => {
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = dirname(__filename)
+
     const jsFilePath = join(__dirname, './tracer.js')
     let tracer: string
     try {

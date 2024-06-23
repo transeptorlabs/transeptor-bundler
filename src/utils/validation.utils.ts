@@ -1,7 +1,9 @@
-import { UserOperation, ValidationErrors } from '../types'
-import { requireCond } from './rpc.utils'
-import { hexDataSlice, hexZeroPad } from 'ethers/lib/utils'
 import { BigNumber, BigNumberish, ethers } from 'ethers'
+import { hexDataSlice, hexZeroPad } from 'ethers/lib/utils.js'
+
+import { UserOperation, ValidationErrors } from '../types/index.js'
+
+import { requireCond } from './rpc.utils.js'
 
 export const maxUint48 = (2 ** 48) - 1
 export const SIG_VALIDATION_FAILED = hexZeroPad('0x01', 20)

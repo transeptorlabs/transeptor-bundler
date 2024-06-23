@@ -1,10 +1,16 @@
 import dotenv from 'dotenv'
 import { Wallet, providers, ethers, BigNumber, utils } from 'ethers'
-import { IENTRY_POINT_ABI } from '../src/abis'
-import { UserOperation } from '../src/types'
-import { packUserOp, deepHexlify } from '../src/utils'
-import { globalCounterABI, simpleAccountABI, simpleAccountFactoryABI } from './abi.e2e'
-import { Logger } from '../src/logger'
+
+import { IENTRY_POINT_ABI } from '../src/abis/index.js'
+import { Logger } from '../src/logger/index.js'
+import { UserOperation } from '../src/types/index.js'
+import { packUserOp, deepHexlify } from '../src/utils/index.js'
+
+import {
+  globalCounterABI,
+  simpleAccountABI,
+  simpleAccountFactoryABI,
+} from './abi.e2e.js'
 dotenv.config()
 
 const provider = new providers.StaticJsonRpcProvider('http://localhost:8545')
@@ -32,27 +38,6 @@ const simpleAccountFactory = new ethers.Contract(
     simpleAccountFactoryABI
 )
 const simpleAccountInterface = new utils.Interface(simpleAccountABI)
-
-// Helper functions
-const ethNodeUp = async () => {
-  try {
-    await provider.send('web3_clientVersion', [])
-    return true
-  } catch (e) {
-    Logger.error('Local Ethereum node is down')
-    return false
-  }
-}
-
-const bundlerNodeUp = async () => {
-  try {
-    await bundlerProvider.send('web3_clientVersion', [])
-    return true
-  } catch (e) {
-    Logger.error('Local Bundler node is down')
-    return false
-  }
-}
 
 const getCfFactoryData = (owner: string) => {
     const salt = BigNumber.from(Math.floor(Math.random() * 10000000)).toNumber() // a random salt 

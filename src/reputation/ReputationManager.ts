@@ -1,9 +1,16 @@
 import { BigNumber, Contract } from 'ethers'
-import { ReputationEntry, ReputationParams, ReputationStatus, StakeInfo, ValidationErrors } from '../types'
-import { requireCond, tostr } from '../utils'
-import { Logger } from '../logger'
-import { IStakeManager } from '../abis'
-import { ProviderService } from '../provider'
+
+import { IStakeManager } from '../abis/index.js'
+import { Logger } from '../logger/index.js'
+import { ProviderService } from '../provider/index.js'
+import {
+  ReputationEntry,
+  ReputationParams,
+  ReputationStatus,
+  StakeInfo,
+  ValidationErrors,
+} from '../types/index.js'
+import { requireCond, tostr } from '../utils/index.js'
 
 export class ReputationManager {
   private entries: { [address: string]: ReputationEntry } = {}

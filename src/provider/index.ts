@@ -1,1 +1,1 @@
-export { ProviderService } from './ProviderService'
+export { ProviderService } from './ProviderService.js'

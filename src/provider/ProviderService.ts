@@ -1,10 +1,11 @@
-import { ContractFactory, Wallet, ethers, providers } from 'ethers'
-import { TransactionRequest } from '@ethersproject/providers'
 import { Deferrable } from '@ethersproject/properties'
-import { Result, resolveProperties } from 'ethers/lib/utils'
-import { TraceOptions, TraceResult, BundlerCollectorReturn, ValidationErrors } from '../types'
-import { Logger } from '../logger'
-import { RpcError } from '../utils'
+import { TransactionRequest } from '@ethersproject/providers'
+import { ContractFactory, Wallet, ethers, providers } from 'ethers'
+import { Result, resolveProperties } from 'ethers/lib/utils.js'
+
+import { Logger } from '../logger/index.js'
+import { TraceOptions, TraceResult, ValidationErrors } from '../types/index.js'
+import { RpcError } from '../utils/index.js'
 
 export class ProviderService {
     private readonly provider: providers.JsonRpcProvider

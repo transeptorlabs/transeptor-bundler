@@ -1,9 +1,11 @@
-import express, { Request, Response } from 'express'
 import { createServer, Server } from 'http'
-import helmet from 'helmet'
+
 import cors from 'cors'
-import { JsonRpcRequest } from '../types'
-import { Logger } from '../logger'
+import express, { Request, Response } from 'express'
+import helmet from 'helmet'
+
+import { Logger } from '../logger/index.js'
+import { JsonRpcRequest } from '../types/index.js'
 
 export class MetricsHttpServer {
   private app: express.Application

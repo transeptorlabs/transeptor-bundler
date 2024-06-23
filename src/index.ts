@@ -1,14 +1,22 @@
-import { BundleManager, BundleProcessor } from './bundle'
-import { EventsManager } from './event'
-import { RpcMethodHandler, EthAPI, DebugAPI, Web3API } from './json-rpc-handler'
-import { JsonrpcHttpServer } from './json-rpc-server'
-import { MempoolManager } from './mempool'
-import { ProviderService } from './provider'
-import { ReputationManager } from './reputation'
-import { ValidationService } from './validation'
-import { Logger } from './logger'
-import { Config } from './config/Config'
-import { MetricsHttpServer, MetricsTracker } from './metrics'
+import { BundleManager, BundleProcessor } from './bundle/index.js'
+import { EventsManager } from './event/index.js'
+import {
+  RpcMethodHandler,
+  EthAPI,
+  DebugAPI,
+  Web3API,
+} from './json-rpc-handler/index.js'
+import { JsonrpcHttpServer } from './json-rpc-server/index.js'
+import { MempoolManager } from './mempool/index.js'
+import { ProviderService } from './provider/index.js'
+import { ReputationManager } from './reputation/index.js'
+import { ValidationService } from './validation/index.js'
+import { Logger } from './logger/index.js'
+import { Config } from './config/index.js'
+import { MetricsHttpServer, MetricsTracker } from './metrics/index.js'
+import { Libp2pNode } from './p2p/index.js'
+
+let p2pNode: Libp2pNode = undefined
 
 async function runBundler() {
   const config = new Config(process.argv)
@@ -67,7 +75,7 @@ async function runBundler() {
     mempoolManager,
     eventsManager,
     config.entryPointContract
-  );
+  )
   const web3 = new Web3API(config.clientVersion, config.isUnsafeMode)
   const rpcHandler = new RpcMethodHandler(
     eth,
@@ -76,6 +84,12 @@ async function runBundler() {
     providerService,
     config.httpApi
   )
+
+    // start p2p node
+    if (config.isP2PMode) {
+      p2pNode = new Libp2pNode(config.peerMultiaddrs, config.findPeers)
+      await p2pNode.start()
+    }
 
   // start rpc server
   const bundlerServer = new JsonrpcHttpServer(
@@ -101,4 +115,19 @@ async function runBundler() {
 runBundler().catch(async (error) => {
   Logger.fatal({error: error.message}, 'Aborted')
   process.exit(1)
+})
+
+
+async function stopLibp2p() {
+  if (p2pNode) {
+    await p2pNode.stop()
+  }
+}
+
+process.on('SIGTERM', async () => {
+  await stopLibp2p()
+})
+
+process.on('SIGTERM', async () => {
+  await stopLibp2p()
 })

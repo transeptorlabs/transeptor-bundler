@@ -1,1 +1,1 @@
-export { ReputationManager } from './ReputationManager'
+export { ReputationManager } from './ReputationManager.js'

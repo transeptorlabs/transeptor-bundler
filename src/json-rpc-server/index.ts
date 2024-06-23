@@ -1,1 +1,1 @@
-export { JsonrpcHttpServer } from './JsonRpcHttpServer'
+export { JsonrpcHttpServer } from './JsonRpcHttpServer.js'

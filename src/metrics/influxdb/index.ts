@@ -1,1 +1,1 @@
-export { InfluxdbClient } from './influxdb-client'
+export { InfluxdbClient } from './influxdb-client.js'

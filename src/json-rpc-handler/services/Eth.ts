@@ -1,14 +1,29 @@
 import { BigNumber, ethers } from 'ethers'
-import { EstimateUserOpGasResult, PackedUserOperation, UserOperation, UserOperationByHashResponse, UserOperationReceipt, ValidationErrors } from '../../types'
-import { deepHexlify, requireCond, packUserOp, unpackUserOp, requireAddressAndFields, calcPreVerificationGas } from '../../utils'
-import { ProviderService } from '../../provider'
-import { resolveProperties } from 'ethers/lib/utils'
-import { BundleManager } from '../../bundle'
-import { MempoolManager } from '../../mempool'
-import { ValidationService } from '../../validation'
-import { EventsManager } from '../../event'
-import { simulateHandleOp } from '../../entrypoint'
-import { Logger } from '../../logger'
+import {
+  EstimateUserOpGasResult,
+  PackedUserOperation,
+  UserOperation,
+  UserOperationByHashResponse,
+  UserOperationReceipt,
+  ValidationErrors,
+} from '../../types/index.js'
+import {
+  deepHexlify,
+  requireCond,
+  packUserOp,
+  unpackUserOp,
+  requireAddressAndFields,
+  calcPreVerificationGas,
+} from '../../utils/index.js'
+
+import { ProviderService } from '../../provider/index.js'
+import { resolveProperties } from 'ethers/lib/utils.js'
+import { BundleManager } from '../../bundle/index.js'
+import { MempoolManager } from '../../mempool/index.js'
+import { ValidationService } from '../../validation/index.js'
+import { EventsManager } from '../../event/index.js'
+import { simulateHandleOp } from '../../entrypoint/index.js'
+import { Logger } from '../../logger/index.js'
 
 export class EthAPI {
   private readonly entryPointContract: ethers.Contract
@@ -50,9 +65,9 @@ export class EthAPI {
     requireCond(userOp1 != null, 'No UserOperation param')
     const userOp = await resolveProperties(userOp1) as any
 
-    const fields = ["sender", "nonce", "callData"];
+    const fields = ['sender', 'nonce', 'callData']
     if (requireSignature) {
-      fields.push("signature");
+      fields.push('signature')
     }
     if (requireGasParams) {
       fields.push('preVerificationGas', 'verificationGasLimit', 'callGasLimit', 'maxFeePerGas', 'maxPriorityFeePerGas')
@@ -83,7 +98,7 @@ export class EthAPI {
       callGasLimit:  BigNumber.from(10e6).toHexString(),
       ...userOpInput,
     }
-    await this.validateParameters(deepHexlify(userOp), entryPointInput);
+    await this.validateParameters(deepHexlify(userOp), entryPointInput)
     const {
       preOpGas,
       validAfter,

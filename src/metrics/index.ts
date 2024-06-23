@@ -1,2 +1,2 @@
-export { MetricsHttpServer } from './metrics-server'
-export { MetricsTracker } from './metrics-tracker'
+export { MetricsHttpServer } from './metrics-server.js'
+export { MetricsTracker } from './metrics-tracker.js'

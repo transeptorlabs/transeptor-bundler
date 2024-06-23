@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  A lightweight ERC4337 bundler node designed specifically for Node.js environment; with a focus on minimal resource consumption, high performance, and minimal dependencies.
+  A lightweight ERC4337 bundler node designed specifically for Node.js environment; with a focus on minimal resource consumption, and minimal dependencies.
 </p>
 
 <p align="center">

@@ -1,7 +1,9 @@
 import { Mutex } from 'async-mutex'
-import { BundleProcessor } from './BundleProcessor'
-import { Logger } from '../logger'
-import { SendBundleReturn } from '../types'
+
+import { Logger } from '../logger/index.js'
+import { SendBundleReturn } from '../types/index.js'
+
+import { BundleProcessor } from './BundleProcessor.js'
 
 /*
   This class act as a top-level interface to bundle UserOperations.

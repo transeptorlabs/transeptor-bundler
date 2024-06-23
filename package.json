@@ -1,7 +1,7 @@
 {
   "name": "transeptor-bundler",
   "version": "0.6.1-alpha.0",
-  "description": "A lightweight ERC4337 bundler node designed specifically for Node.js environment; with a focus on minimal resource consumption, high performance, and minimal dependencies.",
+  "description": "A lightweight ERC4337 bundler node designed specifically for Node.js environment; with a focus on minimal resource consumption, and minimal dependencies.",
   "author": {
     "name": "Transeptor Labs",
     "email": "transeptorhq@gmail.com",
@@ -16,24 +16,27 @@
   "bugs": {
     "url": "https://github.com/transeptorlabs/transeptor-bundler/issues"
   },
+  "type": "module",
+  "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "scripts": {
     "///ab": "_____________________________________________________________________",
     "///cv": "________________________WELCOME BUILDERS______________________________",
     "///tu": "_____________________________________________________________________",
     "clean": "rm -rf dist",
-    "build": "tsc -p ./tsconfig.json && cp ./src/entrypoint/tracer.js dist/cjs/src/entrypoint",
+    "build": "tsc -p ./tsconfig.json && cp ./src/entrypoint/tracer.js dist/esm/src/entrypoint",
     "build:contracts": "cd contracts && forge build",
     "dev": "nodemon",
-    "start": "ts-node ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "start:unsafe": "ts-node ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
-    "start:metrics": "npm run build && node dist/cjs/src/index.js --httpApi web3,eth,debug --txMode base --metrics | pino-pretty",
-    "start:prod": "npm run build && node dist/cjs/src/index.js --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "test": "jest --coverage --config ./jest.config.js",
-    "lint": "eslint src/**/*.ts test/**/*.ts e2e/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts test/**/*.ts e2e/**/*.ts --fix",
-    "local-eth": "./eth-node",
-    "op": "ts-node ./e2e/send-userop.e2e.ts | pino-pretty",
+    "start": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "start:unsafe": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
+    "start:metrics": "node --loader ts-node/esm ./src/index.ts  --httpApi web3,eth,debug --txMode base --metrics | pino-pretty",
+    "start:prod": "npm run build && node dist/esm/src/index.js --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "test": "vitest --config ./vitest.config.ts",
+    "lint": "eslint src/*.ts src/**/*.ts src/**/**/*.ts test/**/*.ts e2e/*.ts",
+    "lint:fix": "eslint src/*.ts src/**/*.ts src/**/**/*.ts test/**/*.ts e2e/*.ts --fix",
+    "op": "node --loader ts-node/esm ./e2e/send-userop.e2e.ts | pino-pretty",
     "///cK": "________________________DOCKER CONTAINERS______________________________",
+    "local-eth": "./eth-node",
     "build:image": "docker build -t bundler-typescript:v-local .",
     "influxdb": "docker-compose up influxdb",
     "grafana": "docker-compose up grafana",
@@ -57,17 +60,19 @@
     "pino": "^8.14.1"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.2",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
     "@types/node": "18.16.3",
+    "@types/os-utils": "^0.0.4",
     "@typescript-eslint/eslint-plugin": "5.59.2",
     "@typescript-eslint/parser": "5.59.2",
     "eslint": "8.39.0",
-    "jest": "^29.5.0",
     "nodemon": "^3.1.0",
     "pino-pretty": "^10.0.0",
-    "ts-jest": "^29.1.0",
     "ts-node": "10.9.1",
-    "typescript": "5.0.4"
+    "typescript": "5.0.4",
+    "vite": "^5.3.1",
+    "vitest": "^1.6.0"
   },
   "engines": {
     "node": ">=20.11.1"
