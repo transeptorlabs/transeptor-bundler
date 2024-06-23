@@ -24,9 +24,9 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
-  },
-  "paths": {
-    "*": ["node_modules/*"]
+    "paths": {
+      "*": ["node_modules/*"]
+    },
   },
   "include": [
     "src/**/*.ts",
