@@ -1,4 +1,6 @@
-import { join } from 'node:path'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'url'
+
 import { Worker, isMainThread } from 'node:worker_threads'
 
 import { Logger } from '../logger/index.js'
@@ -22,6 +24,9 @@ export class MetricsTracker {
 
         // create worker thread to process the metrics
         if (isMainThread) {
+            const __filename = fileURLToPath(import.meta.url)
+            const __dirname = dirname(__filename)
+      
             const workerFilePath = join(__dirname, './workers/system-metrics-worker.js')
             this.systemMetricsWorker = new Worker(workerFilePath, {
                 workerData: {
