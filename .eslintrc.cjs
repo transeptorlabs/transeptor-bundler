@@ -16,7 +16,7 @@ module.exports = {
     'semi': ['error', 'never'],
     'quotes': ['error', 'single'],
     'no-unused-vars': 'off',
-    '@typescript-eslint/no-unused-vars': 'off'
+    '@typescript-eslint/no-unused-vars': 'off',
   },
   ignorePatterns: ['node_modules', './src/validation/tracer.js', '.eslintrc.js', 'scripts' ],
   overrides: [
@@ -25,4 +25,8 @@ module.exports = {
       excludedFiles: './lib/**',
     },
   ],
+  parserOptions: {
+    'ecmaVersion': 'latest',
+    'sourceType': 'module'
+  },
 }

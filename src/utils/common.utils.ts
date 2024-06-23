@@ -1,6 +1,6 @@
 import { ethers, BigNumber, BytesLike } from 'ethers'
-import { hexlify, hexZeroPad } from 'ethers/lib/utils'
 import { BigNumberish } from 'ethers/lib/ethers'
+import { hexlify, hexZeroPad } from 'ethers/lib/utils.js'
 
 export function isValidAddress(address: string) {
   return ethers.utils.isAddress(address)

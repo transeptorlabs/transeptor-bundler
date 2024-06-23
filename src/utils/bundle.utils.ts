@@ -1,19 +1,19 @@
+import { BigNumber, BigNumberish, BytesLike, ethers } from 'ethers'
 import {
   hexConcat,
   hexDataLength,
   hexDataSlice,
   hexZeroPad,
-  hexlify,
   defaultAbiCoder,
   keccak256,
-} from 'ethers/lib/utils'
-import { BigNumber, BigNumberish, BytesLike, ethers } from 'ethers'
+} from 'ethers/lib/utils.js'
+
 import {
   SlotMap,
   StorageMap,
   UserOperation,
   PackedUserOperation,
-} from '../types'
+} from '../types/index.js'
 
 /**
  * merge all validationStorageMap objects into merged map

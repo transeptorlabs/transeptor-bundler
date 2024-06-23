@@ -1,6 +1,5 @@
-import pino from 'pino'
-import { LoggerOptions } from 'pino'
 import dotenv from 'dotenv'
+import pino, { LoggerOptions } from 'pino'
 dotenv.config()
 
 class Logger {

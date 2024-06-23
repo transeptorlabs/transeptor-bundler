@@ -1,12 +1,14 @@
-import express, { Request, Response } from 'express'
 import { createServer, Server } from 'http'
-import helmet from 'helmet'
+
 import cors from 'cors'
 import { ethers } from 'ethers'
-import { ProviderService } from '../provider'
-import { RpcMethodHandler } from '../json-rpc-handler'
-import { JsonRpcRequest } from '../types'
-import { Logger } from '../logger'
+import express, { Request, Response } from 'express'
+import helmet from 'helmet'
+
+import { RpcMethodHandler } from '../json-rpc-handler/index.js'
+import { Logger } from '../logger/index.js'
+import { ProviderService } from '../provider/index.js'
+import { JsonRpcRequest } from '../types/index.js'
 
 export class JsonrpcHttpServer {
   private app: express.Application

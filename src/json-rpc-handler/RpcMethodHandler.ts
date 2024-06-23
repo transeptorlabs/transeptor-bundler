@@ -1,8 +1,14 @@
-import { EthAPI, Web3API, DebugAPI} from './services'
-import { ProviderService } from '../provider'
-import { JsonRpcErrorResponse, JsonRpcRequest, JsonRpcResponse, JsonRpcSuccessResponse } from '../types'
-import { Logger } from '../logger'
-import { RpcError, deepHexlify } from '../utils'
+import { Logger } from '../logger/index.js'
+import { ProviderService } from '../provider/index.js'
+import {
+  JsonRpcErrorResponse,
+  JsonRpcRequest,
+  JsonRpcResponse,
+  JsonRpcSuccessResponse,
+} from '../types/index.js'
+import { RpcError, deepHexlify } from '../utils/index.js'
+
+import { EthAPI, Web3API, DebugAPI } from './services/index.js'
 
 export class RpcMethodHandler {
   private readonly eth: EthAPI

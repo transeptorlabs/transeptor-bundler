@@ -1,12 +1,14 @@
+import { BigNumber, providers } from 'ethers'
+
+import { MempoolManager } from '../src/mempool/index.js'
+import { ProviderService } from '../src/provider/index.js'
+import { ReputationManager } from '../src/reputation/index.js'
+
 import {
   mockUserOperationFactory,
   mockEntryPointGetUserOpHash,
   testWallet,
-} from './test-helpers'
-import { MempoolManager } from '../src/mempool'
-import { ReputationManager } from '../src/reputation'
-import { BigNumber, providers, Wallet } from 'ethers'
-import { ProviderService } from '../src/provider'
+} from './test-helpers.js'
 
 describe('MempoolManager', () => {
   let mempoolManager: MempoolManager

@@ -1,1 +1,1 @@
-export { ValidationService } from './ValidationService'
+export { ValidationService } from './ValidationService.js'

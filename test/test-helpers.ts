@@ -1,5 +1,6 @@
 import { BigNumber, Wallet, BigNumberish } from 'ethers'
-import { UserOperation } from '../src/types'
+
+import { UserOperation } from '../src/types/index.js'
 
 export function mockUserOperationFactory(
   sender: string,

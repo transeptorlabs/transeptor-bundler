@@ -1,7 +1,8 @@
 import { join } from 'node:path'
 import { Worker, isMainThread } from 'node:worker_threads'
-import { Logger } from '../logger'
-import { InfluxdbConnection, WorkerMessage } from '../types'
+
+import { Logger } from '../logger/index.js'
+import { InfluxdbConnection, WorkerMessage } from '../types/index.js'
 
 export class MetricsTracker {
     private interval: any| null = null

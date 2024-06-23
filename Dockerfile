@@ -28,4 +28,4 @@ WORKDIR /usr/app
 # Copy files from the previous build stage
 COPY --from=build_deps /usr/app .
 
-ENTRYPOINT ["node", "./dist/cjs/src/index.js"]
+ENTRYPOINT ["node", "./dist/esm/src/index.js"]

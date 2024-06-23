@@ -1,6 +1,7 @@
 import { BigNumberish } from 'ethers'
-import { UserOperation } from './userop.types'
-import { ReferencedCodeHashes } from './validation.types'
+
+import { UserOperation } from './userop.types.js'
+import { ReferencedCodeHashes } from './validation.types.js'
 
 export interface MempoolEntry {
     userOp: UserOperation;

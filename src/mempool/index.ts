@@ -1,1 +1,1 @@
-export { MempoolManager } from './MempoolManager'
+export { MempoolManager } from './MempoolManager.js'

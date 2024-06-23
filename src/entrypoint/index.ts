@@ -1,1 +1,1 @@
-export * from './sim'
+export * from './sim.js'

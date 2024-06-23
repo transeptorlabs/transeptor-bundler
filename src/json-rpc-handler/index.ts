@@ -1,2 +1,2 @@
-export { RpcMethodHandler } from './RpcMethodHandler'
-export * from './services'
+export { RpcMethodHandler } from './RpcMethodHandler.js'
+export * from './services/index.js'

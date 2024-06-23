@@ -1,9 +1,10 @@
-import { ethers } from 'ethers'
-import { MempoolManager } from '../mempool'
-import { ProviderService } from '../provider'
-import { ReputationManager } from '../reputation'
-import { Logger } from '../logger'
 import { Log } from '@ethersproject/providers'
+import { ethers } from 'ethers'
+
+import { Logger } from '../logger/index.js'
+import { MempoolManager } from '../mempool/index.js'
+import { ProviderService } from '../provider/index.js'
+import { ReputationManager } from '../reputation/index.js'
 
 /**
  * listen to events. trigger ReputationManager's Included

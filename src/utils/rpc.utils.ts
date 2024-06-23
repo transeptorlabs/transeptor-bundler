@@ -1,4 +1,4 @@
-import { hexlify } from 'ethers/lib/utils'
+import { hexlify } from 'ethers/lib/utils.js'
 
 export function requireCond (cond: boolean, msg: string, code?: number, data: any = undefined): void {
     if (!cond) {

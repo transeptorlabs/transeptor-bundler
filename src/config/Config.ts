@@ -1,12 +1,13 @@
-import packageJson from '../../package.json'
-import dotenv from 'dotenv'
 import { Command, OptionValues } from 'commander'
+import dotenv from 'dotenv'
 import { BigNumber, Wallet, ethers, providers } from 'ethers'
-import { parseEther } from 'ethers/lib/utils'
-import { isValidAddress } from '../utils'
-import { IENTRY_POINT_ABI } from '../abis'
-import { Logger } from '../logger'
-import { InfluxdbConnection } from '../types'
+import { parseEther } from 'ethers/lib/utils.js'
+
+import packageJson from '../../package.json' assert { type: 'json' }
+import { IENTRY_POINT_ABI } from '../abis/index.js'
+import { Logger } from '../logger/index.js'
+import { InfluxdbConnection } from '../types/index.js'
+import { isValidAddress } from '../utils/index.js'
 dotenv.config()
 
 export class Config {
