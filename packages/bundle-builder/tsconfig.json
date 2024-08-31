@@ -1,15 +1,14 @@
 {
   "extends": "../../tsconfig-base.json",
   "compilerOptions": {
-    "outDir": "dist/esm",
+    "outDir": "dist",
     "baseUrl": "./",
     "paths": {
       "*": ["node_modules/*"]
     },
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.js",
+    "./src/",
     "../shared/**/*.ts",
   ],
   "exclude": [

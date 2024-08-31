@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  A lightweight ERC4337 bundler node designed specifically for Node.js environment; with a focus on minimal resource consumption, and minimal dependencies.
+  A Typescript ERC4337 bundler node designed; with a focus on minimal resource consumption, and minimal dependencies.
 </p>
 
 <p align="center">
@@ -16,7 +16,6 @@
     <img src="https://img.shields.io/codecov/c/github/transeptorlabs/transeptor-bundler.svg?style=flat-square" alt="codecov">
   </a>
   <img src="https://img.shields.io/badge/ESM-supported-brightgreen" alt="ESM Supported">
-  <img src="https://img.shields.io/docker/pulls/transeptorlabs/bundler" alt="Docker pulls">
 </p>
 
 ## Project status
@@ -30,6 +29,8 @@
 - **Metrics** - Metrics gives insight into the bundler node to allow for performance tuning and debugging. Transeptor bundler can be be configure to store metrics using a push(InfluxDB) and pull(Prometheus) metrics system. Grafana is used to visualize all the metrics. Use `--metrics` flag to enable.
 - **Entity Reputation System** - When staked(i.e with entrypoint contract), an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH. Node can be pre-configured to blacklist and whitelist entities on startup.
 - **Entrypoint contract** - Supports Entrypoint contract [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7)
+- **Muti-node configuration** - Transeptor bundler is degined to work in a multi-node configuration. The `relayer` node is a light weight node that relays validated userOp to a `bundle-builder` node. While the `bundle-builder node` is light weight node the receives validated userOps(ie. from the relayer of p2p mempool) and builds and send bundles.
+- **p2p mempol** - Coming soon.
 
 ## 🚀 Development
 
@@ -43,7 +44,10 @@ Everything you need to get started developing with Transeptor.
 5. Start local eth node `yarn local-eth` - Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to the `.env` file.
 6. In a new terminal window start the bundler node with live watch for local dev. `yarn dev`
 
-The bundler will start on `http://localhost:4337/rpc`. You can now make changes to the code and the bundler will automatically restart. Happy hacking!
+- The `relayer` node will start on `http://localhost:4337/rpc`. 
+- The `bundle-builder` node will start on `http://localhost:4338/rpc`.
+
+You can now make changes to the code and each node will automatically restart.
 
 #### Local dev scripts 
 
@@ -73,8 +77,8 @@ You can build Transeptor from source or use the Docker image.
 
 ### 🔧 Run from source
 1. Use correct node version `nvm use`
-2. Install dependencies `npm install`
-3. Build all packages `yarn build`
+2. Install dependencies `yarn install`
+3. Build `relayer` and `bundle-builder` nodes `yarn build`
 4. Copy values in `.env.sample` into `.env` and fill in the values with your own.
 
 Now let's start the bundler node.(make sure to pass your command line arguments)
@@ -139,8 +143,8 @@ TRANSEPTOR_ENTRYPOINT_ADDRESS=0x
 TRANSEPTOR_BENEFICIARY=<address_to_receive_funds>
 
 # Optional
-TRANSEPTOR_WHITE_LIST=<address_to_whitelist_SEPARATEDBY_COMMA>
-TRANSEPTOR_BLACK_LIST=<address_to_blacklist_SEPARATEDBY_COMMA>
+TRANSEPTOR_WHITE_LIST=<address_to_whitelist_SEPARATED_BY_COMMA>
+TRANSEPTOR_BLACK_LIST=<address_to_blacklist_SEPARATED_BY_COMMA>
 TRANSEPTOR_INFLUX_TOKEN=DEV_TOKEN
 ```
 

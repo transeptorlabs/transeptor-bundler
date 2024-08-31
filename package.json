@@ -2,7 +2,7 @@
   "name": "root",
   "private": true,
   "version": "0.6.2-alpha.0",
-  "description": "A ERC4337 bundler node written in typescript",
+  "description": "A typescript ERC4337 bundler node designed; with a focus on minimal resource consumption, and minimal dependencies.",
   "author": {
     "name": "Transeptor Labs",
     "email": "transeptorhq@gmail.com",
@@ -36,7 +36,7 @@
     "build:contracts": "cd contracts && forge build",
     "///cK": "________________________DOCKER CONTAINERS______________________________",
     "local-eth": "./eth-node",
-    "image:bundle-builder": "docker build -t bundle-builder:v-local --build-arg PACKAGE_NAME=bundle-builder .",
+    "image:bundle-builder": "docker -f Dockerfile.bundle-builder build -t bundle-builder:v-local .",
     "image:relayer": "docker build -f Dockerfile.relayer -t relayer:v-local .",
     "start:docker-bundle-builder": "docker-compose up bundle-builder",
     "start:docker-relayer": "docker-compose up relayer",
@@ -54,7 +54,6 @@
     "nodemon": "^3.1.0",
     "pino-pretty": "^10.0.0",
     "ts-node": "10.9.1",
-    "tsc": "^2.0.4",
     "typescript": "5.0.4",
     "vite": "^5.3.1",
     "vitest": "^1.6.0"

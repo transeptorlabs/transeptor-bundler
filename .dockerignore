@@ -1,12 +1,13 @@
 # dependencies
 node_modules
+**/node_modules
 
 # Docker
 Dockerfile
 docker-compose.yml
 
 # build
-dist
+**/dist
 
 # contracts
 contracts

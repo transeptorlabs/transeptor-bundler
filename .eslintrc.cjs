@@ -18,6 +18,8 @@ module.exports = {
     'node_modules',
     '**/!.eslintrc.cjs',
     '**/*.js', // Ignore tracer file
+    '**/.cache',
+    '**/dist'
   ],
   overrides: [
     {
