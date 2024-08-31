@@ -1,25 +1,25 @@
 version: "3"
 services:
-  relayer:
-    container_name: transeptor-relayer-dev
-    image: relayer:v-local
+  bundler-relayer:
+    container_name: bundler-relayer-dev
+    image: bundler-relayer:v-local
     ports:
       - "4337:4337"
     env_file:
-      - ./packages/relayer/.env
+      - ./packages/bundler-relayer/.env
     command: >
       --port 4337
       --network http://host.docker.internal:8545
       --txMode base
       --httpApi web3,eth,debug
 
-  bundle-builder:
-    container_name: bundle-builder-dev
-    image: bundle-builder:v-local
+  bundler-builder:
+    container_name: bundler-builder-dev
+    image: bundler-builder:v-local
     ports:
       - "4337:4337"
     env_file:
-      - ./packages/bundle-builder/.env
+      - ./packages/bundler-builder/.env
     command: >
       --port 4337
       --network http://host.docker.internal:8545

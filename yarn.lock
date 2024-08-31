@@ -2249,9 +2249,31 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bundle-builder@workspace:packages/bundle-builder":
+"bundler-builder@workspace:packages/bundler-builder":
   version: 0.0.0-use.local
-  resolution: "bundle-builder@workspace:packages/bundle-builder"
+  resolution: "bundler-builder@workspace:packages/bundler-builder"
+  dependencies:
+    "@chainsafe/libp2p-noise": 12.0.2
+    "@influxdata/influxdb-client": 1.33.2
+    "@libp2p/mplex": 8.0.4
+    "@libp2p/tcp": 7.0.3
+    "@multiformats/multiaddr": 12.1.5
+    async-mutex: 0.4.0
+    commander: 10.0.1
+    cors: 2.8.5
+    dotenv: 16.0.3
+    ethers: 5.7.1
+    express: 4.18.3
+    helmet: 7.1.0
+    libp2p: 0.45.9
+    os-utils: 0.0.14
+    pino: 8.14.1
+  languageName: unknown
+  linkType: soft
+
+"bundler-relayer@workspace:packages/bundler-relayer":
+  version: 0.0.0-use.local
+  resolution: "bundler-relayer@workspace:packages/bundler-relayer"
   dependencies:
     "@chainsafe/libp2p-noise": 12.0.2
     "@influxdata/influxdb-client": 1.33.2
@@ -5297,28 +5319,6 @@ __metadata:
   checksum: 7c5011f19e6ddcb759c1e6756877cee3c9eb78fbd1278eca4572d75f74993f0ccdc1e5f7761de6e682dff5344ee94f7a69bc492e2e8eb81d8777774a2399ce9c
   languageName: node
   linkType: hard
-
-"relayer@workspace:packages/relayer":
-  version: 0.0.0-use.local
-  resolution: "relayer@workspace:packages/relayer"
-  dependencies:
-    "@chainsafe/libp2p-noise": 12.0.2
-    "@influxdata/influxdb-client": 1.33.2
-    "@libp2p/mplex": 8.0.4
-    "@libp2p/tcp": 7.0.3
-    "@multiformats/multiaddr": 12.1.5
-    async-mutex: 0.4.0
-    commander: 10.0.1
-    cors: 2.8.5
-    dotenv: 16.0.3
-    ethers: 5.7.1
-    express: 4.18.3
-    helmet: 7.1.0
-    libp2p: 0.45.9
-    os-utils: 0.0.14
-    pino: 8.14.1
-  languageName: unknown
-  linkType: soft
 
 "resolve-from@npm:^4.0.0":
   version: 4.0.0

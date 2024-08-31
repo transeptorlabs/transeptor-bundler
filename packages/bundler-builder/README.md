@@ -1,7 +1,7 @@
-# Bundle Builder
+# Bundler Builder
 
 <p align="center">
-    A light weight node the receives validated userOps and builds and send bundles.
+    A light weight node the receives validated userOps, builds and sends bundles.
 </p>
 
 <p align="center">

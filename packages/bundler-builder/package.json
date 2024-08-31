@@ -1,7 +1,7 @@
 {
-  "name": "bundle-builder",
+  "name": "bundler-builder",
   "version": "0.6.2-alpha.0",
-  "description": "A light weight node the receives validated userOps and builds and send bundles.",
+  "description": "A light weight node the receives validated userOps, builds and send bundles.",
   "type": "module",
   "exports": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",

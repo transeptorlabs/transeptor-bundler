@@ -80,13 +80,13 @@ Now let's start the bundler node.(make sure to pass your command line arguments)
 
 Build image locally
 ```bash
-yarn image:bundle-builder
+yarn image:builder
 yarn image:relayer
 ```
 
 Run image locally
 ```bash
-yarn start:docker-bundle-builder
+yarn start:docker-builder
 yarn start:docker-relayer
 ```
 

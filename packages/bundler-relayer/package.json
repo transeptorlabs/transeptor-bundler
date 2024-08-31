@@ -1,5 +1,5 @@
 {
-  "name": "relayer",
+  "name": "bundler-relayer",
   "version": "0.6.2-alpha.0",
   "description": "A light weight node that relays validated userOp to a bundle-builder node.",
   "license": "GNU",
@@ -14,7 +14,7 @@
     "start": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
     "start:unsafe": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
     "start:metrics": "node --loader ts-node/esm ./src/index.ts  --httpApi web3,eth,debug --txMode base --metrics | pino-pretty",
-    "start:prod": "yarn build && node dist/relayer/src/index.js --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "start:prod": "yarn build && node dist/bundler-relayer/src/index.js --httpApi web3,eth,debug --txMode base | pino-pretty",
     "test": "vitest --config ./vitest.config.ts",
     "lint": "eslint . --ext ts",
     "lint:fix": "yarn lint --fix"

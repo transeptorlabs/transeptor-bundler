@@ -9,7 +9,7 @@ COPY . .
 
 RUN yarn install --frozen-lockfile
 
-WORKDIR /app/packages/relayer
+WORKDIR /app/packages/bundler-builder
 
 RUN yarn build
 
@@ -20,8 +20,8 @@ WORKDIR /app
 
 ENV NODE_ENV production
 
-COPY --from=build /app/packages/relayer/dist ./dist
-COPY --from=build /app/packages/relayer/package.json ./
+COPY --from=build /app/packages/bundler-builder/dist ./dist
+COPY --from=build /app/packages/bundler-builder/package.json ./
 
 RUN yarn install --production --frozen-lockfile
 RUN yarn cache clean --all
@@ -30,4 +30,4 @@ RUN yarn cache clean --all
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
-ENTRYPOINT ["node", "dist/relayer/src/index.js"]
+ENTRYPOINT ["node", "dist/bundler-builder/src/index.js"]
