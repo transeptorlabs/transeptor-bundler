@@ -1,0 +1,15 @@
+{
+  "name": "shared",
+  "version": "0.6.2-alpha.0",
+  "type": "module",
+  "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "scripts": {
+    "lint": "eslint . --ext ts",
+    "lint:fix": "yarn lint --fix"
+  },
+  "packageManager": "yarn@3.2.1",
+  "engines": {
+    "node": ">=20.11.1"
+  }
+}

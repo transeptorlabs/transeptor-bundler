@@ -1,6 +1,0 @@
-{
-    "watch": ["src"],
-    "ext": "ts,json",
-    "ignore": [],
-    "exec": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty"
-}

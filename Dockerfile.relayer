@@ -1,0 +1,31 @@
+# Stage 1: Build the source code
+FROM node:20-alpine3.18 as build
+
+WORKDIR /app
+
+COPY package.json yarn.lock ./
+
+COPY . .
+
+RUN yarn --frozen-lockfile
+RUN yarn install --frozen-lockfile
+
+WORKDIR /app/packages/relayer
+
+RUN yarn build
+
+RUN yarn install --frozen-lockfile
+
+# Stage 2: create prod image
+FROM node:20-alpine3.18 as production
+
+WORKDIR /app
+
+ENV NODE_ENV production
+
+COPY --from=build /app/packages/relayer/dist ./dist
+COPY --from=build /app/packages/relayer/package.json ./
+RUN yarn install --production --frozen-lockfile
+RUN yarn cache clean
+
+ENTRYPOINT ["node", "dist/esm/relayer/src/index.js"]

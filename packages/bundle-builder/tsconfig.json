@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig-base.json",
+  "compilerOptions": {
+    "outDir": "dist/esm",
+    "baseUrl": "./",
+    "paths": {
+      "*": ["node_modules/*"]
+    },
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.js",
+    "../shared/**/*.ts",
+  ],
+  "exclude": [
+  ]
+}

@@ -1,10 +1,10 @@
 import dotenv from 'dotenv'
 import { Wallet, providers, ethers, BigNumber, utils } from 'ethers'
 
-import { IENTRY_POINT_ABI } from '../src/abis/index.js'
-import { Logger } from '../src/logger/index.js'
-import { UserOperation } from '../src/types/index.js'
-import { packUserOp, deepHexlify } from '../src/utils/index.js'
+import { IENTRY_POINT_ABI } from '../packages/shared/abis/index.js'
+import { Logger } from '../packages/shared/logger/index.js'
+import { UserOperation } from '../packages/shared/types/index.js'
+import { packUserOp, deepHexlify } from '../packages/shared/utils/index.js'
 
 import {
   globalCounterABI,
@@ -84,7 +84,8 @@ const getUserOpCallData = (senderAddress: string) => {
 }
 
 const sendDeposit = async (senderAddress: string, feeData: providers.FeeData) => {
-    const depositInWei = BigNumber.from(2)
+    // Convert 10 ETH to Wei
+    const depositInWei = ethers.utils.parseEther('10.0')
     const transactionData = await epContract.populateTransaction.depositTo(
       senderAddress,
       {
@@ -107,7 +108,7 @@ const sendDeposit = async (senderAddress: string, feeData: providers.FeeData) =>
       Logger.error(`Deposit failed: ${senderDepoit.toString()} != ${depositInWei.toString()}`)
       throw new Error('Deposit failed')
     }
-    Logger.info(`Sender deposit: ${await getDeposit(senderAddress)} ETH`) 
+    Logger.info(`Sender deposit: ${await getDeposit(senderAddress)} wei`) 
 }
 
 const getDeposit = async (accountAddr: string): Promise<BigNumber> => {
@@ -175,8 +176,8 @@ async function main() {
     })
     Logger.info(gasEstimate, 'Gas Estimate')
     userOp.callGasLimit = BigNumber.from(gasEstimate.callGasLimit).toHexString()
-    userOp.verificationGasLimit = BigNumber.from(gasEstimate.verificationGasLimit).toHexString()
-    userOp.preVerificationGas = BigNumber.from(gasEstimate.preVerificationGas).toHexString()
+    userOp.verificationGasLimit = BigNumber.from(1000000).toHexString()
+    userOp.preVerificationGas = BigNumber.from(44848).toHexString()
     userOp.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas?.toHexString() ?? BigNumber.from(0).toHexString()
     userOp.maxFeePerGas = feeData.maxFeePerGas?.toHexString() ?? BigNumber.from(0).toHexString()
 
@@ -188,17 +189,18 @@ async function main() {
     const signedUserOp = deepHexlify({ ...userOp, signature })
 
     // Send userOp
-    Logger.info('Sending UserOp')
+    Logger.info({signedUserOp}, 'Sending UserOp')
     const userOpHash = await bundlerProvider.send('eth_sendUserOperation', [signedUserOp, epAddress]).catch((error: any) => {
       const parseJson = JSON.parse(error.body)
       Logger.error(parseJson, 'Failed to send user operation.')
       throw new Error('Failed to send user operation.')
     })
-    Logger.info('UserOp hash:', userOpHash)
+    Logger.info({userOpHash}, 'UserOp hash:', )
 }
 
 main()
   .then(() => process.exit(0))
-  .catch(() => {
+  .catch((error: any) => {
+    Logger.error(error.message)
     process.exit(1)
 })

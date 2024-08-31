@@ -39,32 +39,32 @@ Everything you need to get started developing with Transeptor.
 1. `git submodule update --init`
 2. Use correct node version `nvm use`
 3. Add `PRIVATE_KEY` to `contracts/.env` file to deploy the entrypoint contract locally.
-4. Install dependencies `npm install`
-5. Start local eth node `npm run local-eth` - Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to the `.env` file.
-6. In a new terminal window start the bundler node with live watch for local dev. `npm run dev`
+4. Install dependencies `yarn install`
+5. Start local eth node `yarn local-eth` - Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to the `.env` file.
+6. In a new terminal window start the bundler node with live watch for local dev. `yarn dev`
 
 The bundler will start on `http://localhost:4337/rpc`. You can now make changes to the code and the bundler will automatically restart. Happy hacking!
 
 #### Local dev scripts 
 
-1. Once the bundler node is running, you can use the `run-op` script to send a userOp through the bundler. `npm run op`
+1. Once the bundler node is running, you can use the `run-op` script to send a userOp through the bundler. `yarn op`
 
 ### Test
 
 ```bash
-npm run test
+yarn test
 ```
 
 ### Lint
 
 ```bash
-npm run lint
+yarn lint
 ```
 
 or
 
 ```bash
-npm run lint:fix
+yarn lint:fix
 ```
 
 ## Build
@@ -74,7 +74,7 @@ You can build Transeptor from source or use the Docker image.
 ### 🔧 Run from source
 1. Use correct node version `nvm use`
 2. Install dependencies `npm install`
-3. Build all packages `npm run build`
+3. Build all packages `yarn build`
 4. Copy values in `.env.sample` into `.env` and fill in the values with your own.
 
 Now let's start the bundler node.(make sure to pass your command line arguments)
@@ -86,12 +86,14 @@ Now let's start the bundler node.(make sure to pass your command line arguments)
 
 Build image locally
 ```bash
-npm run build:image
+yarn image:bundle-builder
+yarn image:relayer
 ```
 
 Run image locally
 ```bash
-npm run start:docker-bundler  
+yarn start:docker-bundle-builder
+yarn start:docker-relayer
 ```
 
 ## Command line arguments

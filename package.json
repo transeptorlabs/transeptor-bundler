@@ -1,7 +1,8 @@
 {
-  "name": "transeptor-bundler",
+  "name": "root",
+  "private": true,
   "version": "0.6.2-alpha.0",
-  "description": "A lightweight ERC4337 bundler node designed specifically for Node.js environment; with a focus on minimal resource consumption, and minimal dependencies.",
+  "description": "A ERC4337 bundler node written in typescript",
   "author": {
     "name": "Transeptor Labs",
     "email": "transeptorhq@gmail.com",
@@ -16,48 +17,31 @@
   "bugs": {
     "url": "https://github.com/transeptorlabs/transeptor-bundler/issues"
   },
-  "type": "module",
-  "exports": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "///ab": "_____________________________________________________________________",
     "///cv": "________________________WELCOME BUILDERS______________________________",
     "///tu": "_____________________________________________________________________",
     "clean": "rm -rf dist",
-    "build": "tsc -p ./tsconfig.json && cp ./src/entrypoint/tracer.js dist/esm/src/entrypoint",
-    "build:contracts": "cd contracts && forge build",
-    "dev": "nodemon",
-    "start": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "start:unsafe": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
-    "start:metrics": "node --loader ts-node/esm ./src/index.ts  --httpApi web3,eth,debug --txMode base --metrics | pino-pretty",
-    "start:prod": "npm run build && node dist/esm/src/index.js --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "test": "vitest --config ./vitest.config.ts",
-    "lint": "eslint src/*.ts src/**/*.ts src/**/**/*.ts test/**/*.ts e2e/*.ts",
-    "lint:fix": "eslint src/*.ts src/**/*.ts src/**/**/*.ts test/**/*.ts e2e/*.ts --fix",
+    "build": "yarn workspaces foreach --parallel --interlaced --verbose run build",
+    "dev": "yarn workspaces foreach --parallel --interlaced --verbose run dev",
+    "start": "yarn workspaces foreach --parallel --interlaced --verbose run start",
+    "start:prod": "yarn workspaces foreach --parallel --interlaced --verbose run start:prod",
+    "test": "yarn workspaces foreach --parallel --interlaced --verbose run test",
+    "lint": "yarn workspaces foreach --parallel --interlaced --verbose run lint",
+    "lint:fix": "yarn workspaces foreach --parallel --interlaced --verbose run lint:fix",
     "op": "node --loader ts-node/esm ./e2e/send-userop.e2e.ts | pino-pretty",
+    "build:contracts": "cd contracts && forge build",
     "///cK": "________________________DOCKER CONTAINERS______________________________",
     "local-eth": "./eth-node",
-    "build:image": "docker build -t bundler-typescript:v-local .",
+    "image:bundle-builder": "docker build -t bundle-builder:v-local --build-arg PACKAGE_NAME=bundle-builder .",
+    "image:relayer": "docker build -f Dockerfile.relayer -t relayer:v-local .",
+    "start:docker-bundle-builder": "docker-compose up bundle-builder",
+    "start:docker-relayer": "docker-compose up relayer",
     "influxdb": "docker-compose up influxdb",
-    "grafana": "docker-compose up grafana",
-    "start:docker-bundler": "docker-compose up bundler-typescript-local"
-  },
-  "dependencies": {
-    "@chainsafe/libp2p-noise": "^12.0.2",
-    "@influxdata/influxdb-client": "1.33.2",
-    "@libp2p/mplex": "^8.0.4",
-    "@libp2p/tcp": "^7.0.3",
-    "@multiformats/multiaddr": "^12.1.5",
-    "async-mutex": "0.4.0",
-    "commander": "10.0.1",
-    "cors": "^2.8.5",
-    "dotenv": "16.0.3",
-    "ethers": "^5.7.1",
-    "express": "^4.18.3",
-    "helmet": "^7.1.0",
-    "libp2p": "^0.45.9",
-    "os-utils": "0.0.14",
-    "pino": "^8.14.1"
+    "grafana": "docker-compose up grafana"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -70,10 +54,12 @@
     "nodemon": "^3.1.0",
     "pino-pretty": "^10.0.0",
     "ts-node": "10.9.1",
+    "tsc": "^2.0.4",
     "typescript": "5.0.4",
     "vite": "^5.3.1",
     "vitest": "^1.6.0"
   },
+  "packageManager": "yarn@3.2.1",
   "engines": {
     "node": ">=20.11.1"
   }

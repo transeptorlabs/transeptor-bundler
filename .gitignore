@@ -18,10 +18,15 @@ dist
 .env.test.local
 .env.production.local
 .vscode
+.editorconfig
 
-npm-debug.log*
+# Yarn
+.yarn-integrity
 yarn-debug.log*
 yarn-error.log*
+.yarn/cache
+.yarn/unplugged
+.yarn/install-state.gz
 
 # Metrics data
 /influxdb-data

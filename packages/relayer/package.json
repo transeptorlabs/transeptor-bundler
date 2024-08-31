@@ -1,0 +1,51 @@
+{
+  "name": "relayer",
+  "version": "0.6.2-alpha.0",
+  "description": "",
+  "license": "GNU",
+  "type": "module",
+  "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npx tsc -p ./tsconfig.json && cp ../shared/sim/tracer.js dist/esm/shared/sim",
+    "build:contracts": "cd contracts && forge build",
+    "dev": "nodemon",
+    "start": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "start:unsafe": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
+    "start:metrics": "node --loader ts-node/esm ./src/index.ts  --httpApi web3,eth,debug --txMode base --metrics | pino-pretty",
+    "start:prod": "yarn build && node dist/esm/relayer/src/index.js --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "test": "vitest --config ./vitest.config.ts",
+    "lint": "eslint . --ext ts",
+    "lint:fix": "yarn lint --fix"
+  },
+  "dependencies": {
+    "@chainsafe/libp2p-noise": "^12.0.2",
+    "@influxdata/influxdb-client": "1.33.2",
+    "@libp2p/mplex": "^8.0.4",
+    "@libp2p/tcp": "^7.0.3",
+    "@multiformats/multiaddr": "^12.1.5",
+    "async-mutex": "0.4.0",
+    "commander": "10.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "16.0.3",
+    "ethers": "^5.7.1",
+    "express": "^4.18.3",
+    "helmet": "^7.1.0",
+    "libp2p": "^0.45.9",
+    "os-utils": "0.0.14",
+    "pino": "^8.14.1"
+  },
+  "packageManager": "yarn@3.2.1",
+  "engines": {
+    "node": ">=20.11.1"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src"
+    ],
+    "ext": "ts,json",
+    "ignore": [],
+    "exec": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty"
+  }
+}
