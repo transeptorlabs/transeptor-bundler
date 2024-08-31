@@ -2,7 +2,7 @@
   "name": "root",
   "private": true,
   "version": "0.6.2-alpha.0",
-  "description": "A typescript ERC4337 bundler node designed; with a focus on minimal resource consumption, and minimal dependencies.",
+  "description": "A fast ERC-4337 bundler node with TypeScript-based compile-time type safety.",
   "author": {
     "name": "Transeptor Labs",
     "email": "transeptorhq@gmail.com",
