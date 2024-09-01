@@ -8,8 +8,8 @@
     },
   },
   "include": [
-    "./src/",
-    "../shared/**/*.ts",
+    "src/**/*",
+    "../shared/**/*.ts", "../shared/rpc-server",
   ],
   "exclude": [
   ]

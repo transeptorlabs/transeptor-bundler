@@ -73,7 +73,7 @@ You can build Transeptor from source or use the Docker image.
 
 Now let's start the bundler node.(make sure to pass your command line arguments)
 ```bash
-./transeptor --httpApi web3,eth,debug --txMode base
+./transeptor-relayer --httpApi web3,eth,debug --txMode base
 ```
 
 ### 🐳 Run from Docker image

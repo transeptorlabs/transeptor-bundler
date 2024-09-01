@@ -6,7 +6,7 @@ import {
   DebugAPI,
   Web3API,
 } from './json-rpc-handler/index.js'
-import { JsonrpcHttpServer } from './json-rpc-server/index.js'
+import { createRpcServer } from '../../shared/rpc-server/index.js'
 import { MempoolManager } from './mempool/index.js'
 import { ProviderService } from '../../shared/provider/index.js'
 import { ReputationManager } from './reputation/index.js'
@@ -18,7 +18,7 @@ import { Libp2pNode } from './p2p/index.js'
 
 let p2pNode: Libp2pNode = undefined
 
-async function runBundler() {
+const runBundler = async () => {
   const config = new Config(process.argv)
   const providerService = new ProviderService(config.provider, config.connectedWallet)
 
@@ -92,15 +92,45 @@ async function runBundler() {
     }
 
   // start rpc server
-  const bundlerServer = new JsonrpcHttpServer(
+  const bundlerServer = createRpcServer(
     rpcHandler,
-    providerService,
-    config.entryPointContract,
-    config.txMode,
-    config.isUnsafeMode,
     config.port
   )
-  await bundlerServer.start()
+  const relayerflightCheck = async() => {
+    const { name, chainId } = await providerService.getNetwork()
+
+    if (chainId === 31337 || chainId === 1337) {
+      const isDeployed = await providerService.checkContractDeployment(config.entryPointContract.address)
+      if (!isDeployed) {
+        throw new Error('Entry point contract is not deployed to the network. Please use a pre-deployed contract or deploy the contract first if you are using a local network.')
+      }
+    }
+    
+    const bal = await providerService.getSignerBalance()
+    if (bal.eq(0)) {
+      throw new Error('Bundler signer account is not funded:')
+    }
+  
+    if (config.txMode === 'conditional' && !await providerService.supportsRpcMethod('eth_sendRawTransactionConditional')) {
+      throw new Error('(conditional mode requires connection to a node that support eth_sendRawTransactionConditional')
+    }
+  
+    // full validation requires (debug_traceCall) method on eth node geth and can only be run in private and conditional txMode
+    if (config.txMode === 'searcher' && !config.isUnsafeMode && !await providerService.supportsRpcMethod('debug_traceCall')) {
+      throw new Error(`${config.txMode} mode does not support full validation. Full validation requires (debug_traceCall) method on eth node geth. For local UNSAFE mode: use --unsafe --txMode base or --unsafe --txMode conditional`)
+    }
+  
+    Logger.info(
+      {
+        signerAddress: await providerService.getSignerAddress(),
+        signerBalanceWei: bal.toString(),
+        network: {chainId, name},
+      },
+      'Relayer passed preflight check'
+    )
+
+  }
+  await bundlerServer.start(relayerflightCheck)
 
   // stat metrics server
   if (config.isMetricsEnabled) {
@@ -112,17 +142,16 @@ async function runBundler() {
   }
 }
 
-runBundler().catch(async (error) => {
-  Logger.fatal({error: error.message}, 'Aborted')
-  process.exit(1)
-})
-
-
-async function stopLibp2p() {
+const stopLibp2p = async () => {
   if (p2pNode) {
     await p2pNode.stop()
   }
 }
+
+runBundler().catch(async (error) => {
+  Logger.fatal({error: error.message}, 'Aborted')
+  process.exit(1)
+})
 
 process.on('SIGTERM', async () => {
   await stopLibp2p()

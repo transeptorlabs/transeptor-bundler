@@ -16,6 +16,11 @@ export class ProviderService {
         this.connectedWallet = connectedWallet
     }
     
+    /**
+     * Set the bundler mode to auto or manual.
+     * 
+     * @returns A JSON rpc provider
+     */
     getPovider(): providers.JsonRpcProvider {
         return this.provider
     }

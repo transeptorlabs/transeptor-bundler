@@ -231,7 +231,7 @@ export const partialSimulateValidation = async (epAddress: string, provider: Pro
         const [res] = epSimsInterface.decodeFunctionResult('simulateValidation', simulationResult)
         
         return parseValidationResult(userOp, res)
-    } catch (error) {
+    } catch (error: any) {
         let errorData
         if (error.body) {
             const bodyParse = JSON.parse(error.body)
@@ -287,7 +287,7 @@ export const fullSimulateValidation = async (epAddress: string, provider: Provid
         const validationResult = parseValidationResult(userOp, decodedSimulations)
 
         return [validationResult, tracerResult]
-    } catch (e) {
+    } catch (e: any) {
         // if already parsed, throw as is
         if (e.code != null) {
             throw e

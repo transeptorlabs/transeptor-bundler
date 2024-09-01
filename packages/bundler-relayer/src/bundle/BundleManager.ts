@@ -32,6 +32,11 @@ export class BundleManager {
     Logger.info(`Bundle mode set to ${ this.bundleMode} with interval ${this.autoBundleInterval} ms`)
   }
   
+  /**
+   * Set the bundler mode to auto or manual.
+   *
+   * @param mode - the bundler mode.
+   */
   public setBundlingMode(mode: 'auto' | 'manual') {
     this.bundleMode = mode
     Logger.info({ mode }, 'Set bundling mode')

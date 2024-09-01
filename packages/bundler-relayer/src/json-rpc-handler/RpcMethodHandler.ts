@@ -4,9 +4,13 @@ import {
   JsonRpcErrorResponse,
   JsonRpcRequest,
   JsonRpcResponse,
-  JsonRpcSuccessResponse,
 } from '../../../shared/types/index.js'
-import { RpcError, deepHexlify } from '../../../shared/utils/index.js'
+import {
+  RpcError,
+  createErrorResponse,
+  createSuccessResponse,
+  jsonRpcRequestValidator,
+} from '../../../shared/utils/index.js'
 
 import { EthAPI, Web3API, DebugAPI } from './services/index.js'
 
@@ -31,18 +35,21 @@ export class RpcMethodHandler {
     this.httpApi = httpApi
   }
 
-  public async doHandleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse> {
+  public async doHandleRequest(
+    request: JsonRpcRequest
+  ): Promise<JsonRpcResponse> {
     try {
-      const isValidRpc: boolean | JsonRpcErrorResponse = this.jsonRpcRequestValidator(request)
+      const isValidRpc: boolean | JsonRpcErrorResponse =
+        jsonRpcRequestValidator(request, this.httpApi)
       if (typeof isValidRpc !== 'boolean') {
         return isValidRpc
       }
-    
+
       const method = request.method
       const params = request.params
       let result: any
 
-      Logger.debug( {method}, 'Handling incoming request')
+      Logger.debug({ method }, 'Handling incoming request')
       switch (method) {
         case 'eth_chainId':
           result = await this.providerService.getChainId()
@@ -54,7 +61,10 @@ export class RpcMethodHandler {
           result = await this.eth.sendUserOperation(params[0], params[1])
           break
         case 'eth_estimateUserOperationGas':
-          result = await this.eth.estimateUserOperationGas(params[0], params[1])
+          result = await this.eth.estimateUserOperationGas(
+            params[0],
+            params[1]
+          )
           break
         case 'eth_getUserOperationReceipt':
           result = await this.eth.getUserOperationReceipt(params[0])
@@ -78,7 +88,10 @@ export class RpcMethodHandler {
           break
         case 'debug_bundler_sendBundleNow':
           result = await this.debug.sendBundleNow()
-          if (result.transactionHash === '' && result.userOpHashes.length === 0) {
+          if (
+            result.transactionHash === '' &&
+            result.userOpHashes.length === 0
+          ) {
             result = 'ok'
           }
           break
@@ -110,85 +123,21 @@ export class RpcMethodHandler {
           result = null
           break
         default:
-          throw new RpcError( `Method ${method} is not supported`, -32601)
+          throw new RpcError(`Method ${method} is not supported`, -32601)
       }
 
-      return this.createSuccessResponse(request.id, result)
+      return createSuccessResponse(request.id, result)
     } catch (error: any) {
-      Logger.error({error: error.message}, `Error calling method ${request.method}`)
-      return this.createErrorResponse(request.id, error.code ? error.code : -32000, error.message, error.data ? error.data : undefined)
-    }
-  }
-
-  private jsonRpcRequestValidator(request: JsonRpcRequest): boolean | JsonRpcErrorResponse {
-    if (!request.jsonrpc || request.jsonrpc !== '2.0') {
-      return this.createErrorResponse(request.id, -32600, 'Invalid Request, jsonrpc must be exactly "2.0"')
-    }
-
-    if (!request.method || typeof request.method !== 'string') {
-      return this.createErrorResponse(request.id, -32600, 'Invalid Request, method must be a string')
-    }
-
-    if (request.id === undefined) {
-      return this.createErrorResponse(request.id, -32600, 'Invalid Request, id is missing')
-    }
-
-    const idType = typeof request.id
-    if (idType !== 'number' && idType !== 'string') {
-      return this.createErrorResponse(request.id, -32600, 'Invalid Request, id must be a number or string')
-    }
-
-    if (!request.params || !Array.isArray(request.params)) {
-      return this.createErrorResponse(request.id, -32600, 'Invalid Request, params must be an array')
-    }
-
-    if (this.httpApi.indexOf(request.method.split('_')[0]) === -1) {
-      return this.createErrorResponse(
+      Logger.error(
+        { error: error.message },
+        `Error calling method ${request.method}`
+      )
+      return createErrorResponse(
         request.id,
-        -32601,
-        `Method ${request.method} is not supported`
+        error.code ? error.code : -32000,
+        error.message,
+        error.data ? error.data : undefined
       )
     }
-    return true
-  }
-
-  /*
-    * Construct JSON RPC success response
-  */
-  private createSuccessResponse(
-    id: number | string,
-    result: any
-  ): JsonRpcSuccessResponse {
-    const hexlifyResult = deepHexlify(result)
-    return {
-      jsonrpc: '2.0',
-      id,
-      result: hexlifyResult,
-    }
-  }
-
-  /*
-    * Construct JSON RPC error response
-  */
-  private createErrorResponse(
-    id: number | string,
-    code: number,
-    message: string,
-    data: any = undefined
-  ): JsonRpcErrorResponse {
-    const errorResponse: JsonRpcErrorResponse = {
-      jsonrpc: '2.0',
-      id,
-      error: {
-        code,
-        message,
-      },
-    }
-
-    if (data) {
-      errorResponse.error.data = data
-    }
-    
-    return errorResponse
   }
 }

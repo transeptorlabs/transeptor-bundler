@@ -5,4 +5,4 @@ export TRANSEPTOR_MNEMONIC='test test test test test test test test test test te
 export TRANSEPTOR_BENEFICIARY='0xd21934eD8eAf27a67f0A70042Af50A1D6d195E81'
 
 # Simple script to run Transeptor after building from source
-node ./dist/cjs/src/index.js
+node ./packages/bundler-relayer/dist/bundler-relayer/src/index.js
