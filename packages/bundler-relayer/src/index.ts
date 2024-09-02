@@ -12,14 +12,17 @@ import { ProviderService } from '../../shared/provider/index.js'
 import { ReputationManager } from './reputation/index.js'
 import { ValidationService } from '../../shared/validation/index.js'
 import { Logger } from '../../shared/logger/index.js'
-import { Config } from './config/index.js'
+import { initializeConfig, getConfig } from './config/index.js'
 import { MetricsHttpServer, MetricsTracker } from './metrics/index.js'
 import { Libp2pNode } from './p2p/index.js'
 
 let p2pNode: Libp2pNode = undefined
 
 const runBundler = async () => {
-  const config = new Config(process.argv)
+  const args = process.argv
+  initializeConfig(args)
+  const config = getConfig()
+
   const providerService = new ProviderService(config.provider, config.connectedWallet)
 
   // erc-4337 entity reputation components
