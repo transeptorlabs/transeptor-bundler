@@ -4,9 +4,13 @@ import { BigNumber, Wallet, ethers, providers } from 'ethers'
 import { parseEther } from 'ethers/lib/utils.js'
 
 import packageJson from '../../package.json' assert { type: 'json' }
-import { IENTRY_POINT_ABI } from '../../../shared/abis/index.js'
-import { InfluxdbConnection } from '../../../shared/types/index.js'
+import { IENTRY_POINT_ABI, IStakeManager } from '../../../shared/abis/index.js'
+import {
+  BundlerSignerWallets,
+  InfluxdbConnection,
+} from '../../../shared/types/index.js'
 import { isValidAddress } from '../../../shared/utils/index.js'
+import { createProvider } from '../../../shared/provider'
 
 dotenv.config()
 
@@ -18,10 +22,11 @@ const SUPPORTED_NAMESPACES = ['web3', 'eth', 'debug']
 export type Config = {
   provider: providers.JsonRpcProvider;
   bundlerSignerWallets: BundlerSignerWallets;
+  numberOfSigners: number;
   beneficiaryAddr: string;
   entryPointContract: ethers.Contract;
+  stakeManagerContract: ethers.Contract;
   minSignerBalance: BigNumber;
-  connectedWallet: Wallet; // TODO: remove and use bundlerSignerWallets
 
   isUnsafeMode: boolean;
   txMode: string;
@@ -47,9 +52,7 @@ export type Config = {
   isMetricsEnabled: boolean;
   metricsPort: number;
   influxdbConnection: InfluxdbConnection;
-}
-
-export type BundlerSignerWallets = Record<number, Wallet>;
+};
 
 const getBundlerSignerWallets = (
   numberOfSigners: number,
@@ -60,34 +63,21 @@ const getBundlerSignerWallets = (
     throw new Error('TRANSEPTOR_MNEMONIC env var not set')
   }
 
-  // We create a array if specific length with each element in the array is generated using a mapping function.
-  // Then create tuples where the first element is the index and the second element is the wallet. 
-  // Finaly accumulate these tuples into the BundlerSignerWallets.
+  const intialValue: BundlerSignerWallets = {}
   return Array.from({ length: numberOfSigners }, (_, i) => {
     const path = `m/44'/60'/0'/0/${i}`
     const wallet = Wallet.fromMnemonic(mnemonic, path).connect(provider)
-    return [i, wallet] as [number, Wallet]
+    const wTuple: [number, Wallet] = [i, wallet]
+    return wTuple
   }).reduce((acc, [index, wallet]) => {
     acc[index] = wallet
     return acc
-  }, {} as BundlerSignerWallets)
-}
-
-const getNetworkProvider = (url: string, apiKey?: string): providers.JsonRpcProvider => {
-  const isValid = isValidUrl(url)
-  if (!isValid) {
-    throw new Error('Invalid network URL')
-  }
-  return apiKey ? new providers.JsonRpcProvider(`${url.replace(/\/+$/, '')}/${apiKey}`) : new providers.JsonRpcProvider(url)
-}
-
-const isValidUrl = (url: string): boolean => {
-  const pattern = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/
-  return pattern.test(url)
+  }, intialValue)
 }
 
 export const createRelayerConfig = (args: readonly string[]): Config => {
   const program = new Command()
+  
   program
   .version(`${packageJson.version}`)
   .option('--httpApi <string>', 'ERC4337 rpc method name spaces to enable.', 'web3,eth')
@@ -109,7 +99,8 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
   .option('--influxdbUrl <string>', 'Url influxdb is running on (requires --metrics to be enabled).', 'http://localhost:8086')
   .option('--influxdbOrg <string>', 'Influxdb org (requires --metrics to be enabled).', 'transeptor-labs')
   .option('--influxdbBucket <string>', 'Influxdb bucket (requires --metrics to be enabled).', 'transeptor_metrics')
-
+  .option('--numberOfSigners <number>', 'Number of signers HD paths to use from mnmonic', '3')
+  
   const programOpts: OptionValues = program.parse(args).opts()
 
   // set transaction mode config
@@ -117,19 +108,26 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
     throw new Error('Invalid bundler mode')
   }
 
-  if (programOpts.txMode as string === 'searcher') {
+  if ((programOpts.txMode as string) === 'searcher') {
     if (!process.env.TRANSEPTOR_ALCHEMY_API_KEY) {
       throw new Error('TRANSEPTOR_ALCHEMY_API_KEY env var not set')
     }
   }
 
   // set wallet config
-  const provider = getNetworkProvider(programOpts.network as string, process.env.TRANSEPTOR_ALCHEMY_API_KEY)
+  const provider = createProvider(programOpts.network as string, process.env.TRANSEPTOR_ALCHEMY_API_KEY)
   const supportedEntryPointAddress = process.env.TRANSEPTOR_ENTRYPOINT_ADDRESS || DEFAULT_ENTRY_POINT
-  const entryPointContract = new ethers.Contract(supportedEntryPointAddress, IENTRY_POINT_ABI, provider)
-
-  const bundlerSignerWallets = getBundlerSignerWallets(3, provider)
-  const connectedWallet = bundlerSignerWallets[0]
+  const entryPointContract = new ethers.Contract(
+    supportedEntryPointAddress,
+    IENTRY_POINT_ABI,
+    provider
+  )
+  const stakeManagerContract = new ethers.Contract(
+    supportedEntryPointAddress,
+    IStakeManager,
+    provider
+  )
+  const bundlerSignerWallets = getBundlerSignerWallets(parseInt(programOpts.numberOfSigners), provider)
 
   if (!isValidAddress(supportedEntryPointAddress)) {
     throw new Error('Entry point not a valid address')
@@ -144,8 +142,12 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
   }
 
   // set reputation config
-  const whitelist = process.env.WHITELIST ? process.env.WHITELIST.split(',') : []
-  const blacklist = process.env.BLACKLIST ? process.env.BLACKLIST.split(',') : []
+  const whitelist = process.env.WHITELIST
+    ? process.env.WHITELIST.split(',')
+    : []
+  const blacklist = process.env.BLACKLIST
+    ? process.env.BLACKLIST.split(',')
+    : []
 
   // set p2p config
   const isP2PMode = programOpts.p2p as boolean
@@ -158,7 +160,7 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
         url: programOpts.influxdbUrl as string,
         token: process.env.TRANSEPTOR_INFLUX_TOKEN as string,
         org: programOpts.influxdbOrg as string,
-        bucket: programOpts.influxdbBucket as string
+        bucket: programOpts.influxdbBucket as string,
       }
     : { url: '', org: '', bucket: '', token: '' }
 
@@ -179,10 +181,11 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
   return {
     provider,
     bundlerSignerWallets,
-    connectedWallet,
     beneficiaryAddr: process.env.TRANSEPTOR_BENEFICIARY as string,
     entryPointContract,
+    stakeManagerContract,
     minSignerBalance: parseEther(programOpts.minBalance as string),
+    numberOfSigners: parseInt(programOpts.numberOfSigners),
 
     isUnsafeMode: programOpts.unsafe as boolean,
     txMode: programOpts.txMode as string,

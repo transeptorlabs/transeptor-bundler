@@ -13,6 +13,7 @@ module.exports = {
     'no-console': 'error',
     'no-debugger': 'warn',
     'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    "varsIgnorePattern": "^_",
     semi: ['error', 'never'],
     quotes: ['error', 'single'],
     '@typescript-eslint/no-unused-vars': 'error',

@@ -23,7 +23,7 @@ const runBundler = async () => {
   initializeConfig(args)
   const config = getConfig()
 
-  const providerService = new ProviderService(config.provider, config.connectedWallet)
+  const providerService = new ProviderService(config.provider, config.bundlerSignerWallets[0])
 
   // erc-4337 entity reputation components
   const reputationManager = new ReputationManager(config.minStake, config.minUnstakeDelay, providerService)
