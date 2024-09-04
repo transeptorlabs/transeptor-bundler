@@ -2,10 +2,18 @@ import { Deferrable } from '@ethersproject/properties'
 import { TransactionRequest } from '@ethersproject/providers'
 import { Wallet, ethers, providers } from 'ethers'
 import { resolveProperties } from 'ethers/lib/utils.js'
-import { BundleTxs } from '../types/index.js'
 import { Logger } from '../logger/Logger.js'
 
-type SignerService = {
+export type BundlerSignerWallets = Record<number, Wallet>;
+
+export type PendingTxDetails = {
+    txHash: string;
+    signerIndex: number
+}
+
+export type BundleTxs = Record<string, PendingTxDetails>;
+
+export type SignerService = {
     /**
      * Finds the first signer without a pending bundle transaction and returns the index.
      * 

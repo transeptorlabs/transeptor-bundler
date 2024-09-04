@@ -6,11 +6,13 @@ import { parseEther } from 'ethers/lib/utils.js'
 import packageJson from '../../package.json' assert { type: 'json' }
 import { IENTRY_POINT_ABI, IStakeManager } from '../../../shared/abis/index.js'
 import {
-  BundlerSignerWallets,
   InfluxdbConnection,
 } from '../../../shared/types/index.js'
 import { isValidAddress } from '../../../shared/utils/index.js'
-import { createProvider } from '../../../shared/provider'
+import { 
+  BundlerSignerWallets, 
+  createProvider 
+} from '../../../shared/services/index.js'
 
 dotenv.config()
 
