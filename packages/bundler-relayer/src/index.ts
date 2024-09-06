@@ -1,12 +1,12 @@
 import { BundleManager, BundleProcessor } from './bundle/index.js'
 import { EventsManager } from './event/index.js'
 import {
-  RpcMethodHandler,
   EthAPI,
   DebugAPI,
   Web3API,
-} from './json-rpc-handler/index.js'
-import { createRpcServer } from '../../shared/rpc-server/index.js'
+  createHandlerRegistry,
+} from './handler/index.js'
+import { createRpcHandler, createRpcServer } from '../../shared/rpc/index.js'
 import { MempoolManager } from './mempool/index.js'
 import { ProviderService } from '../../shared/provider/index.js'
 import { ReputationManager } from './reputation/index.js'
@@ -80,23 +80,24 @@ const runBundler = async () => {
     config.entryPointContract
   )
   const web3 = new Web3API(config.clientVersion, config.isUnsafeMode)
-  const rpcHandler = new RpcMethodHandler(
-    eth,
-    debug,
-    web3,
-    providerService,
-    config.httpApi
-  )
 
-    // start p2p node
-    if (config.isP2PMode) {
-      p2pNode = new Libp2pNode(config.peerMultiaddrs, config.findPeers)
-      await p2pNode.start()
-    }
+  // start p2p node
+  if (config.isP2PMode) {
+    p2pNode = new Libp2pNode(config.peerMultiaddrs, config.findPeers)
+    await p2pNode.start()
+  }
 
   // start rpc server
   const bundlerServer = createRpcServer(
-    rpcHandler,
+    createRpcHandler(
+      createHandlerRegistry(
+        eth,
+        debug,
+        web3,
+        providerService,
+      ),
+      config.httpApis
+    ),
     config.port
   )
   const relayerflightCheck = async() => {

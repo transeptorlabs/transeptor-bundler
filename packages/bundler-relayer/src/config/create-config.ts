@@ -10,16 +10,15 @@ import {
 } from '../../../shared/types/index.js'
 import { isValidAddress } from '../../../shared/utils/index.js'
 import { 
-  BundlerSignerWallets, 
   createProvider 
-} from '../../../shared/services/index.js'
+} from '../../../shared/provider/index.js'
+import { BundlerSignerWallets } from '../../../shared/signer/index.js'
 
 dotenv.config()
 
 const DEFAULT_NETWORK = 'http://localhost:8545'
 const DEFAULT_ENTRY_POINT = '0x0000000071727De22E5E9d8BAf0edAc6f37da032'
 const SUPPORTED_MODES = ['base', 'conditional', 'searcher']
-const SUPPORTED_NAMESPACES = ['web3', 'eth', 'debug']
 
 export type Config = {
   provider: providers.JsonRpcProvider;
@@ -45,7 +44,7 @@ export type Config = {
 
   port: number;
   clientVersion: string;
-  httpApi: string[];
+  httpApis: string[];
 
   isP2PMode: boolean;
   findPeers: boolean;
@@ -79,6 +78,7 @@ const getBundlerSignerWallets = (
 
 export const createRelayerConfig = (args: readonly string[]): Config => {
   const program = new Command()
+  const defaulHttpApis = ['web3','eth']
   
   program
   .version(`${packageJson.version}`)
@@ -172,14 +172,6 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
     throw new Error('TRANSEPTOR_INFLUX_TOKEN env var not set')
   }
 
-  // set api config
-  const httpApi = (programOpts.httpApi as string).split(',')
-  httpApi.forEach((api: string) => {
-    if (SUPPORTED_NAMESPACES.indexOf(api) === -1) {
-      throw new Error('Invalid http api')
-    }
-  })
-
   return {
     provider,
     bundlerSignerWallets,
@@ -204,7 +196,7 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
 
     port: parseInt(programOpts.port as string),
     clientVersion: packageJson.version as string,
-    httpApi: (programOpts.httpApi as string).split(','),
+    httpApis: (programOpts.debug as boolean) ? [...defaulHttpApis, 'debug'] : defaulHttpApis,
 
     isP2PMode,
     findPeers: programOpts.findPeers as boolean,

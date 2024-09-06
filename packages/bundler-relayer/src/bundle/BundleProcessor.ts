@@ -314,13 +314,13 @@ export class BundleProcessor {
   }
 
   public async getUserOpHashes(userOps: UserOperation[]): Promise<string[]> {
-    const getCodeHashesFactory = new ethers.ContractFactory(
+    const getUserOpCodeHashesFactory = new ethers.ContractFactory(
       GET_USEROP_HASHES_ABI,
       GET_USEROP_HASHES_BYTECODE
     ) as ContractFactory
 
-    const { userOpHashes } = await this.providerService.runContractScript(
-      getCodeHashesFactory,
+    const { userOpHashes } = await this.providerService.getCodeHashes(
+      getUserOpCodeHashesFactory,
       [this.entryPointContract.address, packUserOps(userOps)]
     )
 

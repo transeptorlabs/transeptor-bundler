@@ -7,9 +7,48 @@ import { Logger } from '../logger/index.js'
 import { TraceOptions, TraceResult, ValidationErrors } from '../types/index.js'
 import { RpcError } from '../utils/index.js'
 
-export const createProviderService = (_provider: providers.JsonRpcProvider) => {
-    const provider = _provider
+export type ProviderService = {
+    getNetwork(): Promise<ethers.providers.Network>
+    checkContractDeployment(contractAddress: string): Promise<boolean>
+    supportsRpcMethod(method: string): Promise<boolean>
+    clientVerion(): Promise<string>
+    getChainId(): Promise<number>
+    getBlockNumber(): Promise<number>
+    getFeeData(): Promise<ethers.providers.FeeData>
+    estimateGas(from: string, to: string, data: string | ethers.utils.Bytes): Promise<number>
+    send(method: string, params: any[]): Promise<any>
+    call(contractAddress: string, data: string): Promise<any>
+    debug_traceCall (tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any>
+    execAndTrace(tx: Deferrable<TransactionRequest>, options: TraceOptions): Promise<TraceResult | any>
+    debug_traceTransaction(hash: string, options: TraceOptions): Promise<TraceResult | any>
+    getCodeHashes<T extends ContractFactory>(c: T, ctrParams: Parameters<T["getDeployTransaction"]>): Promise<Result>
+}
 
+/** 
+ * Note that the contract deployment will cost gas, so it is not free to run this function
+ * run the constructor of the given type as a script: it is expected to revert with the script's return values.
+ * 
+ * @param provider - the connect provider 
+ * @param c - contract factory of the script class
+ * @param ctrParams constructor parameters
+ * @returns an array of arguments of the error
+ * example usasge:
+ *     hashes = await runContractScript(provider, new GetUserOpHashes__factory(), [entryPoint.address, userOps]).then(ret => ret.userOpHashes)
+ */
+const runContractScript = async <T extends ContractFactory>(
+  provider: providers.JsonRpcProvider,
+  c: T,
+  ctrParams: Parameters<T["getDeployTransaction"]>
+): Promise<Result> => {
+  const tx = c.getDeployTransaction(...ctrParams);
+  const ret = await provider.call(tx);
+  const parsed = ContractFactory.getInterface(c.interface).parseError(ret);
+  if (parsed == null)
+    throw new Error("unable to parse script (error) response: " + ret);
+  return parsed.args;
+};
+
+export const createProviderService = (provider: providers.JsonRpcProvider): ProviderService => {
     return {
         getNetwork: async(): Promise<ethers.providers.Network> => {
             return await provider.getNetwork()
@@ -102,22 +141,8 @@ export const createProviderService = (_provider: providers.JsonRpcProvider) => {
             return ret
         },
 
-        /** 
-         * Note that the contract deployment will cost gas, so it is not free to run this function
-         * run the constructor of the given type as a script: it is expected to revert with the script's return values.
-         * 
-         * @param c - contract factory of the script class
-         * @param ctrParams constructor parameters
-         * @returns an array of arguments of the error
-         * example usasge:
-         *     hashes = await runContractScript(provider, new GetUserOpHashes__factory(), [entryPoint.address, userOps]).then(ret => ret.userOpHashes)
-         */
-        runContractScript: async <T extends ContractFactory>(c: T, ctrParams: Parameters<T['getDeployTransaction']>): Promise<Result> => {
-            const tx = c.getDeployTransaction(...ctrParams)
-            const ret = await provider.call(tx)
-            const parsed = ContractFactory.getInterface(c.interface).parseError(ret)
-            if (parsed == null) throw new Error('unable to parse script (error) response: ' + ret)
-            return parsed.args
-        },
+        getCodeHashes: async <T extends ContractFactory>(c: T, ctrParams: Parameters<T["getDeployTransaction"]>): Promise<Result> => {
+            return await runContractScript(provider, c, ctrParams)
+        }
     }
 }

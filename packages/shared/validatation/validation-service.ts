@@ -2,14 +2,10 @@ import {
   BigNumber, 
   ContractFactory,
   ethers, 
-  providers 
 } from "ethers";
 
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from "../abis/index.js";
-import {
-  fullSimulateValidation,
-  partialSimulateValidation,
-} from "./sim.js";
+import { Simulator } from "../sim/index.js";
 import { Logger } from "../logger/index.js";
 import {
   ReferencedCodeHashes,
@@ -26,8 +22,7 @@ import {
   calcPreVerificationGas,
 } from "../utils/index.js";
 
-import { tracerResultParser } from "./parseScannerResult.js";
-import { createProviderService } from "../provider/provider-service.js";
+import { ProviderService } from "../provider/index.js";
 
 export type ValidationService = {
   /**
@@ -56,38 +51,22 @@ export type ValidationService = {
   validateInputParameters(
     userOp: UserOperation,
     entryPointInput: string,
-    requireSignaturn: boolean,
+    requireSignature: boolean,
     requireGasParams: boolean
   ): void;
 };
 
-const getCodeHashes = async (
-  addresses: string[],
-  provider: providers.JsonRpcProvider
-): Promise<ReferencedCodeHashes> => {
+export const createValidationService = (
+  ps: ProviderService, 
+  sim: Simulator,
+  entryPointAddress: string,
+) => {
+  const HEX_REGEX = /^0x[a-fA-F\d]*$/i
+  const VALID_UNTIL_FUTURE_SECONDS = 30 // how much time into the future a UserOperation must be valid in order to be accepted
   const getCodeHashesFactory = new ethers.ContractFactory(
     GET_CODE_HASH_ABI,
     GET_CODE_HASH_BYTECODE
   ) as ContractFactory;
-
-  const ps = createProviderService(provider)
-
-  const { hash } = await ps.runContractScript(
-    getCodeHashesFactory,
-    [addresses]
-  );
-
-  return {
-    hash,
-    addresses,
-  };
-}
-
-export const createValidationService = (_provider: providers.JsonRpcProvider, _entryPointContract: ethers.Contract) => {
-  const provider = _provider
-  const entryPointContract = _entryPointContract
-  const HEX_REGEX = /^0x[a-fA-F\d]*$/i
-  const VALID_UNTIL_FUTURE_SECONDS = 30 // how much time into the future a UserOperation must be valid in order to be accepted
 
   return {
     validateUserOp: async (
@@ -100,9 +79,9 @@ export const createValidationService = (_provider: providers.JsonRpcProvider, _e
         previousCodeHashes != null &&
         previousCodeHashes.addresses.length > 0
       ) {
-        const { hash: codeHashes } = await getCodeHashes(
-          previousCodeHashes.addresses,
-          provider
+        const { hash: codeHashes } = await ps.getCodeHashes(
+          getCodeHashesFactory,
+          [previousCodeHashes.addresses]
         );
 
         // [COD-010]
@@ -123,34 +102,33 @@ export const createValidationService = (_provider: providers.JsonRpcProvider, _e
       // if we are in unsafe mode, we skip the full validation with custom tracer and only run the partial validation with no stake or opcode checks
       if (!isUnsafeMode) {
         let tracerResult: BundlerCollectorReturn;
-        [res, tracerResult] = await fullSimulateValidation(
-          entryPointContract.address,
-          provider,
-          userOp
-        ).catch((e) => {
-          throw e;
-        });
+        [res, tracerResult] = await sim.fullSimulateValidation(userOp).catch((e) => {throw e;});
 
         let contractAddresses: string[];
-        [contractAddresses, storageMap] = tracerResultParser(
+        [contractAddresses, storageMap] = sim.tracerResultParser(
           userOp,
           tracerResult,
           res,
-          entryPointContract
         );
 
         // if no previous contract hashes, then calculate hashes of contracts
         if (previousCodeHashes == null) {
-          codeHashes = await getCodeHashes(contractAddresses, provider);
+          const { hash } = await ps.getCodeHashes(
+            getCodeHashesFactory,
+            [contractAddresses]
+          );
+
+          codeHashes = {
+            addresses: contractAddresses,
+            hash: hash,
+          }
         }
 
         if ((res as any) === "0x") {
           throw new Error("simulateValidation reverted with no revert string!");
         }
       } else {
-        res = await partialSimulateValidation(
-          entryPointContract.address,
-          provider,
+        res = await sim.partialSimulateValidation(
           userOp
         );
       }
@@ -220,8 +198,8 @@ export const createValidationService = (_provider: providers.JsonRpcProvider, _e
       );
       requireCond(
         entryPointInput.toLowerCase() ===
-          entryPointContract.address.toLowerCase(),
-        `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${entryPointContract.address}`,
+        entryPointAddress.toLowerCase(),
+        `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${entryPointAddress}`,
         ValidationErrors.InvalidFields
       );
 

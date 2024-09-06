@@ -9,7 +9,7 @@
   },
   "include": [
     "src/**/*",
-    "../shared/**/*.ts", "../shared/rpc-server",
+    "../shared/**/*.ts", "../shared/rpc",
   ],
   "exclude": [
   ]

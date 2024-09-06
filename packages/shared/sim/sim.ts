@@ -25,6 +25,7 @@ import {
   ExecutionResult,
   ExitInfo,
   StakeInfo as StakeInfoWithAddr,
+  StorageMap,
   UserOperation,
   ValidationErrors,
   ValidationResult,
@@ -34,9 +35,8 @@ import {
   mergeValidationDataValues, 
   packUserOp 
 } from '../utils/index.js'
-import { createProviderService } from '../provider/provider-service.js'
-
-const epSimsInterface = new utils.Interface(I_ENTRY_POINT_SIMULATIONS)
+import { ProviderService } from '../provider/index.js'
+import { tracerResultParser } from './parseTracerResult.js'
 
 interface StakeInfo {
   stake: BigNumberish
@@ -222,114 +222,145 @@ const decodeRevertReason = (data: string | Error, nullIfNoMatch = true): string 
   }
 }
 
-export const partialSimulateValidation = async (epAddress: string, provider: providers.JsonRpcProvider, userOp: UserOperation):  Promise<ValidationResult>  => {
-  Logger.debug('Running partial validation no stake or opcode checks on userOp')
-  const stateOverride = {
-    [epAddress]: {
-    code: EntryPointSimulationsDeployedBytecode
-    }
-  }
-
-  try {
-    const ps = createProviderService(provider)
-    const simulationResult = await ps.send('eth_call', [
-      {
-        to: epAddress,
-        data: epSimsInterface.encodeFunctionData('simulateValidation', [packUserOp(userOp)])
-      }, 
-      'latest',
-      stateOverride
-    ])
-
-    const [res] = epSimsInterface.decodeFunctionResult('simulateValidation', simulationResult)
-    
-    return parseValidationResult(userOp, res)
-  } catch (error: any) {
-    let errorData
-    if (error.body) {
-      const bodyParse = JSON.parse(error.body)
-      if (bodyParse.error.data &&  bodyParse.error.message === 'execution reverted') {
-        errorData = bodyParse.error.data
-      }
-    } else if (error.data) {
-      errorData = error.data
-    }
-
-    const decodedError = decodeRevertReason(errorData)
-    if (decodedError != null) {
-      throw new RpcError(decodedError, ValidationErrors.SimulateValidation)
-    }
-    throw error
-  }
+export type Simulator = {
+  partialSimulateValidation(userOp: UserOperation):  Promise<ValidationResult>
+  fullSimulateValidation(userOp: UserOperation): Promise<[ValidationResult, BundlerCollectorReturn]>
+  simulateHandleOp(userOp: UserOperation): Promise<ExecutionResult>
+  tracerResultParser(
+    userOp: UserOperation,
+    tracerResults: BundlerCollectorReturn,
+    validationResult: ValidationResult,
+  ): [string[], StorageMap]
 }
 
-export const fullSimulateValidation = async (epAddress: string, provider: providers.JsonRpcProvider, userOp: UserOperation): Promise<[ValidationResult, BundlerCollectorReturn]> => {
-  Logger.debug('Running full validation with storage/opcode checks on userOp')
-  const stringifiedTracer = getTracerString()
-  const encodedData = epSimsInterface.encodeFunctionData(
-    'simulateValidation',
-    [packUserOp(userOp)]
-  )
+export const createSimulator = (ps: ProviderService, entryPointContract: ethers.Contract): Simulator => {
+  const epSimsInterface = new utils.Interface(I_ENTRY_POINT_SIMULATIONS)
+  const simFunctionName = 'simulateValidation';
 
-  const ps = createProviderService(provider)
-  const tracerResult: BundlerCollectorReturn =
-    await ps.debug_traceCall(
-    {
-      from: ethers.constants.AddressZero,
-      to: epAddress,
-      data: encodedData,
-      gasLimit: BigNumber.from(userOp.preVerificationGas).add(userOp.verificationGasLimit),
-    },
-    { 
-      tracer: stringifiedTracer,
-      stateOverrides: {
+  return {
+    partialSimulateValidation: async (userOp: UserOperation):  Promise<ValidationResult>  => {
+      Logger.debug('Running partial validation no stake or opcode checks on userOp')
+      const epAddress = entryPointContract.address;
+      const stateOverride = {
         [epAddress]: {
-          code: EntryPointSimulationsDeployedBytecode
+        code: EntryPointSimulationsDeployedBytecode
         }
       }
+    
+      try {
+        const simulationResult = await ps.send('eth_call', [
+          {
+            to: epAddress,
+            data: epSimsInterface.encodeFunctionData(simFunctionName, [packUserOp(userOp)])
+          }, 
+          'latest',
+          stateOverride
+        ])
+    
+        const [res] = epSimsInterface.decodeFunctionResult(simFunctionName, simulationResult)
+        
+        return parseValidationResult(userOp, res)
+      } catch (error: any) {
+        let errorData
+        if (error.body) {
+          const bodyParse = JSON.parse(error.body)
+          if (bodyParse.error.data &&  bodyParse.error.message === 'execution reverted') {
+            errorData = bodyParse.error.data
+          }
+        } else if (error.data) {
+          errorData = error.data
+        }
+    
+        const decodedError = decodeRevertReason(errorData)
+        if (decodedError != null) {
+          throw new RpcError(decodedError, ValidationErrors.SimulateValidation)
+        }
+        throw error
+      }
+    },
+    
+    fullSimulateValidation: async (userOp: UserOperation): Promise<[ValidationResult, BundlerCollectorReturn]> => {
+      Logger.debug('Running full validation with storage/opcode checks on userOp')
+      const stringifiedTracer = getTracerString()
+      const encodedData = epSimsInterface.encodeFunctionData(
+        simFunctionName,
+        [packUserOp(userOp)]
+      )
+    
+      const epAddress = entryPointContract.address;
+      const tracerResult: BundlerCollectorReturn =
+        await ps.debug_traceCall(
+        {
+          from: ethers.constants.AddressZero,
+          to: epAddress,
+          data: encodedData,
+          gasLimit: BigNumber.from(userOp.preVerificationGas).add(userOp.verificationGasLimit),
+        },
+        { 
+          tracer: stringifiedTracer,
+          stateOverrides: {
+            [epAddress]: {
+              code: EntryPointSimulationsDeployedBytecode
+            }
+          }
+        }
+      )
+    
+      const lastCallResult = tracerResult.calls.slice(-1)[0]
+      const exitInfoData = (lastCallResult as ExitInfo).data
+      if (lastCallResult.type === 'REVERT') {
+        throw new RpcError(decodeRevertReason(exitInfoData, false) as string, ValidationErrors.SimulateValidation)
+      }
+    
+      try {
+        const [decodedSimulations] = epSimsInterface.decodeFunctionResult(simFunctionName, exitInfoData)
+        const validationResult = parseValidationResult(userOp, decodedSimulations)
+    
+        return [validationResult, tracerResult]
+      } catch (e: any) {
+        // if already parsed, throw as is
+        if (e.code != null) {
+            throw e
+        }
+        // not a known error of EntryPoint (probably, only Error(string), since FailedOp is handled above)
+        const err = decodeErrorReason(e)
+        throw new RpcError(err != null ? err.reason : exitInfoData, -32000)
+      }
+    },
+    
+    simulateHandleOp: async (userOp: UserOperation): Promise<ExecutionResult> => {    
+      Logger.debug('Running simulateHandleOp on userOp')
+      const epAddress = entryPointContract.address;
+      const stateOverride = {
+        [epAddress]: {
+        code: EntryPointSimulationsDeployedBytecode
+        }
+      }
+    
+      const simulateHandleOpResult = await ps.send('eth_call', [
+        {
+          to: epAddress,
+          data: epSimsInterface.encodeFunctionData('simulateHandleOp', [packUserOp(userOp), ethers.constants.AddressZero, '0x'])
+        }, 
+        'latest',
+        stateOverride
+      ]).catch((e: any) => { throw new RpcError(decodeRevertReason(e) as string, ValidationErrors.SimulateValidation) })
+    
+      const [res] = epSimsInterface.decodeFunctionResult('simulateHandleOp', simulateHandleOpResult)
+      return parseExecutionResult(res)
+    },
+
+    tracerResultParser:(
+      userOp: UserOperation,
+      tracerResults: BundlerCollectorReturn,
+      validationResult: ValidationResult,
+    ): [string[], StorageMap] => {
+      return tracerResultParser(
+        userOp,
+        tracerResults,
+        validationResult,
+        entryPointContract
+      );
     }
-  )
-
-  const lastCallResult = tracerResult.calls.slice(-1)[0]
-  const exitInfoData = (lastCallResult as ExitInfo).data
-  if (lastCallResult.type === 'REVERT') {
-    throw new RpcError(decodeRevertReason(exitInfoData, false) as string, ValidationErrors.SimulateValidation)
   }
-
-  try {
-    const [decodedSimulations] = epSimsInterface.decodeFunctionResult('simulateValidation', exitInfoData)
-    const validationResult = parseValidationResult(userOp, decodedSimulations)
-
-    return [validationResult, tracerResult]
-  } catch (e: any) {
-    // if already parsed, throw as is
-    if (e.code != null) {
-        throw e
-    }
-    // not a known error of EntryPoint (probably, only Error(string), since FailedOp is handled above)
-    const err = decodeErrorReason(e)
-    throw new RpcError(err != null ? err.reason : exitInfoData, -32000)
-  }
-}
-
-export const simulateHandleOp = async (epAddress: string, provider: providers.JsonRpcProvider, userOp: UserOperation): Promise<ExecutionResult> => {    
-  Logger.debug('Running simulateHandleOp on userOp')
-  const stateOverride = {
-    [epAddress]: {
-    code: EntryPointSimulationsDeployedBytecode
-    }
-  }
-
-  const ps = createProviderService(provider)
-  const simulateHandleOpResult = await ps.send('eth_call', [
-    {
-      to: epAddress,
-      data: epSimsInterface.encodeFunctionData('simulateHandleOp', [packUserOp(userOp), ethers.constants.AddressZero, '0x'])
-    }, 
-    'latest',
-    stateOverride
-  ]).catch((e: any) => { throw new RpcError(decodeRevertReason(e) as string, ValidationErrors.SimulateValidation) })
-
-  const [res] = epSimsInterface.decodeFunctionResult('simulateHandleOp', simulateHandleOpResult)
-  return parseExecutionResult(res)
 }

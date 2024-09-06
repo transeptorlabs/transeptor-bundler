@@ -3,14 +3,14 @@ import cors from 'cors'
 import express, { Request, Response } from 'express'
 import helmet from 'helmet'
 
-import { RpcMethodHandler } from '../../bundler-relayer/src/json-rpc-handler/index.js'
 import { Logger } from '../logger/index.js'
 import { 
   JsonRpcRequest,
   RpcServer 
 } from '../types/index.js'
+import { RpcHandler } from './rpcHandler.js'
 
-const createApp = (rpc: RpcMethodHandler): express.Application => {
+const createApp = (rpc: RpcHandler): express.Application => {
   const app = express()
 
   app.use(
@@ -42,7 +42,7 @@ const createApp = (rpc: RpcMethodHandler): express.Application => {
  * @returns An object with `start` and `stop` methods to control the server.
  */
 export const createRpcServer = (
-  rpc: RpcMethodHandler, 
+  rpc: RpcHandler, 
   port: number
 ): RpcServer => {
   const app = createApp(rpc)
