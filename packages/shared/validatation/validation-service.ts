@@ -60,7 +60,7 @@ export const createValidationService = (
   ps: ProviderService, 
   sim: Simulator,
   entryPointAddress: string,
-) => {
+):ValidationService  => {
   const HEX_REGEX = /^0x[a-fA-F\d]*$/i
   const VALID_UNTIL_FUTURE_SECONDS = 30 // how much time into the future a UserOperation must be valid in order to be accepted
   const getCodeHashesFactory = new ethers.ContractFactory(
@@ -72,8 +72,8 @@ export const createValidationService = (
     validateUserOp: async (
       userOp: UserOperation,
       isUnsafeMode: boolean,
+      checkStakes: boolean,
       previousCodeHashes?: ReferencedCodeHashes,
-      checkStakes = true
     ): Promise<ValidateUserOpResult> => {
       if (
         previousCodeHashes != null &&

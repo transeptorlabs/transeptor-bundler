@@ -1,3 +1,3 @@
-export { EthAPI } from './Eth.js'
-export { DebugAPI } from './Debug.js'
-export { Web3API } from './Web3.js'
+export * from './Eth.js'
+export * from './Debug.js'
+export * from './Web3.js'

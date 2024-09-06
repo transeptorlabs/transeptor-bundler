@@ -42,9 +42,7 @@ const isTransactionPending = async (provider: providers.Provider, txHash: string
     }
 }
 
-export const createSignerService = (_provider: providers.Provider):SignerService  => {
-    const provider = _provider
-
+export const createSignerService = (provider: providers.Provider):SignerService  => {
     return {
         getReadySigner: async (bundleTxs: BundleTxs): Promise<number> => {
             if (Object.keys(bundleTxs).length === 0) {
