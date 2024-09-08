@@ -1,4 +1,4 @@
-import { providers } from "ethers"
+import { providers } from 'ethers'
 
 export const routeRequest = async (bundlerBuilderClientUrl: string, method: string, params: any[]) => {
     const provider = new providers.StaticJsonRpcProvider(bundlerBuilderClientUrl)

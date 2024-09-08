@@ -5,7 +5,8 @@ export type CommonEventManager = {
   getUserOperationEvent(userOpHash: string): Promise<ethers.Event>
 
   /** 
-   * filter full bundle logs, and leave only logs for the given userOpHash
+   * Filter full bundle logs, and leave only logs for the given userOpHash
+   * 
    * @param userOpEvent - the event of our UserOp (known to exist in the logs)
    * @param logs - full bundle logs. after each group of logs there is a single UserOperationEvent with unique hash.
    */

@@ -1,8 +1,8 @@
-import { ProviderService } from '../../../shared/provider/index.js';
-import { HandlerRegistry } from '../../../shared/rpc/index.js';
+import { ProviderService } from '../../../shared/provider/index.js'
+import { HandlerRegistry } from '../../../shared/rpc/index.js'
 
-import { EthAPI, Web3API } from './apis/index.js';
-import { routeRequest } from './request-router.js';
+import { EthAPI, Web3API } from './apis/index.js'
+import { routeRequest } from './request-router.js'
 
 export const createRelayerHandlerRegistry = (
   eth: EthAPI, 
@@ -30,4 +30,4 @@ export const createRelayerHandlerRegistry = (
   'debug_bundler_clearReputation': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_clearReputation', params),
   'debug_bundler_addUserOps': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_addUserOps', params),
   'debug_bundler_getStakeStatus': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_getStakeStatus', params),
-});
+})

@@ -159,9 +159,9 @@ export const createEthAPI = (
         // TODO: Extract error to get correct code and message for bundler-builder node
         requireCond(
           false,
-          "Failed to add user Operation to mempool",
+          'Failed to add user Operation to mempool',
           ValidationErrors.OpcodeValidation
-        );
+        )
       }
 
       return userOpHash

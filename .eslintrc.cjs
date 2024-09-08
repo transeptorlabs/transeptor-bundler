@@ -12,34 +12,31 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'warn',
     'no-console': 'error',
     'no-debugger': 'warn',
-    'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-    "varsIgnorePattern": "^_",
+    'no-unused-vars': 'off',
+    '@typescript-eslint/no-unused-vars': ['error', { 
+      argsIgnorePattern: '^_', 
+      varsIgnorePattern: '^_'
+    }],
     semi: ['error', 'never'],
     quotes: ['error', 'single'],
-    '@typescript-eslint/no-unused-vars': 'error',
 
     // JSDoc-specific rules
-    'jsdoc/check-alignment': 'warn', // Ensures JSDoc comments are aligned
-    'jsdoc/check-param-names': 'error', // Validates JSDoc parameter names
-    'jsdoc/check-tag-names': 'error', // Validates JSDoc tag names
-    'jsdoc/check-types': 'error', // Validates JSDoc type names
-    'jsdoc/require-param': 'error', // Requires JSDoc param
-    'jsdoc/require-returns': 'error', // Requires JSDoc returns if a function has a return statement
-    "jsdoc/tag-lines": ["error", "any",{"startLines":1}], // Requires JSDoc: Expected only 1 line after block description
+    'jsdoc/check-alignment': 'warn',
+    'jsdoc/check-param-names': 'error',
+    'jsdoc/check-tag-names': 'error',
+    'jsdoc/check-types': 'error',
+    'jsdoc/require-param': 'error',
+    'jsdoc/require-returns': 'error',
+    "jsdoc/tag-lines": ["error", "any",{"startLines":1}],
     "jsdoc/require-returns-type": ["off", {"contexts":["never"]}],
     "jsdoc/require-param-type": ["off", {"contexts":["never"]}]
   },
   ignorePatterns: [
     'node_modules',
     '.eslintrc.cjs',
-    '**/*.js', // Ignore tracer file
+    '**/*.js',
     '**/.cache',
     '**/dist'
-  ],
-  overrides: [
-    {
-      files: ['*.ts'],
-    },
   ],
   parserOptions: {
     ecmaVersion: 'latest',
@@ -47,7 +44,7 @@ module.exports = {
   },
   settings: {
     jsdoc: {
-      mode: 'typescript', // Enable TypeScript support in JSDoc
+      mode: 'typescript',
     },
   },
 }

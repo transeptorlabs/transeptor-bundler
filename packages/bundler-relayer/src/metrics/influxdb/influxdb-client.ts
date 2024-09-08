@@ -29,9 +29,8 @@ export class InfluxdbClient {
         })
 
         writeApi.writePoint(point)
-        /**
-         * Flush pending writes and close writeApi.
-        **/
+
+        // Flush pending writes and close writeApi.
         await writeApi.close()
     }
 }

@@ -31,17 +31,13 @@ export class MetricsHttpServer {
   }
 
   private async preflightCheck(): Promise<void> {
-    try {
-      if (this.httpServer === undefined) {
-        throw new Error('httpServer is undefined')
-      }
-
-      // TODO: check that there is a connect to db
-    
-      Logger.info('Bundler passed metrics server preflight check')
-    } catch (err: any) {
-      throw err
+    if (this.httpServer === undefined) {
+      throw new Error('httpServer is undefined')
     }
+
+    // TODO: check that there is a connect to db
+  
+    Logger.info('Bundler passed metrics server preflight check')
   }
 
   async start(): Promise<void> {
