@@ -27,55 +27,95 @@ import { CommonEventManager } from '../../event/index.js'
 
 const HEX_REGEX = /^0x[a-fA-F\d]*$/i
 
-const validateParameters = async(
+const validateParameters = async (
   userOp1: UserOperation,
   entryPointInput: string,
   entryPointContract: ethers.Contract,
-  requireSignature = true, 
+  requireSignature = true,
   requireGasParams = true,
 ): Promise<void> => {
-  requireCond(entryPointInput != null, 'No entryPoint param', ValidationErrors.InvalidFields)
+  requireCond(
+    entryPointInput != null,
+    'No entryPoint param',
+    ValidationErrors.InvalidFields,
+  )
 
-  if (entryPointInput?.toString().toLowerCase() !== entryPointContract.address.toLowerCase()) {
-    throw new Error(`The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${entryPointContract.address}`)
+  if (
+    entryPointInput?.toString().toLowerCase() !==
+    entryPointContract.address.toLowerCase()
+  ) {
+    throw new Error(
+      `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${entryPointContract.address}`,
+    )
   }
   // minimal sanity check: userOp exists, and all members are hex
   requireCond(userOp1 != null, 'No UserOperation param')
-  const userOp = await resolveProperties(userOp1) as any
+  const userOp = (await resolveProperties(userOp1)) as any
 
   const fields = ['sender', 'nonce', 'callData']
   if (requireSignature) {
     fields.push('signature')
   }
   if (requireGasParams) {
-    fields.push('preVerificationGas', 'verificationGasLimit', 'callGasLimit', 'maxFeePerGas', 'maxPriorityFeePerGas')
+    fields.push(
+      'preVerificationGas',
+      'verificationGasLimit',
+      'callGasLimit',
+      'maxFeePerGas',
+      'maxPriorityFeePerGas',
+    )
   }
-  fields.forEach(key => {
-    requireCond(userOp[key] != null, 'Missing userOp field: ' + key, ValidationErrors.InvalidFields, userOp)
+  fields.forEach((key) => {
+    requireCond(
+      userOp[key] != null,
+      'Missing userOp field: ' + key,
+      ValidationErrors.InvalidFields,
+      userOp,
+    )
     const value: string = userOp[key].toString()
-    requireCond(value.match(HEX_REGEX) != null, `Invalid hex value for property ${key} in UserOp`, ValidationErrors.InvalidFields, userOp[key])
+    requireCond(
+      value.match(HEX_REGEX) != null,
+      `Invalid hex value for property ${key} in UserOp`,
+      ValidationErrors.InvalidFields,
+      userOp[key],
+    )
   })
 
-  requireAddressAndFields(userOp, 'paymaster', ['paymasterPostOpGasLimit', 'paymasterVerificationGasLimit'], ['paymasterData'])
+  requireAddressAndFields(
+    userOp,
+    'paymaster',
+    ['paymasterPostOpGasLimit', 'paymasterVerificationGasLimit'],
+    ['paymasterData'],
+  )
   requireAddressAndFields(userOp, 'factory', ['factoryData'])
 }
 
 export type EthAPI = {
-  estimateUserOperationGas(userOpInput: Partial<UserOperation>, entryPointInput: string): Promise<EstimateUserOpGasResult>
-  sendUserOperation(userOp: UserOperation, entryPointInput: string): Promise<string>
+  estimateUserOperationGas(
+    userOpInput: Partial<UserOperation>,
+    entryPointInput: string,
+  ): Promise<EstimateUserOpGasResult>
+  sendUserOperation(
+    userOp: UserOperation,
+    entryPointInput: string,
+  ): Promise<string>
   getSupportedEntryPoints(): string[]
-  getUserOperationReceipt(userOpHash: string): Promise<UserOperationReceipt | null>
-  getUserOperationByHash(userOpHash: string): Promise<UserOperationByHashResponse | null>
+  getUserOperationReceipt(
+    userOpHash: string,
+  ): Promise<UserOperationReceipt | null>
+  getUserOperationByHash(
+    userOpHash: string,
+  ): Promise<UserOperationByHashResponse | null>
 }
 
 export const createEthAPI = (
-  ps: ProviderService, 
+  ps: ProviderService,
   sim: Simulator,
   vs: ValidationService,
   commonEventsManager: CommonEventManager,
   entryPointContract: ethers.Contract,
   bundlerBuilderClientUrl: string,
-  isUnsafeMode: boolean
+  isUnsafeMode: boolean,
 ): EthAPI => {
   return {
     /*
@@ -84,25 +124,34 @@ export const createEthAPI = (
         * gas limits (and prices) parameters are optional, but are used if specified. maxFeePerGas and maxPriorityFeePerGas default to zero, so no payment is required by neither account nor paymaster.
         * Optionally accepts the State Override Set to allow users to modify the state during the gas estimation. This field as well as its behavior is equivalent to the ones defined for eth_call RPC method.
     */
-    estimateUserOperationGas: async (userOpInput: Partial<UserOperation>, entryPointInput: string): Promise<EstimateUserOpGasResult> => {
+    estimateUserOperationGas: async (
+      userOpInput: Partial<UserOperation>,
+      entryPointInput: string,
+    ): Promise<EstimateUserOpGasResult> => {
       const userOp = {
         // Override gas params to estimate gas defaults
         maxFeePerGas: BigNumber.from(0).toHexString(),
         maxPriorityFeePerGas: BigNumber.from(0).toHexString(),
         preVerificationGas: BigNumber.from(0).toHexString(),
-        verificationGasLimit:  BigNumber.from(10e6).toHexString(),
-        callGasLimit:  BigNumber.from(10e6).toHexString(),
+        verificationGasLimit: BigNumber.from(10e6).toHexString(),
+        callGasLimit: BigNumber.from(10e6).toHexString(),
         ...userOpInput,
       }
-      await validateParameters(deepHexlify(userOp), entryPointInput, entryPointContract)
-      const {
-        preOpGas,
-        validAfter,
-        validUntil,
-      } = await sim.simulateHandleOp(userOp as UserOperation)
+      await validateParameters(
+        deepHexlify(userOp),
+        entryPointInput,
+        entryPointContract,
+      )
+      const { preOpGas, validAfter, validUntil } = await sim.simulateHandleOp(
+        userOp as UserOperation,
+      )
 
       // TODO: Use simulateHandleOp with proxy contract to estimate callGasLimit too
-      const callGasLimit = await ps.estimateGas(entryPointContract.address, userOp.sender, userOp.callData)
+      const callGasLimit = await ps.estimateGas(
+        entryPointContract.address,
+        userOp.sender,
+        userOp.callData,
+      )
       const verificationGasLimit = BigNumber.from(preOpGas).toNumber()
       const preVerificationGas = calcPreVerificationGas(userOp)
 
@@ -111,32 +160,32 @@ export const createEthAPI = (
         validUntil,
         preVerificationGas,
         verificationGasLimit,
-        callGasLimit
+        callGasLimit,
         // TODO: Add paymaster gas values
         // paymasterVerificationGasLimit,
         // paymasterPostOpGasLimit,
       }
     },
 
-    sendUserOperation: async (userOp: UserOperation, entryPointInput: string):Promise<string> => {
+    sendUserOperation: async (
+      userOp: UserOperation,
+      entryPointInput: string,
+    ): Promise<string> => {
       Logger.debug('Running checks on userOp')
       // TODO: This looks like a duplicate of the userOp validateParameters function
       await validateParameters(userOp, entryPointInput, entryPointContract)
       const userOpReady = await resolveProperties(userOp)
-      vs.validateInputParameters(
-        userOp, 
-        entryPointInput,
-        true,
-        true,
-      )
+      vs.validateInputParameters(userOp, entryPointInput, true, true)
       const validationResult = await vs.validateUserOp(
-        userOp, 
+        userOp,
         isUnsafeMode,
         true,
-        undefined
+        undefined,
       )
 
-      const userOpHash = await entryPointContract.getUserOpHash(packUserOp(userOpReady))
+      const userOpHash = await entryPointContract.getUserOpHash(
+        packUserOp(userOpReady),
+      )
       const relayedOp: RelayUserOpParam = {
         userOp,
         userOpHash,
@@ -145,14 +194,14 @@ export const createEthAPI = (
         senderInfo: validationResult.senderInfo,
         paymasterInfo: validationResult.paymasterInfo,
         factoryInfo: validationResult.factoryInfo,
-        aggregatorInfo: validationResult.aggregatorInfo
+        aggregatorInfo: validationResult.aggregatorInfo,
       }
 
       try {
         const addOpResult = await routeRequest(
           bundlerBuilderClientUrl,
           'builder_addUserOp',
-          [relayedOp]
+          [relayedOp],
         )
         Logger.debug(addOpResult, 'UserOp included in mempool...')
       } catch (error: any) {
@@ -160,7 +209,7 @@ export const createEthAPI = (
         requireCond(
           false,
           'Failed to add user Operation to mempool',
-          ValidationErrors.OpcodeValidation
+          ValidationErrors.OpcodeValidation,
         )
       }
 
@@ -171,8 +220,14 @@ export const createEthAPI = (
       return [entryPointContract.address]
     },
 
-    getUserOperationReceipt: async (userOpHash: string): Promise<UserOperationReceipt | null> => {
-      requireCond(userOpHash?.toString()?.match(HEX_REGEX) != null, 'Missing/invalid userOpHash', ValidationErrors.InvalidFields)
+    getUserOperationReceipt: async (
+      userOpHash: string,
+    ): Promise<UserOperationReceipt | null> => {
+      requireCond(
+        userOpHash?.toString()?.match(HEX_REGEX) != null,
+        'Missing/invalid userOpHash',
+        ValidationErrors.InvalidFields,
+      )
       const event = await commonEventsManager.getUserOperationEvent(userOpHash)
       if (event == null) {
         return null
@@ -187,12 +242,18 @@ export const createEthAPI = (
         actualGasUsed: event.args.actualGasUsed,
         success: event.args.success,
         logs,
-        receipt
+        receipt,
       })
     },
 
-    getUserOperationByHash: async (userOpHash: string): Promise<UserOperationByHashResponse | null> => {
-      requireCond(userOpHash?.toString()?.match(HEX_REGEX) != null, 'Missing/invalid userOpHash', ValidationErrors.InvalidFields)
+    getUserOperationByHash: async (
+      userOpHash: string,
+    ): Promise<UserOperationByHashResponse | null> => {
+      requireCond(
+        userOpHash?.toString()?.match(HEX_REGEX) != null,
+        'Missing/invalid userOpHash',
+        ValidationErrors.InvalidFields,
+      )
       const event = await commonEventsManager.getUserOperationEvent(userOpHash)
       if (event == null) {
         return null
@@ -207,10 +268,11 @@ export const createEthAPI = (
       if (ops == null) {
         throw new Error('failed to parse transaction')
       }
-      
-      const op = ops.find(op =>
-        op.sender === event.args?.sender &&
-        BigNumber.from(op.nonce).eq(event.args?.nonce)
+
+      const op = ops.find(
+        (op) =>
+          op.sender === event.args?.sender &&
+          BigNumber.from(op.nonce).eq(event.args?.nonce),
       )
       if (op == null) {
         throw new Error('unable to find userOp in transaction')
@@ -221,9 +283,8 @@ export const createEthAPI = (
         entryPoint: entryPointContract.address,
         transactionHash: tx.hash,
         blockHash: tx.blockHash ?? '',
-        blockNumber: tx.blockNumber ?? 0
+        blockNumber: tx.blockNumber ?? 0,
       })
-    }
+    },
   }
 }
-

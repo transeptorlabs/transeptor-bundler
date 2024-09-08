@@ -1,11 +1,12 @@
 module.exports = {
   root: true,
   parser: '@typescript-eslint/parser',
-  plugins: ['@typescript-eslint/eslint-plugin', '@typescript-eslint', 'jsdoc'],
+  plugins: ['@typescript-eslint', 'jsdoc', 'prettier'],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:jsdoc/recommended',
+    'plugin:prettier/recommended'
   ],
   rules: {
     '@typescript-eslint/explicit-function-return-type': 'off',
@@ -13,12 +14,15 @@ module.exports = {
     'no-console': 'error',
     'no-debugger': 'warn',
     'no-unused-vars': 'off',
-    '@typescript-eslint/no-unused-vars': ['error', { 
-      argsIgnorePattern: '^_', 
-      varsIgnorePattern: '^_'
-    }],
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     semi: ['error', 'never'],
     quotes: ['error', 'single'],
+
+    // Prettier specific rule
+    'prettier/prettier': ['error', {
+      semi: false,
+      singleQuote: true
+    }],
 
     // JSDoc-specific rules
     'jsdoc/check-alignment': 'warn',
