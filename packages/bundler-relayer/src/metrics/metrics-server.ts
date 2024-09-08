@@ -11,7 +11,7 @@ export class MetricsHttpServer {
   private app: express.Application
   private readonly httpServer: Server
   private readonly port: number
-  
+
   constructor(port: number) {
     this.port = port
 
@@ -20,7 +20,7 @@ export class MetricsHttpServer {
     this.app.use(
       helmet({
         referrerPolicy: { policy: 'no-referrer-when-downgrade' },
-      })
+      }),
     )
     this.app.use(cors())
     this.app.use(express.json())
@@ -36,7 +36,7 @@ export class MetricsHttpServer {
     }
 
     // TODO: check that there is a connect to db
-  
+
     Logger.info('Bundler passed metrics server preflight check')
   }
 
@@ -55,9 +55,9 @@ export class MetricsHttpServer {
   async handleRequest(req: Request, res: Response): Promise<void> {
     const request = req.body as JsonRpcRequest
     res.json({
-        jsonrpc: '2.0',
-        id: request.id,
-        result: 'ok',
+      jsonrpc: '2.0',
+      id: request.id,
+      result: 'ok',
     })
   }
 }

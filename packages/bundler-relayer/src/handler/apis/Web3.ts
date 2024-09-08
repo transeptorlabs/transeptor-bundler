@@ -1,11 +1,14 @@
 export type Web3API = {
-    clientVersion(): string
+  clientVersion(): string
 }
 
-export const createWeb3API = (version: string, isUnsafeMode: boolean): Web3API => {
-    return {
-        clientVersion:(): string => {
-            return 'transeptor/' + version + (isUnsafeMode ? '/unsafe' : '')
-        }
-    }
+export const createWeb3API = (
+  version: string,
+  isUnsafeMode: boolean,
+): Web3API => {
+  return {
+    clientVersion: (): string => {
+      return 'transeptor/' + version + (isUnsafeMode ? '/unsafe' : '')
+    },
+  }
 }

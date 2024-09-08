@@ -1,6 +1,4 @@
-import { 
-  createCommonEventManager,
-} from './event/index.js'
+import { createCommonEventManager } from './event/index.js'
 import {
   createRelayerHandlerRegistry,
   createEthAPI,
@@ -21,11 +19,7 @@ const runBundlerRelayer = async () => {
 
   const ps = createProviderService(config.provider)
   const sim = createSimulator(ps, config.entryPointContract)
-  const vs = createValidationService(
-    ps,
-    sim,
-    config.entryPointContract.address,
-  )
+  const vs = createValidationService(ps, sim, config.entryPointContract.address)
 
   // start rpc server
   const commonEventManager = createCommonEventManager(config.entryPointContract)
@@ -38,19 +32,16 @@ const runBundlerRelayer = async () => {
         commonEventManager,
         config.entryPointContract,
         config.bundlerBuilderClientUrl,
-        config.isUnsafeMode
+        config.isUnsafeMode,
       ),
-      createWeb3API(
-        config.clientVersion, 
-        config.isUnsafeMode
-      ),
+      createWeb3API(config.clientVersion, config.isUnsafeMode),
       config.bundlerBuilderClientUrl,
       ps,
     ),
     config.httpApis,
     config.port,
   )
-  await bundlerServer.start(async() => {
+  await bundlerServer.start(async () => {
     // run checks
     // TODO: Ping the bundler-builder node to make sure it is runing before ready to take request
   })
@@ -66,7 +57,6 @@ const runBundlerRelayer = async () => {
 }
 
 runBundlerRelayer().catch(async (error) => {
-  Logger.fatal({error: error.message}, 'Aborted')
+  Logger.fatal({ error: error.message }, 'Aborted')
   process.exit(1)
 })
-

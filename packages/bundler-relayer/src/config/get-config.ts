@@ -1,4 +1,3 @@
-
 import { createRelayerConfig, Config } from './create-config.js'
 
 let config: Config | undefined = undefined
