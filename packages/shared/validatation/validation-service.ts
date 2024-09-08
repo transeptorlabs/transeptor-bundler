@@ -8,14 +8,16 @@ import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from "../abis/index.js";
 import { Simulator } from "../sim/index.js";
 import { Logger } from "../logger/index.js";
 import {
-  ReferencedCodeHashes,
   StorageMap,
   UserOperation,
+  BundlerCollectorReturn,
+} from "../types/index.js";
+import {
+  ReferencedCodeHashes,
   ValidateUserOpResult,
   ValidationErrors,
   ValidationResult,
-  BundlerCollectorReturn,
-} from "../types/index.js";
+} from './validation.types.js'
 import {
   requireCond,
   requireAddressAndFields,

@@ -1,5 +1,6 @@
 import { TransactionReceipt } from '@ethersproject/providers'
 import type { BigNumberish, BytesLike } from 'ethers'
+import type { ReferencedCodeHashes, StakeInfo } from '../validatation/index.js';
 
 // New transaction types for account-abstracted transactions
 export type UserOperation = {
@@ -33,7 +34,7 @@ export type PackedUserOperation = {
     signature: BytesLike;
 }
   
-export interface UserOperationReceipt {
+export type UserOperationReceipt = {
     /// the request hash
     userOpHash: string
     /// the account sending this UserOperation
@@ -57,7 +58,7 @@ export interface UserOperationReceipt {
     receipt: TransactionReceipt
 }
 
-export interface UserOperationByHashResponse {
+export type UserOperationByHashResponse = {
     userOperation: UserOperation
     entryPoint: string
     blockNumber: number
@@ -65,7 +66,7 @@ export interface UserOperationByHashResponse {
     transactionHash: string
 }
 
-export interface EstimateUserOpGasResult {
+export type EstimateUserOpGasResult = {
     /**
      * the preVerification gas used by this UserOperation.
      */
@@ -99,6 +100,17 @@ export interface EstimateUserOpGasResult {
      * value used for paymaster post op execution (if paymaster exists in the UserOperation)
      */
     paymasterPostOpGasLimit?: BigNumberish
+}
+
+export type RelayUserOpParam = {
+    userOp: UserOperation,
+    userOpHash: string,
+    prefund: BigNumberish,
+    referencedContracts: ReferencedCodeHashes,
+    senderInfo: StakeInfo,
+    paymasterInfo?: StakeInfo,
+    factoryInfo?: StakeInfo,
+    aggregatorInfo?: StakeInfo
 }
 
 

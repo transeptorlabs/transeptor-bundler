@@ -80,7 +80,7 @@ export class Libp2pNode {
     private async doPing() {
         Logger.info('Starting pinging remote peer to check connectivity')
         const pingService = this.node.services.ping as PingService
-        if (this.peerMultiaddrs.length >= 0 && this.connectToPeers) {
+        if (this.peerMultiaddrs.length > 0 && this.connectToPeers) {
             const ma: Multiaddr = multiaddr(this.peerMultiaddrs[0])
             const latency = await pingService.ping(ma)
             Logger.info(`pinged remote peer at ${this.peerMultiaddrs[0]} in ${latency}ms`)

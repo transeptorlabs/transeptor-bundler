@@ -2,11 +2,12 @@ import { BigNumber, ethers } from 'ethers'
 import {
   EstimateUserOpGasResult,
   PackedUserOperation,
+  RelayUserOpParam,
   UserOperation,
   UserOperationByHashResponse,
   UserOperationReceipt,
-  ValidationErrors,
 } from '../../../../shared/types/index.js'
+import { ValidationErrors } from '../../../../shared/validatation/index.js'
 import {
   deepHexlify,
   requireCond,
@@ -18,12 +19,11 @@ import {
 
 import { ProviderService } from '../../../../shared/provider/index.js'
 import { resolveProperties } from 'ethers/lib/utils.js'
-import { BundleManager } from '../../bundle/index.js'
-import { MempoolManager } from '../../mempool/index.js'
-import { EventsManager } from '../../event/index.js'
 import { Simulator } from '../../../../shared/sim/index.js'
 import { Logger } from '../../../../shared/logger/index.js'
 import { ValidationService } from '../../../../shared/validatation/index.js'
+import { routeRequest } from '../request-router.js'
+import { CommonEventManager } from '../../event/index.js'
 
 const HEX_REGEX = /^0x[a-fA-F\d]*$/i
 
@@ -61,16 +61,20 @@ const validateParameters = async(
 }
 
 export type EthAPI = {
+  estimateUserOperationGas(userOpInput: Partial<UserOperation>, entryPointInput: string): Promise<EstimateUserOpGasResult>
+  sendUserOperation(userOp: UserOperation, entryPointInput: string): Promise<string>
+  getSupportedEntryPoints(): string[]
+  getUserOperationReceipt(userOpHash: string): Promise<UserOperationReceipt | null>
+  getUserOperationByHash(userOpHash: string): Promise<UserOperationByHashResponse | null>
 }
 
 export const createEthAPI = (
   ps: ProviderService, 
   sim: Simulator,
   vs: ValidationService,
-  mempoolManager: MempoolManager,
-  bundleManager: BundleManager,
-  eventsManager: EventsManager,
+  commonEventsManager: CommonEventManager,
   entryPointContract: ethers.Contract,
+  bundlerBuilderClientUrl: string,
   isUnsafeMode: boolean
 ): EthAPI => {
   return {
@@ -114,7 +118,7 @@ export const createEthAPI = (
       }
     },
 
-    sendUserOperation: async (userOp: UserOperation, entryPointInput: string) => {
+    sendUserOperation: async (userOp: UserOperation, entryPointInput: string):Promise<string> => {
       Logger.debug('Running checks on userOp')
       // TODO: This looks like a duplicate of the userOp validateParameters function
       await validateParameters(userOp, entryPointInput, entryPointContract)
@@ -133,21 +137,31 @@ export const createEthAPI = (
       )
 
       const userOpHash = await entryPointContract.getUserOpHash(packUserOp(userOpReady))
-
-      await mempoolManager.addUserOp(
+      const relayedOp: RelayUserOpParam = {
         userOp,
         userOpHash,
-        validationResult.returnInfo.prefund,
-        validationResult.referencedContracts,
-        validationResult.senderInfo,
-        validationResult.paymasterInfo,
-        validationResult.factoryInfo,
-        validationResult.aggregatorInfo
-      )
+        prefund: validationResult.returnInfo.prefund,
+        referencedContracts: validationResult.referencedContracts,
+        senderInfo: validationResult.senderInfo,
+        paymasterInfo: validationResult.paymasterInfo,
+        factoryInfo: validationResult.factoryInfo,
+        aggregatorInfo: validationResult.aggregatorInfo
+      }
 
-      // TODO: This code is blocking request since the userOp is added to the mempool. Offload to a separate process to avoid blocking
-      if (mempoolManager.isMempoolOverloaded()) {
-        await bundleManager.doAttemptAutoBundle(true)
+      try {
+        const addOpResult = await routeRequest(
+          bundlerBuilderClientUrl,
+          'builder_addUserOp',
+          [relayedOp]
+        )
+        Logger.debug(addOpResult, 'UserOp included in mempool...')
+      } catch (error: any) {
+        // TODO: Extract error to get correct code and message for bundler-builder node
+        requireCond(
+          false,
+          "Failed to add userOperation to mempool",
+          ValidationErrors.OpcodeValidation
+        );
       }
 
       return userOpHash
@@ -159,12 +173,12 @@ export const createEthAPI = (
 
     getUserOperationReceipt: async (userOpHash: string): Promise<UserOperationReceipt | null> => {
       requireCond(userOpHash?.toString()?.match(HEX_REGEX) != null, 'Missing/invalid userOpHash', ValidationErrors.InvalidFields)
-      const event = await eventsManager.getUserOperationEvent(userOpHash)
+      const event = await commonEventsManager.getUserOperationEvent(userOpHash)
       if (event == null) {
         return null
       }
       const receipt = await event.getTransactionReceipt()
-      const logs = eventsManager.filterLogs(event, receipt.logs)
+      const logs = commonEventsManager.filterLogs(event, receipt.logs)
       return deepHexlify({
         userOpHash,
         sender: event.args.sender,
@@ -179,7 +193,7 @@ export const createEthAPI = (
 
     getUserOperationByHash: async (userOpHash: string): Promise<UserOperationByHashResponse | null> => {
       requireCond(userOpHash?.toString()?.match(HEX_REGEX) != null, 'Missing/invalid userOpHash', ValidationErrors.InvalidFields)
-      const event = await eventsManager.getUserOperationEvent(userOpHash)
+      const event = await commonEventsManager.getUserOperationEvent(userOpHash)
       if (event == null) {
         return null
       }

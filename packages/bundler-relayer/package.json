@@ -9,13 +9,12 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "npx tsc -p ./tsconfig.json && cp ../shared/sim/tracer.js dist/shared/sim",
-    "build:contracts": "cd contracts && forge build",
     "dev": "nodemon",
-    "start": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "start:unsafe": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
-    "start:metrics": "node --loader ts-node/esm ./src/index.ts  --httpApi web3,eth,debug --txMode base --metrics | pino-pretty",
-    "start:prod": "yarn build && node dist/bundler-relayer/src/index.js --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "test": "vitest --config ./vitest.config.ts",
+    "start": "node --loader ts-node/esm ./src/index.ts --debug --txMode base | pino-pretty",
+    "start:unsafe": "node --loader ts-node/esm ./src/index.ts --debug --txMode base --unsafe | pino-pretty",
+    "start:metrics": "node --loader ts-node/esm ./src/index.ts --debug --txMode base --metrics | pino-pretty",
+    "start:prod": "yarn build && node dist/bundler-relayer/src/index.js --debug --txMode base | pino-pretty",
+    "test": "echo no test",
     "lint": "eslint . --ext ts",
     "lint:fix": "yarn lint --fix"
   },

@@ -5,7 +5,7 @@ import {
   MeasurementName,
   InfluxdbConnection,
   WorkerMessage,
-} from '../../../../shared/types/index.js'
+} from '../metrics.types.js'
 
 
 parentPort.on('message', async (message) => {

@@ -11,7 +11,7 @@ services:
       --port 4337
       --network http://host.docker.internal:8545
       --txMode base
-      --httpApi web3,eth,debug
+      --debug
 
   bundler-builder:
     container_name: bundler-builder-dev

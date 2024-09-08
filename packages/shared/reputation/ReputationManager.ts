@@ -1,16 +1,17 @@
-import { BigNumber, Contract } from 'ethers'
+import { BigNumber, Contract, ethers } from 'ethers'
 
-import { IStakeManager } from '../../../shared/abis/index.js'
-import { Logger } from '../../../shared/logger/index.js'
-import { ProviderService } from '../../../shared/provider/index.js'
+import { IStakeManager } from '../abis/index.js'
+import { Logger } from '../logger/index.js'
 import {
   ReputationEntry,
   ReputationParams,
   ReputationStatus,
+} from '../types/index.js'
+import {
   StakeInfo,
   ValidationErrors,
-} from '../../../shared/types/index.js'
-import { requireCond, tostr } from '../../../shared/utils/index.js'
+} from '../validatation/index.js'
+import { requireCond, tostr } from '../utils/index.js'
 
 export class ReputationManager {
   private entries: { [address: string]: ReputationEntry } = {}
@@ -19,7 +20,7 @@ export class ReputationManager {
   private interval: any | null = null
   private readonly minStake: BigNumber
   private readonly minUnstakeDelay: number
-  private readonly providerService: ProviderService
+  private readonly stakeManagerContract: ethers.Contract
 
   private bundlerReputationParams: ReputationParams = {
     minInclusionDenominator: 10,
@@ -33,11 +34,14 @@ export class ReputationManager {
     banSlack: 10,
   }
 
-  constructor(minStake: BigNumber, minUnstakeDelay: number, providerService: ProviderService,
+  constructor(
+    minStake: BigNumber,
+    minUnstakeDelay: number,
+    stakeManagerContract: ethers.Contract,
     ) {
     this.minStake = minStake
     this.minUnstakeDelay = minUnstakeDelay
-    this.providerService = providerService
+    this.stakeManagerContract = stakeManagerContract
   }
 
   /**
@@ -163,13 +167,11 @@ export class ReputationManager {
 
   public async getStakeStatus(
     address: string,
-    entryPointAddress: string
   ): Promise<{
     stakeInfo: StakeInfo;
     isStaked: boolean;
   }> {
-    const sm = new Contract(entryPointAddress, IStakeManager, this.providerService.getPovider())
-    const info = await sm.getDepositInfo(address)
+    const info = await this.stakeManagerContract.getDepositInfo(address)
     const isStaked =
       BigNumber.from(info.stake).gte(this.minStake) &&
       BigNumber.from(info.unstakeDelaySec).gte(this.minUnstakeDelay)

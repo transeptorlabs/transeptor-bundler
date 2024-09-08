@@ -1,7 +1,8 @@
 import { BigNumber, BigNumberish, ethers } from 'ethers'
 import { hexDataSlice, hexZeroPad } from 'ethers/lib/utils.js'
 
-import { UserOperation, ValidationErrors } from '../types/index.js'
+import { UserOperation } from '../types/index.js'
+import { ValidationErrors } from '../validatation/index.js'
 
 import { requireCond } from './rpc.utils.js'
 

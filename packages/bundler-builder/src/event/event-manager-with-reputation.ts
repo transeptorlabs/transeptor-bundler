@@ -2,17 +2,16 @@ import { Log } from '@ethersproject/providers'
 import { ethers } from 'ethers'
 
 import { Logger } from '../../../shared/logger/index.js'
-import { MempoolManager } from '../mempool/index.js'
 import { ProviderService } from '../../../shared/provider/index.js'
-import { ReputationManager } from '../reputation/index.js'
+import { ReputationManager } from '../../../shared/reputation/index.js'
+import { budlerBuilderEmitter } from './constants.js'
 
 /**
  * listen to events. trigger ReputationManager's Included
  */
-export class EventsManager {
+export class EventManagerWithReputation {
   private readonly providerService: ProviderService
   private readonly reputationManager: ReputationManager
-  private readonly mempoolManager: MempoolManager
   private readonly entryPointContract: ethers.Contract
 
   private lastBlock?: number
@@ -22,15 +21,12 @@ export class EventsManager {
   constructor(
     providerService: ProviderService,
     reputationManager: ReputationManager,
-    mempoolManager: MempoolManager,
     entryPointContract: ethers.Contract
   ) {
     this.providerService = providerService
     this.reputationManager = reputationManager
-    this.mempoolManager = mempoolManager
     this.entryPointContract = entryPointContract
     this.initEventListener()
-    
   }
 
   /**
@@ -82,7 +78,11 @@ export class EventsManager {
 
   private async handleUserOperationEvent(ev: any): Promise<void> {
     const hash = ev.args.userOpHash
-    await this.mempoolManager.removeUserOp(hash)
+
+    // emit event to remove userOp
+    Logger.debug(`Sending (removeUserOp) event with data: ${hash}...`)
+    budlerBuilderEmitter.emit('removeUserOp', hash);
+    
     this.includedAddress(ev.args.sender)
     this.includedAddress(ev.args.paymaster)
     this.includedAddress(this.getEventAggregator(ev))
@@ -115,17 +115,18 @@ export class EventsManager {
     }
   }
 
-  public async getUserOperationEvent (userOpHash: string): Promise<any> {
+  public async getUserOperationEvent (userOpHash: string): Promise<ethers.Event> {
     // TODO: eth_getLogs is throttled. must be acceptable for finding a UserOperation by hash
     const event = await this.entryPointContract.queryFilter(this.entryPointContract.filters.UserOperationEvent(userOpHash))
     return event[0]
   }
 
-  /* filter full bundle logs, and leave only logs for the given userOpHash
-    // @param userOpEvent - the event of our UserOp (known to exist in the logs)
-    // @param logs - full bundle logs. after each group of logs there is a single UserOperationEvent with unique hash.
-  */
-  public filterLogs (userOpEvent: any, logs: Log[]): Log[] {
+  /** 
+   * filter full bundle logs, and leave only logs for the given userOpHash
+   * @param userOpEvent - the event of our UserOp (known to exist in the logs)
+   * @param logs - full bundle logs. after each group of logs there is a single UserOperationEvent with unique hash.
+   */
+  public filterLogs (userOpEvent: ethers.Event, logs: Log[]): Log[] {
     let startIndex = -1
     let endIndex = -1
     const events = Object.values(this.entryPointContract.interface.events)

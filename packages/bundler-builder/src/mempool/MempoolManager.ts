@@ -2,14 +2,16 @@ import { Mutex } from 'async-mutex'
 import { BigNumber, BigNumberish } from 'ethers'
 
 import { Logger } from '../../../shared/logger/index.js'
-import { ReputationManager } from '../reputation/index.js'
+import { ReputationManager } from '../../../shared/reputation/index.js'
 import {
   MempoolEntry,
-  ReferencedCodeHashes,
-  StakeInfo,
+  RelayUserOpParam,
   UserOperation,
-  ValidationErrors,
 } from '../../../shared/types/index.js'
+import {
+  StakeInfo,
+  ValidationErrors,
+} from '../../../shared/validatation/index.js'
 import { RpcError, requireCond } from '../../../shared/utils/index.js'
 
 /* In-memory mempool with used to manage UserOperations.
@@ -97,17 +99,21 @@ export class MempoolManager {
    * revets if unable to add UserOp to mempool (too many UserOps with this sender)
    */
   public async addUserOp(
-    userOp: UserOperation,
-    userOpHash: string,
-    prefund: BigNumberish,
-    referencedContracts: ReferencedCodeHashes,
-    senderInfo: StakeInfo,
-    paymasterInfo?: StakeInfo,
-    factoryInfo?: StakeInfo,
-    aggregatorInfo?: StakeInfo
+    relayUserOpParam: RelayUserOpParam
   ): Promise<void> {
     const release = await this.mutex.acquire()
     try {
+      const {
+        userOp,
+        userOpHash,
+        prefund,
+        referencedContracts,
+        senderInfo, 
+        paymasterInfo, 
+        factoryInfo,
+        aggregatorInfo
+       } = relayUserOpParam
+
       const entry: MempoolEntry = {
         userOp,
         userOpHash,

@@ -1,2 +1,2 @@
 export * from './rpcServer.js'
-export * from './rpcHandler.js'
+export * from './rpc.types.js'

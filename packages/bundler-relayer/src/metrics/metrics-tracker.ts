@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url'
 import { Worker, isMainThread } from 'node:worker_threads'
 
 import { Logger } from '../../../shared/logger/index.js'
-import { InfluxdbConnection, WorkerMessage } from '../../../shared/types/index.js'
+import { InfluxdbConnection, WorkerMessage } from './metrics.types.js'
 
 export class MetricsTracker {
     private interval: any| null = null

@@ -4,7 +4,8 @@ import { ContractFactory, ethers, providers } from 'ethers'
 import { Result, resolveProperties } from 'ethers/lib/utils.js'
 
 import { Logger } from '../logger/index.js'
-import { TraceOptions, TraceResult, ValidationErrors } from '../types/index.js'
+import { TraceOptions, TraceResult } from '../sim/index.js'
+import { ValidationErrors } from '../validatation/index.js'
 import { RpcError } from '../utils/index.js'
 
 export type ProviderService = {

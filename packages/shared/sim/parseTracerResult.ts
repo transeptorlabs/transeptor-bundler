@@ -8,16 +8,17 @@ import {
   IACCOUNT_ABI
 } from '../abis/index.js'
 import { 
-  StakeInfo, 
   StorageMap, 
   UserOperation, 
-  ValidationErrors,
-  ValidationResult, 
   BundlerCollectorReturn, 
   TopLevelCallInfo 
 } from '../types/index.js'
+import {
+  ValidationErrors,
+  ValidationResult, 
+  StakeInfo, 
+} from '../validatation/index.js'
 import { requireCond, toBytes32 } from '../utils/index.js'
-
 
 interface CallEntry {
   to: string

@@ -3,9 +3,9 @@ import { BigNumber, ContractFactory, ethers } from 'ethers'
 
 import { GET_USEROP_HASHES_ABI, GET_USEROP_HASHES_BYTECODE } from '../../../shared/abis/index.js'
 import { Logger } from '../../../shared/logger/index.js'
-import { MempoolManager } from '../mempool/index.js'
+import { MempoolManager } from '../../../bundler-builder/src/mempool/index.js'
 import { ProviderService } from '../../../shared/provider/index.js'
-import { ReputationManager } from '../reputation/index.js'
+import { ReputationManager } from '../../../shared/reputation/index.js'
 import {
   MempoolEntry,
   ReputationStatus,

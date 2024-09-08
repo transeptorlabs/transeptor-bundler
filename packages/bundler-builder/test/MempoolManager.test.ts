@@ -3,13 +3,12 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { BigNumber, providers } from 'ethers'
 
 import { MempoolManager } from '../src/mempool/index.js'
-import { ProviderService } from '../../shared/provider/index.js'
-import { ReputationManager } from '../src/reputation/index.js'
+import { createProviderService } from '../../shared/provider/index.js'
+import { ReputationManager } from '../../shared/reputation/index.js'
 
 import {
   mockUserOperationFactory,
   mockEntryPointGetUserOpHash,
-  testWallet,
 } from './test-helpers.js'
 
 // Waiting on support for hardhat to support ESM in TypeScript projects to improve testing
@@ -22,7 +21,7 @@ describe('MempoolManager', () => {
     rm = new ReputationManager(
       BigNumber.from('1'),
       84600,
-      new ProviderService(new providers.JsonRpcProvider(''), testWallet)
+      createProviderService(new providers.JsonRpcProvider(''))
     )
     mempoolManager = new MempoolManager(rm, 5)
   })

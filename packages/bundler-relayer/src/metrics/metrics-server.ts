@@ -5,7 +5,7 @@ import express, { Request, Response } from 'express'
 import helmet from 'helmet'
 
 import { Logger } from '../../../shared/logger/index.js'
-import { JsonRpcRequest } from '../../../shared/types/index.js'
+import { JsonRpcRequest } from '../../../shared/rpc/index.js'
 
 export class MetricsHttpServer {
   private app: express.Application

@@ -1,13 +1,11 @@
-export class Web3API {
-    private readonly version: string
-    private readonly isUnsafeMode: boolean
+export type Web3API = {
+    clientVersion(): string
+}
 
-    constructor(version: string, isUnsafeMode: boolean) {
-        this.version = version
-        this.isUnsafeMode = isUnsafeMode
-    }
-  
-    clientVersion(): string {
-        return 'transeptor/' + this.version + (this.isUnsafeMode ? '/unsafe' : '')
+export const createWeb3API = (version: string, isUnsafeMode: boolean): Web3API => {
+    return {
+        clientVersion:(): string => {
+            return 'transeptor/' + version + (isUnsafeMode ? '/unsafe' : '')
+        }
     }
 }

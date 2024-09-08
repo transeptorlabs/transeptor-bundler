@@ -4,11 +4,13 @@ import express, { Request, Response } from 'express'
 import helmet from 'helmet'
 
 import { Logger } from '../logger/index.js'
-import { 
+import type { 
   JsonRpcRequest,
-  RpcServer 
-} from '../types/index.js'
-import { RpcHandler } from './rpcHandler.js'
+  RpcServer,
+  HandlerRegistry, 
+  RpcHandler
+} from './rpc.types.js'
+import { createRpcHandler } from './rpcHandler.js'
 
 const createApp = (rpc: RpcHandler): express.Application => {
   const app = express()
@@ -34,25 +36,20 @@ const createApp = (rpc: RpcHandler): express.Application => {
   return app
 }
 
-/**
- * Creates an RPC HTTP server.
- * 
- * @param rpc - The handler for RPC method requests.
- * @param port - The port on which the server should listen.
- * @returns An object with `start` and `stop` methods to control the server.
- */
-export const createRpcServer = (
-  rpc: RpcHandler, 
+export const createRpcServerWithHandlers = (
+  handlers: HandlerRegistry, 
+  supportedApiPrefixes: string[], 
   port: number
 ): RpcServer => {
-  const app = createApp(rpc)
-  const httpServer: Server = createServer(app)
+  const rpc = createRpcHandler(handlers, supportedApiPrefixes);
+  const app = createApp(rpc);
+  const httpServer: Server = createServer(app);
 
   return {
     start: async (preflightCheck: () => Promise<void>): Promise<void> => {
       await preflightCheck()
       httpServer.listen(port, () => {
-        Logger.info(`Bundler listening on http://localhost:${port}/rpc`)
+        Logger.info(`Node listening on http://localhost:${port}/rpc`)
       })
     },
 

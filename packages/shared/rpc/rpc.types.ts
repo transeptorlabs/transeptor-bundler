@@ -39,3 +39,15 @@ export type RpcServer = {
      */
     stop: () => Promise<void>;
 }
+
+export type RpcHandler = {
+    doHandleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse>;
+}
+  
+// Handler function type
+export type HandlerFunction = (params: any[]) => Promise<any> | any;
+
+// Registry for handlers
+export type HandlerRegistry = {
+    [method: string]: HandlerFunction;
+};

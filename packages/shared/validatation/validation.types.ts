@@ -1,6 +1,6 @@
 import { BigNumberish, BytesLike } from 'ethers'
 
-import { StorageMap } from './bundle.types.js'
+import { StorageMap } from '../types/bundle.types.js'
 
 /**
  * result from successful simulateValidation

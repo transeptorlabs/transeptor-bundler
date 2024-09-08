@@ -2,7 +2,7 @@ import { Deferrable } from '@ethersproject/properties'
 import { TransactionRequest } from '@ethersproject/providers'
 import { Wallet, ethers, providers } from 'ethers'
 import { resolveProperties } from 'ethers/lib/utils.js'
-import { Logger } from '../logger/Logger.js'
+import { Logger } from '../../../shared/logger/index.js';
 
 export type BundlerSignerWallets = Record<number, Wallet>;
 

@@ -1,13 +1,13 @@
 import { ProviderService } from '../../../shared/provider/index.js';
 import { HandlerRegistry } from '../../../shared/rpc/index.js';
 
-import { EthAPI, Web3API, DebugAPI } from './apis/index.js';
+import { EthAPI, Web3API } from './apis/index.js';
+import { routeRequest } from './request-router.js';
 
-// Create handlers for each method
-export const createHandlerRegistry = (
+export const createRelayerHandlerRegistry = (
   eth: EthAPI, 
-  debug: DebugAPI, 
   web3: Web3API,
+  bundlerBuilderClientUrl: string,
   ps: ProviderService,
 ): HandlerRegistry => ({
   'eth_chainId': async () => ps.getChainId(),
@@ -17,42 +17,17 @@ export const createHandlerRegistry = (
   'eth_getUserOperationReceipt': async (params) => eth.getUserOperationReceipt(params[0]),
   'eth_getUserOperationByHash': async (params) => eth.getUserOperationByHash(params[0]),
   'web3_clientVersion': async () => web3.clientVersion(),
-  'debug_bundler_clearState': async () => {
-    await debug.clearState();
-    return 'ok';
-  },
-  'debug_bundler_dumpMempool': async () => debug.dumpMempool(),
-  'debug_bundler_clearMempool': async () => {
-    await debug.clearMempool();
-    return 'ok';
-  },
-  'debug_bundler_sendBundleNow': async () => {
-    const result = await debug.sendBundleNow();
-    if (result.transactionHash === '' && result.userOpHashes.length === 0) {
-      return 'ok';
-    }
-    return result;
-  },
-  'debug_bundler_setBundlingMode': async (params) => {
-    debug.setBundlingMode(params[0]);
-    return 'ok';
-  },
-  'debug_bundler_setBundleInterval': async () => 'ok', // TODO:  Placeholder for implementation, need to implement
-  'debug_bundler_setReputation': async (params) => {
-    await debug.setReputation(params[0]);
-    return 'ok';
-  },
-  'debug_bundler_dumpReputation': async () => debug.dumpReputation(),
-  'debug_bundler_clearReputation': () => {
-    debug.clearReputation();
-    return 'ok';
-  },
-  'debug_bundler_addUserOps': async (params) => {
-    await debug.addUserOps(params[0]);
-    return 'ok';
-  },
-  'debug_bundler_getStakeStatus': async (params) => {
-    await debug.getStakeStatus(params[0], params[1]);
-    return null;
-  },
+  
+  // route debug to bundle builder node
+  'debug_bundler_clearState': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_clearState', params),
+  'debug_bundler_dumpMempool': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_dumpMempool', params),
+  'debug_bundler_clearMempool': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_clearMempool', params),
+  'debug_bundler_sendBundleNow': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_sendBundleNow', params),
+  'debug_bundler_setBundlingMode': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_setBundlingMode', params),
+  'debug_bundler_setBundleInterval': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_setBundleInterval', params),
+  'debug_bundler_setReputation': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_setReputation', params),
+  'debug_bundler_dumpReputation': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_dumpReputation', params),
+  'debug_bundler_clearReputation': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_clearReputation', params),
+  'debug_bundler_addUserOps': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_addUserOps', params),
+  'debug_bundler_getStakeStatus': async (params) => routeRequest(bundlerBuilderClientUrl, 'debug_bundler_getStakeStatus', params),
 });

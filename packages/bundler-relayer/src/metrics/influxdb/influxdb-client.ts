@@ -1,7 +1,7 @@
 'use strict'
 import os from 'os'
 import { InfluxDB, Point } from '@influxdata/influxdb-client'
-import { MeasurementName } from '../../../../shared/types/index.js'
+import { MeasurementName } from '../metrics.types.js'
 
 export class InfluxdbClient {
     private readonly org: string

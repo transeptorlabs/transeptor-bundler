@@ -1,26 +1,16 @@
 import { Logger } from '../logger/index.js'
-import {
+import type {
+  HandlerRegistry,
   JsonRpcErrorResponse,
   JsonRpcRequest,
   JsonRpcResponse,
   JsonRpcSuccessResponse,
-} from '../types/index.js'
+  RpcHandler,
+} from './rpc.types.js'
 import {
   deepHexlify,
   RpcError,
 } from '../utils/index.js'
-
-export type RpcHandler = {
-  doHandleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse>;
-}
-
-// Handler function type
-export type HandlerFunction = (params: any[]) => Promise<any> | any;
-
-// Registry for handlers
-export type HandlerRegistry = {
-  [method: string]: HandlerFunction;
-};
 
 /*
  * Construct JSON RPC success response
