@@ -1,10 +1,10 @@
 import dotenv from 'dotenv'
 import { Wallet, providers, ethers, BigNumber, utils } from 'ethers'
 
-import { IENTRY_POINT_ABI } from '../packages/shared/abis/index.js'
-import { Logger } from '../packages/shared/logger/index.js'
-import { UserOperation } from '../packages/shared/types/index.js'
-import { packUserOp, deepHexlify } from '../packages/shared/utils/index.js'
+import { IENTRY_POINT_ABI } from '../../shared/abis/index.js'
+import { Logger } from '../../shared/logger/index.js'
+import { UserOperation } from '../../shared/types/index.js'
+import { packUserOp, deepHexlify } from '../../shared/utils/index.js'
 
 import {
   globalCounterABI,
@@ -18,7 +18,7 @@ const bundlerProvider = new ethers.providers.StaticJsonRpcProvider('http://local
 const dummySig = '0xfffffffffffffffffffffffffffffff0000000000000000000000000000000007aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1c'
 
 // Derive the second account from the HDNode and create a new wallet for the second account
-const hdNode = ethers.utils.HDNode.fromMnemonic(process.env.TRANSEPTOR_MNEMONIC as string)
+const hdNode = ethers.utils.HDNode.fromMnemonic(process.env.TRANSEPTOR_E2E_TRANSEPTOR_MNEMONIC as string)
 const secondAccount = hdNode.derivePath('m/44\'/60\'/0\'/0/1')
 const secondAccountPrivateKey = secondAccount.privateKey
 const secondWallet = new Wallet(secondAccountPrivateKey, provider).connect(provider)
@@ -200,7 +200,7 @@ async function main() {
 
 main()
   .then(() => process.exit(0))
-  .catch((error: any) => {
-    Logger.error(error.message)
+  .catch(() => {
+    Logger.error('Script failed')
     process.exit(1)
 })

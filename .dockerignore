@@ -18,7 +18,6 @@ docs
 # scripts
 eth-node
 transeptor
-/e2e
 
 # Metrics data
 influxdb-data

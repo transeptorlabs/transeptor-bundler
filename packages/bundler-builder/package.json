@@ -7,10 +7,10 @@
   "types": "./dist/src/index.d.ts",
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "npx tsc -p ./tsconfig.json",
-    "dev": "nodemon",
-    "start": "node --loader ts-node/esm ./src/index.ts | pino-pretty",
-    "start:prod": "yarn build && node dist/bundler-builder/src/index.js | pino-pretty",
+    "build": "echo no build",
+    "dev": "echo no dev",
+    "start": "echo no start",
+    "start:prod": "echo no start:prod",
     "test": "vitest --config ./vitest.config.ts",
     "lint": "echo no lint",
     "lint:fix": "echo no lint:fix"
@@ -38,7 +38,8 @@
   },
   "nodemonConfig": {
     "watch": [
-      "src"
+      "src",
+      "../shared"
     ],
     "ext": "ts,json",
     "ignore": [],

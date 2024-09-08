@@ -32,7 +32,7 @@
     "test": "yarn workspaces foreach --parallel --interlaced --verbose run test",
     "lint": "yarn workspaces foreach --parallel --interlaced --verbose run lint",
     "lint:fix": "yarn workspaces foreach --parallel --interlaced --verbose run lint:fix",
-    "op": "node --loader ts-node/esm ./e2e/send-userop.e2e.ts | pino-pretty",
+    "send-op": "yarn workspace bundler-relayer run send-op",
     "build:contracts": "cd contracts && forge build",
     "///cK": "________________________DOCKER CONTAINERS______________________________",
     "local-eth": "./eth-node",

@@ -3,7 +3,6 @@ import dotenv from 'dotenv'
 import { BigNumber, ethers, providers } from 'ethers'
 import { parseEther } from 'ethers/lib/utils.js'
 
-import packageJson from '../../package.json' assert { type: 'json' }
 import { IENTRY_POINT_ABI, IStakeManager } from '../../../shared/abis/index.js'
 
 import { isValidAddress } from '../../../shared/utils/index.js'
@@ -18,6 +17,7 @@ dotenv.config()
 const DEFAULT_NETWORK = 'http://localhost:8545'
 const DEFAULT_BUNDLER_BUILDER_CLIENT_URL = 'http://localhost:4338/rpc'
 const SUPPORTED_MODES = ['base', 'conditional', 'searcher']
+const nodeVersion = '0.6.2-alpha.0' // manual update on each release
 
 export type Config = {
   provider: providers.JsonRpcProvider;
@@ -54,7 +54,7 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
   const defaulHttpApis = ['web3','eth']
   
   program
-  .version(`${packageJson.version}`)
+  .version(`${nodeVersion}`)
   .option('--debug', 'Enable ERC4337 debug rpc method name space', false)
   .option('--network <string>', 'ETH execution client url.', `${DEFAULT_NETWORK}`)
   .option('--bundlerBuilder <string>', 'ERC-4337 bundler-builder client url.', `${DEFAULT_BUNDLER_BUILDER_CLIENT_URL}`)
@@ -147,7 +147,7 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
     blacklist,
 
     port: parseInt(programOpts.port as string),
-    clientVersion: packageJson.version as string,
+    clientVersion: nodeVersion,
     httpApis: (programOpts.debug as boolean) ? [...defaulHttpApis, 'debug'] : defaulHttpApis,
 
     bundlerBuilderClientUrl: programOpts.bundlerBuilder as string,

@@ -1,7 +1,7 @@
 # Shared
 
 <p align="center">
-    Shared Modules that relayer and bundle-builder nodes.
+    Shared Modules that bundler-relayer and bundler-builder nodes.
 </p>
 
 <p align="center">

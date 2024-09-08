@@ -95,9 +95,11 @@ export const createRpcHandler = (handlers: HandlerRegistry, supportedApiPrefixes
       try {
         const isValidRpc: boolean | JsonRpcErrorResponse = jsonRpcRequestValidator(request, supportedApiPrefixes)
         if (typeof isValidRpc !== 'boolean') {
+          Logger.debug(`-- Incoming request for ${request.method} with requestId(${request.id}) is not valid.`)
           return isValidRpc
         }
 
+        Logger.debug(`--> Handling valid request for ${request.method} with requestId(${request.id})`)
         const handler = handlers[request.method];
         if (!handler) {
           throw new RpcError(`Method ${request.method} is not supported`, -32601);
@@ -106,12 +108,15 @@ export const createRpcHandler = (handlers: HandlerRegistry, supportedApiPrefixes
         // Await the handler function result to handle both sync and async handlers
         const result = await Promise.resolve(handler(request.params));
 
+        Logger.debug(`<-- Sending success response for requestId(${request.id})`)
         return createSuccessResponse(request.id, result)
       } catch (error: any) {
         Logger.error(
           { error: error.message },
-          `Error calling method ${request.method}`
+          `Error handling method requestId(${request.id})`
         )
+
+        Logger.debug(`<-- Sending error response for requestId(${request.id})`)
         return createErrorResponse(
           request.id,
           error.code ? error.code : -32000,

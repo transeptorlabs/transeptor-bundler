@@ -10,13 +10,14 @@
     "clean": "rm -rf dist",
     "build": "npx tsc -p ./tsconfig.json && cp ../shared/sim/tracer.js dist/shared/sim",
     "dev": "nodemon",
-    "start": "node --loader ts-node/esm ./src/index.ts --debug --txMode base | pino-pretty",
-    "start:unsafe": "node --loader ts-node/esm ./src/index.ts --debug --txMode base --unsafe | pino-pretty",
-    "start:metrics": "node --loader ts-node/esm ./src/index.ts --debug --txMode base --metrics | pino-pretty",
+    "start": "node --import ./register-hook.js ./src/index.ts --debug --txMode base | pino-pretty",
+    "start:unsafe": "node --import ./register-hook.js ./src/index.ts --debug --txMode base --unsafe | pino-pretty",
+    "start:metrics": "node --import ./register-hook.js ./src/index.ts --debug --txMode base --metrics | pino-pretty",
     "start:prod": "yarn build && node dist/bundler-relayer/src/index.js --debug --txMode base | pino-pretty",
     "test": "echo no test",
     "lint": "eslint . --ext ts",
-    "lint:fix": "yarn lint --fix"
+    "lint:fix": "yarn lint --fix",
+    "send-op": "node --import ./register-hook.js ./e2e/send-userop.e2e.ts | pino-pretty"
   },
   "dependencies": {
     "@chainsafe/libp2p-noise": "12.0.2",
@@ -41,10 +42,11 @@
   },
   "nodemonConfig": {
     "watch": [
-      "src"
+      "src",
+      "../shared"
     ],
     "ext": "ts,json",
     "ignore": [],
-    "exec": "node --loader ts-node/esm ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty"
+    "exec": "node --import ./register-hook.js ./src/index.ts --debug --txMode base | pino-pretty"
   }
 }
