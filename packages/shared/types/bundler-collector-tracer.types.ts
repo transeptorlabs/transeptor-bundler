@@ -5,8 +5,8 @@
  */
 export interface BundlerCollectorReturn {
   /**
- * storage and opcode info, collected on top-level calls from EntryPoint
- */
+   * storage and opcode info, collected on top-level calls from EntryPoint
+   */
   callsFromEntryPoint: TopLevelCallInfo[]
 
   /**

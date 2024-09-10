@@ -1,23 +1,19 @@
-import { BigNumber, Contract, ethers } from 'ethers'
+import { BigNumber, ethers } from 'ethers'
 
-import { IStakeManager } from '../abis/index.js'
 import { Logger } from '../logger/index.js'
 import {
   ReputationEntry,
   ReputationParams,
   ReputationStatus,
 } from '../types/index.js'
-import {
-  StakeInfo,
-  ValidationErrors,
-} from '../validatation/index.js'
+import { StakeInfo, ValidationErrors } from '../validatation/index.js'
 import { requireCond, tostr } from '../utils/index.js'
 
 export class ReputationManager {
   private entries: { [address: string]: ReputationEntry } = {}
   private readonly blackList = new Set<string>() // black-listed entities - always banned
   private readonly whitelist = new Set<string>() // white-listed entities - always OK.
-  private interval: any | null = null
+  private interval: NodeJS.Timer | null = null
   private readonly minStake: BigNumber
   private readonly minUnstakeDelay: number
   private readonly stakeManagerContract: ethers.Contract
@@ -38,22 +34,69 @@ export class ReputationManager {
     minStake: BigNumber,
     minUnstakeDelay: number,
     stakeManagerContract: ethers.Contract,
-    ) {
+  ) {
     this.minStake = minStake
     this.minUnstakeDelay = minUnstakeDelay
     this.stakeManagerContract = stakeManagerContract
   }
 
+  public clearState(): void {
+    this.entries = {}
+  }
+
+  // https://github.com/eth-infinitism/account-abstraction/blob/develop/eip/EIPS/eip-4337.md#reputation-scoring-and-throttlingbanning-for-paymasters
+  public getStatus(addr?: string): ReputationStatus {
+    addr = addr?.toLowerCase()
+    if (addr == null || this.whitelist.has(addr)) {
+      return ReputationStatus.OK
+    }
+    if (this.blackList.has(addr)) {
+      return ReputationStatus.BANNED
+    }
+
+    const entry = this.entries[addr]
+    if (entry == null) {
+      return ReputationStatus.OK
+    }
+    const minExpectedIncluded = Math.floor(
+      entry.opsSeen / this.bundlerReputationParams.minInclusionDenominator,
+    )
+    if (
+      minExpectedIncluded <=
+      entry.opsIncluded + this.bundlerReputationParams.throttlingSlack
+    ) {
+      return ReputationStatus.OK
+    } else if (
+      minExpectedIncluded <=
+      entry.opsIncluded + this.bundlerReputationParams.banSlack
+    ) {
+      return ReputationStatus.THROTTLED
+    } else {
+      return ReputationStatus.BANNED
+    }
+  }
+
   /**
-   * debug: dump reputation map (with updated "status" for each entry)
+   * Returns the reputation status for all entries in reputation manager.
+   *
+   * @returns An array of reputation entries with their status.
    */
   dump(): ReputationEntry[] {
-    Object.values(this.entries).forEach(entry => { entry.status = this.getStatus(entry.address) })
+    Object.values(this.entries).forEach((entry) => {
+      entry.status = this.getStatus(entry.address)
+    })
     return Object.values(this.entries)
   }
 
   /**
-   * exponential backoff of opsSeen and opsIncluded values
+   * Applies exponential backoff to the `opsSeen` and `opsIncluded` values
+   * for each entry in the `entries` object and removes entries with zero values.
+   *
+   * This function is typically run on an hourly basis (as implied by its name).
+   * It gradually reduces the `opsSeen` and `opsIncluded` values for each entry,
+   * simulating a decay or cooldown effect over time. Entries are removed if
+   * both `opsSeen` and `opsIncluded` are reduced to zero.
+   *
    */
   private hourlyCron(): void {
     if (this.entries === undefined || this.entries === null) {
@@ -74,7 +117,7 @@ export class ReputationManager {
     this.stopHourlyCron()
 
     Logger.info(
-      `Set reputation interval to execute every ${60 * 60 * 1000} (ms)`
+      `Set reputation interval to execute every ${60 * 60 * 1000} (ms)`,
     )
 
     this.interval = setInterval(this.hourlyCron, 60 * 60 * 1000) // 60 minutes * 60 seconds * 1000 milliseconds
@@ -116,21 +159,19 @@ export class ReputationManager {
   }
 
   /**
-   * address seen in the mempool triggered by the
-   * @param addr
+   * Update the last seen status of an entity.
+   *
+   * @param addr - The address of the entity that is seen.
    */
-  public updateSeenStatus(addr?: string): void {
-    if (addr == null) {
-      return
-    }
+  public updateSeenStatus(addr: string): void {
     const entry = this.getOrCreate(addr)
     entry.opsSeen++
   }
 
   /**
-   * found paymaster/deployer/aggregator on-chain.
-   * triggered by the EventsManager.
-   * @param addr
+   * Update the included status of an entity.
+   *
+   * @param addr - The address of the entity that is included.
    */
   public updateIncludedStatus(addr: string): void {
     const entry = this.getOrCreate(addr)
@@ -141,35 +182,9 @@ export class ReputationManager {
     return this.whitelist.has(addr)
   }
 
-  // https://github.com/eth-infinitism/account-abstraction/blob/develop/eip/EIPS/eip-4337.md#reputation-scoring-and-throttlingbanning-for-paymasters
-  public getStatus(addr?: string): ReputationStatus {
-    addr = addr?.toLowerCase()
-    if (addr == null || this.whitelist.has(addr)) {
-      return ReputationStatus.OK
-    }
-    if (this.blackList.has(addr)) {
-      return ReputationStatus.BANNED
-    }
-
-    const entry = this.entries[addr]
-    if (entry == null) {
-      return ReputationStatus.OK
-    }
-    const minExpectedIncluded = Math.floor(entry.opsSeen / this.bundlerReputationParams.minInclusionDenominator)
-    if (minExpectedIncluded <= entry.opsIncluded + this.bundlerReputationParams.throttlingSlack) {
-      return ReputationStatus.OK
-    } else if (minExpectedIncluded <= entry.opsIncluded + this.bundlerReputationParams.banSlack) {
-      return ReputationStatus.THROTTLED
-    } else {
-      return ReputationStatus.BANNED
-    }
-  }
-
-  public async getStakeStatus(
-    address: string,
-  ): Promise<{
-    stakeInfo: StakeInfo;
-    isStaked: boolean;
+  public async getStakeStatus(address: string): Promise<{
+    stakeInfo: StakeInfo
+    isStaked: boolean
   }> {
     const info = await this.stakeManagerContract.getDepositInfo(address)
     const isStaked =
@@ -186,15 +201,13 @@ export class ReputationManager {
   }
 
   /**
-   * an entity that caused handleOps to revert, which requires re-building the bundle from scratch.
+   * An entity that caused handleOps to revert, which requires re-building the bundle from scratch.
    * should be banned immediately, by increasing its opSeen counter
-   * @param addr
+   *
+   * @param addr - The address of the entity that caused the handleOps to revert.
    */
-  public crashedHandleOps(addr: string | undefined): void {
-    if (addr == null) {
-      return
-    }
-    // todo: what value to put? how long do we want this banning to hold?
+  public crashedHandleOps(addr: string): void {
+    // TODO: what value to put? how long do we want this banning to hold?
     const entry = this.getOrCreate(addr)
     entry.opsSeen += 10000
     entry.opsIncluded = 0
@@ -202,15 +215,10 @@ export class ReputationManager {
   }
 
   /**
-   * for debugging: clear in-memory state
-   */
-  public clearState(): void {
-    this.entries = {}
-  }
-
-  /**
-   * for debugging: put in the given reputation entries
-   * @param entries
+   * Set the reputation of the given entities. Intended for debug testing purposes.
+   *
+   * @param reputations - The reputation entries to set.
+   * @returns The updated reputation entries.
    */
   public setReputation(reputations: ReputationEntry[]): ReputationEntry[] {
     reputations.forEach((rep) => {
@@ -224,46 +232,52 @@ export class ReputationManager {
   }
 
   /**
-   * check the given address (account/paymaster/deployer/aggregator) is banned
-   * unlike {@link checkStake} does not check whitelist or stake
+   * Check the given address (account/paymaster/deployer/aggregator) is banned.
+   * Does not check whitelist or stake
+   *
+   * @param title the address title (field name to put into the "data" element)
+   * @param info stake info for the address.
    */
   checkBanned(
     title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
-    info: StakeInfo
+    info: StakeInfo,
   ): void {
     requireCond(
       this.getStatus(info.addr) !== ReputationStatus.BANNED,
       `${title} ${info.addr} is banned`,
       ValidationErrors.Reputation,
-      { [title]: info.addr }
+      { [title]: info.addr },
     )
   }
 
   /**
    * check the given address (account/paymaster/deployer/aggregator) is throttled
-   * unlike {@link checkStake} does not check whitelist or stake
+   * Does not check whitelist or stake
+   *
+   * @param title the address title (field name to put into the "data" element)
+   * @param info stake info for the address.
    */
   checkThrottled(
     title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
-    info: StakeInfo
+    info: StakeInfo,
   ): void {
     requireCond(
       this.getStatus(info.addr) !== ReputationStatus.THROTTLED,
       `${title} ${info.addr} is throttled`,
       ValidationErrors.Reputation,
-      { [title]: info.addr }
+      { [title]: info.addr },
     )
   }
 
   /**
-   * check the given address (account/paymaster/deployer/aggregator) is staked
-   * @param title the address title (field name to put into the "data" element)
-   * @param raddr the address to check the stake of. null is "ok"
-   * @param info stake info from verification. if not given, then read from entryPoint
+   * Check the given address (account/paymaster/deployer/aggregator) is staked.
+   *
+   * @param title the address title (field name to put into the "data" element).
+   * @param info stake info from verification. if not given, then read from entryPoint.
    */
   public checkStake(
     title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
-    info?: StakeInfo
+    info?: StakeInfo,
   ): void {
     if (info?.addr == null || this.isWhitelisted(info.addr)) {
       return
@@ -272,45 +286,50 @@ export class ReputationManager {
       this.getStatus(info.addr) !== ReputationStatus.BANNED,
       `${title} ${info.addr} is banned`,
       ValidationErrors.Reputation,
-      { [title]: info.addr }
+      { [title]: info.addr },
     )
 
     requireCond(
       BigNumber.from(info.stake).gte(this.minStake),
       `${title} ${info.addr} stake ${tostr(info.stake)} is too low (min=${tostr(
-        this.minStake
+        this.minStake,
       )})`,
-      ValidationErrors.InsufficientStake
+      ValidationErrors.InsufficientStake,
     )
     requireCond(
       BigNumber.from(info.unstakeDelaySec).gte(
-        BigNumber.from(this.minUnstakeDelay)
+        BigNumber.from(this.minUnstakeDelay),
       ),
       `${title} ${info.addr} unstake delay ${tostr(
-        info.unstakeDelaySec
+        info.unstakeDelaySec,
       )} is too low (min=${this.minUnstakeDelay})`,
-      ValidationErrors.InsufficientStake
+      ValidationErrors.InsufficientStake,
     )
   }
-
 
   /**
    * @param entity - the address of a non-sender unstaked entity.
    * @returns maxMempoolCount - the number of UserOperations this entity is allowed to have in the mempool.
    */
-  public calculateMaxAllowedMempoolOpsUnstaked (entity: string): number {
+  public calculateMaxAllowedMempoolOpsUnstaked(entity: string): number {
     entity = entity.toLowerCase()
     const SAME_UNSTAKED_ENTITY_MEMPOOL_COUNT = 10
     const entry = this.entries[entity]
     if (entry == null) {
       return SAME_UNSTAKED_ENTITY_MEMPOOL_COUNT
     }
+
     const INCLUSION_RATE_FACTOR = 10
     let inclusionRate = entry.opsIncluded / entry.opsSeen
     if (entry.opsSeen === 0) {
       // prevent NaN of Infinity in tests
       inclusionRate = 0
     }
-    return SAME_UNSTAKED_ENTITY_MEMPOOL_COUNT + Math.floor(inclusionRate * INCLUSION_RATE_FACTOR) + (Math.min(entry.opsIncluded, 10000))
+
+    return (
+      SAME_UNSTAKED_ENTITY_MEMPOOL_COUNT +
+      Math.floor(inclusionRate * INCLUSION_RATE_FACTOR) +
+      Math.min(entry.opsIncluded, 10000)
+    )
   }
 }

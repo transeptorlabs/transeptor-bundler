@@ -1,7 +1,7 @@
 import { Logger } from '../../shared/logger/index.js'
 import { BundleManager, BundleProcessor } from './bundle/index.js'
 import { createRpcServerWithHandlers } from '../../shared/rpc/index.js'
-import { getConfig, initializeConfig } from './config/get-config.js'
+import { createBuilderConfig } from './config/index.js'
 import { createRelayerHandlerRegistry } from './handler/handlerRegistry.js'
 import { createDebugAPI } from './handler/index.js'
 import { Libp2pNode } from './p2p/index.js'
@@ -12,14 +12,16 @@ import { createProviderService } from '../../shared/provider/index.js'
 import { createValidationService } from '../../shared/validatation/index.js'
 import { createSimulator } from '../../shared/sim/index.js'
 import { createSignerService } from './signer/index.js'
-import { budlerBuilderEmitter, EventManagerWithReputation } from './event/index.js'
+import {
+  budlerBuilderEmitter,
+  EventManagerWithReputation,
+} from './event/index.js'
 
 let p2pNode: Libp2pNode = undefined
 
 const runBundlerBuilder = async () => {
   const args = process.argv
-  initializeConfig(args)
-  const config = getConfig()
+  const config = createBuilderConfig(args)
 
   const ss = createSignerService(config.provider)
   const ps = createProviderService(config.provider)
@@ -62,7 +64,7 @@ const runBundlerBuilder = async () => {
     config.isAutoBundle,
     config.autoBundleInterval,
   )
-  
+
   // start p2p node
   if (config.isP2PMode) {
     p2pNode = new Libp2pNode(config.peerMultiaddrs, config.findPeers)

@@ -4,11 +4,11 @@ import express, { Request, Response } from 'express'
 import helmet from 'helmet'
 
 import { Logger } from '../logger/index.js'
-import type { 
+import type {
   JsonRpcRequest,
   RpcServer,
-  HandlerRegistry, 
-  RpcHandler
+  HandlerRegistry,
+  RpcHandler,
 } from './rpc.types.js'
 import { createRpcHandler } from './rpcHandler.js'
 
@@ -18,7 +18,7 @@ const createApp = (rpc: RpcHandler): express.Application => {
   app.use(
     helmet({
       referrerPolicy: { policy: 'no-referrer-when-downgrade' },
-    })
+    }),
   )
   app.use(cors())
   app.use(express.json())
@@ -37,13 +37,13 @@ const createApp = (rpc: RpcHandler): express.Application => {
 }
 
 export const createRpcServerWithHandlers = (
-  handlers: HandlerRegistry, 
-  supportedApiPrefixes: string[], 
-  port: number
+  handlers: HandlerRegistry,
+  supportedApiPrefixes: string[],
+  port: number,
 ): RpcServer => {
-  const rpc = createRpcHandler(handlers, supportedApiPrefixes);
-  const app = createApp(rpc);
-  const httpServer: Server = createServer(app);
+  const rpc = createRpcHandler(handlers, supportedApiPrefixes)
+  const app = createApp(rpc)
+  const httpServer: Server = createServer(app)
 
   return {
     start: async (preflightCheck: () => Promise<void>): Promise<void> => {
@@ -64,6 +64,6 @@ export const createRpcServerWithHandlers = (
           }
         })
       })
-    }
+    },
   }
 }

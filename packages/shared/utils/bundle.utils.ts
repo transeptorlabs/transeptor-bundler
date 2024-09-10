@@ -16,17 +16,19 @@ import {
 } from '../types/index.js'
 
 /**
- * merge all validationStorageMap objects into merged map
+ * Merge all validationStorageMap objects into merged map
  * - entry with "root" (string) is always preferred over entry with slot-map
  * - merge slot entries
  * NOTE: slot values are supposed to be the value before the transaction started.
- *  so same address/slot in different validations should carry the same value
- * @param mergedStorageMap
- * @param validationStorageMap
+ * so same address/slot in different validations should carry the same value
+ *
+ * @param mergedStorageMap - merged storage map.
+ * @param validationStorageMap - validation storage map.
+ * @returns mergedStorageMap
  */
 export function mergeStorageMap(
   mergedStorageMap: StorageMap,
-  validationStorageMap: StorageMap
+  validationStorageMap: StorageMap,
 ): StorageMap {
   Object.entries(validationStorageMap).forEach(([addr, validationEntry]) => {
     if (typeof validationEntry === 'string') {
@@ -50,28 +52,69 @@ export function mergeStorageMap(
   return mergedStorageMap
 }
 
-export function packUint (high128: BigNumberish, low128: BigNumberish): string {
-  return hexZeroPad(BigNumber.from(high128).shl(128).add(low128).toHexString(), 32)
+/**
+ * Pack a uint256 into 2 uint128.
+ *
+ * @param high128 - high 128 bits
+ * @param low128 - low 128 bits
+ * @returns packed uint256.
+ */
+export function packUint(high128: BigNumberish, low128: BigNumberish): string {
+  return hexZeroPad(
+    BigNumber.from(high128).shl(128).add(low128).toHexString(),
+    32,
+  )
 }
 
-export function unpackUint (packed: BytesLike): [high128: BigNumber, low128: BigNumber] {
+/**
+ * Unpack a packed uint.
+ *
+ * @param packed - packed uint
+ * @returns high128, low128
+ */
+export function unpackUint(
+  packed: BytesLike,
+): [high128: BigNumber, low128: BigNumber] {
   const packedNumber: BigNumber = BigNumber.from(packed)
-  return [packedNumber.shr(128), packedNumber.and(BigNumber.from(1).shl(128).sub(1))]
+  return [
+    packedNumber.shr(128),
+    packedNumber.and(BigNumber.from(1).shl(128).sub(1)),
+  ]
 }
 
-export function packPaymasterData (paymaster: string, paymasterVerificationGasLimit: BigNumberish, postOpGasLimit: BigNumberish, paymasterData?: BytesLike): BytesLike {
+/**
+ * Pack a paymaster data.
+ *
+ * @param paymaster - address of the paymaster contract.
+ * @param paymasterVerificationGasLimit - gas limit for the paymaster verification.
+ * @param postOpGasLimit  - gas limit for the post-operation.
+ * @param paymasterData - optional data to be passed to the paymaster contract.
+ * @returns packed paymaster data.
+ */
+export function packPaymasterData(
+  paymaster: string,
+  paymasterVerificationGasLimit: BigNumberish,
+  postOpGasLimit: BigNumberish,
+  paymasterData?: BytesLike,
+): BytesLike {
   return ethers.utils.hexConcat([
     paymaster,
     packUint(paymasterVerificationGasLimit, postOpGasLimit),
-    paymasterData ?? '0x'
+    paymasterData ?? '0x',
   ])
 }
 
+/**
+ * Unpack a packed paymaster data.
+ *
+ * @param paymasterAndData - packed paymaster data.
+ * @returns paymaster, paymasterVerificationGas, postOpGasLimit, paymasterData
+ */
 export function unpackPaymasterAndData(paymasterAndData: BytesLike): {
-  paymaster: string;
-  paymasterVerificationGas: BigNumber;
-  postOpGasLimit: BigNumber;
-  paymasterData: BytesLike;
+  paymaster: string
+  paymasterVerificationGas: BigNumber
+  postOpGasLimit: BigNumber
+  paymasterData: BytesLike
 } | null {
   if (paymasterAndData.length <= 2) return null
   if (hexDataLength(paymasterAndData) < 52) {
@@ -79,7 +122,7 @@ export function unpackPaymasterAndData(paymasterAndData: BytesLike): {
     throw new Error(`invalid PaymasterAndData: ${paymasterAndData as string}`)
   }
   const [paymasterVerificationGas, postOpGasLimit] = unpackUint(
-    hexDataSlice(paymasterAndData, 20, 52)
+    hexDataSlice(paymasterAndData, 20, 52),
   )
   return {
     paymaster: hexDataSlice(paymasterAndData, 0, 20),
@@ -89,6 +132,12 @@ export function unpackPaymasterAndData(paymasterAndData: BytesLike): {
   }
 }
 
+/**
+ * Pack a UserOperation to a PackedUserOperation.
+ *
+ * @param userOp a UserOperation.
+ * @returns a PackedUserOperation.
+ */
 export function packUserOp(userOp: UserOperation): PackedUserOperation {
   let paymasterAndData: BytesLike
   if (userOp.paymaster == null) {
@@ -104,7 +153,7 @@ export function packUserOp(userOp: UserOperation): PackedUserOperation {
       userOp.paymaster,
       userOp.paymasterVerificationGasLimit,
       userOp.paymasterPostOpGasLimit,
-      userOp.paymasterData
+      userOp.paymasterData,
     )
   }
 
@@ -118,7 +167,7 @@ export function packUserOp(userOp: UserOperation): PackedUserOperation {
     callData: userOp.callData,
     accountGasLimits: packUint(
       userOp.verificationGasLimit,
-      userOp.callGasLimit
+      userOp.callGasLimit,
     ),
     preVerificationGas: userOp.preVerificationGas,
     gasFees: packUint(userOp.maxPriorityFeePerGas, userOp.maxFeePerGas),
@@ -127,9 +176,15 @@ export function packUserOp(userOp: UserOperation): PackedUserOperation {
   }
 }
 
+/**
+ * Unpack a PackedUserOperation to a UserOperation.
+ *
+ * @param packedUserOp a PackedUserOperation.
+ * @returns a UserOperation.
+ */
 export function unpackUserOp(packedUserOp: PackedUserOperation): UserOperation {
   const [verificationGasLimit, callGasLimit] = unpackUint(
-    packedUserOp.accountGasLimits
+    packedUserOp.accountGasLimits,
   )
   const [maxPriorityFeePerGas, maxFeePerGas] = unpackUint(packedUserOp.gasFees)
 
@@ -160,25 +215,33 @@ export function unpackUserOp(packedUserOp: PackedUserOperation): UserOperation {
       paymaster: pmData.paymaster,
       paymasterVerificationGasLimit: pmData.paymasterVerificationGas,
       paymasterPostOpGasLimit: pmData.postOpGasLimit,
-      paymasterData: pmData.paymasterData
+      paymasterData: pmData.paymasterData,
     }
   }
   return ret
 }
 
+/**
+ * Convert an array of UserOperation to an array of PackedUserOperation.
+ *
+ * @param userOps an array of UserOperation.
+ * @returns an array of PackedUserOperation.
+ */
 export function packUserOps(userOps: UserOperation[]): PackedUserOperation[] {
   return userOps.map(packUserOp)
 }
 
 /**
- * abi-encode the userOperation
- * @param op a PackedUserOp
+ * abi-encode the userOperation.
+ *
+ * @param op1 a PackedUserOp or UserOp.
  * @param forSignature "true" if the hash is needed to calculate the getUserOpHash()
  *  "false" to pack entire UserOp, for calculating the calldata cost of putting it on-chain.
+ * @returns the abi-encoded userOperation
  */
 export function encodeUserOp(
   op1: PackedUserOperation | UserOperation,
-  forSignature = true
+  forSignature = true,
 ): string {
   // if "op" is unpacked UserOperation, then pack it first, before we ABI-encode it.
   let op: PackedUserOperation
@@ -208,7 +271,7 @@ export function encodeUserOp(
         op.preVerificationGas,
         op.gasFees,
         keccak256(op.paymasterAndData),
-      ]
+      ],
     )
   } else {
     // for the purpose of calculating gas cost encode also signature (and no keccak of bytes)
@@ -234,7 +297,7 @@ export function encodeUserOp(
         op.gasFees,
         op.paymasterAndData,
         op.signature,
-      ]
+      ],
     )
   }
 }

@@ -7,15 +7,14 @@ import {
 import { createRpcServerWithHandlers } from '../../shared/rpc/index.js'
 import { createProviderService } from '../../shared/provider/index.js'
 import { Logger } from '../../shared/logger/index.js'
-import { initializeConfig, getConfig } from './config/index.js'
+import { createRelayerConfig } from './config/index.js'
 import { MetricsHttpServer, MetricsTracker } from './metrics/index.js'
 import { createValidationService } from '../../shared/validatation/index.js'
 import { createSimulator } from '../../shared/sim/sim.js'
 
 const runBundlerRelayer = async () => {
   const args = process.argv
-  initializeConfig(args)
-  const config = getConfig()
+  const config = createRelayerConfig(args)
 
   const ps = createProviderService(config.provider)
   const sim = createSimulator(ps, config.entryPointContract)
