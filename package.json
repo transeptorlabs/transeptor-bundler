@@ -40,6 +40,7 @@
     "///gj": "________________________Builder NODE______________________________",
     "image:builder": "docker -f Dockerfile.bundler-builder build -t bundler-builder:v-local .",
     "start:docker-builder": "docker-compose up bundler-builder",
+    "test:mempool": "yarn workspace bundler-builder run test:mempool",
     "///sj": "________________________Shared MODULE ______________________________",
     "shared-lint": "yarn workspace shared run lint",
     "shared-lint:fix": "yarn workspace shared run lint:fix",
