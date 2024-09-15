@@ -1,11 +1,11 @@
-import { createMempoolState } from './mempool-state.js'
+import { createMempoolState, MempoolStateService } from './mempool-state.js'
 import { MempoolEntry, MempoolState } from './mempool.types.js'
 
 const sharedState = createMempoolState()
 
 // Pure functions to define how the state should be updated
 const addMempoolEntry =
-  (hash: string, opEntry: MempoolEntry) => async (state: MempoolState) => {
+  (hash: string, opEntry: MempoolEntry) => (state: MempoolState) => {
     return {
       ...state,
       standardPool: {
@@ -15,7 +15,7 @@ const addMempoolEntry =
     }
   }
 
-const addToEntryCount = (address: string) => async (state: MempoolState) => {
+const addToEntryCount = (address: string) => (state: MempoolState) => {
   if (state.entryCount[address] === undefined) {
     return {
       ...state,
@@ -87,11 +87,28 @@ const simulateConcurrentRequests = async () => {
   })
 }
 
+/**
+ * Simple manager to handle state updates
+ *
+ * @param passedSharedState - MempoolStateService.
+ * @returns  - Manager object with methods to update state.
+ */
+const createManager = (passedSharedState: MempoolStateService) => {
+  return {
+    addEntry: async () => {
+      await passedSharedState.updateState(
+        addToEntryCount(`0x_some_address_manager_${100}`),
+      )
+    },
+  }
+}
+
 const main = async () => {
   await simulateConcurrentRequests()
 
   // After the concurrent requests
-  await sharedState.updateState(addToEntryCount(`0x_some_address_${100}`))
+  const manager = createManager(sharedState)
+  await manager.addEntry()
   console.log('Entry Count After')
   Object.entries(sharedState.getEntryCount()).forEach(([key, value]) => {
     console.log(`Key: ${key}, Value: ${value}`)

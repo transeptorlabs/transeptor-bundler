@@ -1,7 +1,8 @@
 import { BigNumberish } from 'ethers'
 
 import { ReferencedCodeHashes } from '../../../shared/validatation/index.js'
-import { ReputationEntry, UserOperation } from '../../../shared/types/index.js'
+import { UserOperation } from '../../../shared/types/index.js'
+import { ReputationEntry } from '../reputation/index.js'
 
 export type MempoolEntry = {
   userOp: UserOperation
@@ -38,7 +39,7 @@ export type MempoolState = {
   entryCount: EntryCount
 
   // reputation
-  blackList: string[]
-  whitelist: string[]
+  blackList: string[] // black-listed entities - always banned
+  whitelist: string[] // white-listed entities - always OK.
   reputationEntries: ReputationEntries
 }

@@ -20,7 +20,7 @@ export type MempoolStateService = {
    * @returns  A promise that resolves when the state has been updated.
    */
   updateState: (
-    updateFn: (state: MempoolState) => Promise<MempoolState>,
+    updateFn: (state: MempoolState) => MempoolState,
   ) => Promise<void>
 }
 
@@ -36,17 +36,16 @@ export const createMempoolState = (): MempoolStateService => {
   }
 
   return {
-    // Getters
     getStandardPool: (): StandardPool => state.standardPool,
     getEntryCount: (): EntryCount => state.entryCount,
     getBlackList: (): string[] => state.blackList,
     getWhitelist: (): string[] => state.whitelist,
     getReputationEntries: () => state.reputationEntries,
     updateState: (
-      updateFn: (state: MempoolState) => Promise<MempoolState>,
+      updateFn: (state: MempoolState) => MempoolState,
     ): Promise<void> => {
-      return mutex.runExclusive(async () => {
-        state = await updateFn(state)
+      return mutex.runExclusive(() => {
+        state = updateFn(state)
       })
     },
   }
