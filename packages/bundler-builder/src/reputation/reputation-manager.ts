@@ -16,6 +16,7 @@ import {
   MempoolStateService,
   MempoolState,
   ReputationEntries,
+  MempoolStateKeys,
 } from '../mempool/index.js'
 
 export const createReputationManager = (
@@ -24,55 +25,11 @@ export const createReputationManager = (
   minUnstakeDelay: number,
   stakeManagerContract: ethers.Contract,
 ): ReputationManager => {
+  let interval: NodeJS.Timer | null = null
   const bundlerReputationParams: ReputationParams = {
     minInclusionDenominator: 10,
     throttlingSlack: 10,
     banSlack: 50,
-  }
-
-  /**
-   * Applies exponential backoff to the `opsSeen` and `opsIncluded` values
-   * for each entry in the `entries` object and removes entries with zero values.
-   *
-   * This function is typically run on an hourly basis (as implied by its name).
-   * It gradually reduces the `opsSeen` and `opsIncluded` values for each entry,
-   * simulating a decay or cooldown effect over time. Entries are removed if
-   * both `opsSeen` and `opsIncluded` are reduced to zero.
-   *
-   */
-  const createHourlyCron = () => {
-    const entries = mp.getReputationEntries()
-    if (entries === undefined || entries === null) {
-      return
-    }
-
-    Object.keys(entries).forEach(async (addr) => {
-      const entry = entries[addr]
-
-      await mp.updateState((state: MempoolState) => {
-        if (entry.opsIncluded === 0 && entry.opsSeen === 0) {
-          // delete the entry from the state
-          const stateEntries = { ...state.reputationEntries }
-          delete stateEntries[addr]
-          return {
-            ...state,
-            reputationEntries: stateEntries,
-          }
-        }
-
-        return {
-          ...state,
-          reputationEntries: {
-            ...state.reputationEntries,
-            [addr]: {
-              address: entry.address,
-              opsSeen: Math.floor((entry.opsSeen * 23) / 24),
-              opsIncluded: Math.floor((entry.opsSeen * 23) / 24),
-            },
-          },
-        }
-      })
-    })
   }
 
   const stopHourlyCron = () => {
@@ -83,31 +40,83 @@ export const createReputationManager = (
     }
   }
 
-  const startHourlyCron = () => {
+  const startHourlyCron = async () => {
     stopHourlyCron()
 
     Logger.info(
       `Set reputation interval to execute every ${60 * 60 * 1000} (ms)`,
     )
 
-    interval = setInterval(createHourlyCron, 60 * 60 * 1000) // 60 minutes * 60 seconds * 1000 milliseconds
+    const { reputationEntries } = await mp.getState(
+      MempoolStateKeys.ReputationEntries,
+    )
+
+    /**
+     * Applies exponential backoff to the `opsSeen` and `opsIncluded` values
+     * for each entry in the `entries` object and removes entries with zero values.
+     *
+     * This function is typically run on an hourly basis (as implied by its name).
+     * It gradually reduces the `opsSeen` and `opsIncluded` values for each entry,
+     * simulating a decay or cooldown effect over time. Entries are removed if
+     * both `opsSeen` and `opsIncluded` are reduced to zero.
+     *
+     */
+    interval = setInterval(
+      () => {
+        if (reputationEntries === undefined || reputationEntries === null) {
+          return
+        }
+
+        Object.keys(reputationEntries).forEach(async (addr) => {
+          const entry = reputationEntries[addr]
+
+          await mp.updateState((state: MempoolState) => {
+            if (entry.opsIncluded === 0 && entry.opsSeen === 0) {
+              // delete the entry from the state
+              const stateEntries = { ...state.reputationEntries }
+              delete stateEntries[addr]
+              return {
+                ...state,
+                reputationEntries: stateEntries,
+              }
+            }
+
+            return {
+              ...state,
+              reputationEntries: {
+                ...state.reputationEntries,
+                [addr]: {
+                  address: entry.address,
+                  opsSeen: Math.floor((entry.opsSeen * 23) / 24),
+                  opsIncluded: Math.floor((entry.opsSeen * 23) / 24),
+                },
+              },
+            }
+          })
+        })
+      },
+      60 * 60 * 1000,
+    ) // 60 minutes * 60 seconds * 1000 milliseconds
   }
 
   // https://github.com/eth-infinitism/account-abstraction/blob/develop/eip/EIPS/eip-4337.md#reputation-scoring-and-throttlingbanning-for-paymasters
-  const getStatus = (addr?: string): ReputationStatus => {
-    const whitelist = mp.getWhitelist()
-    const blackList = mp.getBlackList()
-    const entries = mp.getReputationEntries()
+  const getStatus = async (addr?: string): Promise<ReputationStatus> => {
+    const { whiteList, blackList, reputationEntries } = await mp.getState([
+      MempoolStateKeys.WhiteList,
+      MempoolStateKeys.BlackList,
+      MempoolStateKeys.ReputationEntries,
+    ])
+
     addr = addr?.toLowerCase()
 
-    if (addr == null || whitelist.indexOf(addr) !== -1) {
+    if (addr == null || whiteList.indexOf(addr) !== -1) {
       return ReputationStatus.OK
     }
     if (blackList.indexOf(addr) !== -1) {
       return ReputationStatus.BANNED
     }
 
-    const entry = entries[addr]
+    const entry = reputationEntries[addr]
     if (entry == null) {
       return ReputationStatus.OK
     }
@@ -129,18 +138,12 @@ export const createReputationManager = (
     }
   }
 
-  const dump = (): ReputationEntry[] => {
-    const entries = mp.getReputationEntries()
-
-    Object.values(entries).forEach((entry) => {
-      entry.status = getStatus(entry.address)
-    })
-    return Object.values(entries)
+  const dump = async (): Promise<ReputationEntry[]> => {
+    const { reputationEntries } = await mp.getState(
+      MempoolStateKeys.ReputationEntries,
+    )
+    return Object.values(reputationEntries)
   }
-
-  // start the hourly cron job
-  let interval: NodeJS.Timer | null = null
-  startHourlyCron()
 
   return {
     getStatus,
@@ -167,7 +170,7 @@ export const createReputationManager = (
       await mp.updateState((state: MempoolState) => {
         return {
           ...state,
-          whitelist: [...state.whitelist, ...items],
+          whitelist: [...state.whiteList, ...items],
         }
       })
     },
@@ -186,10 +189,9 @@ export const createReputationManager = (
 
     updateSeenStatus: async (addr: string): Promise<void> => {
       addr = addr.toLowerCase()
-      const entries = mp.getReputationEntries()
-      const entry = entries[addr]
 
       await mp.updateState((state: MempoolState) => {
+        const entry = state.reputationEntries[addr]
         return {
           ...state,
           reputationEntries: {
@@ -206,10 +208,8 @@ export const createReputationManager = (
 
     updateIncludedStatus: async (addr: string): Promise<void> => {
       addr = addr.toLowerCase()
-      const entries = mp.getReputationEntries()
-      const entry = entries[addr]
-
       await mp.updateState((state: MempoolState) => {
+        const entry = state.reputationEntries[addr]
         return {
           ...state,
           reputationEntries: {
@@ -247,10 +247,9 @@ export const createReputationManager = (
     crashedHandleOps: async (addr: string): Promise<void> => {
       // TODO: what value to put? how long do we want this banning to hold?
       addr = addr.toLowerCase()
-      const entries = mp.getReputationEntries()
-      const entry = entries[addr]
 
       await mp.updateState((state: MempoolState) => {
+        const entry = state.reputationEntries[addr]
         const bannedEntry = {
           address: addr,
           opsSeen: entry ? entry.opsSeen + 10000 : 10000,
@@ -298,42 +297,44 @@ export const createReputationManager = (
       return dump()
     },
 
-    checkBanned: (
+    checkBanned: async (
       title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
       info: StakeInfo,
-    ): void => {
+    ): Promise<void> => {
+      const status = await getStatus(info.addr)
       requireCond(
-        getStatus(info.addr) !== ReputationStatus.BANNED,
+        status !== ReputationStatus.BANNED,
         `${title} ${info.addr} is banned`,
         ValidationErrors.Reputation,
         { [title]: info.addr },
       )
     },
 
-    checkThrottled: (
+    checkThrottled: async (
       title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
       info: StakeInfo,
-    ): void => {
+    ): Promise<void> => {
+      const status = await getStatus(info.addr)
       requireCond(
-        getStatus(info.addr) !== ReputationStatus.THROTTLED,
+        status !== ReputationStatus.THROTTLED,
         `${title} ${info.addr} is throttled`,
         ValidationErrors.Reputation,
         { [title]: info.addr },
       )
     },
 
-    checkStake: (
+    checkStake: async (
       title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
       info?: StakeInfo,
-    ): void => {
-      const whitelist = mp.getWhitelist()
-      const isWhitelisted = whitelist.indexOf(info.addr.toLowerCase()) !== -1
-      if (info?.addr == null || isWhitelisted) {
+    ): Promise<void> => {
+      // If the address is whitelisted, we don't need to check the stake
+      const status = await getStatus(info.addr)
+      if (info?.addr == null || status === ReputationStatus.OK) {
         return
       }
 
       requireCond(
-        getStatus(info.addr) !== ReputationStatus.BANNED,
+        status !== ReputationStatus.BANNED,
         `${title} ${info.addr} is banned`,
         ValidationErrors.Reputation,
         { [title]: info.addr },
@@ -357,11 +358,15 @@ export const createReputationManager = (
       )
     },
 
-    calculateMaxAllowedMempoolOpsUnstaked: (entity: string): number => {
-      const entries = mp.getReputationEntries()
+    calculateMaxAllowedMempoolOpsUnstaked: async (
+      entity: string,
+    ): Promise<number> => {
+      const { reputationEntries } = await mp.getState(
+        MempoolStateKeys.ReputationEntries,
+      )
       entity = entity.toLowerCase()
       const SAME_UNSTAKED_ENTITY_MEMPOOL_COUNT = 10
-      const entry = entries[entity]
+      const entry = reputationEntries[entity]
       if (entry == null) {
         return SAME_UNSTAKED_ENTITY_MEMPOOL_COUNT
       }

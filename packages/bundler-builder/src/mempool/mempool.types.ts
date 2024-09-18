@@ -36,10 +36,18 @@ export type ReputationEntries = Record<string, ReputationEntry>
 
 export type MempoolState = {
   standardPool: StandardPool
-  entryCount: EntryCount
+  mempoolEntryCount: EntryCount // count entities in mempool.
 
   // reputation
   blackList: string[] // black-listed entities - always banned
-  whitelist: string[] // white-listed entities - always OK.
+  whiteList: string[] // white-listed entities - always OK.
   reputationEntries: ReputationEntries
+}
+
+export enum MempoolStateKeys {
+  StandardPool = 'standardPool',
+  MempoolEntryCount = 'mempoolEntryCount',
+  BlackList = 'blackList',
+  WhiteList = 'whiteList',
+  ReputationEntries = 'reputationEntries',
 }

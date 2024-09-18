@@ -23,17 +23,17 @@ export type ReputationEntry = {
 }
 
 export type ReputationManager = {
-  startHourlyCron(): void
+  startHourlyCron(): Promise<void>
   stopHourlyCron(): void
   clearState(): Promise<void>
-  getStatus(addr?: string): ReputationStatus
+  getStatus(addr?: string): Promise<ReputationStatus>
 
   /**
    * Returns the reputation status for all entries in reputation manager.
    *
    * @returns An array of reputation entries with their status.
    */
-  dump(): ReputationEntry[]
+  dump(): Promise<ReputationEntry[]>
 
   addWhitelist(items: string[]): Promise<void>
   addBlacklist(items: string[]): Promise<void>
@@ -83,7 +83,7 @@ export type ReputationManager = {
   checkBanned(
     title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
     info: StakeInfo,
-  ): void
+  ): Promise<void>
 
   /**
    * check the given address (account/paymaster/deployer/aggregator) is throttled
@@ -95,7 +95,7 @@ export type ReputationManager = {
   checkThrottled(
     title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
     info: StakeInfo,
-  ): void
+  ): Promise<void>
 
   /**
    * Check the given address (account/paymaster/deployer/aggregator) is staked.
@@ -106,11 +106,11 @@ export type ReputationManager = {
   checkStake(
     title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
     info?: StakeInfo,
-  ): void
+  ): Promise<void>
 
   /**
    * @param entity - the address of a non-sender unstaked entity.
    * @returns maxMempoolCount - the number of UserOperations this entity is allowed to have in the mempool.
    */
-  calculateMaxAllowedMempoolOpsUnstaked(entity: string): number
+  calculateMaxAllowedMempoolOpsUnstaked(entity: string): Promise<number>
 }

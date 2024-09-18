@@ -1,5 +1,9 @@
 import { createMempoolState, MempoolStateService } from './mempool-state.js'
-import { MempoolEntry, MempoolState } from './mempool.types.js'
+import {
+  MempoolEntry,
+  MempoolState,
+  MempoolStateKeys,
+} from './mempool.types.js'
 
 const sharedState = createMempoolState()
 
@@ -16,11 +20,11 @@ const addMempoolEntry =
   }
 
 const addToEntryCount = (address: string) => (state: MempoolState) => {
-  if (state.entryCount[address] === undefined) {
+  if (state.mempoolEntryCount[address] === undefined) {
     return {
       ...state,
-      entryCount: {
-        ...state.entryCount,
+      mempoolEntryCount: {
+        ...state.mempoolEntryCount,
         [address]: 1,
       },
     }
@@ -29,8 +33,8 @@ const addToEntryCount = (address: string) => (state: MempoolState) => {
   return {
     ...state,
     entryCount: {
-      ...state.entryCount,
-      [address]: state.entryCount[address] + 1,
+      ...state.mempoolEntryCount,
+      [address]: state.mempoolEntryCount[address] + 1,
     },
   }
 }
@@ -77,12 +81,16 @@ const simulateConcurrentRequests = async () => {
 
   // Expected output
   console.log('Standard Pool')
-  Object.entries(sharedState.getStandardPool()).forEach(([key, value]) => {
+  const { standardPool, mempoolEntryCount } = await sharedState.getState([
+    MempoolStateKeys.StandardPool,
+    MempoolStateKeys.MempoolEntryCount,
+  ])
+  Object.entries(standardPool).forEach(([key, value]) => {
     console.log(`Key: ${key}, Value: ${value}`)
   })
 
   console.log('Entry Count')
-  Object.entries(sharedState.getEntryCount()).forEach(([key, value]) => {
+  Object.entries(mempoolEntryCount).forEach(([key, value]) => {
     console.log(`Key: ${key}, Value: ${value}`)
   })
 }
@@ -110,7 +118,10 @@ const main = async () => {
   const manager = createManager(sharedState)
   await manager.addEntry()
   console.log('Entry Count After')
-  Object.entries(sharedState.getEntryCount()).forEach(([key, value]) => {
+  const { mempoolEntryCount } = await sharedState.getState(
+    MempoolStateKeys.MempoolEntryCount,
+  )
+  Object.entries(mempoolEntryCount).forEach(([key, value]) => {
     console.log(`Key: ${key}, Value: ${value}`)
   })
 }

@@ -1,17 +1,33 @@
 import { Mutex } from 'async-mutex'
-import {
-  MempoolState,
-  StandardPool,
-  EntryCount,
-  ReputationEntries,
-} from './mempool.types.js'
+import { MempoolState, MempoolStateKeys } from './mempool.types.js'
 
 export type MempoolStateService = {
-  getStandardPool: () => StandardPool
-  getEntryCount: () => EntryCount
-  getBlackList: () => string[]
-  getWhitelist: () => string[]
-  getReputationEntries: () => ReputationEntries
+  /**
+   * Getter for the state. It allows for retrieving any part of the state.
+   * Consumers of the getState function will get the proper return type based on the key they pass,
+   * without needing to cast the result manually.
+   *
+   * @param keys - A single key or an array of keys to retrieve from the state.
+   * @returns A promise that resolves to the requested state value.
+   *
+   * @throws Error if the key is invalid.
+   *
+   * @example
+   * // single value can be retrieved:
+   * const { standardPool } = await mempoolStateService.getState(MempoolStateKeys.StandardPool);
+   * console.log(standardPool)  // Logs the standardPool value
+   *
+   * // multiple values can be retrieved at once:
+   * const { standardPool, blackList } = await mempoolStateService.getState([
+   *   MempoolStateKeys.StandardPool,
+   *   MempoolStateKeys.BlackList,
+   * ])
+   * console.log(standardPool)  // Logs the standardPool value
+   * console.log(blackList)     // Logs the blackList value
+   */
+  getState: <K extends keyof MempoolState>(
+    keys: MempoolStateKeys | MempoolStateKeys[],
+  ) => Promise<Pick<MempoolState, K>>
 
   /**
    * Single setter to allow for atomic updates of any part of the state.
@@ -28,25 +44,41 @@ export const createMempoolState = (): MempoolStateService => {
   const mutex = new Mutex()
   let state: MempoolState = {
     standardPool: {},
-    entryCount: {},
+    mempoolEntryCount: {},
 
     blackList: [],
-    whitelist: [],
+    whiteList: [],
     reputationEntries: {},
   }
 
   return {
-    getStandardPool: (): StandardPool => state.standardPool,
-    getEntryCount: (): EntryCount => state.entryCount,
-    getBlackList: (): string[] => state.blackList,
-    getWhitelist: (): string[] => state.whitelist,
-    getReputationEntries: () => state.reputationEntries,
-    updateState: (
+    getState: async <K extends keyof MempoolState>(
+      keys: MempoolStateKeys | MempoolStateKeys[],
+    ): Promise<Pick<MempoolState, K>> => {
+      const release = await mutex.acquire()
+      try {
+        if (Array.isArray(keys)) {
+          const selectedState = {} as Pick<MempoolState, K>
+          keys.forEach((key) => {
+            selectedState[key] = state[key]
+          })
+          return selectedState
+        } else {
+          return { [keys]: state[keys] } as Pick<MempoolState, K>
+        }
+      } finally {
+        release()
+      }
+    },
+    updateState: async (
       updateFn: (state: MempoolState) => MempoolState,
     ): Promise<void> => {
-      return mutex.runExclusive(() => {
+      const release = await mutex.acquire()
+      try {
         state = updateFn(state)
-      })
+      } finally {
+        release()
+      }
     },
   }
 }

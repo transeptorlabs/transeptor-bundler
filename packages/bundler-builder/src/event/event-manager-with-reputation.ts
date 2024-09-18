@@ -4,7 +4,7 @@ import { ethers } from 'ethers'
 import { Logger } from '../../../shared/logger/index.js'
 import { ProviderService } from '../../../shared/provider/index.js'
 import { ReputationManager } from '../../../shared/reputation/index.js'
-import { budlerBuilderEmitter } from './constants.js'
+import EventEmitter from 'node:events'
 
 /**
  * listen to events. trigger ReputationManager's Included
@@ -13,6 +13,7 @@ export class EventManagerWithReputation {
   private readonly providerService: ProviderService
   private readonly reputationManager: ReputationManager
   private readonly entryPointContract: ethers.Contract
+  private eventEmitter: EventEmitter
 
   private lastBlock?: number
   private eventAggregator: string | null = null
@@ -21,11 +22,13 @@ export class EventManagerWithReputation {
   constructor(
     providerService: ProviderService,
     reputationManager: ReputationManager,
-    entryPointContract: ethers.Contract
+    entryPointContract: ethers.Contract,
+    eventEmitter: EventEmitter
   ) {
     this.providerService = providerService
     this.reputationManager = reputationManager
     this.entryPointContract = entryPointContract
+    this.eventEmitter = eventEmitter
     this.initEventListener()
   }
 
@@ -81,7 +84,7 @@ export class EventManagerWithReputation {
 
     // emit event to remove userOp
     Logger.debug(`Sending (removeUserOp) event with data: ${hash}...`)
-    budlerBuilderEmitter.emit('removeUserOp', hash);
+    this.eventEmitter.emit('removeUserOp', hash);
     
     this.includedAddress(ev.args.sender)
     this.includedAddress(ev.args.paymaster)
