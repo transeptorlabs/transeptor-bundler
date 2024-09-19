@@ -16,7 +16,7 @@ import {
   MempoolStateService,
   MempoolState,
   ReputationEntries,
-  MempoolStateKeys,
+  MempoolStateKey,
 } from '../mempool/index.js'
 
 export const createReputationManager = (
@@ -48,7 +48,7 @@ export const createReputationManager = (
     )
 
     const { reputationEntries } = await mp.getState(
-      MempoolStateKeys.ReputationEntries,
+      MempoolStateKey.ReputationEntries,
     )
 
     /**
@@ -102,9 +102,9 @@ export const createReputationManager = (
   // https://github.com/eth-infinitism/account-abstraction/blob/develop/eip/EIPS/eip-4337.md#reputation-scoring-and-throttlingbanning-for-paymasters
   const getStatus = async (addr?: string): Promise<ReputationStatus> => {
     const { whiteList, blackList, reputationEntries } = await mp.getState([
-      MempoolStateKeys.WhiteList,
-      MempoolStateKeys.BlackList,
-      MempoolStateKeys.ReputationEntries,
+      MempoolStateKey.WhiteList,
+      MempoolStateKey.BlackList,
+      MempoolStateKey.ReputationEntries,
     ])
 
     addr = addr?.toLowerCase()
@@ -140,7 +140,7 @@ export const createReputationManager = (
 
   const dump = async (): Promise<ReputationEntry[]> => {
     const { reputationEntries } = await mp.getState(
-      MempoolStateKeys.ReputationEntries,
+      MempoolStateKey.ReputationEntries,
     )
     return Object.values(reputationEntries)
   }
@@ -362,7 +362,7 @@ export const createReputationManager = (
       entity: string,
     ): Promise<number> => {
       const { reputationEntries } = await mp.getState(
-        MempoolStateKeys.ReputationEntries,
+        MempoolStateKey.ReputationEntries,
       )
       entity = entity.toLowerCase()
       const SAME_UNSTAKED_ENTITY_MEMPOOL_COUNT = 10

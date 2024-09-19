@@ -1,80 +1,70 @@
-import { createMempoolState, MempoolStateService } from './mempool-state.js'
-import {
-  MempoolEntry,
-  MempoolState,
-  MempoolStateKeys,
-} from './mempool.types.js'
+import { createMempoolState } from './mempool-state.js'
+import { MempoolStateKey, MempoolStateService } from './mempool.types.js'
 
 const sharedState = createMempoolState()
-
-// Pure functions to define how the state should be updated
-const addMempoolEntry =
-  (hash: string, opEntry: MempoolEntry) => (state: MempoolState) => {
-    return {
-      ...state,
-      standardPool: {
-        ...state.standardPool,
-        [hash]: opEntry,
-      },
-    }
-  }
-
-const addToEntryCount = (address: string) => (state: MempoolState) => {
-  if (state.mempoolEntryCount[address] === undefined) {
-    return {
-      ...state,
-      mempoolEntryCount: {
-        ...state.mempoolEntryCount,
-        [address]: 1,
-      },
-    }
-  }
-
-  return {
-    ...state,
-    entryCount: {
-      ...state.mempoolEntryCount,
-      [address]: state.mempoolEntryCount[address] + 1,
-    },
-  }
-}
 
 /**
  * Simulating concurrent requests
  */
 const simulateConcurrentRequests = async () => {
   const incrementPromises = Array.from({ length: 10 }, (_, i) =>
-    sharedState.updateState(
-      addMempoolEntry(`0x_some_hash _${i}`, {
-        userOp: {
-          sender: '',
-          nonce: '',
-          factory: '',
-          factoryData: '',
-          callData: '',
-          callGasLimit: '',
-          verificationGasLimit: '',
-          preVerificationGas: '',
-          maxFeePerGas: '',
-          maxPriorityFeePerGas: '',
-          paymaster: '',
-          paymasterVerificationGasLimit: '',
-          paymasterPostOpGasLimit: '',
-          paymasterData: '',
-          signature: '',
+    sharedState.updateState(MempoolStateKey.StandardPool, (currentValue) => {
+      return {
+        standardPool: {
+          ...currentValue.standardPool,
+          [`0x_some_hash _${i}`]: {
+            userOp: {
+              sender: '',
+              nonce: '',
+              factory: '',
+              factoryData: '',
+              callData: '',
+              callGasLimit: '',
+              verificationGasLimit: '',
+              preVerificationGas: '',
+              maxFeePerGas: '',
+              maxPriorityFeePerGas: '',
+              paymaster: '',
+              paymasterVerificationGasLimit: '',
+              paymasterPostOpGasLimit: '',
+              paymasterData: '',
+              signature: '',
+            },
+            userOpHash: '',
+            prefund: '',
+            referencedContracts: {
+              addresses: [],
+              hash: '',
+            },
+            status: 'pending',
+          },
         },
-        userOpHash: '',
-        prefund: '',
-        referencedContracts: {
-          addresses: [],
-          hash: '',
-        },
-        status: 'pending',
-      }),
-    ),
+      }
+    }),
   )
+
   const addEntryCountPromises = Array.from({ length: 5 }, (_, i) =>
-    sharedState.updateState(addToEntryCount(`0x_some_address_${i}`)),
+    sharedState.updateState(
+      MempoolStateKey.MempoolEntryCount,
+      ({ mempoolEntryCount }) => {
+        const address = `0x_some_address_${i}`
+        if (mempoolEntryCount[address] === undefined) {
+          return {
+            mempoolEntryCount: {
+              ...mempoolEntryCount,
+              [address]: 1,
+            },
+          }
+        }
+
+        return {
+          mempoolEntryCount: {
+            ...mempoolEntryCount,
+            [address]: mempoolEntryCount[address] + 1,
+          },
+        }
+      },
+    ),
   )
 
   await Promise.all([...incrementPromises, ...addEntryCountPromises])
@@ -82,8 +72,8 @@ const simulateConcurrentRequests = async () => {
   // Expected output
   console.log('Standard Pool')
   const { standardPool, mempoolEntryCount } = await sharedState.getState([
-    MempoolStateKeys.StandardPool,
-    MempoolStateKeys.MempoolEntryCount,
+    MempoolStateKey.StandardPool,
+    MempoolStateKey.MempoolEntryCount,
   ])
   Object.entries(standardPool).forEach(([key, value]) => {
     console.log(`Key: ${key}, Value: ${value}`)
@@ -105,7 +95,16 @@ const createManager = (passedSharedState: MempoolStateService) => {
   return {
     addEntry: async () => {
       await passedSharedState.updateState(
-        addToEntryCount(`0x_some_address_manager_${100}`),
+        MempoolStateKey.MempoolEntryCount,
+        ({ mempoolEntryCount }) => {
+          const address = '0x_some_address_100'
+          return {
+            mempoolEntryCount: {
+              ...mempoolEntryCount,
+              [address]: 1,
+            },
+          }
+        },
       )
     },
   }
@@ -119,7 +118,7 @@ const main = async () => {
   await manager.addEntry()
   console.log('Entry Count After')
   const { mempoolEntryCount } = await sharedState.getState(
-    MempoolStateKeys.MempoolEntryCount,
+    MempoolStateKey.MempoolEntryCount,
   )
   Object.entries(mempoolEntryCount).forEach(([key, value]) => {
     console.log(`Key: ${key}, Value: ${value}`)
