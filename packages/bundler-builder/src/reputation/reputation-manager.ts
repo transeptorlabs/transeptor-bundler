@@ -14,7 +14,6 @@ import {
 import { requireCond, tostr } from '../../../shared/utils/index.js'
 import {
   MempoolStateService,
-  MempoolState,
   ReputationEntries,
   MempoolStateKey,
 } from '../mempool/index.js'
@@ -70,29 +69,30 @@ export const createReputationManager = (
         Object.keys(reputationEntries).forEach(async (addr) => {
           const entry = reputationEntries[addr]
 
-          await mp.updateState((state: MempoolState) => {
-            if (entry.opsIncluded === 0 && entry.opsSeen === 0) {
-              // delete the entry from the state
-              const stateEntries = { ...state.reputationEntries }
-              delete stateEntries[addr]
-              return {
-                ...state,
-                reputationEntries: stateEntries,
+          await mp.updateState(
+            MempoolStateKey.ReputationEntries,
+            ({ reputationEntries }) => {
+              if (entry.opsIncluded === 0 && entry.opsSeen === 0) {
+                // delete the entry from the state
+                const stateEntries = { ...reputationEntries }
+                delete stateEntries[addr]
+                return {
+                  reputationEntries: stateEntries,
+                }
               }
-            }
 
-            return {
-              ...state,
-              reputationEntries: {
-                ...state.reputationEntries,
-                [addr]: {
-                  address: entry.address,
-                  opsSeen: Math.floor((entry.opsSeen * 23) / 24),
-                  opsIncluded: Math.floor((entry.opsSeen * 23) / 24),
+              return {
+                reputationEntries: {
+                  ...reputationEntries,
+                  [addr]: {
+                    address: entry.address,
+                    opsSeen: Math.floor((entry.opsSeen * 23) / 24),
+                    opsIncluded: Math.floor((entry.opsSeen * 23) / 24),
+                  },
                 },
-              },
-            }
-          })
+              }
+            },
+          )
         })
       },
       60 * 60 * 1000,
@@ -155,9 +155,8 @@ export const createReputationManager = (
     dump,
 
     clearState: async () => {
-      await mp.updateState((state: MempoolState) => {
+      await mp.updateState(MempoolStateKey.ReputationEntries, (_) => {
         return {
-          ...state,
           reputationEntries: {},
         }
       })
@@ -167,10 +166,9 @@ export const createReputationManager = (
       if (items.length === 0) {
         return
       }
-      await mp.updateState((state: MempoolState) => {
+      await mp.updateState(MempoolStateKey.WhiteList, ({ whiteList }) => {
         return {
-          ...state,
-          whitelist: [...state.whiteList, ...items],
+          whiteList: [...whiteList, ...items],
         }
       })
     },
@@ -179,10 +177,9 @@ export const createReputationManager = (
       if (items.length === 0) {
         return
       }
-      await mp.updateState((state: MempoolState) => {
+      await mp.updateState(MempoolStateKey.BlackList, ({ blackList }) => {
         return {
-          ...state,
-          blackList: [...state.blackList, ...items],
+          blackList: [...blackList, ...items],
         }
       })
     },
@@ -190,38 +187,42 @@ export const createReputationManager = (
     updateSeenStatus: async (addr: string): Promise<void> => {
       addr = addr.toLowerCase()
 
-      await mp.updateState((state: MempoolState) => {
-        const entry = state.reputationEntries[addr]
-        return {
-          ...state,
-          reputationEntries: {
-            ...state.reputationEntries,
-            [addr]: {
-              address: addr,
-              opsSeen: entry ? entry.opsSeen + 1 : 0,
-              opsIncluded: entry ? entry.opsIncluded : 0,
+      await mp.updateState(
+        MempoolStateKey.ReputationEntries,
+        ({ reputationEntries }) => {
+          const entry = reputationEntries[addr]
+          return {
+            reputationEntries: {
+              ...reputationEntries,
+              [addr]: {
+                address: addr,
+                opsSeen: entry ? entry.opsSeen + 1 : 0,
+                opsIncluded: entry ? entry.opsIncluded : 0,
+              },
             },
-          },
-        }
-      })
+          }
+        },
+      )
     },
 
     updateIncludedStatus: async (addr: string): Promise<void> => {
       addr = addr.toLowerCase()
-      await mp.updateState((state: MempoolState) => {
-        const entry = state.reputationEntries[addr]
-        return {
-          ...state,
-          reputationEntries: {
-            ...state.reputationEntries,
-            [addr]: {
-              address: addr,
-              opsSeen: entry ? entry.opsSeen : 0,
-              opsIncluded: entry ? entry.opsIncluded + 1 : 0,
+      await mp.updateState(
+        MempoolStateKey.ReputationEntries,
+        ({ reputationEntries }) => {
+          const entry = reputationEntries[addr]
+          return {
+            reputationEntries: {
+              ...reputationEntries,
+              [addr]: {
+                address: addr,
+                opsSeen: entry ? entry.opsSeen : 0,
+                opsIncluded: entry ? entry.opsIncluded + 1 : 0,
+              },
             },
-          },
-        }
-      })
+          }
+        },
+      )
     },
 
     getStakeStatus: async (
@@ -248,22 +249,24 @@ export const createReputationManager = (
       // TODO: what value to put? how long do we want this banning to hold?
       addr = addr.toLowerCase()
 
-      await mp.updateState((state: MempoolState) => {
-        const entry = state.reputationEntries[addr]
-        const bannedEntry = {
-          address: addr,
-          opsSeen: entry ? entry.opsSeen + 10000 : 10000,
-          opsIncluded: 0,
-        }
-        Logger.debug({ addr, entry: bannedEntry }, 'crashedHandleOps')
-        return {
-          ...state,
-          reputationEntries: {
-            ...state.reputationEntries,
-            [addr]: bannedEntry,
-          },
-        }
-      })
+      await mp.updateState(
+        MempoolStateKey.ReputationEntries,
+        ({ reputationEntries }) => {
+          const entry = reputationEntries[addr]
+          const bannedEntry = {
+            address: addr,
+            opsSeen: entry ? entry.opsSeen + 10000 : 10000,
+            opsIncluded: 0,
+          }
+          Logger.debug({ addr, entry: bannedEntry }, 'crashedHandleOps')
+          return {
+            reputationEntries: {
+              ...reputationEntries,
+              [addr]: bannedEntry,
+            },
+          }
+        },
+      )
     },
 
     setReputation: async (
@@ -284,15 +287,17 @@ export const createReputationManager = (
         return acc
       }, initalReady)
 
-      await mp.updateState((state: MempoolState) => {
-        return {
-          ...state,
-          reputationEntries: {
-            ...state.reputationEntries,
-            ...newEntries,
-          },
-        }
-      })
+      await mp.updateState(
+        MempoolStateKey.ReputationEntries,
+        ({ reputationEntries }) => {
+          return {
+            reputationEntries: {
+              ...reputationEntries,
+              ...newEntries,
+            },
+          }
+        },
+      )
 
       return dump()
     },

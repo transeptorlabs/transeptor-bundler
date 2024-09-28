@@ -8,8 +8,68 @@ import {
   ValidationErrors,
 } from '../../../shared/validatation/index.js'
 import { RpcError, requireCond } from '../../../shared/utils/index.js'
-import { EntryCount, MempoolEntry, MempoolState } from './mempool.types.js'
-import { MempoolStateService } from './mempool-state.js'
+import {
+  EntryCount,
+  MempoolEntry,
+  MempoolStateKey,
+  MempoolStateService,
+} from './mempool.types.js'
+
+/* In-memory mempool with used to manage UserOperations.
+
+  Key methods and their functionality:
+    - findByHash(): Retrieves the MempoolEntry associated with the given hash string key. It acquires the mutex to ensure thread-safety during access.
+    - addUserOp(): Sets the value associated with the given userOpHash string key. It acquires the mutex to ensure thread-safety during modification.
+    - removeUserOp(): Removes the MempoolEntry with the given userOpHash string key from the mempool. It acquires the mutex to ensure thread-safety during modification. Returns true if the item is successfully removed, and false if the item doesn't exist.
+    - getNextIdle(): Gets items from the MempoolEntry in bundles of the specified bundleSize that have status of idle. It acquires the mutex to ensure thread-safety during modification. Returns an array of key-value pairs ([string, MempoolEntry]) representing the removed MempoolEntrys.
+    - getNextIdle(): Gets all items from the MempoolEntry that have status of idle. It acquires the mutex to ensure thread-safety during modification. Returns an array of key-value pairs ([string, MempoolEntry]) representing the removed MempoolEntrys.
+    - size: return current size of mempool for debugging
+    - dump: print all items in mempool for debugging
+    - clearState: clear all items in mempool for debugging
+*/
+export type MempoolManager = {
+  /**
+   * Returns all addresses that are currently known to be "senders" according to the current mempool.
+   *
+   * @returns - An array of known sender addresses in lowercase.
+   */
+  getKnownSenders(): Promise<string[]>
+
+  /**
+   * Returns all addresses that are currently known to be any kind of entity according to the current mempool.
+   * Note that "sender" addresses are not returned by this function. Use {@link getKnownSenders} instead.
+   *
+   * @returns - An array of known entity addresses in lowercase.
+   */
+  getKnownEntities(): Promise<string[]>
+
+  /**
+   * Add userOp into the mempool, after initial validation.
+   * replace existing, if any (and if new gas is higher)
+   * reverts if unable to add UserOp to mempool (too many UserOps with this sender)
+   *
+   * @param relayUserOpParam - The UserOperation to add to the mempool.
+   */
+  addUserOp(relayUserOpParam: RelayUserOpParam): Promise<void>
+
+  findByHash(userOpHash: string): Promise<MempoolEntry | undefined>
+
+  removeUserOp(userOpOrHash: string | UserOperation): Promise<boolean>
+
+  getNextPending(): Promise<MempoolEntry[]>
+
+  getAllPending(): Promise<MempoolEntry[]>
+
+  updateEntryStatusPending(userOpHash: string): Promise<void>
+
+  isMempoolOverloaded(): Promise<boolean>
+
+  size(): Promise<number>
+
+  clearState(): Promise<void>
+
+  dump(): Promise<UserOperation[]>
+}
 
 const checkReplaceUserOp = (
   oldEntry: MempoolEntry,
@@ -38,25 +98,11 @@ const checkReplaceUserOp = (
   )
 }
 
-/* In-memory mempool with used to manage UserOperations.
-  The MempoolManager class is a Hash Table data structure that provides efficient insertion, removal, and retrieval of items based on a hash string key. 
-  It utilizes the async-mutex package to prevent race conditions when modifying or accessing the hash table state.
-
-  Key methods and their functionality:
-    - findByHash(): Retrieves the MempoolEntry associated with the given hash string key. It acquires the mutex to ensure thread-safety during access.
-    - addUserOp(): Sets the value associated with the given userOpHash string key. It acquires the mutex to ensure thread-safety during modification.
-    - removeUserOp(): Removes the MempoolEntry with the given userOpHash string key from the mempool. It acquires the mutex to ensure thread-safety during modification. Returns true if the item is successfully removed, and false if the item doesn't exist.
-    - getNextIdle(): Gets items from the MempoolEntry in bundles of the specified bundleSize that have status of idle. It acquires the mutex to ensure thread-safety during modification. Returns an array of key-value pairs ([string, MempoolEntry]) representing the removed MempoolEntrys.
-    - getNextIdle(): Gets all items from the MempoolEntry that have status of idle. It acquires the mutex to ensure thread-safety during modification. Returns an array of key-value pairs ([string, MempoolEntry]) representing the removed MempoolEntrys.
-    - size: return current size of mempool for debugging
-    - dump: print all items in mempool for debugging
-    - clearState: clear all items in mempool for debugging
-    */
 export const createMempoolManager = (
   mp: MempoolStateService,
-  bundleSize: number, // maximum # of pending mempool entities
   reputationManager: ReputationManager,
-) => {
+  bundleSize: number, // maximum # of pending mempool entities
+): MempoolManager => {
   const MAX_MEMPOOL_USEROPS_PER_SENDER = 4 // max # of pending mempool entities per sender
   const THROTTLED_ENTITY_MEMPOOL_COUNT = 4
   Logger.info(
@@ -64,72 +110,77 @@ export const createMempoolManager = (
   )
 
   // Funtions to interface with reputationManager
-  const checkReputationStatus = (
+  const checkReputationStatus = async (
     title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
     stakeInfo: StakeInfo,
     maxTxMempoolAllowedOverride?: number,
-  ): void => {
+  ): Promise<void> => {
     const maxTxMempoolAllowedEntity =
       maxTxMempoolAllowedOverride ??
-      reputationManager.calculateMaxAllowedMempoolOpsUnstaked(stakeInfo.addr)
+      (await reputationManager.calculateMaxAllowedMempoolOpsUnstaked(
+        stakeInfo.addr,
+      ))
 
-    reputationManager.checkBanned(title, stakeInfo)
+    await reputationManager.checkBanned(title, stakeInfo)
 
-    const entryCount = mp.getMempoolEntryCount()
-    const foundCount = entryCount[stakeInfo.addr.toLowerCase()] ?? 0
+    const { mempoolEntryCount } = await mp.getState(
+      MempoolStateKey.MempoolEntryCount,
+    )
+    const foundCount = mempoolEntryCount[stakeInfo.addr.toLowerCase()] ?? 0
     if (foundCount > THROTTLED_ENTITY_MEMPOOL_COUNT) {
-      reputationManager.checkThrottled(title, stakeInfo)
+      await reputationManager.checkThrottled(title, stakeInfo)
     }
     if (foundCount > maxTxMempoolAllowedEntity) {
-      reputationManager.checkStake(title, stakeInfo)
+      await reputationManager.checkStake(title, stakeInfo)
     }
   }
 
-  const checkReputation = (
+  const checkReputation = async (
     senderInfo: StakeInfo,
     paymasterInfo?: StakeInfo,
     factoryInfo?: StakeInfo,
     aggregatorInfo?: StakeInfo,
-  ): void => {
-    checkReputationStatus('account', senderInfo, MAX_MEMPOOL_USEROPS_PER_SENDER)
+  ): Promise<void> => {
+    await checkReputationStatus(
+      'account',
+      senderInfo,
+      MAX_MEMPOOL_USEROPS_PER_SENDER,
+    )
 
     if (paymasterInfo != null) {
-      checkReputationStatus('paymaster', paymasterInfo)
+      await checkReputationStatus('paymaster', paymasterInfo)
     }
 
     if (factoryInfo != null) {
-      checkReputationStatus('deployer', factoryInfo)
+      await checkReputationStatus('deployer', factoryInfo)
     }
 
     if (aggregatorInfo != null) {
-      checkReputationStatus('aggregator', aggregatorInfo)
+      await checkReputationStatus('aggregator', aggregatorInfo)
     }
   }
 
-  const updateSeenStatus = (
+  const updateSeenStatus = async (
     aggregator: string | undefined,
     userOp: UserOperation,
     senderInfo: StakeInfo,
-  ): void => {
+  ): Promise<void> => {
     try {
-      reputationManager.checkStake('account', senderInfo)
-      reputationManager.updateSeenStatus(userOp.sender)
+      await reputationManager.checkStake('account', senderInfo)
+      await reputationManager.updateSeenStatus(userOp.sender)
     } catch (e: any) {
       if (!(e instanceof RpcError)) throw e
     }
-    reputationManager.updateSeenStatus(aggregator)
-    reputationManager.updateSeenStatus(userOp.paymaster)
-    reputationManager.updateSeenStatus(userOp.factory)
+
+    // TODO: This can be batched to optimize performance
+    await reputationManager.updateSeenStatus(aggregator)
+    await reputationManager.updateSeenStatus(userOp.paymaster)
+    await reputationManager.updateSeenStatus(userOp.factory)
   }
 
-  /**
-   * Returns all addresses that are currently known to be "senders" according to the current mempool.
-   *
-   * @returns - An array of known sender addresses in lowercase.
-   */
   const getKnownSenders = async (): Promise<string[]> => {
-    const currentMempool = await mp.getStandardPool()
-    const entries = Object.values(currentMempool)
+    const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+    const entries = Object.values(standardPool)
     if (entries.length === 0) {
       return []
     }
@@ -142,15 +193,9 @@ export const createMempoolManager = (
       }, initialValue)
   }
 
-  /**
-   * Returns all addresses that are currently known to be any kind of entity according to the current mempool.
-   * Note that "sender" addresses are not returned by this function. Use {@link getKnownSenders} instead.
-   *
-   * @returns - An array of known entity addresses in lowercase.
-   */
   const getKnownEntities = async (): Promise<string[]> => {
-    const currentMempool = await mp.getStandardPool()
-    const entries = Object.values(currentMempool)
+    const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+    const entries = Object.values(standardPool)
     if (entries.length === 0) {
       return []
     }
@@ -178,15 +223,17 @@ export const createMempoolManager = (
    * @param userOp - The UserOperation to check for multiple roles violation.
    * @throws - If the sender is found in the known entities or if the paymaster or factory is found in known senders.
    */
-  const checkMultipleRolesViolation = (userOp: UserOperation): void => {
-    const knownEntities = getKnownEntities()
+  const checkMultipleRolesViolation = async (
+    userOp: UserOperation,
+  ): Promise<void> => {
+    const knownEntities = await getKnownEntities()
     requireCond(
       !knownEntities.includes(userOp.sender.toLowerCase()),
       `The sender address "${userOp.sender}" is used as a different entity in another UserOperation currently in mempool`,
       ValidationErrors.OpcodeValidation,
     )
 
-    const knownSenders = getKnownSenders()
+    const knownSenders = await getKnownSenders()
     const paymaster = userOp.paymaster
     const factory = userOp.factory
 
@@ -213,8 +260,8 @@ export const createMempoolManager = (
     sender: string,
     nonce: BigNumberish,
   ): Promise<MempoolEntry | undefined> => {
-    const currentMempool = await mp.getStandardPool()
-    const entries = Object.values(currentMempool)
+    const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+    const entries = Object.values(standardPool)
     if (entries.length === 0) {
       return undefined
     }
@@ -233,11 +280,6 @@ export const createMempoolManager = (
     getKnownSenders,
     getKnownEntities,
 
-    /*
-     * add userOp into the mempool, after initial validation.
-     * replace existing, if any (and if new gas is higher)
-     * revets if unable to add UserOp to mempool (too many UserOps with this sender)
-     */
     addUserOp: async (relayUserOpParam: RelayUserOpParam): Promise<void> => {
       const {
         userOp,
@@ -262,15 +304,17 @@ export const createMempoolManager = (
       const oldEntry = await findBySenderNonce(userOp.sender, userOp.nonce)
       if (oldEntry) {
         checkReplaceUserOp(oldEntry, entry)
-        await mp.updateState((state: MempoolState) => {
-          return {
-            ...state,
-            standardPool: {
-              ...state.standardPool,
-              [userOpHash]: entry,
-            },
-          }
-        })
+        await mp.updateState(
+          MempoolStateKey.StandardPool,
+          ({ standardPool }) => {
+            return {
+              standardPool: {
+                ...standardPool,
+                [userOpHash]: entry,
+              },
+            }
+          },
+        )
 
         Logger.debug(
           {
@@ -283,45 +327,51 @@ export const createMempoolManager = (
         )
       } else {
         // check reputation and throttling
-        checkReputation(senderInfo, paymasterInfo, factoryInfo, aggregatorInfo)
-        checkMultipleRolesViolation(userOp)
+        await checkReputation(
+          senderInfo,
+          paymasterInfo,
+          factoryInfo,
+          aggregatorInfo,
+        )
+        await checkMultipleRolesViolation(userOp)
 
         // update entity entryCount and add to mempool if all checks passed
-        await mp.updateState((state: MempoolState) => {
-          const sender = userOp.sender.toLowerCase()
-          const entriesCountToUpdate: EntryCount = {
-            [sender]: (state.mempoolEntryCount[sender] ?? 0) + 1,
-          }
-
-          // update paymaster and factory counts
-          if (userOp.paymaster != null) {
-            if (userOp.paymaster !== '0x') {
-              entriesCountToUpdate[userOp.paymaster.toLowerCase()] =
-                (state.mempoolEntryCount[userOp.paymaster.toLowerCase()] ?? 0) +
-                1
+        await mp.updateState(
+          [MempoolStateKey.StandardPool, MempoolStateKey.MempoolEntryCount],
+          ({ standardPool, mempoolEntryCount }) => {
+            const sender = userOp.sender.toLowerCase()
+            const entriesCountToUpdate: EntryCount = {
+              [sender]: (mempoolEntryCount[sender] ?? 0) + 1,
             }
-          }
-          if (userOp.factory != null) {
-            if (userOp.factory !== '0x') {
-              entriesCountToUpdate[userOp.factory.toLowerCase()] =
-                (state.mempoolEntryCount[userOp.factory.toLowerCase()] ?? 0) + 1
-            }
-          }
 
-          return {
-            ...state,
-            standardPool: {
-              ...state.standardPool,
-              [userOpHash]: entry,
-            },
-            mempoolEntryCount: {
-              ...state.mempoolEntryCount,
-              ...entriesCountToUpdate,
-            },
-          }
-        })
+            // update paymaster and factory counts
+            if (userOp.paymaster != null) {
+              if (userOp.paymaster !== '0x') {
+                entriesCountToUpdate[userOp.paymaster.toLowerCase()] =
+                  (mempoolEntryCount[userOp.paymaster.toLowerCase()] ?? 0) + 1
+              }
+            }
+            if (userOp.factory != null) {
+              if (userOp.factory !== '0x') {
+                entriesCountToUpdate[userOp.factory.toLowerCase()] =
+                  (mempoolEntryCount[userOp.factory.toLowerCase()] ?? 0) + 1
+              }
+            }
+
+            return {
+              standardPool: {
+                ...standardPool,
+                [userOpHash]: entry,
+              },
+              mempoolEntryCount: {
+                ...mempoolEntryCount,
+                ...entriesCountToUpdate,
+              },
+            }
+          },
+        )
       }
-      updateSeenStatus(aggregatorInfo?.addr, userOp, senderInfo)
+      await updateSeenStatus(aggregatorInfo?.addr, userOp, senderInfo)
       Logger.debug(
         {
           sender: userOp.sender,
@@ -336,124 +386,151 @@ export const createMempoolManager = (
     findByHash: async (
       userOpHash: string,
     ): Promise<MempoolEntry | undefined> => {
-      const currentMempool = await mp.getStandardPool()
-      return currentMempool[userOpHash]
+      const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+      return standardPool[userOpHash]
     },
 
     removeUserOp: async (
       userOpOrHash: string | UserOperation,
     ): Promise<boolean> => {
-      const release = await this.mutex.acquire()
-      try {
-        let entry: MempoolEntry | undefined
-        if (typeof userOpOrHash === 'string') {
-          entry = this.mempool.get(userOpOrHash)
-        } else {
-          entry = this.findBySenderNonce(
-            userOpOrHash.sender,
-            userOpOrHash.nonce,
-          )
-        }
-
-        if (!entry) {
-          return false
-        }
-
-        const userOpHash = entry.userOpHash
-        const result = this.mempool.delete(userOpHash)
-        if (result) {
-          const count = (this.entryCount[entry.userOp.sender] ?? 0) - 1
-          count <= 0
-            ? delete this.entryCount[entry.userOp.sender]
-            : (this.entryCount[entry.userOp.sender] = count)
-        }
-
-        return result
-      } finally {
-        release()
+      let entry: MempoolEntry | undefined
+      if (typeof userOpOrHash === 'string') {
+        const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+        entry = standardPool[userOpOrHash]
+      } else {
+        entry = await findBySenderNonce(userOpOrHash.sender, userOpOrHash.nonce)
       }
+
+      if (!entry) {
+        return false
+      }
+
+      const userOpHash = entry.userOpHash
+      await mp.updateState(
+        [MempoolStateKey.StandardPool, MempoolStateKey.MempoolEntryCount],
+        ({ standardPool, mempoolEntryCount }) => {
+          delete standardPool[userOpHash]
+
+          const count = (mempoolEntryCount[entry.userOp.sender] ?? 0) - 1
+          count <= 0
+            ? delete mempoolEntryCount[entry.userOp.sender]
+            : (mempoolEntryCount[entry.userOp.sender] = count)
+
+          return {
+            standardPool,
+            mempoolEntryCount,
+          }
+        },
+      )
+
+      return true
     },
 
     getNextPending: async (): Promise<MempoolEntry[]> => {
-      const release = await this.mutex.acquire()
-      try {
-        const entries: MempoolEntry[] = []
-        let count = 0
-        for (const [key, value] of this.mempool.entries()) {
-          if (count >= this.bundleSize) {
-            break
-          }
+      const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
 
-          if (value.status === 'bundling') {
-            continue
-          }
-
-          value.status = 'bundling'
-          entries.push(value)
-          count++
+      let count = 0
+      const entries = Object.values(standardPool).map((entry) => {
+        if (count >= bundleSize) {
+          return
         }
-        return entries
-      } finally {
-        release()
-      }
+        if (entry.status === 'bundling') {
+          return
+        }
+        count++
+        return entry
+      })
+
+      // Update the status of the entries to 'bundling'
+      const userOpHashes = entries.map((entry) => entry.userOpHash)
+      await mp.updateState(MempoolStateKey.StandardPool, ({ standardPool }) => {
+        userOpHashes.forEach((hash) => {
+          standardPool[hash].status = 'bundling'
+        })
+        return { standardPool }
+      })
+
+      return entries
     },
 
     getAllPending: async (): Promise<MempoolEntry[]> => {
-      const release = await this.mutex.acquire()
-      try {
-        const entries: MempoolEntry[] = []
-        for (const [key, value] of this.mempool.entries()) {
-          if (value.status === 'pending') {
-            value.status = 'bundling'
-            entries.push(value)
-          }
-        }
-        return entries
-      } finally {
-        release()
-      }
+      const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+
+      const entries = Object.values(standardPool).filter(
+        (entry) => entry.status === 'pending',
+      )
+
+      // Update the status of the entries to 'bundling'
+      const userOpHashes = entries.map((entry) => entry.userOpHash)
+      await mp.updateState(MempoolStateKey.StandardPool, ({ standardPool }) => {
+        userOpHashes.forEach((hash) => {
+          standardPool[hash].status = 'bundling'
+        })
+        return { standardPool }
+      })
+
+      return entries
     },
 
     updateEntryStatusPending: async (userOpHash: string): Promise<void> => {
-      const release = await this.mutex.acquire()
-      try {
-        const entry = this.mempool.get(userOpHash)
-        if (entry) {
-          entry.status = 'pending'
-        }
-      } finally {
-        release()
+      const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+      const entry = standardPool[userOpHash]
+      if (entry) {
+        await mp.updateState(
+          MempoolStateKey.StandardPool,
+          ({ standardPool }) => {
+            return {
+              standardPool: {
+                ...standardPool,
+                [userOpHash]: {
+                  ...entry,
+                  status: 'pending',
+                },
+              },
+            }
+          },
+        )
       }
     },
 
-    isMempoolOverloaded: (): boolean => {
-      return this.size() >= this.bundleSize
+    isMempoolOverloaded: async (): Promise<boolean> => {
+      const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+      return Object.keys(standardPool).length >= bundleSize
     },
 
-    size: (): number => {
-      return this.mempool.size
+    size: async (): Promise<number> => {
+      const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+      return Object.keys(standardPool).length
     },
 
     clearState: async (): Promise<void> => {
-      const release = await this.mutex.acquire()
-      try {
-        this.mempool.clear()
-        this.entryCount = {}
-      } finally {
-        release()
-      }
+      await mp.updateState(
+        [MempoolStateKey.StandardPool, MempoolStateKey.MempoolEntryCount],
+        (_) => {
+          return {
+            standardPool: {},
+            mempoolEntryCount: {},
+          }
+        },
+      )
     },
 
-    dump: (): Array<UserOperation> => {
+    dump: async (): Promise<UserOperation[]> => {
+      const { standardPool, mempoolEntryCount } = await mp.getState([
+        MempoolStateKey.StandardPool,
+        MempoolStateKey.MempoolEntryCount,
+      ])
+
       Logger.debug(
         '_______________________________MEMPOOL DUMP____________________________________________',
       )
-      Logger.debug(`Mempool size: ${this.mempool.size}`)
-      Logger.debug({ entryCount: this.entryCount }, 'Mempool entryCount')
+      Logger.debug(`Mempool size: ${Object.keys(standardPool).length}`)
+      Logger.debug({ entryCount: mempoolEntryCount }, 'Mempool entryCount')
       Logger.debug(
         '________________________________________________________________________________________',
       )
-      return Array.from(this.mempool.values()).map(
+
+      return Object.values(standardPool).map(
         (mempoolEntry) => mempoolEntry.userOp,
       )
     },

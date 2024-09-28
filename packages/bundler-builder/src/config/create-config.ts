@@ -1,17 +1,17 @@
 import { Command, OptionValues } from 'commander'
 import dotenv from 'dotenv'
 import { BigNumber, ethers, providers, Wallet } from 'ethers'
-import packageJson from '../../package.json' assert { type: 'json' }
 import { createProvider } from '../../../shared/provider/index.js'
-import { IENTRY_POINT_ABI, IStakeManager } from '../../../shared/abis'
+import { IENTRY_POINT_ABI, IStakeManager } from '../../../shared/abis/index.js'
 import { DEFAULT_ENTRY_POINT } from '../../../shared/constants/index.js'
 import { BundlerSignerWallets } from '../../../bundler-builder/src/signer/index.js'
-import { parseEther } from 'ethers/lib/utils'
 import { isValidAddress } from '../../../shared/utils/index.js'
 
 dotenv.config()
 
 const DEFAULT_NETWORK = 'http://localhost:8545'
+const SUPPORTED_MODES = ['base', 'conditional', 'searcher']
+const nodeVersion = '0.6.2-alpha.0' // manual update on each release
 
 export type Config = {
   provider: providers.JsonRpcProvider
@@ -26,6 +26,19 @@ export type Config = {
   port: number
   entryPointContract: ethers.Contract
   stakeManagerContract: ethers.Contract
+
+  whitelist: string[]
+  blacklist: string[]
+
+  minStake: BigNumber
+  minUnstakeDelay: number
+
+  bundleSize: number
+  maxBundleGas: number
+  isAutoBundle: boolean
+  autoBundleInterval: number
+  txMode: string
+  isUnsafeMode: boolean
 
   isP2PMode: boolean
   findPeers: boolean
@@ -58,7 +71,7 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
   const defaulHttpApis = ['builder', 'debug']
 
   program
-    .version(`${packageJson.version}`)
+    .version(`${nodeVersion}`)
     .option(
       '--network <string>',
       'ETH execution client url.',
@@ -66,7 +79,7 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
     )
     .option('--p2p', 'p2p mode enabled', false)
     .option('--findPeers', 'Search for peers when p2p enabled.', false)
-    .option('--port <number>', 'Bundler-relayer node listening port.', '4337')
+    .option('--port <number>', 'Bundler-relayer node listening port.', '4338')
     .option(
       '--numberOfSigners <number>',
       'Number of signers HD paths to use from mnmonic',
@@ -76,6 +89,41 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
       '--minBalance <string>',
       'Maximum ETH balance need for signer address.',
       '1',
+    )
+    .option(
+      '--minStake <string>',
+      'Minimum stake a entity has to have to pass reputation system.',
+      '1',
+    ) // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
+    .option(
+      '--minUnstakeDelay <number>',
+      'Time paymaster has to wait to unlock the stake(seconds).',
+      '0',
+    ) // One day - 84600
+    .option(
+      '--bundleSize <number>',
+      'Maximum number of pending mempool entities to start auto bundler.',
+      '10',
+    )
+    .option(
+      '--maxBundleGas <number>',
+      'Max gas the bundler will use in transactions.',
+      '5000000',
+    )
+    .option('--auto', 'Automatic bundling.', false)
+    .option(
+      '--autoBundleInterval <number>',
+      'Auto bundler interval in (ms).',
+      '12000',
+    )
+    .option(
+      '--txMode <string>',
+      'Bundler transaction mode (base, conditional, searcher).',
+      'base',
+    )
+    .option(
+      '--unsafe',
+      'Enable no storage or opcode checks during userOp simulation.',
     )
 
   const programOpts: OptionValues = program.parse(args).opts()
@@ -117,18 +165,50 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
       : []
     : []
 
+  // set reputation config
+  const whitelist = process.env.WHITELIST
+    ? process.env.WHITELIST.split(',')
+    : []
+  const blacklist = process.env.BLACKLIST
+    ? process.env.BLACKLIST.split(',')
+    : []
+
+  // set transaction mode config
+  if (!SUPPORTED_MODES.includes(programOpts.txMode as string)) {
+    throw new Error('Invalid bundler mode')
+  }
+
+  if ((programOpts.txMode as string) === 'searcher') {
+    if (!process.env.TRANSEPTOR_ALCHEMY_API_KEY) {
+      throw new Error('TRANSEPTOR_ALCHEMY_API_KEY env var not set')
+    }
+  }
+
   return {
     provider,
     bundlerSignerWallets,
     beneficiaryAddr: process.env.TRANSEPTOR_BENEFICIARY as string,
-    minSignerBalance: parseEther(programOpts.minBalance as string),
+    minSignerBalance: ethers.utils.parseEther(programOpts.minBalance as string),
     numberOfSigners: parseInt(programOpts.numberOfSigners),
 
-    clientVersion: packageJson.version as string,
+    clientVersion: nodeVersion,
     httpApis: defaulHttpApis,
     port: parseInt(programOpts.port as string),
     entryPointContract,
     stakeManagerContract,
+
+    minStake: ethers.utils.parseEther(programOpts.minStake as string),
+    minUnstakeDelay: parseInt(programOpts.minUnstakeDelay as string),
+
+    whitelist,
+    blacklist,
+
+    bundleSize: parseInt(programOpts.bundleSize as string),
+    maxBundleGas: parseInt(programOpts.maxBundleGas as string),
+    isAutoBundle: programOpts.auto as boolean,
+    autoBundleInterval: parseInt(programOpts.autoBundleInterval as string),
+    txMode: programOpts.txMode as string,
+    isUnsafeMode: programOpts.unsafe as boolean,
 
     isP2PMode,
     findPeers: programOpts.findPeers as boolean,

@@ -8,12 +8,13 @@
   "types": "./dist/src/index.d.ts",
   "scripts": {
     "clean": "rm -rf dist",
+    "ls-cmd": "node --import ./register-hook.js ./src/index.ts --help",
     "build": "npx tsc -p ./tsconfig.json && cp ../shared/sim/tracer.js dist/shared/sim",
     "dev": "nodemon",
-    "start": "node --import ./register-hook.js ./src/index.ts --debug --txMode base | pino-pretty",
-    "start:unsafe": "node --import ./register-hook.js ./src/index.ts --debug --txMode base --unsafe | pino-pretty",
-    "start:metrics": "node --import ./register-hook.js ./src/index.ts --debug --txMode base --metrics | pino-pretty",
-    "start:prod": "yarn build && node dist/bundler-relayer/src/index.js --debug --txMode base | pino-pretty",
+    "start": "node --import ./register-hook.js ./src/index.ts --debug | pino-pretty",
+    "start:unsafe": "node --import ./register-hook.js ./src/index.ts --debug --unsafe | pino-pretty",
+    "start:metrics": "node --import ./register-hook.js ./src/index.ts --debug --metrics | pino-pretty",
+    "start:prod": "yarn build && node dist/bundler-relayer/src/index.js --debug | pino-pretty",
     "test": "echo no test",
     "lint": "eslint . --ext ts",
     "lint:fix": "yarn lint --fix",
@@ -47,6 +48,6 @@
     ],
     "ext": "ts,json",
     "ignore": [],
-    "exec": "node --import ./register-hook.js ./src/index.ts --debug --txMode base | pino-pretty"
+    "exec": "node --import ./register-hook.js ./src/index.ts --debug | pino-pretty"
   }
 }

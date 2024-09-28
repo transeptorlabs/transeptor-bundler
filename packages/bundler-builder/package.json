@@ -7,9 +7,10 @@
   "types": "./dist/src/index.d.ts",
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "echo no build",
-    "dev": "echo no dev",
-    "start": "echo no start",
+    "ls-cmd": "node --import ./register-hook.js ./src/index.ts --help",
+    "build": "npx tsc -p ./tsconfig.json && cp ../shared/sim/tracer.js dist/shared/sim",
+    "dev": "nodemon",
+    "start": "node --import ./register-hook.js ./src/index.ts --txMode base | pino-pretty",
     "start:prod": "echo no start:prod",
     "test": "vitest --config ./vitest.config.ts",
     "lint": "echo no lint",
@@ -44,6 +45,6 @@
     ],
     "ext": "ts,json",
     "ignore": [],
-    "exec": "node --loader ts-node/esm ./src/index.ts | pino-pretty"
+    "exec": "node --import ./register-hook.js ./src/index.ts --txMode base | pino-pretty"
   }
 }

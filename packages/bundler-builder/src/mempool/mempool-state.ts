@@ -10,6 +10,7 @@ export const createMempoolState = (): MempoolStateService => {
   let state: MempoolState = {
     standardPool: {},
     mempoolEntryCount: {},
+    bundleTxs: {},
 
     blackList: [],
     whiteList: [],

@@ -1,7 +1,6 @@
 import { Command, OptionValues } from 'commander'
 import dotenv from 'dotenv'
-import { BigNumber, ethers, providers } from 'ethers'
-import { parseEther } from 'ethers/lib/utils.js'
+import { ethers, providers } from 'ethers'
 
 import { IENTRY_POINT_ABI, IStakeManager } from '../../../shared/abis/index.js'
 
@@ -14,7 +13,6 @@ dotenv.config()
 
 const DEFAULT_NETWORK = 'http://localhost:8545'
 const DEFAULT_BUNDLER_BUILDER_CLIENT_URL = 'http://localhost:4338/rpc'
-const SUPPORTED_MODES = ['base', 'conditional', 'searcher']
 const nodeVersion = '0.6.2-alpha.0' // manual update on each release
 
 export type Config = {
@@ -24,17 +22,6 @@ export type Config = {
   stakeManagerContract: ethers.Contract
 
   isUnsafeMode: boolean
-  txMode: string
-  autoBundleInterval: number
-  bundleSize: number
-  isAutoBundle: boolean
-  maxMempoolSize: number
-  minUnstakeDelay: number
-  maxBundleGas: number
-
-  whitelist: string[]
-  blacklist: string[]
-  minStake: BigNumber
 
   port: number
   clientVersion: string
@@ -64,39 +51,11 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
       'ERC-4337 bundler-builder client url.',
       `${DEFAULT_BUNDLER_BUILDER_CLIENT_URL}`,
     )
-    .option(
-      '--maxBundleGas <number>',
-      'Max gas the bundler will use in transactions.',
-      '5000000',
-    )
-    .option('--auto', 'Automatic bundling.', false)
-    .option(
-      '--autoBundleInterval <number>',
-      'Auto bundler interval in (ms).',
-      '12000',
-    )
-    .option(
-      '--bundleSize <number>',
-      'Maximum number of pending mempool entities to start auto bundler.',
-      '10',
-    )
     .option('--port <number>', 'Bundler-relayer node listening port.', '4337')
     .option(
-      '--minStake <string>',
-      'Minimum stake a entity has to have to pass reputation system.',
-      '1',
-    ) // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
-    .option(
-      '--minUnstakeDelay <number>',
-      'Time paymaster has to wait to unlock the stake(seconds).',
-      '0',
-    ) // One day - 84600
-    .option(
-      '--txMode <string>',
-      'Bundler transaction mode (base, conditional, searcher).',
-      'base',
+      '--unsafe',
+      'Enable no storage or opcode checks during userOp simulation.',
     )
-    .option('--unsafe', 'Enable no storage or opcode checks.')
     .option('--metrics', 'Bundler node metrics tracking enabled.', false)
     .option('--metricsPort <number>', 'Metrics server listening port.', '4001')
     .option(
@@ -116,17 +75,6 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
     )
 
   const programOpts: OptionValues = program.parse(args).opts()
-
-  // set transaction mode config
-  if (!SUPPORTED_MODES.includes(programOpts.txMode as string)) {
-    throw new Error('Invalid bundler mode')
-  }
-
-  if ((programOpts.txMode as string) === 'searcher') {
-    if (!process.env.TRANSEPTOR_ALCHEMY_API_KEY) {
-      throw new Error('TRANSEPTOR_ALCHEMY_API_KEY env var not set')
-    }
-  }
 
   const provider = createProvider(
     programOpts.network as string,
@@ -148,14 +96,6 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
   if (!isValidAddress(supportedEntryPointAddress)) {
     throw new Error('Entry point not a valid address')
   }
-
-  // set reputation config
-  const whitelist = process.env.WHITELIST
-    ? process.env.WHITELIST.split(',')
-    : []
-  const blacklist = process.env.BLACKLIST
-    ? process.env.BLACKLIST.split(',')
-    : []
 
   // set metric config
   const isMetricsEnabled = programOpts.metrics as boolean
@@ -182,17 +122,6 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
     stakeManagerContract,
 
     isUnsafeMode: programOpts.unsafe as boolean,
-    txMode: programOpts.txMode as string,
-    autoBundleInterval: parseInt(programOpts.autoBundleInterval as string),
-    bundleSize: parseInt(programOpts.bundleSize as string),
-    isAutoBundle: programOpts.auto as boolean,
-    maxMempoolSize: 100,
-    maxBundleGas: parseInt(programOpts.maxBundleGas as string),
-
-    minStake: parseEther(programOpts.minStake as string),
-    minUnstakeDelay: parseInt(programOpts.minUnstakeDelay as string),
-    whitelist,
-    blacklist,
 
     port: parseInt(programOpts.port as string),
     clientVersion: nodeVersion,

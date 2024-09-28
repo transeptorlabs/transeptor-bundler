@@ -13,24 +13,24 @@ import { createSignerService } from './signer/index.js'
 import { EventManagerWithReputation } from './event/index.js'
 import EventEmitter from 'node:events'
 import { createReputationManager } from './reputation/index.js'
-import { createMempoolState } from './mempool/index.js'
+import { createMempoolManager, createMempoolState } from './mempool/index.js'
 
 let p2pNode: Libp2pNode = undefined
+
+const stopLibp2p = async () => {
+  if (p2pNode) {
+    await p2pNode.stop()
+  }
+}
 
 const runBundlerBuilder = async () => {
   const args = process.argv
   const config = createBuilderConfig(args)
   const bundlerBuilderEmitter = new EventEmitter()
 
-  const ss = createSignerService(config.provider)
   const ps = createProviderService(config.provider)
   const sim = createSimulator(ps, config.entryPointContract)
-  const vs = createValidationService(ps, sim, config.entryPointContract.address)
   const mempoolState = createMempoolState()
-  const mempoolManager = new MempoolManager(
-    reputationManager,
-    config.bundleSize,
-  )
 
   const reputationManager = createReputationManager(
     mempoolState,
@@ -41,6 +41,12 @@ const runBundlerBuilder = async () => {
   await reputationManager.addWhitelist(config.whitelist)
   await reputationManager.addBlacklist(config.blacklist)
   reputationManager.startHourlyCron()
+
+  const mempoolManager = createMempoolManager(
+    mempoolState,
+    reputationManager,
+    config.bundleSize,
+  )
 
   const eventsManager = new EventManagerWithReputation(
     ps,
@@ -55,7 +61,7 @@ const runBundlerBuilder = async () => {
 
   const bundleProcessor = new BundleProcessor(
     ps,
-    vs,
+    createValidationService(ps, sim, config.entryPointContract.address),
     reputationManager,
     mempoolManager,
     config.maxBundleGas,
@@ -63,6 +69,8 @@ const runBundlerBuilder = async () => {
     config.txMode,
     config.beneficiaryAddr,
     config.minSignerBalance,
+    config.isUnsafeMode,
+    config.bundlerSignerWallets,
   )
   const bundleManager = new BundleManager(
     bundleProcessor,
@@ -86,13 +94,16 @@ const runBundlerBuilder = async () => {
         eventsManager,
         config.entryPointContract,
       ),
+      mempoolManager,
     ),
     config.httpApis,
     config.port,
   )
   await bundlerServer.start(async () => {
+    const ss = createSignerService(ps)
     const { name, chainId } = await ps.getNetwork()
 
+    // Make sure the entry point contract is deployed to the network
     if (chainId === 31337 || chainId === 1337) {
       const isDeployed = await ps.checkContractDeployment(
         config.entryPointContract.address,
@@ -102,20 +113,6 @@ const runBundlerBuilder = async () => {
           'Entry point contract is not deployed to the network. Please use a pre-deployed contract or deploy the contract first if you are using a local network.',
         )
       }
-    }
-
-    const bal = await ps.getSignerBalance()
-    if (bal.eq(0)) {
-      throw new Error('Bundler signer account is not funded:')
-    }
-
-    if (
-      config.txMode === 'conditional' &&
-      !(await ps.supportsRpcMethod('eth_sendRawTransactionConditional'))
-    ) {
-      throw new Error(
-        '(conditional mode requires connection to a node that support eth_sendRawTransactionConditional',
-      )
     }
 
     // full validation requires (debug_traceCall) method on eth node geth and can only be run in private and conditional txMode
@@ -129,10 +126,35 @@ const runBundlerBuilder = async () => {
       )
     }
 
+    if (
+      config.txMode === 'conditional' &&
+      !(await ps.supportsRpcMethod('eth_sendRawTransactionConditional'))
+    ) {
+      throw new Error(
+        '(conditional mode requires connection to a node that support eth_sendRawTransactionConditional',
+      )
+    }
+
+    // Check if the signer accounts have enough balance
+    const signerDetails = await Promise.all(
+      Object.values(config.bundlerSignerWallets).map(async (signer) => {
+        const bal = await ss.getSignerBalance(signer)
+        if (bal.eq(config.minSignerBalance)) {
+          throw new Error(
+            `Bundler signer account(${signer.address}) is not funded: Min balance required: ${config.minSignerBalance}`,
+          )
+        }
+
+        return {
+          signerAddresses: signer.address,
+          signerBalanceWei: bal.toString(),
+        }
+      }),
+    )
+
     Logger.info(
       {
-        signerAddress: await ps.getSignerAddress(),
-        signerBalanceWei: bal.toString(),
+        signerDetails,
         network: { chainId, name },
       },
       'Relayer passed preflight check',
@@ -144,12 +166,6 @@ runBundlerBuilder().catch(async (error) => {
   Logger.fatal({ error: error.message }, 'Aborted')
   process.exit(1)
 })
-
-const stopLibp2p = async () => {
-  if (p2pNode) {
-    await p2pNode.stop()
-  }
-}
 
 process.on('SIGTERM', async () => {
   await stopLibp2p()

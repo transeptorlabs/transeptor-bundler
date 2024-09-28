@@ -41,8 +41,18 @@ const runBundlerRelayer = async () => {
     config.port,
   )
   await bundlerServer.start(async () => {
-    // run checks
-    // TODO: Ping the bundler-builder node to make sure it is runing before ready to take request
+    // TODO: Ping the bundler-builder node to make sure it is running before ready to take request
+    // Make sure they are connected to the same network
+
+    // full validation requires (debug_traceCall) method on eth node geth
+    if (
+      !config.isUnsafeMode &&
+      !(await ps.supportsRpcMethod('debug_traceCall'))
+    ) {
+      throw new Error(
+        'Full validation requires (debug_traceCall) method on eth node geth. For local UNSAFE mode: use --unsafe',
+      )
+    }
   })
 
   // stat metrics server

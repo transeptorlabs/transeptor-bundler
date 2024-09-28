@@ -3,7 +3,7 @@ import { ethers } from 'ethers'
 
 import { Logger } from '../../../shared/logger/index.js'
 import { ProviderService } from '../../../shared/provider/index.js'
-import { ReputationManager } from '../../../shared/reputation/index.js'
+import { ReputationManager } from '../reputation/index.js'
 import EventEmitter from 'node:events'
 
 /**
@@ -23,7 +23,7 @@ export class EventManagerWithReputation {
     providerService: ProviderService,
     reputationManager: ReputationManager,
     entryPointContract: ethers.Contract,
-    eventEmitter: EventEmitter
+    eventEmitter: EventEmitter,
   ) {
     this.providerService = providerService
     this.reputationManager = reputationManager
@@ -40,25 +40,30 @@ export class EventManagerWithReputation {
       const ev = args.slice(-1)[0]
       void this.handleEvent(ev as any)
     })
-    Logger.debug('Entrypoint contract EventListener listening to UserOperationEvent')
+    Logger.debug(
+      'Entrypoint contract EventListener listening to UserOperationEvent',
+    )
   }
 
   /**
    * process all new events since last run
-  */
+   */
   public async handlePastEvents(): Promise<void> {
     if (this.lastBlock === undefined) {
       this.lastBlock = Math.max(
         1,
-        (await this.providerService.getBlockNumber()) - 1000
+        (await this.providerService.getBlockNumber()) - 1000,
       )
     }
     const events = await this.entryPointContract.queryFilter(
       { address: this.entryPointContract.address },
-      this.lastBlock
+      this.lastBlock,
     )
 
-    Logger.debug({lastBlock: this.lastBlock, events: events.length}, 'Handling past Entrypoint events since last run')
+    Logger.debug(
+      { lastBlock: this.lastBlock, events: events.length },
+      'Handling past Entrypoint events since last run',
+    )
     for (const ev of events) {
       await this.handleEvent(ev)
     }
@@ -84,8 +89,8 @@ export class EventManagerWithReputation {
 
     // emit event to remove userOp
     Logger.debug(`Sending (removeUserOp) event with data: ${hash}...`)
-    this.eventEmitter.emit('removeUserOp', hash);
-    
+    this.eventEmitter.emit('removeUserOp', hash)
+
     this.includedAddress(ev.args.sender)
     this.includedAddress(ev.args.paymaster)
     this.includedAddress(this.getEventAggregator(ev))
@@ -118,27 +123,34 @@ export class EventManagerWithReputation {
     }
   }
 
-  public async getUserOperationEvent (userOpHash: string): Promise<ethers.Event> {
+  public async getUserOperationEvent(
+    userOpHash: string,
+  ): Promise<ethers.Event> {
     // TODO: eth_getLogs is throttled. must be acceptable for finding a UserOperation by hash
-    const event = await this.entryPointContract.queryFilter(this.entryPointContract.filters.UserOperationEvent(userOpHash))
+    const event = await this.entryPointContract.queryFilter(
+      this.entryPointContract.filters.UserOperationEvent(userOpHash),
+    )
     return event[0]
   }
 
-  /** 
+  /**
    * filter full bundle logs, and leave only logs for the given userOpHash
+   *
    * @param userOpEvent - the event of our UserOp (known to exist in the logs)
    * @param logs - full bundle logs. after each group of logs there is a single UserOperationEvent with unique hash.
+   * @returns filtered logs
    */
-  public filterLogs (userOpEvent: ethers.Event, logs: Log[]): Log[] {
+  public filterLogs(userOpEvent: ethers.Event, logs: Log[]): Log[] {
     let startIndex = -1
     let endIndex = -1
     const events = Object.values(this.entryPointContract.interface.events)
-    const foundEvent = events.find(e => e.name === 'BeforeExecution')
+    const foundEvent = events.find((e) => e.name === 'BeforeExecution')
     if (!foundEvent) {
       throw new Error('fatal: no BeforeExecution event found')
     }
-    
-    const beforeExecutionTopic = this.entryPointContract.interface.getEventTopic(foundEvent)
+
+    const beforeExecutionTopic =
+      this.entryPointContract.interface.getEventTopic(foundEvent)
     logs.forEach((log, index) => {
       if (log?.topics[0] === beforeExecutionTopic) {
         // all UserOp execution events start after the "BeforeExecution" event.

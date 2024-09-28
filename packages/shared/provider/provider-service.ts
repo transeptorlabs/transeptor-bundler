@@ -39,6 +39,7 @@ export type ProviderService = {
     c: T,
     ctrParams: Parameters<T['getDeployTransaction']>,
   ): Promise<Result>
+  getTransactionReceipt(txHash: string): Promise<providers.TransactionReceipt>
 }
 
 /**
@@ -184,6 +185,12 @@ export const createProviderService = (
       ctrParams: Parameters<T['getDeployTransaction']>,
     ): Promise<Result> => {
       return await runContractScript(provider, c, ctrParams)
+    },
+
+    getTransactionReceipt: async (
+      txHash: string,
+    ): Promise<providers.TransactionReceipt> => {
+      return await provider.getTransactionReceipt(txHash)
     },
   }
 }

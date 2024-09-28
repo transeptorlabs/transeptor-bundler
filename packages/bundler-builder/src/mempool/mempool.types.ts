@@ -34,9 +34,22 @@ export type EntryCount = Record<string, number>
  */
 export type ReputationEntries = Record<string, ReputationEntry>
 
+export type PendingTxDetails = {
+  txHash: string
+  signerIndex: number
+}
+
+/*
+ * Hold the pending transactions for each bundle
+ *
+ * The key is the hash of the bundle
+ */
+export type BundleTxs = Record<string, PendingTxDetails>
+
 export type MempoolState = {
   standardPool: StandardPool
   mempoolEntryCount: EntryCount // count entities in mempool.
+  bundleTxs: BundleTxs
 
   // reputation
   blackList: string[] // black-listed entities - always banned
@@ -47,6 +60,7 @@ export type MempoolState = {
 export enum MempoolStateKey {
   StandardPool = 'standardPool',
   MempoolEntryCount = 'mempoolEntryCount',
+  BundleTxs = 'bundleTxs',
   BlackList = 'blackList',
   WhiteList = 'whiteList',
   ReputationEntries = 'reputationEntries',

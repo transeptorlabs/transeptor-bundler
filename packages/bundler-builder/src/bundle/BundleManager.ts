@@ -29,9 +29,11 @@ export class BundleManager {
     if (this.bundleMode === 'auto') {
       this.startAutoBundler()
     }
-    Logger.info(`Bundle mode set to ${ this.bundleMode} with interval ${this.autoBundleInterval} ms`)
+    Logger.info(
+      `Bundle mode set to ${this.bundleMode} with interval ${this.autoBundleInterval} ms`,
+    )
   }
-  
+
   /**
    * Set the bundler mode to auto or manual.
    *
@@ -56,9 +58,7 @@ export class BundleManager {
   public startAutoBundler() {
     this.stopAutoBundler()
 
-    Logger.info(
-      `Set auto bundler with interval: ${this.autoBundleInterval} ms`
-    )
+    Logger.info(`Set auto bundler with interval: ${this.autoBundleInterval} ms`)
 
     this.interval = setInterval(async () => {
       try {
