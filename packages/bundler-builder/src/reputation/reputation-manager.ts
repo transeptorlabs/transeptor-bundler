@@ -184,9 +184,13 @@ export const createReputationManager = (
       })
     },
 
-    updateSeenStatus: async (addr: string): Promise<void> => {
-      addr = addr.toLowerCase()
+    updateSeenStatus: async (addr?: string): Promise<void> => {
+      if (addr == null) {
+        return
+      }
 
+      Logger.debug({ addr }, 'Updating seen status with reputation manager')
+      addr = addr.toLowerCase()
       await mp.updateState(
         MempoolStateKey.ReputationEntries,
         ({ reputationEntries }) => {

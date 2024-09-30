@@ -34,6 +34,10 @@
     "os-utils": "0.0.14",
     "pino": "8.14.1"
   },
+  "devDependencies": {
+    "nodemon": "^3.1.0",
+    "pino-pretty": "^10.0.0"
+  },
   "packageManager": "yarn@3.2.1",
   "engines": {
     "node": ">=20.11.1"

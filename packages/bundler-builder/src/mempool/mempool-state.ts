@@ -4,6 +4,7 @@ import {
   MempoolStateKey,
   MempoolStateService,
 } from './mempool.types.js'
+import { Logger } from '../../../shared/logger/index.js'
 
 export const createMempoolState = (): MempoolStateService => {
   const mutex = new Mutex()
@@ -41,6 +42,9 @@ export const createMempoolState = (): MempoolStateService => {
       keys: MempoolStateKey | MempoolStateKey[],
       updateFn: (currentValue: Pick<MempoolState, K>) => Partial<MempoolState>,
     ): Promise<void> => {
+      Logger.debug(
+        `Acquiring Mutex: Updating in-memory state with keys: ${keys}`,
+      )
       const release = await mutex.acquire()
       try {
         const newState = { ...state } // Create a shallow copy of the state
@@ -113,6 +117,7 @@ export const createMempoolState = (): MempoolStateService => {
 
         state = newState
       } finally {
+        Logger.debug('Releasing Mutex: Updated in-memory state')
         release()
       }
     },

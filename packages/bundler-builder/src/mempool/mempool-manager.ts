@@ -106,7 +106,7 @@ export const createMempoolManager = (
   const MAX_MEMPOOL_USEROPS_PER_SENDER = 4 // max # of pending mempool entities per sender
   const THROTTLED_ENTITY_MEMPOOL_COUNT = 4
   Logger.info(
-    `In-memory Mempool initialized with bundleSize=${bundleSize} and MAX_MEMPOOL_USEROPS_PER_SENDER=${MAX_MEMPOOL_USEROPS_PER_SENDER}`,
+    `Setting bundleSize=${bundleSize} and MAX_MEMPOOL_USEROPS_PER_SENDER=${MAX_MEMPOOL_USEROPS_PER_SENDER}`,
   )
 
   // Funtions to interface with reputationManager
@@ -281,6 +281,7 @@ export const createMempoolManager = (
     getKnownEntities,
 
     addUserOp: async (relayUserOpParam: RelayUserOpParam): Promise<void> => {
+      Logger.debug('Attempting to add UserOperation to mempool')
       const {
         userOp,
         userOpHash,
@@ -326,7 +327,7 @@ export const createMempoolManager = (
           'replace userOp in mempool',
         )
       } else {
-        // check reputation and throttling
+        Logger.debug('New entry, checking reputation and throttling...')
         await checkReputation(
           senderInfo,
           paymasterInfo,
@@ -335,26 +336,33 @@ export const createMempoolManager = (
         )
         await checkMultipleRolesViolation(userOp)
 
-        // update entity entryCount and add to mempool if all checks passed
+        Logger.debug(
+          'Reputation and throttling checks passed, adding to mempool...',
+        )
         await mp.updateState(
           [MempoolStateKey.StandardPool, MempoolStateKey.MempoolEntryCount],
           ({ standardPool, mempoolEntryCount }) => {
+            Logger.debug({ addr: userOp.sender }, 'Updating sender count...')
             const sender = userOp.sender.toLowerCase()
             const entriesCountToUpdate: EntryCount = {
               [sender]: (mempoolEntryCount[sender] ?? 0) + 1,
             }
 
-            // update paymaster and factory counts
-            if (userOp.paymaster != null) {
-              if (userOp.paymaster !== '0x') {
-                entriesCountToUpdate[userOp.paymaster.toLowerCase()] =
-                  (mempoolEntryCount[userOp.paymaster.toLowerCase()] ?? 0) + 1
+            if (userOp.paymaster) {
+              const paymaster = userOp.paymaster.toLowerCase()
+              if (paymaster !== '0x') {
+                Logger.debug({ addr: paymaster }, 'Updating paymaster count...')
+                entriesCountToUpdate[paymaster] =
+                  (mempoolEntryCount[paymaster] ?? 0) + 1
               }
             }
-            if (userOp.factory != null) {
-              if (userOp.factory !== '0x') {
-                entriesCountToUpdate[userOp.factory.toLowerCase()] =
-                  (mempoolEntryCount[userOp.factory.toLowerCase()] ?? 0) + 1
+
+            if (userOp.factory) {
+              const factory = userOp.factory.toLowerCase()
+              if (factory !== '0x') {
+                Logger.debug({ addr: factory }, 'Updating factory count...')
+                entriesCountToUpdate[factory] =
+                  (mempoolEntryCount[factory] ?? 0) + 1
               }
             }
 
@@ -371,6 +379,7 @@ export const createMempoolManager = (
           },
         )
       }
+
       await updateSeenStatus(aggregatorInfo?.addr, userOp, senderInfo)
       Logger.debug(
         {
@@ -379,7 +388,7 @@ export const createMempoolManager = (
           userOpHash,
           status: entry.status,
         },
-        'added userOp to mempool',
+        'Successfully added UserOperation to mempool',
       )
     },
 

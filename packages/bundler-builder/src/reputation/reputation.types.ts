@@ -43,7 +43,7 @@ export type ReputationManager = {
    *
    * @param addr - The address of the entity that is seen.
    */
-  updateSeenStatus(addr: string): Promise<void>
+  updateSeenStatus(addr?: string): Promise<void>
 
   /**
    * Update the included status of an entity.
