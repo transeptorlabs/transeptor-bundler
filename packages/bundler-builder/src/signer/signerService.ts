@@ -43,6 +43,7 @@ const isTransactionPending = async (
   }
 }
 
+// TODO: Pass signers as an argument
 export const createSignerService = (ps: ProviderService): SignerService => {
   return {
     getReadySigner: async (bundleTxs: BundleTxs): Promise<number> => {

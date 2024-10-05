@@ -1,4 +1,4 @@
-export interface SlotMap {
+export type SlotMap = {
   [slot: string]: string
 }
 
@@ -6,11 +6,17 @@ export interface SlotMap {
  * map of storage
  * for each address, either a root hash, or a map of slot:value
  */
-export interface StorageMap {
+export type StorageMap = {
   [address: string]: string | SlotMap
 }
 
-export interface SendBundleReturn {
+export type SendBundleReturn = {
   transactionHash: string
   userOpHashes: string[]
+}
+
+export type SendBundleReturnWithSigner = {
+  transactionHash: string
+  userOpHashes: string[]
+  signerIndex: number
 }

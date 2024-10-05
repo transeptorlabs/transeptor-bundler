@@ -38,7 +38,7 @@
     "image:relayer": "docker build -f Dockerfile.bundler-relayer -t bundler-relayer:v-local .",
     "start:docker-relayer": "docker-compose up bundler-relayer",
     "///gj": "________________________Builder NODE______________________________",
-    "image:builder": "docker -f Dockerfile.bundler-builder build -t bundler-builder:v-local .",
+    "image:builder": "docker build -f Dockerfile.bundler-builder -t bundler-builder:v-local .",
     "start:docker-builder": "docker-compose up bundler-builder",
     "test:mempool": "yarn workspace bundler-builder run test:mempool",
     "///sj": "________________________Shared MODULE ______________________________",

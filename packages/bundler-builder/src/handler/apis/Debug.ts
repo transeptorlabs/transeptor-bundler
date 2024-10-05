@@ -7,7 +7,6 @@ import { StakeInfo } from '../../../../shared/validatation/index.js'
 import { ethers, BigNumber } from 'ethers'
 import { ReputationEntry, ReputationManager } from '../../reputation/index.js'
 import { BundleManager } from '../../bundle/index.js'
-import { EventManagerWithReputation } from '../../event/index.js'
 import { MempoolManager } from '../../mempool/index.js'
 
 export type DebugAPI = {
@@ -29,7 +28,6 @@ export const createDebugAPI = (
   bundleManager: BundleManager,
   reputationManager: ReputationManager,
   mempoolManager: MempoolManager,
-  eventsManager: EventManagerWithReputation,
   entryPointContract: ethers.Contract,
 ): DebugAPI => {
   return {
@@ -55,9 +53,7 @@ export const createDebugAPI = (
     },
 
     sendBundleNow: async (): Promise<SendBundleReturn> => {
-      const result = await bundleManager.doAttemptAutoBundle(true)
-      await eventsManager.handlePastEvents()
-      return result
+      return await bundleManager.doAttemptBundle(true)
     },
 
     setReputation: async (param: any): Promise<ReputationEntry[]> => {

@@ -12,5 +12,6 @@
     "../shared/**/*.ts",
   ],
   "exclude": [
+    "./src/mempool/data-race-test.ts"
   ]
 }

@@ -4,7 +4,7 @@ import { ethers } from 'ethers'
 import { Logger } from '../../../shared/logger/index.js'
 import { ProviderService } from '../../../shared/provider/index.js'
 import { ReputationManager } from '../reputation/index.js'
-import EventEmitter from 'node:events'
+import { MempoolManager } from '../mempool/index.js'
 
 /**
  * listen to events. trigger ReputationManager's Included
@@ -13,7 +13,7 @@ export class EventManagerWithReputation {
   private readonly providerService: ProviderService
   private readonly reputationManager: ReputationManager
   private readonly entryPointContract: ethers.Contract
-  private eventEmitter: EventEmitter
+  private mempoolManager: MempoolManager
 
   private lastBlock?: number
   private eventAggregator: string | null = null
@@ -22,13 +22,13 @@ export class EventManagerWithReputation {
   constructor(
     providerService: ProviderService,
     reputationManager: ReputationManager,
+    mempoolManager: MempoolManager,
     entryPointContract: ethers.Contract,
-    eventEmitter: EventEmitter,
   ) {
     this.providerService = providerService
     this.reputationManager = reputationManager
     this.entryPointContract = entryPointContract
-    this.eventEmitter = eventEmitter
+    this.mempoolManager = mempoolManager
     this.initEventListener()
   }
 
@@ -86,11 +86,9 @@ export class EventManagerWithReputation {
 
   private async handleUserOperationEvent(ev: any): Promise<void> {
     const hash = ev.args.userOpHash
+    await this.mempoolManager.removeUserOp(hash)
 
-    // emit event to remove userOp
-    Logger.debug(`Sending (removeUserOp) event with data: ${hash}...`)
-    this.eventEmitter.emit('removeUserOp', hash)
-
+    // TODO: Make this a batch operation
     this.includedAddress(ev.args.sender)
     this.includedAddress(ev.args.paymaster)
     this.includedAddress(this.getEventAggregator(ev))

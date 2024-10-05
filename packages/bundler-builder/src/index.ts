@@ -1,5 +1,9 @@
 import { Logger } from '../../shared/logger/index.js'
-import { BundleManager, BundleProcessor } from './bundle/index.js'
+import {
+  createBundleBuilder,
+  createBundleManager,
+  createBundleProcessor,
+} from './bundle/index.js'
 import { createRpcServerWithHandlers } from '../../shared/rpc/index.js'
 import { createBuilderConfig } from './config/index.js'
 import { createRelayerHandlerRegistry } from './handler/handlerRegistry.js'
@@ -11,7 +15,6 @@ import { createValidationService } from '../../shared/validatation/index.js'
 import { createSimulator } from '../../shared/sim/index.js'
 import { createSignerService } from './signer/index.js'
 import { EventManagerWithReputation } from './event/index.js'
-import EventEmitter from 'node:events'
 import { createReputationManager } from './reputation/index.js'
 import { createMempoolManager, createMempoolState } from './mempool/index.js'
 
@@ -26,7 +29,6 @@ const stopLibp2p = async () => {
 const runBundlerBuilder = async () => {
   const args = process.argv
   const config = createBuilderConfig(args)
-  const bundlerBuilderEmitter = new EventEmitter()
 
   const ps = createProviderService(config.provider)
   const sim = createSimulator(ps, config.entryPointContract)
@@ -48,32 +50,33 @@ const runBundlerBuilder = async () => {
     config.bundleSize,
   )
 
-  const eventsManager = new EventManagerWithReputation(
-    ps,
-    reputationManager,
-    config.entryPointContract,
-    bundlerBuilderEmitter,
-  )
-  bundlerBuilderEmitter.on('removeUserOp', async (data: string) => {
-    Logger.debug(`Received (removeUserOp) event with data: ${data}...`)
-    await mempoolManager.removeUserOp(data)
-  })
-
-  const bundleProcessor = new BundleProcessor(
-    ps,
-    createValidationService(ps, sim, config.entryPointContract.address),
-    reputationManager,
-    mempoolManager,
-    config.maxBundleGas,
-    config.entryPointContract,
-    config.txMode,
-    config.beneficiaryAddr,
-    config.minSignerBalance,
-    config.isUnsafeMode,
-    config.bundlerSignerWallets,
-  )
-  const bundleManager = new BundleManager(
-    bundleProcessor,
+  const bundleManager = createBundleManager(
+    createBundleProcessor(
+      ps,
+      reputationManager,
+      mempoolManager,
+      config.entryPointContract,
+      config.txMode,
+      config.beneficiaryAddr,
+      config.minSignerBalance,
+      config.bundlerSignerWallets,
+    ),
+    createBundleBuilder(
+      ps,
+      createValidationService(ps, sim, config.entryPointContract.address),
+      reputationManager,
+      mempoolManager,
+      config.maxBundleGas,
+      config.isUnsafeMode,
+      config.txMode,
+      config.entryPointContract,
+    ),
+    new EventManagerWithReputation(
+      ps,
+      reputationManager,
+      mempoolManager,
+      config.entryPointContract,
+    ),
     config.isAutoBundle,
     config.autoBundleInterval,
   )
@@ -91,7 +94,6 @@ const runBundlerBuilder = async () => {
         bundleManager,
         reputationManager,
         mempoolManager,
-        eventsManager,
         config.entryPointContract,
       ),
       mempoolManager,
