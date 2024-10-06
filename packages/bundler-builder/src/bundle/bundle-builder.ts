@@ -223,7 +223,10 @@ export const createBundleBuilder = (
           'Bundle full: sending unbundled UserOps back to mempool with status of pending',
         )
         for (let i = 0; i < notIncludedUserOpsHashes.length; i++) {
-          await mempoolManager.updateEntryStatusPending(entries[i].userOpHash)
+          await mempoolManager.updateEntryStatus(
+            entries[i].userOpHash,
+            'pending',
+          )
         }
       }
 

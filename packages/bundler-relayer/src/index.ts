@@ -53,6 +53,8 @@ const runBundlerRelayer = async () => {
         'Full validation requires (debug_traceCall) method on eth node geth. For local UNSAFE mode: use --unsafe',
       )
     }
+
+    Logger.info('Relayer passed preflight check')
   })
 
   // stat metrics server

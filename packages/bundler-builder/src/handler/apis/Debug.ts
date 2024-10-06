@@ -8,6 +8,7 @@ import { ethers, BigNumber } from 'ethers'
 import { ReputationEntry, ReputationManager } from '../../reputation/index.js'
 import { BundleManager } from '../../bundle/index.js'
 import { MempoolManager } from '../../mempool/index.js'
+import { EventManagerWithListener } from '../../event/index.js'
 
 export type DebugAPI = {
   clearState(): Promise<void>
@@ -28,6 +29,7 @@ export const createDebugAPI = (
   bundleManager: BundleManager,
   reputationManager: ReputationManager,
   mempoolManager: MempoolManager,
+  eventsManager: EventManagerWithListener,
   entryPointContract: ethers.Contract,
 ): DebugAPI => {
   return {
@@ -53,7 +55,9 @@ export const createDebugAPI = (
     },
 
     sendBundleNow: async (): Promise<SendBundleReturn> => {
-      return await bundleManager.doAttemptBundle(true)
+      const result = await bundleManager.doAttemptBundle(true)
+      await eventsManager.handlePastEvents()
+      return result
     },
 
     setReputation: async (param: any): Promise<ReputationEntry[]> => {

@@ -1,4 +1,3 @@
-import { Log } from '@ethersproject/providers'
 import { ethers } from 'ethers'
 
 import { Logger } from '../../../shared/logger/index.js'
@@ -6,171 +5,135 @@ import { ProviderService } from '../../../shared/provider/index.js'
 import { ReputationManager } from '../reputation/index.js'
 import { MempoolManager } from '../mempool/index.js'
 
-/**
- * listen to events. trigger ReputationManager's Included
- */
-export class EventManagerWithReputation {
-  private readonly providerService: ProviderService
-  private readonly reputationManager: ReputationManager
-  private readonly entryPointContract: ethers.Contract
-  private mempoolManager: MempoolManager
+export type EventManagerWithListener = {
+  /**
+   * Process all new events since last run
+   */
+  handlePastEvents: () => Promise<void>
+}
 
-  private lastBlock?: number
-  private eventAggregator: string | null = null
-  private eventAggregatorTxHash: string | null = null
-
-  constructor(
-    providerService: ProviderService,
-    reputationManager: ReputationManager,
-    mempoolManager: MempoolManager,
-    entryPointContract: ethers.Contract,
-  ) {
-    this.providerService = providerService
-    this.reputationManager = reputationManager
-    this.entryPointContract = entryPointContract
-    this.mempoolManager = mempoolManager
-    this.initEventListener()
-  }
+export const createEventManagerWithListener = (
+  providerService: ProviderService,
+  reputationManager: ReputationManager,
+  mempoolManager: MempoolManager,
+  entryPointContract: ethers.Contract,
+): EventManagerWithListener => {
+  let lastBlock: number | null = null
+  let eventAggregator: string | null = null
+  let eventAggregatorTxHash: string | null = null
 
   /**
-   * automatically listen to all UserOperationEvent events and will flush mempool from already-included UserOperations
+   * Handle an event from the entrypoint contract.
+   *
+   * @param ev - the event
    */
-  private initEventListener(): void {
-    this.entryPointContract.on('UserOperationEvent', (...args) => {
-      const ev = args.slice(-1)[0]
-      void this.handleEvent(ev as any)
-    })
-    Logger.debug(
-      'Entrypoint contract EventListener listening to UserOperationEvent',
-    )
-  }
-
-  /**
-   * process all new events since last run
-   */
-  public async handlePastEvents(): Promise<void> {
-    if (this.lastBlock === undefined) {
-      this.lastBlock = Math.max(
-        1,
-        (await this.providerService.getBlockNumber()) - 1000,
-      )
-    }
-    const events = await this.entryPointContract.queryFilter(
-      { address: this.entryPointContract.address },
-      this.lastBlock,
-    )
-
-    Logger.debug(
-      { lastBlock: this.lastBlock, events: events.length },
-      'Handling past Entrypoint events since last run',
-    )
-    for (const ev of events) {
-      await this.handleEvent(ev)
-    }
-  }
-
-  private async handleEvent(ev: any): Promise<void> {
+  const handleEvent = async (ev: ethers.Event): Promise<void> => {
     switch (ev.event) {
       case 'UserOperationEvent':
-        await this.handleUserOperationEvent(ev as any)
+        await handleUserOperationEvent(ev as any)
         break
       case 'AccountDeployed':
-        this.handleAccountDeployedEvent(ev as any)
+        handleAccountDeployedEvent(ev as any)
         break
       case 'SignatureAggregatorChanged':
-        this.handleAggregatorChangedEvent(ev as any)
+        handleAggregatorChangedEvent(ev as any)
         break
     }
-    this.lastBlock = ev.blockNumber + 1
-  }
-
-  private async handleUserOperationEvent(ev: any): Promise<void> {
-    const hash = ev.args.userOpHash
-    await this.mempoolManager.removeUserOp(hash)
-
-    // TODO: Make this a batch operation
-    this.includedAddress(ev.args.sender)
-    this.includedAddress(ev.args.paymaster)
-    this.includedAddress(this.getEventAggregator(ev))
-  }
-
-  // AccountDeployed event is sent before each UserOperationEvent that deploys a contract.
-  private handleAccountDeployedEvent(ev: any): void {
-    this.includedAddress(ev.args.factory)
-  }
-
-  private handleAggregatorChangedEvent(ev: any): void {
-    this.eventAggregator = ev.args.aggregator
-    this.eventAggregatorTxHash = ev.transactionHash
-  }
-
-  // aggregator event is sent once per events bundle for all UserOperationEvents in this bundle.
-  // it is not sent at all if the transaction is handleOps
-  private getEventAggregator(ev: any): string | null {
-    if (ev.transactionHash !== this.eventAggregatorTxHash) {
-      this.eventAggregator = null
-      this.eventAggregatorTxHash = ev.transactionHash
-    }
-    return this.eventAggregator
-  }
-
-  private includedAddress(data: string | null): void {
-    if (data != null && data.length > 42) {
-      const addr = data.slice(0, 42)
-      this.reputationManager.updateIncludedStatus(addr)
-    }
-  }
-
-  public async getUserOperationEvent(
-    userOpHash: string,
-  ): Promise<ethers.Event> {
-    // TODO: eth_getLogs is throttled. must be acceptable for finding a UserOperation by hash
-    const event = await this.entryPointContract.queryFilter(
-      this.entryPointContract.filters.UserOperationEvent(userOpHash),
-    )
-    return event[0]
+    lastBlock = ev.blockNumber + 1
   }
 
   /**
-   * filter full bundle logs, and leave only logs for the given userOpHash
+   * Aggregator event is sent once per events bundle for all UserOperationEvents in this bundle.
+   * it is not sent at all if the transaction is handleOps
    *
-   * @param userOpEvent - the event of our UserOp (known to exist in the logs)
-   * @param logs - full bundle logs. after each group of logs there is a single UserOperationEvent with unique hash.
-   * @returns filtered logs
+   * @param ev - the event
+   * @returns the aggregator address
    */
-  public filterLogs(userOpEvent: ethers.Event, logs: Log[]): Log[] {
-    let startIndex = -1
-    let endIndex = -1
-    const events = Object.values(this.entryPointContract.interface.events)
-    const foundEvent = events.find((e) => e.name === 'BeforeExecution')
-    if (!foundEvent) {
-      throw new Error('fatal: no BeforeExecution event found')
+  const getEventAggregator = (ev: any): string | null => {
+    if (ev.transactionHash !== eventAggregatorTxHash) {
+      eventAggregator = null
+      eventAggregatorTxHash = ev.transactionHash
     }
+    return eventAggregator
+  }
 
-    const beforeExecutionTopic =
-      this.entryPointContract.interface.getEventTopic(foundEvent)
-    logs.forEach((log, index) => {
-      if (log?.topics[0] === beforeExecutionTopic) {
-        // all UserOp execution events start after the "BeforeExecution" event.
-        startIndex = endIndex = index
-      } else if (log?.topics[0] === userOpEvent.topics[0]) {
-        // process UserOperationEvent
-        if (log.topics[1] === userOpEvent.topics[1]) {
-          // it's our userOpHash. save as end of logs array
-          endIndex = index
-        } else {
-          // it's a different hash. remember it as beginning index, but only if we didn't find our end index yet.
-          if (endIndex === -1) {
-            startIndex = index
-          }
-        }
-      }
+  /**
+   * Update the reputation status of an address.
+   *
+   * @param data - the address to check
+   */
+  const includedAddress = (data: string | null): void => {
+    if (data != null && data.length > 42) {
+      const addr = data.slice(0, 42)
+      reputationManager.updateIncludedStatus(addr)
+    }
+  }
+
+  /**
+   * UserOperationEvent event is sent once entrypoint handleOps finishes execution for the userOp.
+   *
+   * @param ev - the event
+   */
+  const handleUserOperationEvent = async (ev: any): Promise<void> => {
+    const userOpHash = ev.args.userOpHash
+    const sucess = ev.args.success
+    await mempoolManager.updateEntryStatus(
+      userOpHash,
+      sucess ? 'bundled' : 'failed',
+    )
+
+    // TODO: Make this a batch operation
+    includedAddress(ev.args.sender)
+    includedAddress(ev.args.paymaster)
+    includedAddress(getEventAggregator(ev))
+  }
+
+  /**
+   * AccountDeployed event is sent before each UserOperationEvent that deploys a contract.
+   *
+   * @param ev - the event
+   */
+  const handleAccountDeployedEvent = (ev: any): void => {
+    includedAddress(ev.args.factory)
+  }
+
+  const handleAggregatorChangedEvent = (ev: any): void => {
+    eventAggregator = ev.args.aggregator
+    eventAggregatorTxHash = ev.transactionHash
+  }
+
+  /**
+   * Automatically listen to all UserOperationEvent events and will flush mempool from already-included UserOperations
+   */
+  const initEventListener = (): void => {
+    entryPointContract.on('UserOperationEvent', (...args) => {
+      const ev = args.slice(-1)[0]
+      void handleEvent(ev as any)
     })
+    Logger.debug(
+      'Entrypoint contract EventListener listening to events(UserOperationEvent, AccountDeployed, SignatureAggregatorChanged)',
+    )
+  }
 
-    if (endIndex === -1) {
-      throw new Error('fatal: no UserOperationEvent in logs')
-    }
+  initEventListener()
 
-    return logs.slice(startIndex + 1, endIndex)
+  return {
+    handlePastEvents: async (): Promise<void> => {
+      if (!lastBlock) {
+        lastBlock = Math.max(1, (await providerService.getBlockNumber()) - 1000)
+      }
+      const events = await entryPointContract.queryFilter(
+        { address: entryPointContract.address },
+        lastBlock,
+      )
+
+      Logger.debug(
+        { lastBlock: lastBlock, events: events.length },
+        'Handling past Entrypoint events since last run',
+      )
+      for (const ev of events) {
+        await handleEvent(ev)
+      }
+    },
   }
 }

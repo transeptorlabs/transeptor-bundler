@@ -1,4 +1,7 @@
-import { EventManagerWithReputation } from '../event/event-manager-with-reputation.js'
+import {
+  MempoolStateKey,
+  MempoolStateService,
+} from '../mempool/mempool.types.js'
 import { Logger } from '../../../shared/logger/index.js'
 import { SendBundleReturn } from '../../../shared/types/index.js'
 
@@ -24,7 +27,7 @@ export type BundleManager = {
 export const createBundleManager = (
   bundleProcessor: BundleProcessor,
   bundleBuilder: BundleBuilder,
-  eventsManager: EventManagerWithReputation,
+  mp: MempoolStateService,
   isAutoBundle: boolean,
   autoBundleInterval: number,
 ): BundleManager => {
@@ -34,8 +37,7 @@ export const createBundleManager = (
   const doAttemptBundle = async (
     force?: boolean,
   ): Promise<SendBundleReturn> => {
-    // Scan for past events to flush any already-included user operations from the mempool
-    await eventsManager.handlePastEvents()
+    // TODO: Flush the mempool to remove bundled and failed userOps
 
     const [bundle, storageMap] = await bundleBuilder.createBundle(force)
     Logger.debug({ length: bundle.length }, 'bundle created(ready to send)')
@@ -48,7 +50,20 @@ export const createBundleManager = (
 
     const result = await bundleProcessor.sendBundle(bundle, storageMap)
 
-    // TODO: Add the txnHash to the confirmation queue(MempoolState.bundleTxs)
+    //  Add the txnHash to the confirmation queue(MempoolState.bundleTxs)
+    await mp.updateState(MempoolStateKey.BundleTxs, ({ bundleTxs }) => {
+      return {
+        bundleTxs: {
+          ...bundleTxs,
+          [result.transactionHash]: {
+            txHash: result.transactionHash,
+            signerIndex: result.signerIndex,
+            status: 'pending',
+          },
+        },
+      }
+    })
+
     return {
       transactionHash: result.transactionHash,
       userOpHashes: result.userOpHashes,

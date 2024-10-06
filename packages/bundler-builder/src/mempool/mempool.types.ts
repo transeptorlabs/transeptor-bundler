@@ -4,12 +4,14 @@ import { ReferencedCodeHashes } from '../../../shared/validatation/index.js'
 import { UserOperation } from '../../../shared/types/index.js'
 import { ReputationEntry } from '../reputation/index.js'
 
+export type EntryStatus = 'bundling' | 'pending' | 'bundled' | 'failed'
+
 export type MempoolEntry = {
   userOp: UserOperation
   userOpHash: string
   prefund: BigNumberish
   referencedContracts: ReferencedCodeHashes
-  status: 'bundling' | 'pending'
+  status: EntryStatus
   // aggregator, if one was found during simulation
   aggregator?: string
 }
@@ -34,15 +36,18 @@ export type EntryCount = Record<string, number>
  */
 export type ReputationEntries = Record<string, ReputationEntry>
 
+export type BundleTxStatus = 'pending' | 'confirmed' | 'failed'
+
 export type PendingTxDetails = {
   txHash: string
   signerIndex: number
+  status: BundleTxStatus
 }
 
 /*
  * Hold the pending transactions for each bundle
  *
- * The key is the hash of the bundle
+ * The key is the transaction hash
  */
 export type BundleTxs = Record<string, PendingTxDetails>
 

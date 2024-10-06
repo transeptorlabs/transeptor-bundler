@@ -10,6 +10,7 @@ import {
 import { RpcError, requireCond } from '../../../shared/utils/index.js'
 import {
   EntryCount,
+  EntryStatus,
   MempoolEntry,
   MempoolStateKey,
   MempoolStateService,
@@ -60,7 +61,7 @@ export type MempoolManager = {
 
   getAllPending(): Promise<MempoolEntry[]>
 
-  updateEntryStatusPending(userOpHash: string): Promise<void>
+  updateEntryStatus(userOpHash: string, status: EntryStatus): Promise<void>
 
   isMempoolOverloaded(): Promise<boolean>
 
@@ -481,7 +482,10 @@ export const createMempoolManager = (
       return entries
     },
 
-    updateEntryStatusPending: async (userOpHash: string): Promise<void> => {
+    updateEntryStatus: async (
+      userOpHash: string,
+      status: EntryStatus,
+    ): Promise<void> => {
       const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
       const entry = standardPool[userOpHash]
       if (entry) {
@@ -493,7 +497,7 @@ export const createMempoolManager = (
                 ...standardPool,
                 [userOpHash]: {
                   ...entry,
-                  status: 'pending',
+                  status,
                 },
               },
             }

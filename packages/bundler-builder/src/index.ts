@@ -14,9 +14,9 @@ import { createProviderService } from '../../shared/provider/index.js'
 import { createValidationService } from '../../shared/validatation/index.js'
 import { createSimulator } from '../../shared/sim/index.js'
 import { createSignerService } from './signer/index.js'
-import { EventManagerWithReputation } from './event/index.js'
 import { createReputationManager } from './reputation/index.js'
 import { createMempoolManager, createMempoolState } from './mempool/index.js'
+import { createEventManagerWithListener } from './event/event-manager-with-reputation.js'
 
 let p2pNode: Libp2pNode = undefined
 
@@ -29,11 +29,11 @@ const stopLibp2p = async () => {
 const runBundlerBuilder = async () => {
   const args = process.argv
   const config = createBuilderConfig(args)
-
   const ps = createProviderService(config.provider)
   const sim = createSimulator(ps, config.entryPointContract)
   const mempoolState = createMempoolState()
 
+  // Create manager instances
   const reputationManager = createReputationManager(
     mempoolState,
     config.minStake,
@@ -48,6 +48,13 @@ const runBundlerBuilder = async () => {
     mempoolState,
     reputationManager,
     config.bundleSize,
+  )
+
+  const eventManager = createEventManagerWithListener(
+    ps,
+    reputationManager,
+    mempoolManager,
+    config.entryPointContract,
   )
 
   const bundleManager = createBundleManager(
@@ -71,12 +78,7 @@ const runBundlerBuilder = async () => {
       config.txMode,
       config.entryPointContract,
     ),
-    new EventManagerWithReputation(
-      ps,
-      reputationManager,
-      mempoolManager,
-      config.entryPointContract,
-    ),
+    mempoolState,
     config.isAutoBundle,
     config.autoBundleInterval,
   )
@@ -94,6 +96,7 @@ const runBundlerBuilder = async () => {
         bundleManager,
         reputationManager,
         mempoolManager,
+        eventManager,
         config.entryPointContract,
       ),
       mempoolManager,
@@ -159,7 +162,7 @@ const runBundlerBuilder = async () => {
         signerDetails,
         network: { chainId, name },
       },
-      'Relayer passed preflight check',
+      'Builder passed preflight check',
     )
   })
 }
