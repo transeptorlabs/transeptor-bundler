@@ -42,34 +42,32 @@ export type ProviderService = {
   getTransactionReceipt(txHash: string): Promise<providers.TransactionReceipt>
 }
 
-/**
- * Note that the contract deployment will cost gas, so it is not free to run this function.
- * Run the constructor of the given type as a script: it is expected to revert with the script's return values.
- *
- * @param provider - The connect provider.
- * @param c - Contract factory of the script class.
- * @param ctrParams Constructor parameters.
- * @returns An array of arguments of the error.
- *
- * @example
- * const hashes = await runContractScript(provider, new GetUserOpHashes__factory(), [entryPoint.address, userOps]).then(ret => ret.userOpHashes)
- */
-const runContractScript = async <T extends ContractFactory>(
-  provider: providers.JsonRpcProvider,
-  c: T,
-  ctrParams: Parameters<T['getDeployTransaction']>,
-): Promise<Result> => {
-  const tx = c.getDeployTransaction(...ctrParams)
-  const ret = await provider.call(tx)
-  const parsed = ContractFactory.getInterface(c.interface).parseError(ret)
-  if (parsed == null)
-    throw new Error('unable to parse script (error) response: ' + ret)
-  return parsed.args
-}
-
 export const createProviderService = (
   provider: providers.JsonRpcProvider,
 ): ProviderService => {
+  /**
+   * Note that the contract deployment will cost gas, so it is not free to run this function.
+   * Run the constructor of the given type as a script: it is expected to revert with the script's return values.
+   *
+   * @param c - Contract factory of the script class.
+   * @param ctrParams Constructor parameters.
+   * @returns An array of arguments of the error.
+   *
+   * @example
+   * const hashes = await runContractScript(provider, new GetUserOpHashes__factory(), [entryPoint.address, userOps]).then(ret => ret.userOpHashes)
+   */
+  const runContractScript = async <T extends ContractFactory>(
+    c: T,
+    ctrParams: Parameters<T['getDeployTransaction']>,
+  ): Promise<Result> => {
+    const tx = c.getDeployTransaction(...ctrParams)
+    const ret = await provider.call(tx)
+    const parsed = ContractFactory.getInterface(c.interface).parseError(ret)
+    if (parsed == null)
+      throw new Error('unable to parse script (error) response: ' + ret)
+    return parsed.args
+  }
+
   return {
     getNetwork: async (): Promise<ethers.providers.Network> => {
       return await provider.getNetwork()
@@ -184,7 +182,7 @@ export const createProviderService = (
       c: T,
       ctrParams: Parameters<T['getDeployTransaction']>,
     ): Promise<Result> => {
-      return await runContractScript(provider, c, ctrParams)
+      return await runContractScript(c, ctrParams)
     },
 
     getTransactionReceipt: async (

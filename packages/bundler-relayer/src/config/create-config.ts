@@ -30,7 +30,6 @@ export type Config = {
   bundlerBuilderClientUrl: string
 
   isMetricsEnabled: boolean
-  metricsPort: number
   influxdbConnection: InfluxdbConnection
 }
 
@@ -57,7 +56,6 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
       'Enable no storage or opcode checks during userOp simulation.',
     )
     .option('--metrics', 'Bundler node metrics tracking enabled.', false)
-    .option('--metricsPort <number>', 'Metrics server listening port.', '4001')
     .option(
       '--influxdbUrl <string>',
       'Url influxdb is running on (requires --metrics to be enabled).',
@@ -99,6 +97,9 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
 
   // set metric config
   const isMetricsEnabled = programOpts.metrics as boolean
+  if (isMetricsEnabled && !process.env.TRANSEPTOR_INFLUX_TOKEN) {
+    throw new Error('TRANSEPTOR_INFLUX_TOKEN env var not set')
+  }
   const influxdbConnection: InfluxdbConnection = isMetricsEnabled
     ? {
         url: programOpts.influxdbUrl as string,
@@ -107,14 +108,6 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
         bucket: programOpts.influxdbBucket as string,
       }
     : { url: '', org: '', bucket: '', token: '' }
-
-  const metricsPort = isMetricsEnabled
-    ? parseInt(programOpts.metricsPort as string)
-    : 0
-
-  if (isMetricsEnabled && !process.env.TRANSEPTOR_INFLUX_TOKEN) {
-    throw new Error('TRANSEPTOR_INFLUX_TOKEN env var not set')
-  }
 
   return {
     provider,
@@ -132,7 +125,6 @@ export const createRelayerConfig = (args: readonly string[]): Config => {
     bundlerBuilderClientUrl: programOpts.bundlerBuilder as string,
 
     isMetricsEnabled,
-    metricsPort,
     influxdbConnection,
   }
 }

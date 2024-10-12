@@ -8,7 +8,7 @@ import { createRpcServerWithHandlers } from '../../shared/rpc/index.js'
 import { createProviderService } from '../../shared/provider/index.js'
 import { Logger } from '../../shared/logger/index.js'
 import { createRelayerConfig } from './config/index.js'
-import { MetricsHttpServer, MetricsTracker } from './metrics/index.js'
+import { createMetricsTracker } from './metrics/index.js'
 import { createValidationService } from '../../shared/validatation/index.js'
 import { createSimulator } from '../../shared/sim/sim.js'
 
@@ -59,10 +59,7 @@ const runBundlerRelayer = async () => {
 
   // stat metrics server
   if (config.isMetricsEnabled) {
-    const metricsTracker = new MetricsTracker(config.influxdbConnection)
-    const metricsServer = new MetricsHttpServer(config.metricsPort)
-
-    await metricsServer.start()
+    const metricsTracker = createMetricsTracker(config.influxdbConnection)
     metricsTracker.startTracker()
   }
 }
