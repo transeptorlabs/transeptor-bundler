@@ -1,17 +1,32 @@
 version: "3"
 services:
-  bundler-typescript-local:
-    container_name: transeptor-dev
-    image: bundler-typescript:v-local
+  bundler-relayer:
+    depends_on:
+      bundler-builder:
+        condition: service_started
+    container_name: bundler-relayer-dev
+    image: bundler-relayer:v-local
     ports:
       - "4337:4337"
     env_file:
-      - ./.env
+      - ./packages/bundler-relayer/.env
     command: >
       --port 4337
       --network http://host.docker.internal:8545
+      --bundlerBuilder http://host.docker.internal:4338/rpc
+      --debug
+
+  bundler-builder:
+    container_name: bundler-builder-dev
+    image: bundler-builder:v-local
+    ports:
+      - "4338:4338"
+    env_file:
+      - ./packages/bundler-builder/.env
+    command: >
+      --port 4338
+      --network http://host.docker.internal:8545
       --txMode base
-      --httpApi web3,eth,debug
 
   influxdb:
     container_name: influxdb

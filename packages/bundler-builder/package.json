@@ -1,0 +1,53 @@
+{
+  "name": "bundler-builder",
+  "version": "0.6.2-alpha.0",
+  "description": "A light weight node the receives validated userOps, builds and send bundles.",
+  "type": "module",
+  "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "ls-cmd": "node --import ./register-hook.js ./src/index.ts --help",
+    "build": "npx tsc -p ./tsconfig.json && cp ../shared/sim/tracer.js dist/shared/sim",
+    "dev": "nodemon",
+    "start": "node --import ./register-hook.js ./src/index.ts --txMode base | pino-pretty",
+    "start:unsafe": "node --import ./register-hook.js ./src/index.ts --txMode --unsafe | pino-pretty",
+    "start:prod": "yarn build && node dist/bundler-relayer/src/index.js --txMode base| pino-pretty",
+    "test": "vitest --config ./vitest.config.ts",
+    "lint": "eslint . --ext ts",
+    "lint:fix": "yarn lint --fix",
+    "test:mempool-race": "node --import ./register-hook.js ./e2e/data-race-test.ts "
+  },
+  "dependencies": {
+    "@chainsafe/libp2p-noise": "12.0.2",
+    "@libp2p/mplex": "8.0.4",
+    "@libp2p/tcp": "7.0.3",
+    "@multiformats/multiaddr": "12.1.5",
+    "async-mutex": "0.4.0",
+    "commander": "10.0.1",
+    "cors": "2.8.5",
+    "dotenv": "16.0.3",
+    "ethers": "5.7.1",
+    "express": "4.18.3",
+    "helmet": "7.1.0",
+    "libp2p": "0.45.9",
+    "pino": "8.14.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0",
+    "pino-pretty": "^10.0.0"
+  },
+  "packageManager": "yarn@3.2.1",
+  "engines": {
+    "node": ">=20.11.1"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src",
+      "../shared"
+    ],
+    "ext": "ts,json",
+    "ignore": [],
+    "exec": "node --import ./register-hook.js ./src/index.ts --txMode base | pino-pretty"
+  }
+}

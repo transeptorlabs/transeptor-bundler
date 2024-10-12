@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  A lightweight ERC4337 bundler node designed specifically for Node.js environment; with a focus on minimal resource consumption, and minimal dependencies.
+  A fast ERC-4337 bundler node with TypeScript-based <strong>compile-time type safety.</strong> 
 </p>
 
 <p align="center">
@@ -16,20 +16,11 @@
     <img src="https://img.shields.io/codecov/c/github/transeptorlabs/transeptor-bundler.svg?style=flat-square" alt="codecov">
   </a>
   <img src="https://img.shields.io/badge/ESM-supported-brightgreen" alt="ESM Supported">
-  <img src="https://img.shields.io/docker/pulls/transeptorlabs/bundler" alt="Docker pulls">
 </p>
 
-## Project status
-
 > :warning: **This repository is currently under active development.**
-> See our road-map [here](https://hackmd.io/@V00D00-child/SyXKL6Kmn#Project-StatusRoadmap-)
-
-## ✨ Features
-- **Full Validation** - Full spec storage access rules and opcode banning. Requires a connection to a geth node that supports `debug_traceCall` method.
-- **Partial Validation** - No storage access rules and opcode banning. Use `--unsafe` flag to enable.
-- **Metrics** - Metrics gives insight into the bundler node to allow for performance tuning and debugging. Transeptor bundler can be be configure to store metrics using a push(InfluxDB) and pull(Prometheus) metrics system. Grafana is used to visualize all the metrics. Use `--metrics` flag to enable.
-- **Entity Reputation System** - When staked(i.e with entrypoint contract), an entity is also allowed to use its own associated storage, in addition to senders associated storage as ETH. Node can be pre-configured to blacklist and whitelist entities on startup.
-- **Entrypoint contract** - Supports Entrypoint contract [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7)
+> 
+> Support ERC-4337 Entrypoint contract [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7)
 
 ## 🚀 Development
 
@@ -39,32 +30,39 @@ Everything you need to get started developing with Transeptor.
 1. `git submodule update --init`
 2. Use correct node version `nvm use`
 3. Add `PRIVATE_KEY` to `contracts/.env` file to deploy the entrypoint contract locally.
-4. Install dependencies `npm install`
-5. Start local eth node `npm run local-eth` - Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to the `.env` file.
-6. In a new terminal window start the bundler node with live watch for local dev. `npm run dev`
+4. Install dependencies `yarn install`
+5. Start local eth node `yarn local-eth` - Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to the nodes `.env` files.
+6. In a new terminal window start the bundler node with live watch for local dev. `yarn dev`
 
-The bundler will start on `http://localhost:4337/rpc`. You can now make changes to the code and the bundler will automatically restart. Happy hacking!
+- The `relayer` node will start on `http://localhost:4337/rpc`. 
+- The `bundle-builder` node will start on `http://localhost:4338/rpc`.
 
-#### Local dev scripts 
+You can now make changes to the code and each node will automatically restart.
 
-1. Once the bundler node is running, you can use the `run-op` script to send a userOp through the bundler. `npm run op`
+#### Local dev e2e scripts 
+
+Make sure both `relayer` and `bundle-builder` nodes are running before running to to send a userOp through the bundler
+
+```bash
+yarn send-op
+```
 
 ### Test
 
 ```bash
-npm run test
+yarn test
 ```
 
 ### Lint
 
 ```bash
-npm run lint
+yarn lint
 ```
 
 or
 
 ```bash
-npm run lint:fix
+yarn lint:fix
 ```
 
 ## Build
@@ -72,74 +70,31 @@ npm run lint:fix
 You can build Transeptor from source or use the Docker image.
 
 ### 🔧 Run from source
-1. Use correct node version `nvm use`
-2. Install dependencies `npm install`
-3. Build all packages `npm run build`
-4. Copy values in `.env.sample` into `.env` and fill in the values with your own.
+1. Use correct node version: `nvm use`
+2. Install dependencies: `yarn install`
+3. Build `bundler-relayer` and `bundler-builder` nodes: `yarn build`
 
-Now let's start the bundler node.(make sure to pass your command line arguments)
+Now let's start the bundler nodes.
 ```bash
-./transeptor --httpApi web3,eth,debug --txMode base
+./transeptor-builder
+./transeptor-relayer
 ```
 
-### 🐳 Run from Docker image
+### 🐳 Run from Docker images
 
-Build image locally
+Build images
 ```bash
-npm run build:image
+yarn build:images
 ```
 
-Run image locally
+Run images in the background
 ```bash
-npm run start:docker-bundler  
+yarn start:images
 ```
 
-## Command line arguments
-
-List of all command line arguments supported by the bundler.
-
+stop images
 ```bash
-Usage: index [options]
-
-Options:
-  -V, --version                  output the version number
-  --httpApi <string>             ERC4337 rpc method name spaces to enable. (default: "web3,eth")
-  --network <string>             ETH execution client url. (default: "http://localhost:8545")
-  --minBalance <string>          Maximum ETH balance need for signer address. (default: "1")
-  --maxBundleGas <number>        Max gas the bundler will use in transactions. (default: "5000000")
-  --auto                         Automatic bundling. (default: false)
-  --autoBundleInterval <number>  Auto bundler interval in (ms). (default: "12000")
-  --bundleSize <number>          Maximum number of pending mempool entities to start auto bundler. (default: "10")
-  --port <number>                Bundler node listening port. (default: "4000")
-  --minStake <string>            Minimum stake a entity has to have to pass reputation system. (default: "1")
-  --minUnstakeDelay <number>     Time paymaster has to wait to unlock the stake(seconds). (default: "0")
-  --txMode <string>              Bundler transaction mode (base, conditional, searcher). (default: "base")
-  --unsafe                       Enable no storage or opcode checks.
-  --p2p                          p2p mode enabled (default: false)
-  --findPeers                    Search for peers when p2p enabled. (default: false)
-  --metrics                      Bundler node metrics tracking enabled. (default: false)
-  --metricsPort <number>         Metrics server listening port. (default: "4001")
-  --influxdbUrl <string>         Url influxdb is running on (requires --metrics to be enabled). (default:
-                                 "http://localhost:8086")
-  --influxdbOrg <string>         Influxdb org (requires --metrics to be enabled). (default: "transeptor-labs")
-  --influxdbBucket <string>      Influxdb bucket (requires --metrics to be enabled). (default: "transeptor_metrics")
-  -h, --help                     display help for command
-```
-
-## Environment variables
-
-List of all environment variables supported by the bundler.
-
-```bash
-# Required for production
-TRANSEPTOR_MNEMONIC=<your-mnemonic>
-TRANSEPTOR_ENTRYPOINT_ADDRESS=0x
-TRANSEPTOR_BENEFICIARY=<address_to_receive_funds>
-
-# Optional
-TRANSEPTOR_WHITE_LIST=<address_to_whitelist_SEPARATEDBY_COMMA>
-TRANSEPTOR_BLACK_LIST=<address_to_blacklist_SEPARATEDBY_COMMA>
-TRANSEPTOR_INFLUX_TOKEN=DEV_TOKEN
+yarn stop:images
 ```
 
 ## Contribute
