@@ -24,10 +24,9 @@ Options:
   --debug                    Enable ERC4337 debug rpc method name space (default: false)
   --network <string>         ETH execution client url. (default: "http://localhost:8545")
   --bundlerBuilder <string>  ERC-4337 bundler-builder client url. (default: "http://localhost:4338/rpc")
-  --port <number>            Bundler-relayer node listening port. (default: "4338")
+  --port <number>            Bundler-relayer node listening port. (default: "4337")
   --unsafe                   Enable no storage or opcode checks during userOp simulation.
   --metrics                  Bundler node metrics tracking enabled. (default: false)
-  --metricsPort <number>     Metrics server listening port. (default: "4001")
   --influxdbUrl <string>     Url influxdb is running on (requires --metrics to be enabled). (default: "http://localhost:8086")
   --influxdbOrg <string>     Influxdb org (requires --metrics to be enabled). (default: "transeptor-labs")
   --influxdbBucket <string>  Influxdb bucket (requires --metrics to be enabled). (default: "transeptor_metrics")

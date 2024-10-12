@@ -6,7 +6,7 @@ Transeptor Labs prioritizes security and stability, so we will manually manage T
 
 ## Version Locking
 
-All production dependencies in the `relayer` and `bundle-builder` nodes `package.json` will be locked. Dev dependencies the nodes use are set at `Caret Version(^)`.
+All production dependencies in the `bundler-relayer` and `bundler-builder` nodes `package.json` will be locked. Dev dependencies the nodes use are set at `Caret Version(^)`.
 
 ## Dependency Audit Process
 

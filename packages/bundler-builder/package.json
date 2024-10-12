@@ -14,13 +14,12 @@
     "start:unsafe": "node --import ./register-hook.js ./src/index.ts --txMode --unsafe | pino-pretty",
     "start:prod": "yarn build && node dist/bundler-relayer/src/index.js --txMode base| pino-pretty",
     "test": "vitest --config ./vitest.config.ts",
-    "lint": "echo no lint",
-    "lint:fix": "echo no lint:fix",
+    "lint": "eslint . --ext ts",
+    "lint:fix": "yarn lint --fix",
     "test:mempool": "node --import ./register-hook.js ./src/mempool/data-race-test.ts "
   },
   "dependencies": {
     "@chainsafe/libp2p-noise": "12.0.2",
-    "@influxdata/influxdb-client": "1.33.2",
     "@libp2p/mplex": "8.0.4",
     "@libp2p/tcp": "7.0.3",
     "@multiformats/multiaddr": "12.1.5",
@@ -32,12 +31,7 @@
     "express": "4.18.3",
     "helmet": "7.1.0",
     "libp2p": "0.45.9",
-    "os-utils": "0.0.14",
     "pino": "8.14.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.0",
-    "pino-pretty": "^10.0.0"
   },
   "packageManager": "yarn@3.2.1",
   "engines": {

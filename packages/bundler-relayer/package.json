@@ -21,25 +21,15 @@
     "send-op": "node --import ./register-hook.js ./e2e/send-userop.e2e.ts | pino-pretty"
   },
   "dependencies": {
-    "@chainsafe/libp2p-noise": "12.0.2",
     "@influxdata/influxdb-client": "1.33.2",
-    "@libp2p/mplex": "8.0.4",
-    "@libp2p/tcp": "7.0.3",
-    "@multiformats/multiaddr": "12.1.5",
-    "async-mutex": "0.4.0",
     "commander": "10.0.1",
     "cors": "2.8.5",
     "dotenv": "16.0.3",
     "ethers": "5.7.1",
     "express": "4.18.3",
     "helmet": "7.1.0",
-    "libp2p": "0.45.9",
     "os-utils": "0.0.14",
     "pino": "8.14.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.0",
-    "pino-pretty": "^10.0.0"
   },
   "packageManager": "yarn@3.2.1",
   "engines": {

@@ -1,7 +1,7 @@
 # Bundler Builder
 
 <p align="center">
-    A light weight node the receives validated userOps, builds and sends bundles.
+  A light weight node the receives validated userOps, builds and sends bundles.
 </p>
 
 <p align="center">
@@ -24,7 +24,7 @@ Options:
   --network <string>             ETH execution client url. (default: "http://localhost:8545")
   --p2p                          p2p mode enabled (default: false)
   --findPeers                    Search for peers when p2p enabled. (default: false)
-  --port <number>                Bundler-relayer node listening port. (default: "4337")
+  --port <number>                Bundler-relayer node listening port. (default: "4338")
   --numberOfSigners <number>     Number of signers HD paths to use from mnmonic (default: "3")
   --minBalance <string>          Maximum ETH balance need for signer address. (default: "1")
   --minStake <string>            Minimum stake a entity has to have to pass reputation system. (default: "1")
@@ -35,7 +35,7 @@ Options:
   --autoBundleInterval <number>  Auto bundler interval in (ms). (default: "12000")
   --txMode <string>              Bundler transaction mode (base, conditional, searcher). (default: "base")
   --unsafe                       Enable no storage or opcode checks during userOp simulation.
-  -h, --help                     display help for command
+  -h, --help                     display help for command 
 ```
 
 ## Environment variables

@@ -1,6 +1,9 @@
 version: "3"
 services:
   bundler-relayer:
+    depends_on:
+      bundler-builder:
+        condition: service_started
     container_name: bundler-relayer-dev
     image: bundler-relayer:v-local
     ports:
@@ -10,23 +13,20 @@ services:
     command: >
       --port 4337
       --network http://host.docker.internal:8545
-      --txMode base
+      --bundlerBuilder http://host.docker.internal:4338/rpc
       --debug
 
   bundler-builder:
     container_name: bundler-builder-dev
     image: bundler-builder:v-local
     ports:
-      - "4337:4337"
+      - "4338:4338"
     env_file:
       - ./packages/bundler-builder/.env
     command: >
-      --port 4337
+      --port 4338
       --network http://host.docker.internal:8545
       --txMode base
-      --httpApi web3,eth,debug
-
-      
 
   influxdb:
     container_name: influxdb

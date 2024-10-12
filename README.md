@@ -70,28 +70,31 @@ yarn lint:fix
 You can build Transeptor from source or use the Docker image.
 
 ### 🔧 Run from source
-1. Use correct node version `nvm use`
-2. Install dependencies `yarn install`
-3. Build `relayer` and `bundle-builder` nodes `yarn build`
-4. Copy values in `.env.sample` into `.env` and fill in the values with your own.
+1. Use correct node version: `nvm use`
+2. Install dependencies: `yarn install`
+3. Build `bundler-relayer` and `bundler-builder` nodes: `yarn build`
 
-Now let's start the bundler node.(make sure to pass your command line arguments)
+Now let's start the bundler nodes.
 ```bash
-./transeptor-relayer --httpApi web3,eth,debug --txMode base
+./transeptor-builder
+./transeptor-relayer
 ```
 
-### 🐳 Run from Docker image
+### 🐳 Run from Docker images
 
-Build image locally
+Build images
 ```bash
-yarn image:builder
-yarn image:relayer
+yarn build:images
 ```
 
-Run image locally
+Run images in the background
 ```bash
-yarn start:docker-builder
-yarn start:docker-relayer
+yarn start:images
+```
+
+stop images
+```bash
+yarn stop:images
 ```
 
 ## Contribute
