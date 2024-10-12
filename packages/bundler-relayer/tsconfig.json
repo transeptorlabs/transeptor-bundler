@@ -8,9 +8,11 @@
     },
   },
   "include": [
-    "src/**/*",
+    "./src/",
     "../shared/**/*.ts",
   ],
   "exclude": [
+    "e2e/**",
+    "src/**/*.test.ts"
   ]
 }

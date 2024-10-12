@@ -8,9 +8,9 @@ import { PingService, pingService } from 'libp2p/ping'
 import { Logger } from '../../../shared/logger/index.js'
 
 const GOSSIP_MAX_SIZE = 1048576 // (= 1048576, 1 MiB) The maximum allowed size of uncompressed gossip messages.
-const MAX_OPS_PER_REQUEST = 4096 // Maximum number of UserOps in a single request.
-const RESP_TIMEOUT = 10 // (seconds) The maximum time for complete response transfer.
-const TTFB_TIMEOUT = 5 // (seconds) The maximum time to wait for first byte of request response (time-to-first-byte).
+// const MAX_OPS_PER_REQUEST = 4096 // Maximum number of UserOps in a single request.
+// const RESP_TIMEOUT = 10 // (seconds) The maximum time for complete response transfer.
+// const TTFB_TIMEOUT = 5 // (seconds) The maximum time to wait for first byte of request response (time-to-first-byte).
 
 export class Libp2pNode {
   private node: any | undefined

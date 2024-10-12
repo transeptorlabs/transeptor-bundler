@@ -5,6 +5,7 @@
   "exports": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "scripts": {
+    "test": "echo no test",
     "lint": "eslint . --ext ts",
     "lint:fix": "yarn lint --fix"
   },

@@ -16,18 +16,6 @@ import {
   MempoolStateService,
 } from './mempool.types.js'
 
-/* In-memory mempool with used to manage UserOperations.
-
-  Key methods and their functionality:
-    - findByHash(): Retrieves the MempoolEntry associated with the given hash string key. It acquires the mutex to ensure thread-safety during access.
-    - addUserOp(): Sets the value associated with the given userOpHash string key. It acquires the mutex to ensure thread-safety during modification.
-    - removeUserOp(): Removes the MempoolEntry with the given userOpHash string key from the mempool. It acquires the mutex to ensure thread-safety during modification. Returns true if the item is successfully removed, and false if the item doesn't exist.
-    - getNextIdle(): Gets items from the MempoolEntry in bundles of the specified bundleSize that have status of idle. It acquires the mutex to ensure thread-safety during modification. Returns an array of key-value pairs ([string, MempoolEntry]) representing the removed MempoolEntrys.
-    - getNextIdle(): Gets all items from the MempoolEntry that have status of idle. It acquires the mutex to ensure thread-safety during modification. Returns an array of key-value pairs ([string, MempoolEntry]) representing the removed MempoolEntrys.
-    - size: return current size of mempool for debugging
-    - dump: print all items in mempool for debugging
-    - clearState: clear all items in mempool for debugging
-*/
 export type MempoolManager = {
   /**
    * Returns all addresses that are currently known to be "senders" according to the current mempool.
@@ -53,50 +41,71 @@ export type MempoolManager = {
    */
   addUserOp(relayUserOpParam: RelayUserOpParam): Promise<void>
 
+  /**
+   * Retrieves the MempoolEntry associated with the given hash string key.
+   *
+   * @param userOpHash - The userOpHash to search for.
+   * @returns - The MempoolEntry associated with the userOpHash, or undefined if not found.
+   */
   findByHash(userOpHash: string): Promise<MempoolEntry | undefined>
 
+  /**
+   * Removes the MempoolEntry with the given userOpHash string key from the mempool.
+   *
+   * @param userOpOrHash - The UserOperation or its hash to remove from the mempool.
+   * @returns - True if the UserOperation was removed, false otherwise.
+   */
   removeUserOp(userOpOrHash: string | UserOperation): Promise<boolean>
 
+  /**
+   * Retrieves the next pending UserOperation from the mempool.
+   * Updates the status of the retrieved UserOperation to 'bundling'.
+   *
+   * @returns - An array of MempoolEntry objects that are pending.
+   */
   getNextPending(): Promise<MempoolEntry[]>
 
+  /**
+   * Retrieves all pending UserOperations from the mempool.
+   * Updates the status of the retrieved UserOperations to 'bundling'.
+   *
+   * @returns - An array of MempoolEntry objects that are pending.
+   */
   getAllPending(): Promise<MempoolEntry[]>
 
+  /**
+   * Updates the status of the UserOperation with the given userOpHash to the given status.
+   *
+   * @param userOpHash - The hash of the UserOperation to update.
+   * @param status - The new status of the UserOperation.
+   */
   updateEntryStatus(userOpHash: string, status: EntryStatus): Promise<void>
 
+  /**
+   * Checks if the mempool is overloaded using the current bundleSize.
+   *
+   * @returns - True if the mempool is overloaded, false otherwise.
+   */
   isMempoolOverloaded(): Promise<boolean>
 
+  /**
+   * Returns the current size of the mempool(i.e. the number of UserOperations in the mempool).
+   *
+   * @returns - The number of UserOperations in the mempool.
+   */
   size(): Promise<number>
 
+  /**
+   * Clears the state of the mempool.
+   */
   clearState(): Promise<void>
 
+  /**
+   * Dumps the current state of the mempool to the log.
+   *
+   * @returns - An array of UserOperation objects in the mempool
+   */
   dump(): Promise<UserOperation[]>
-}
-
-const checkReplaceUserOp = (
-  oldEntry: MempoolEntry,
-  entry: MempoolEntry,
-): void => {
-  const oldMaxPriorityFeePerGas = BigNumber.from(
-    oldEntry.userOp.maxPriorityFeePerGas,
-  ).toNumber()
-  const newMaxPriorityFeePerGas = BigNumber.from(
-    entry.userOp.maxPriorityFeePerGas,
-  ).toNumber()
-  const oldMaxFeePerGas = BigNumber.from(
-    oldEntry.userOp.maxFeePerGas,
-  ).toNumber()
-  const newMaxFeePerGas = BigNumber.from(entry.userOp.maxFeePerGas).toNumber()
-  // the error is "invalid fields", even though it is detected only after validation
-  requireCond(
-    newMaxPriorityFeePerGas >= oldMaxPriorityFeePerGas * 1.1,
-    `Replacement UserOperation must have higher maxPriorityFeePerGas (old=${oldMaxPriorityFeePerGas} new=${newMaxPriorityFeePerGas}) `,
-    ValidationErrors.InvalidFields,
-  )
-  requireCond(
-    newMaxFeePerGas >= oldMaxFeePerGas * 1.1,
-    `Replacement UserOperation must have higher maxFeePerGas (old=${oldMaxFeePerGas} new=${newMaxFeePerGas}) `,
-    ValidationErrors.InvalidFields,
-  )
 }
 
 export const createMempoolManager = (
@@ -109,6 +118,33 @@ export const createMempoolManager = (
   Logger.info(
     `Setting bundleSize=${bundleSize} and MAX_MEMPOOL_USEROPS_PER_SENDER=${MAX_MEMPOOL_USEROPS_PER_SENDER}`,
   )
+
+  const checkReplaceUserOp = (
+    oldEntry: MempoolEntry,
+    entry: MempoolEntry,
+  ): void => {
+    const oldMaxPriorityFeePerGas = BigNumber.from(
+      oldEntry.userOp.maxPriorityFeePerGas,
+    ).toNumber()
+    const newMaxPriorityFeePerGas = BigNumber.from(
+      entry.userOp.maxPriorityFeePerGas,
+    ).toNumber()
+    const oldMaxFeePerGas = BigNumber.from(
+      oldEntry.userOp.maxFeePerGas,
+    ).toNumber()
+    const newMaxFeePerGas = BigNumber.from(entry.userOp.maxFeePerGas).toNumber()
+    // the error is "invalid fields", even though it is detected only after validation
+    requireCond(
+      newMaxPriorityFeePerGas >= oldMaxPriorityFeePerGas * 1.1,
+      `Replacement UserOperation must have higher maxPriorityFeePerGas (old=${oldMaxPriorityFeePerGas} new=${newMaxPriorityFeePerGas}) `,
+      ValidationErrors.InvalidFields,
+    )
+    requireCond(
+      newMaxFeePerGas >= oldMaxFeePerGas * 1.1,
+      `Replacement UserOperation must have higher maxFeePerGas (old=${oldMaxFeePerGas} new=${newMaxFeePerGas}) `,
+      ValidationErrors.InvalidFields,
+    )
+  }
 
   // Funtions to interface with reputationManager
   const checkReputationStatus = async (
@@ -257,6 +293,13 @@ export const createMempoolManager = (
     )
   }
 
+  /**
+   * Finds a MempoolEntry by the sender address and nonce.
+   *
+   * @param sender - The sender address to search for.
+   * @param nonce - The nonce to search for.
+   * @returns - The MempoolEntry associated with the sender and nonce, or undefined if not found.
+   */
   const findBySenderNonce = async (
     sender: string,
     nonce: BigNumberish,
@@ -440,19 +483,16 @@ export const createMempoolManager = (
       const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
 
       let count = 0
-      const entries = Object.values(standardPool).map((entry) => {
-        if (count >= bundleSize) {
-          return
+      const foundPendingEntries: MempoolEntry[] = []
+      Object.values(standardPool).forEach((entry) => {
+        if (count < bundleSize && entry.status === 'pending') {
+          count++
+          foundPendingEntries.push(entry)
         }
-        if (entry.status === 'bundling') {
-          return
-        }
-        count++
-        return entry
       })
 
       // Update the status of the entries to 'bundling'
-      const userOpHashes = entries.map((entry) => entry.userOpHash)
+      const userOpHashes = foundPendingEntries.map((entry) => entry.userOpHash)
       await mp.updateState(MempoolStateKey.StandardPool, ({ standardPool }) => {
         userOpHashes.forEach((hash) => {
           standardPool[hash].status = 'bundling'
@@ -460,7 +500,7 @@ export const createMempoolManager = (
         return { standardPool }
       })
 
-      return entries
+      return foundPendingEntries
     },
 
     getAllPending: async (): Promise<MempoolEntry[]> => {

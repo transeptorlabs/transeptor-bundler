@@ -3,8 +3,14 @@ import pino, { LoggerOptions } from 'pino'
 dotenv.config()
 
 const createLogger = () => {
+  let logLevel = process.env.TRANSEPTOR_LOG_LEVEL
+  if (!logLevel) {
+    logLevel =
+      process.env.TRANSEPTOR_LOG_LEVEL === 'production' ? 'info' : 'debug'
+  }
+
   const options: LoggerOptions = {
-    level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+    level: logLevel,
     formatters: {
       level: (label) => {
         return { level: label.toUpperCase() }

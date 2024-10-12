@@ -1,5 +1,9 @@
-import { createMempoolState } from './mempool-state.js'
-import { MempoolStateKey, MempoolStateService } from './mempool.types.js'
+/* eslint-disable no-console */
+import { createMempoolState } from '../src/mempool/index.js'
+import {
+  MempoolStateKey,
+  MempoolStateService,
+} from '../src/mempool/mempool.types.js'
 
 const sharedState = createMempoolState()
 
