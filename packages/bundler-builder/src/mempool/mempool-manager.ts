@@ -352,6 +352,7 @@ export const createMempoolManager = (
         await mp.updateState(
           MempoolStateKey.StandardPool,
           ({ standardPool }) => {
+            delete standardPool[oldEntry.userOpHash]
             return {
               standardPool: {
                 ...standardPool,
