@@ -336,12 +336,12 @@ export const createReputationManager = (
       title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
       info?: StakeInfo,
     ): Promise<void> => {
-      // If the address is whitelisted, we don't need to check the stake
-      const status = await getStatus(info.addr)
-      if (info?.addr == null || status === ReputationStatus.OK) {
+      if (info?.addr == null) {
         return
       }
 
+      // If the address is whitelisted, we don't need to check the stake
+      const status = await getStatus(info.addr)
       requireCond(
         status !== ReputationStatus.BANNED,
         `${title} ${info.addr} is banned`,
@@ -349,6 +349,7 @@ export const createReputationManager = (
         { [title]: info.addr },
       )
 
+      // Check if min stake and unstake delay are met
       requireCond(
         BigNumber.from(info.stake).gte(minStake),
         `${title} ${info.addr} stake ${tostr(info.stake)} is too low (min=${tostr(
@@ -356,6 +357,7 @@ export const createReputationManager = (
         )})`,
         ValidationErrors.InsufficientStake,
       )
+
       requireCond(
         BigNumber.from(info.unstakeDelaySec).gte(
           BigNumber.from(minUnstakeDelay),
