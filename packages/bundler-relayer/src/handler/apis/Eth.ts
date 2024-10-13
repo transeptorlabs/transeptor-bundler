@@ -15,6 +15,7 @@ import {
   unpackUserOp,
   requireAddressAndFields,
   calcPreVerificationGas,
+  RpcError,
 } from '../../../../shared/utils/index.js'
 
 import { ProviderService } from '../../../../shared/provider/index.js'
@@ -197,27 +198,20 @@ export const createEthAPI = (
         aggregatorInfo: validationResult.aggregatorInfo,
       }
 
-      try {
-        Logger.debug(
-          `Sending userOp to bundler-builder node... at ${bundlerBuilderClientUrl}`,
-        )
-        const addOpResult = await routeRequest(
-          bundlerBuilderClientUrl,
-          'builder_addUserOp',
-          [relayedOp],
-        )
-        Logger.debug(addOpResult, 'UserOp included in mempool...')
-      } catch (error: any) {
-        // TODO: Extract error to get correct code and message for bundler-builder node
-        Logger.error(
-          `Failed to add userOp to bundler-builder node: ${error.message}`,
-        )
-        requireCond(
-          false,
-          'Failed to add user Operation to mempool',
-          ValidationErrors.OpcodeValidation,
-        )
+      Logger.debug(
+        `Sending userOp to bundler-builder node... at ${bundlerBuilderClientUrl}`,
+      )
+      const res: string | RpcError = await routeRequest<string>(
+        bundlerBuilderClientUrl,
+        'builder_addUserOp',
+        [relayedOp],
+      )
+
+      if (res instanceof RpcError) {
+        requireCond(false, res.message, res.code)
       }
+
+      Logger.debug(res, 'UserOp included in mempool...')
 
       return userOpHash
     },
