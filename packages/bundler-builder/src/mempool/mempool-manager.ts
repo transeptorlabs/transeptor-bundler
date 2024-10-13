@@ -146,7 +146,14 @@ export const createMempoolManager = (
     )
   }
 
-  // Funtions to interface with reputationManager
+  /**
+   * Checks the reputation status of the given stakeInfo.
+   * Banned: If the entity is banned, an error is thrown as banned entities are not allowed to add UserOperations.
+   *
+   * @param title - The title of the entity to check the reputation status for.
+   * @param stakeInfo - The StakeInfo of the entity to check the reputation status for.
+   * @param maxTxMempoolAllowedOverride  - The maximum number of transactions allowed in the mempool for the entity.
+   */
   const checkReputationStatus = async (
     title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
     stakeInfo: StakeInfo,
@@ -167,7 +174,7 @@ export const createMempoolManager = (
     if (foundCount > THROTTLED_ENTITY_MEMPOOL_COUNT) {
       await reputationManager.checkThrottled(title, stakeInfo)
     }
-    if (foundCount > maxTxMempoolAllowedEntity) {
+    if (foundCount >= maxTxMempoolAllowedEntity) {
       await reputationManager.checkStake(title, stakeInfo)
     }
   }
@@ -200,10 +207,8 @@ export const createMempoolManager = (
   const updateSeenStatus = async (
     aggregator: string | undefined,
     userOp: UserOperation,
-    senderInfo: StakeInfo,
   ): Promise<void> => {
     try {
-      await reputationManager.checkStake('account', senderInfo)
       await reputationManager.updateSeenStatus(userOp.sender)
     } catch (e: any) {
       if (!(e instanceof RpcError)) throw e
@@ -425,7 +430,7 @@ export const createMempoolManager = (
         )
       }
 
-      await updateSeenStatus(aggregatorInfo?.addr, userOp, senderInfo)
+      await updateSeenStatus(aggregatorInfo?.addr, userOp)
       Logger.debug(
         {
           sender: userOp.sender,
