@@ -7,6 +7,7 @@ import { SendBundleReturn } from '../../../shared/types/index.js'
 
 import { BundleBuilder } from './bundle-builder.js'
 import { BundleProcessor } from './bundle-processor.js'
+import { EventManagerWithListener } from '../event/index.js'
 
 export type BundleManager = {
   /**
@@ -27,6 +28,7 @@ export type BundleManager = {
 export const createBundleManager = (
   bundleProcessor: BundleProcessor,
   bundleBuilder: BundleBuilder,
+  eventsManager: EventManagerWithListener,
   mp: MempoolStateService,
   isAutoBundle: boolean,
   autoBundleInterval: number,
@@ -37,7 +39,8 @@ export const createBundleManager = (
   const doAttemptBundle = async (
     force?: boolean,
   ): Promise<SendBundleReturn> => {
-    // TODO: Flush the mempool to remove bundled and failed userOps
+    // Flush the mempool to remove succeful userOps update failed userOps status
+    await eventsManager.handlePastEvents()
 
     const [bundle, storageMap] = await bundleBuilder.createBundle(force)
     Logger.debug({ length: bundle.length }, 'bundle created(ready to send)')

@@ -35,7 +35,7 @@ export const createBundleBuilder = (
     }
 
     // TODO: Include entries based off highest fee
-    // if isAuto is true, send the all pending UserOps in the mempool as a bundle
+    // if force is true, send the all pending UserOps in the mempool as a bundle
     const entries: MempoolEntry[] = force
       ? await mempoolManager.getAllPending()
       : await mempoolManager.getNextPending()
@@ -75,11 +75,12 @@ export const createBundleBuilder = (
         const paymasterStatus = await reputationManager.getStatus(paymaster)
         const deployerStatus = await reputationManager.getStatus(factory)
 
+        // Remove UserOps from mempool if paymaster or deployer is banned
         if (
           paymasterStatus === ReputationStatus.BANNED ||
           deployerStatus === ReputationStatus.BANNED
         ) {
-          await mempoolManager.removeUserOp(entry.userOp)
+          await mempoolManager.removeUserOp(entry.userOpHash)
           continue
         }
 
@@ -96,6 +97,7 @@ export const createBundleBuilder = (
           notIncludedUserOpsHashes.push(entry.userOpHash)
           continue
         }
+
         // [SREP-030]
         if (
           factory != null &&
@@ -109,8 +111,9 @@ export const createBundleBuilder = (
           notIncludedUserOpsHashes.push(entry.userOpHash)
           continue
         }
+
+        // allow only a single UserOp per sender per bundle
         if (senders.has(entry.userOp.sender)) {
-          // allow only a single UserOp per sender per bundle
           Logger.debug(
             { sender: entry.userOp.sender, nonce: entry.userOp.nonce },
             'skipping already included sender',
@@ -138,7 +141,7 @@ export const createBundleBuilder = (
           continue
         }
 
-        // Check if the UserOp accesses a storage of another known sender
+        // [STO-041] Check if the UserOp accesses a storage of another known sender and ban the sender if so
         for (const storageAddress of Object.keys(validationResult.storageMap)) {
           if (
             storageAddress.toLowerCase() !==
@@ -148,6 +151,7 @@ export const createBundleBuilder = (
             Logger.debug(
               `UserOperation from ${entry.userOp.sender} sender accessed a storage of another known sender ${storageAddress}`,
             )
+            notIncludedUserOpsHashes.push(entry.userOpHash)
             continue mainLoop
           }
         }

@@ -56,6 +56,10 @@ export const createDebugAPI = (
 
     sendBundleNow: async (): Promise<SendBundleReturn> => {
       const result = await bundleManager.doAttemptBundle(true)
+
+      // handlePastEvents is called before building the next bundle.
+      // However in debug mode, we are interested in the side effects
+      // (on the mempool) of this "sendBundle" operation
       await eventsManager.handlePastEvents()
       return result
     },

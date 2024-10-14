@@ -77,10 +77,20 @@ export const createEventManagerWithListener = (
   const handleUserOperationEvent = async (ev: any): Promise<void> => {
     const userOpHash = ev.args.userOpHash
     const sucess = ev.args.success
-    await mempoolManager.updateEntryStatus(
-      userOpHash,
-      sucess ? 'bundled' : 'failed',
-    )
+
+    if (sucess) {
+      Logger.debug(
+        { userOpHash },
+        'UserOperationEvent success. Removing from mempool',
+      )
+      await mempoolManager.removeUserOp(userOpHash)
+    } else {
+      Logger.debug(
+        { userOpHash },
+        'UserOperationEvent failed. Updating status in mempool',
+      )
+      await mempoolManager.updateEntryStatus(userOpHash, 'failed')
+    }
 
     // TODO: Make this a batch operation
     includedAddress(ev.args.sender)

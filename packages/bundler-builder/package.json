@@ -11,7 +11,7 @@
     "build": "npx tsc -p ./tsconfig.json && cp ../shared/sim/tracer.js dist/shared/sim",
     "dev": "nodemon",
     "start": "node --import ./register-hook.js ./src/index.ts --txMode base | pino-pretty",
-    "start:unsafe": "node --import ./register-hook.js ./src/index.ts --txMode --unsafe | pino-pretty",
+    "start:unsafe": "node --import ./register-hook.js ./src/index.ts --txMode base --unsafe | pino-pretty",
     "start:prod": "yarn build && node dist/bundler-relayer/src/index.js --txMode base| pino-pretty",
     "test": "vitest --config ./vitest.config.ts",
     "lint": "eslint . --ext ts",
