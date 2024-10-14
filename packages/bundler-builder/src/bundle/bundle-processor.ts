@@ -98,37 +98,49 @@ export const createBundleProcessor = (
       const beneficiary = await selectBeneficiary(signer)
 
       try {
-        const feeData = await providerService.getFeeData()
+        const [feeData, chainId, nonce] = await Promise.all([
+          providerService.getFeeData(),
+          providerService.getChainId(),
+          ss.getTransactionCount(signer),
+        ])
+
+        // populate the transaction (e.g to, data, and value)
         const tx = await entryPointContract.populateTransaction.handleOps(
           packUserOps(userOps),
           beneficiary,
-          {
-            type: 2,
-            nonce: await ss.getTransactionCount(signer),
-            gasLimit: 10e6,
-            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? 0,
-            maxFeePerGas: feeData.maxFeePerGas ?? 0,
-          },
         )
-        tx.chainId = await providerService.getChainId()
-        const signedTx = await ss.signTransaction(tx, signer)
+
+        const signedTx = await ss.signTransaction(
+          {
+            ...tx,
+            chainId,
+            type: 2,
+            nonce,
+            gasLimit: BigNumber.from(10e6),
+            maxPriorityFeePerGas:
+              feeData.maxPriorityFeePerGas ?? BigNumber.from(0),
+            maxFeePerGas: feeData.maxFeePerGas ?? BigNumber.from(0),
+          },
+          signer,
+        )
 
         let ret: string
-        if (txMode === 'conditional') {
-          ret = await providerService.send(
-            'eth_sendRawTransactionConditional',
-            [signedTx, { knownAccounts: storageMap }],
-          )
-          Logger.debug(
-            { ret, length: userOps.length },
-            'eth_sendRawTransactionConditional ret=',
-          )
-        } else {
-          ret = await providerService.send('eth_sendRawTransaction', [signedTx])
-          Logger.debug(
-            { ret, length: userOps.length },
-            'eth_sendRawTransaction ret=',
-          )
+        switch (txMode) {
+          case 'conditional':
+            ret = await providerService.send(
+              'eth_sendRawTransactionConditional',
+              [signedTx, { knownAccounts: storageMap }],
+            )
+            break
+          case 'base':
+            ret = await providerService.send('eth_sendRawTransaction', [
+              signedTx,
+            ])
+            break
+          case 'searcher':
+            throw new Error('searcher txMode is not supported')
+          default:
+            throw new Error(`unknown txMode: ${txMode}`)
         }
 
         // TODO: parse ret, and revert if needed.

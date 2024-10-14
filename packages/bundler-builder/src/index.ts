@@ -78,6 +78,7 @@ const runBundlerBuilder = async () => {
       config.txMode,
       config.entryPointContract,
     ),
+    eventManager,
     mempoolState,
     config.isAutoBundle,
     config.autoBundleInterval,
@@ -120,9 +121,8 @@ const runBundlerBuilder = async () => {
       }
     }
 
-    // full validation requires (debug_traceCall) method on eth node geth and can only be run in private and conditional txMode
+    // safe mode: full validation requires (debug_traceCall) method on eth node geth
     if (
-      config.txMode === 'searcher' &&
       !config.isUnsafeMode &&
       !(await ps.supportsRpcMethod('debug_traceCall'))
     ) {

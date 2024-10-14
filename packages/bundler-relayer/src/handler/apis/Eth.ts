@@ -254,6 +254,10 @@ export const createEthAPI = (
         'Missing/invalid userOpHash',
         ValidationErrors.InvalidFields,
       )
+
+      // TODO: First check if the userOp is pending in the mempool
+      // if so the UserOperation is pending in the bundler’s mempool:
+      // MAY return null, or: a full UserOperation, with the addition of the entryPoint field and a null value for blockNumber, blockHash and transactionHash.
       const event = await commonEventsManager.getUserOperationEvent(userOpHash)
       if (event == null) {
         return null
