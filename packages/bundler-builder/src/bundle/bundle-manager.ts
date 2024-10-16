@@ -1,7 +1,4 @@
-import {
-  MempoolStateKey,
-  MempoolStateService,
-} from '../mempool/mempool.types.js'
+import { MempoolEntry, MempoolManagerBuilder } from '../mempool/index.js'
 import { Logger } from '../../../shared/logger/index.js'
 import { SendBundleReturn } from '../../../shared/types/index.js'
 
@@ -29,12 +26,25 @@ export const createBundleManager = (
   bundleProcessor: BundleProcessor,
   bundleBuilder: BundleBuilder,
   eventsManager: EventManagerWithListener,
-  mp: MempoolStateService,
+  mempoolManagerBuilder: MempoolManagerBuilder,
   isAutoBundle: boolean,
   autoBundleInterval: number,
 ): BundleManager => {
   let bundleMode: 'auto' | 'manual' = isAutoBundle ? 'auto' : 'manual'
   let interval: NodeJS.Timer | null = null
+
+  const getEntries = async (force?: boolean): Promise<MempoolEntry[]> => {
+    if ((await mempoolManagerBuilder.size()) === 0) {
+      return []
+    }
+
+    // if force is true, send the all pending UserOps in the mempool as a bundle
+    const entries: MempoolEntry[] = force
+      ? await mempoolManagerBuilder.getAllPending()
+      : await mempoolManagerBuilder.getNextPending()
+
+    return entries
+  }
 
   const doAttemptBundle = async (
     force?: boolean,
@@ -42,34 +52,59 @@ export const createBundleManager = (
     // Flush the mempool to remove succeful userOps update failed userOps status
     await eventsManager.handlePastEvents()
 
-    const [bundle, storageMap] = await bundleBuilder.createBundle(force)
-    Logger.debug({ length: bundle.length }, 'bundle created(ready to send)')
-    if (bundle.length === 0) {
+    const entries = await getEntries(force)
+    if (entries.length === 0) {
+      Logger.debug('No entries to bundle')
       return {
         transactionHash: '',
         userOpHashes: [],
       }
     }
 
-    const result = await bundleProcessor.sendBundle(bundle, storageMap)
+    const knownSenders = await mempoolManagerBuilder.getKnownSenders()
 
-    //  Add the txnHash to the confirmation queue(MempoolState.bundleTxs)
-    await mp.updateState(MempoolStateKey.BundleTxs, ({ bundleTxs }) => {
-      return {
-        bundleTxs: {
-          ...bundleTxs,
-          [result.transactionHash]: {
-            txHash: result.transactionHash,
-            signerIndex: result.signerIndex,
-            status: 'pending',
-          },
-        },
-      }
-    })
+    const {
+      bundle,
+      storageMap,
+      notIncludedUserOpsHashes,
+      markedToRemoveUserOpsHashes,
+    } = await bundleBuilder.createBundle(entries, knownSenders)
+    Logger.debug({ length: bundle.length }, 'bundle created(ready to send)')
+
+    if (notIncludedUserOpsHashes.length > 0) {
+      Logger.debug(
+        { total: notIncludedUserOpsHashes.length },
+        'Bundle full: sending unbundled UserOps back to mempool with status of pending',
+      )
+      notIncludedUserOpsHashes.forEach(async (userOpHash) => {
+        await mempoolManagerBuilder.updateEntryStatus(userOpHash, 'pending')
+      })
+    }
+
+    if (markedToRemoveUserOpsHashes.length > 0) {
+      Logger.debug(
+        { total: markedToRemoveUserOpsHashes.length },
+        'Bundle full: removing banned UserOps from mempool',
+      )
+      markedToRemoveUserOpsHashes.forEach(async (userOpHash) => {
+        await mempoolManagerBuilder.removeUserOp(userOpHash)
+      })
+    }
+
+    const res = await bundleProcessor.sendBundle(bundle, storageMap)
+    if (res.failedOp) {
+      Logger.error({ failedOp: res.failedOp }, 'Bundle failed')
+      await mempoolManagerBuilder.removeUserOp(res.failedOp)
+    }
+
+    await mempoolManagerBuilder.addBundleTxnConfirmation(
+      res.transactionHash,
+      res.signerIndex,
+    )
 
     return {
-      transactionHash: result.transactionHash,
-      userOpHashes: result.userOpHashes,
+      transactionHash: res.transactionHash,
+      userOpHashes: res.userOpHashes,
     }
   }
 

@@ -1,3 +1,5 @@
+import { UserOperation } from '../../shared/types/index.js'
+
 export type SlotMap = {
   [slot: string]: string
 }
@@ -19,4 +21,5 @@ export type SendBundleReturnWithSigner = {
   transactionHash: string
   userOpHashes: string[]
   signerIndex: number
+  failedOp?: UserOperation
 }

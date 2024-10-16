@@ -6,7 +6,6 @@ import {
   GET_USEROP_HASHES_BYTECODE,
 } from '../../../shared/abis/index.js'
 import { Logger } from '../../../shared/logger/index.js'
-import { MempoolManager } from '../mempool/index.js'
 import { ProviderService } from '../../../shared/provider/index.js'
 import {
   SendBundleReturnWithSigner,
@@ -35,7 +34,6 @@ export type BundleProcessor = {
 export const createBundleProcessor = (
   providerService: ProviderService,
   reputationManager: ReputationManager,
-  mempoolManager: MempoolManager,
   entryPointContract: ethers.Contract,
   txMode: string,
   beneficiary: string,
@@ -150,6 +148,7 @@ export const createBundleProcessor = (
         return {
           transactionHash: ret,
           userOpHashes: hashes,
+          signerIndex,
         } as SendBundleReturnWithSigner
       } catch (e: any) {
         let parsedError: ErrorDescription
@@ -180,8 +179,6 @@ export const createBundleProcessor = (
           reputationManager.crashedHandleOps(userOp.factory)
         }
 
-        // remove failed UserOp from mempool
-        await mempoolManager.removeUserOp(userOp)
         Logger.warn(
           `Failed handleOps sender=${userOp.sender} reason=${reasonStr}`,
         )
@@ -190,6 +187,7 @@ export const createBundleProcessor = (
           transactionHash: '',
           userOpHashes: [],
           signerIndex,
+          failedOp: userOp,
         }
       }
     },

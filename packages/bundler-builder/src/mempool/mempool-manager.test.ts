@@ -5,17 +5,20 @@ import {
   mockEntryPointGetUserOpHash,
 } from '../../test/test-helpers.js'
 import { createMempoolState } from './mempool-state.js'
-import { createMempoolManager, MempoolManager } from './mempool-manager.js'
+import {
+  createMempoolManagerCore,
+  MempoolManagerCore,
+} from './mempool-manager.js'
 import { mockReputationManager } from '../../test/mocks/index.js'
 import { BigNumber } from 'ethers'
 
-describe('MempoolManager', () => {
-  let mempoolManager: MempoolManager
+describe('MempoolManagerCore', () => {
+  let mempoolManager: MempoolManagerCore
   const MOCK_BUNDLE_SIZE = 5
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mempoolManager = createMempoolManager(
+    mempoolManager = createMempoolManagerCore(
       createMempoolState(),
       mockReputationManager,
       MOCK_BUNDLE_SIZE,

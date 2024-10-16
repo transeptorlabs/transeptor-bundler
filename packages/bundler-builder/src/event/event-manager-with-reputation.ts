@@ -3,7 +3,7 @@ import { ethers } from 'ethers'
 import { Logger } from '../../../shared/logger/index.js'
 import { ProviderService } from '../../../shared/provider/index.js'
 import { ReputationManager } from '../reputation/index.js'
-import { MempoolManager } from '../mempool/index.js'
+import { MempoolManageUpdater } from '../mempool/index.js'
 
 export type EventManagerWithListener = {
   /**
@@ -15,7 +15,7 @@ export type EventManagerWithListener = {
 export const createEventManagerWithListener = (
   providerService: ProviderService,
   reputationManager: ReputationManager,
-  mempoolManager: MempoolManager,
+  mempoolManageUpdater: MempoolManageUpdater,
   entryPointContract: ethers.Contract,
 ): EventManagerWithListener => {
   let lastBlock: number | null = null
@@ -83,13 +83,13 @@ export const createEventManagerWithListener = (
         { userOpHash },
         'UserOperationEvent success. Removing from mempool',
       )
-      await mempoolManager.removeUserOp(userOpHash)
+      await mempoolManageUpdater.removeUserOp(userOpHash)
     } else {
       Logger.debug(
         { userOpHash },
         'UserOperationEvent failed. Updating status in mempool',
       )
-      await mempoolManager.updateEntryStatus(userOpHash, 'failed')
+      await mempoolManageUpdater.updateEntryStatus(userOpHash, 'failed')
     }
 
     // TODO: Make this a batch operation

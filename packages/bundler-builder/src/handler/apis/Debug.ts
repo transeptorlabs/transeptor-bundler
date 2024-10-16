@@ -7,7 +7,7 @@ import { StakeInfo } from '../../../../shared/validatation/index.js'
 import { ethers, BigNumber } from 'ethers'
 import { ReputationEntry, ReputationManager } from '../../reputation/index.js'
 import { BundleManager } from '../../bundle/index.js'
-import { MempoolManager } from '../../mempool/index.js'
+import { MempoolManagerCore } from '../../mempool/index.js'
 import { EventManagerWithListener } from '../../event/index.js'
 
 export type DebugAPI = {
@@ -28,22 +28,22 @@ export type DebugAPI = {
 export const createDebugAPI = (
   bundleManager: BundleManager,
   reputationManager: ReputationManager,
-  mempoolManager: MempoolManager,
+  mempoolManagerCore: MempoolManagerCore,
   eventsManager: EventManagerWithListener,
   entryPointContract: ethers.Contract,
 ): DebugAPI => {
   return {
     clearState: async (): Promise<void> => {
-      await mempoolManager.clearState()
+      await mempoolManagerCore.clearState()
       await reputationManager.clearState()
     },
 
     dumpMempool: async () => {
-      return await mempoolManager.dump()
+      return await mempoolManagerCore.dump()
     },
 
     clearMempool: async (): Promise<void> => {
-      await mempoolManager.clearState()
+      await mempoolManagerCore.clearState()
     },
 
     setBundlingMode: (mode: string): boolean => {
@@ -73,7 +73,7 @@ export const createDebugAPI = (
         const userOpHash = await entryPointContract.getUserOpHash(
           packUserOp(userOp),
         )
-        await mempoolManager.addUserOp({
+        await mempoolManagerCore.addUserOp({
           userOp,
           userOpHash,
           prefund: BigNumber.from(0),
