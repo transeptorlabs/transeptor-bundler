@@ -15,7 +15,13 @@ import { createValidationService } from '../../shared/validatation/index.js'
 import { createSimulator } from '../../shared/sim/index.js'
 import { createSignerService } from './signer/index.js'
 import { createReputationManager } from './reputation/index.js'
-import { createMempoolManager, createMempoolState } from './mempool/index.js'
+import {
+  createMempoolManagerBuilder,
+  createMempoolManagerCore,
+  createMempoolManageSender,
+  createMempoolManageUpdater,
+  createMempoolState,
+} from './mempool/index.js'
 import { createEventManagerWithListener } from './event/event-manager-with-reputation.js'
 
 let p2pNode: Libp2pNode = undefined
@@ -44,7 +50,7 @@ const runBundlerBuilder = async () => {
   await reputationManager.addBlacklist(config.blacklist)
   reputationManager.startHourlyCron()
 
-  const mempoolManager = createMempoolManager(
+  const mempoolManagerCore = createMempoolManagerCore(
     mempoolState,
     reputationManager,
     config.bundleSize,
@@ -53,7 +59,7 @@ const runBundlerBuilder = async () => {
   const eventManager = createEventManagerWithListener(
     ps,
     reputationManager,
-    mempoolManager,
+    createMempoolManageUpdater(mempoolManagerCore),
     config.entryPointContract,
   )
 
@@ -61,7 +67,6 @@ const runBundlerBuilder = async () => {
     createBundleProcessor(
       ps,
       reputationManager,
-      mempoolManager,
       config.entryPointContract,
       config.txMode,
       config.beneficiaryAddr,
@@ -72,14 +77,15 @@ const runBundlerBuilder = async () => {
       ps,
       createValidationService(ps, sim, config.entryPointContract.address),
       reputationManager,
-      mempoolManager,
-      config.maxBundleGas,
-      config.isUnsafeMode,
-      config.txMode,
-      config.entryPointContract,
+      {
+        maxBundleGas: config.maxBundleGas,
+        isUnsafeMode: config.isUnsafeMode,
+        txMode: config.txMode,
+        entryPointContract: config.entryPointContract,
+      },
     ),
     eventManager,
-    mempoolState,
+    createMempoolManagerBuilder(mempoolManagerCore),
     config.isAutoBundle,
     config.autoBundleInterval,
   )
@@ -96,11 +102,11 @@ const runBundlerBuilder = async () => {
       createDebugAPI(
         bundleManager,
         reputationManager,
-        mempoolManager,
+        mempoolManagerCore,
         eventManager,
         config.entryPointContract,
       ),
-      mempoolManager,
+      createMempoolManageSender(mempoolManagerCore),
     ),
     config.httpApis,
     config.port,

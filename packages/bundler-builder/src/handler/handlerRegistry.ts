@@ -1,14 +1,14 @@
-import { MempoolManager } from '../mempool/index.js'
 import type { HandlerRegistry } from '../../../shared/rpc/index.js'
 
 import { DebugAPI } from './apis/index.js'
+import { MempoolManageSender } from '../mempool/index.js'
 
 export const createRelayerHandlerRegistry = (
   debug: DebugAPI,
-  mempool: MempoolManager,
+  mempoolManageSender: MempoolManageSender,
 ): HandlerRegistry => ({
   builder_addUserOp: async (params) => {
-    await mempool.addUserOp(params[0])
+    await mempoolManageSender.addUserOp(params[0])
     return 'ok'
   },
 

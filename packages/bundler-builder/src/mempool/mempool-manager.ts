@@ -16,7 +16,7 @@ import {
   MempoolStateService,
 } from './mempool.types.js'
 
-export type MempoolManager = {
+export type MempoolManagerCore = {
   /**
    * Returns all addresses that are currently known to be "senders" according to the current mempool.
    *
@@ -106,13 +106,73 @@ export type MempoolManager = {
    * @returns - An array of UserOperation objects in the mempool
    */
   dump(): Promise<UserOperation[]>
+
+  /**
+   * Add the txnHash to the confirmation queue
+   *
+   * @param transactionHash - The transaction hash to add to the confirmation queue.
+   * @param signerIndex - The index of the signer that signed the transaction.
+   */
+  addBundleTxnConfirmation(
+    transactionHash: string,
+    signerIndex: number,
+  ): Promise<void>
 }
 
-export const createMempoolManager = (
+export type MempoolManageSender = Pick<MempoolManagerCore, 'addUserOp'>
+
+export type MempoolManageUpdater = Pick<
+  MempoolManagerCore,
+  'removeUserOp' | 'updateEntryStatus'
+>
+
+export type MempoolManagerBuilder = Pick<
+  MempoolManagerCore,
+  | 'size'
+  | 'getAllPending'
+  | 'getNextPending'
+  | 'getKnownSenders'
+  | 'updateEntryStatus'
+  | 'removeUserOp'
+  | 'addBundleTxnConfirmation'
+>
+
+export const createMempoolManageSender = (
+  mempoolManagerCore: MempoolManagerCore,
+): MempoolManageSender => {
+  return {
+    addUserOp: mempoolManagerCore.addUserOp,
+  }
+}
+
+export const createMempoolManageUpdater = (
+  mempoolManagerCore: MempoolManagerCore,
+): MempoolManageUpdater => {
+  return {
+    removeUserOp: mempoolManagerCore.removeUserOp,
+    updateEntryStatus: mempoolManagerCore.updateEntryStatus,
+  }
+}
+
+export const createMempoolManagerBuilder = (
+  mempoolManagerCore: MempoolManagerCore,
+): MempoolManagerBuilder => {
+  return {
+    size: mempoolManagerCore.size,
+    getAllPending: mempoolManagerCore.getAllPending,
+    getNextPending: mempoolManagerCore.getNextPending,
+    getKnownSenders: mempoolManagerCore.getKnownSenders,
+    updateEntryStatus: mempoolManagerCore.updateEntryStatus,
+    removeUserOp: mempoolManagerCore.removeUserOp,
+    addBundleTxnConfirmation: mempoolManagerCore.addBundleTxnConfirmation,
+  }
+}
+
+export const createMempoolManagerCore = (
   mp: MempoolStateService,
   reputationManager: ReputationManager,
   bundleSize: number, // maximum # of pending mempool entities
-): MempoolManager => {
+): MempoolManagerCore => {
   const MAX_MEMPOOL_USEROPS_PER_SENDER = 4 // max # of pending mempool entities per sender
   const THROTTLED_ENTITY_MEMPOOL_COUNT = 4
   Logger.info(
@@ -592,6 +652,28 @@ export const createMempoolManager = (
       return Object.values(standardPool).map(
         (mempoolEntry) => mempoolEntry.userOp,
       )
+    },
+
+    addBundleTxnConfirmation: async (
+      transactionHash: string,
+      signerIndex: number,
+    ): Promise<void> => {
+      if (transactionHash === '') {
+        return
+      }
+
+      await mp.updateState(MempoolStateKey.BundleTxs, ({ bundleTxs }) => {
+        return {
+          bundleTxs: {
+            ...bundleTxs,
+            [transactionHash]: {
+              txHash: transactionHash,
+              signerIndex: signerIndex,
+              status: 'pending',
+            },
+          },
+        }
+      })
     },
   }
 }
