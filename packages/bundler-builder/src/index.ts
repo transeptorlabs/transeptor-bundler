@@ -20,9 +20,9 @@ import {
   createMempoolManagerCore,
   createMempoolManageSender,
   createMempoolManageUpdater,
-  createMempoolState,
 } from './mempool/index.js'
 import { createEventManagerWithListener } from './event/event-manager-with-reputation.js'
+import { createState } from './state/index.js'
 
 let p2pNode: Libp2pNode = undefined
 
@@ -37,11 +37,11 @@ const runBundlerBuilder = async () => {
   const config = createBuilderConfig(args)
   const ps = createProviderService(config.provider)
   const sim = createSimulator(ps, config.entryPointContract)
-  const mempoolState = createMempoolState()
+  const state = createState()
 
   // Create manager instances
   const reputationManager = createReputationManager(
-    mempoolState,
+    state,
     config.minStake,
     config.minUnstakeDelay,
     config.stakeManagerContract,
@@ -51,7 +51,7 @@ const runBundlerBuilder = async () => {
   reputationManager.startHourlyCron()
 
   const mempoolManagerCore = createMempoolManagerCore(
-    mempoolState,
+    state,
     reputationManager,
     config.bundleSize,
   )

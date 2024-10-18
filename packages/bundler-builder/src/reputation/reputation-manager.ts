@@ -12,14 +12,10 @@ import {
   ValidationErrors,
 } from '../../../shared/validatation/index.js'
 import { requireCond, tostr } from '../../../shared/utils/index.js'
-import {
-  MempoolStateService,
-  ReputationEntries,
-  MempoolStateKey,
-} from '../mempool/index.js'
+import { StateService, ReputationEntries, StateKey } from '../state/index.js'
 
 export const createReputationManager = (
-  mp: MempoolStateService,
+  state: StateService,
   minStake: BigNumber,
   minUnstakeDelay: number,
   stakeManagerContract: ethers.Contract,
@@ -46,8 +42,8 @@ export const createReputationManager = (
       `Set reputation interval to execute every ${60 * 60 * 1000} (ms)`,
     )
 
-    const { reputationEntries } = await mp.getState(
-      MempoolStateKey.ReputationEntries,
+    const { reputationEntries } = await state.getState(
+      StateKey.ReputationEntries,
     )
 
     /**
@@ -69,8 +65,8 @@ export const createReputationManager = (
         Object.keys(reputationEntries).forEach(async (addr) => {
           const entry = reputationEntries[addr]
 
-          await mp.updateState(
-            MempoolStateKey.ReputationEntries,
+          await state.updateState(
+            StateKey.ReputationEntries,
             ({ reputationEntries }) => {
               if (entry.opsIncluded === 0 && entry.opsSeen === 0) {
                 // delete the entry from the state
@@ -101,10 +97,10 @@ export const createReputationManager = (
 
   // https://github.com/eth-infinitism/account-abstraction/blob/develop/eip/EIPS/eip-4337.md#reputation-scoring-and-throttlingbanning-for-paymasters
   const getStatus = async (addr?: string): Promise<ReputationStatus> => {
-    const { whiteList, blackList, reputationEntries } = await mp.getState([
-      MempoolStateKey.WhiteList,
-      MempoolStateKey.BlackList,
-      MempoolStateKey.ReputationEntries,
+    const { whiteList, blackList, reputationEntries } = await state.getState([
+      StateKey.WhiteList,
+      StateKey.BlackList,
+      StateKey.ReputationEntries,
     ])
 
     addr = addr?.toLowerCase()
@@ -139,8 +135,8 @@ export const createReputationManager = (
   }
 
   const dump = async (): Promise<ReputationEntry[]> => {
-    const { reputationEntries } = await mp.getState(
-      MempoolStateKey.ReputationEntries,
+    const { reputationEntries } = await state.getState(
+      StateKey.ReputationEntries,
     )
     return Object.values(reputationEntries)
   }
@@ -155,7 +151,7 @@ export const createReputationManager = (
     dump,
 
     clearState: async () => {
-      await mp.updateState(MempoolStateKey.ReputationEntries, (_) => {
+      await state.updateState(StateKey.ReputationEntries, (_) => {
         return {
           reputationEntries: {},
         }
@@ -166,7 +162,7 @@ export const createReputationManager = (
       if (items.length === 0) {
         return
       }
-      await mp.updateState(MempoolStateKey.WhiteList, ({ whiteList }) => {
+      await state.updateState(StateKey.WhiteList, ({ whiteList }) => {
         return {
           whiteList: [...whiteList, ...items],
         }
@@ -177,7 +173,7 @@ export const createReputationManager = (
       if (items.length === 0) {
         return
       }
-      await mp.updateState(MempoolStateKey.BlackList, ({ blackList }) => {
+      await state.updateState(StateKey.BlackList, ({ blackList }) => {
         return {
           blackList: [...blackList, ...items],
         }
@@ -191,8 +187,8 @@ export const createReputationManager = (
 
       Logger.debug({ addr }, 'Updating seen status with reputation manager')
       addr = addr.toLowerCase()
-      await mp.updateState(
-        MempoolStateKey.ReputationEntries,
+      await state.updateState(
+        StateKey.ReputationEntries,
         ({ reputationEntries }) => {
           const entry = reputationEntries[addr]
           return {
@@ -209,10 +205,39 @@ export const createReputationManager = (
       )
     },
 
+    updateSeenStatusBatch: async (addrs: string[]): Promise<void> => {
+      if (addrs.length === 0) {
+        return
+      }
+
+      await state.updateState(
+        StateKey.ReputationEntries,
+        ({ reputationEntries }) => {
+          const newEntries = addrs.reduce((acc, addr) => {
+            addr = addr.toLowerCase()
+            const entry = reputationEntries[addr]
+            acc[addr] = {
+              address: addr,
+              opsSeen: entry ? entry.opsSeen + 1 : 0,
+              opsIncluded: entry ? entry.opsIncluded : 0,
+            }
+            return acc
+          }, {} as ReputationEntries)
+
+          return {
+            reputationEntries: {
+              ...reputationEntries,
+              ...newEntries,
+            },
+          }
+        },
+      )
+    },
+
     updateIncludedStatus: async (addr: string): Promise<void> => {
       addr = addr.toLowerCase()
-      await mp.updateState(
-        MempoolStateKey.ReputationEntries,
+      await state.updateState(
+        StateKey.ReputationEntries,
         ({ reputationEntries }) => {
           const entry = reputationEntries[addr]
           return {
@@ -231,6 +256,7 @@ export const createReputationManager = (
 
     getStakeStatus: async (
       address: string,
+      _: string,
     ): Promise<{
       stakeInfo: StakeInfo
       isStaked: boolean
@@ -239,6 +265,7 @@ export const createReputationManager = (
       const isStaked =
         BigNumber.from(info.stake).gte(minStake) &&
         BigNumber.from(info.unstakeDelaySec).gte(minUnstakeDelay)
+
       return {
         stakeInfo: {
           addr: address,
@@ -253,8 +280,8 @@ export const createReputationManager = (
       // TODO: what value to put? how long do we want this banning to hold?
       addr = addr.toLowerCase()
 
-      await mp.updateState(
-        MempoolStateKey.ReputationEntries,
+      await state.updateState(
+        StateKey.ReputationEntries,
         ({ reputationEntries }) => {
           const entry = reputationEntries[addr]
           const bannedEntry = {
@@ -291,8 +318,8 @@ export const createReputationManager = (
         return acc
       }, initalReady)
 
-      await mp.updateState(
-        MempoolStateKey.ReputationEntries,
+      await state.updateState(
+        StateKey.ReputationEntries,
         ({ reputationEntries }) => {
           return {
             reputationEntries: {
@@ -372,8 +399,8 @@ export const createReputationManager = (
     calculateMaxAllowedMempoolOpsUnstaked: async (
       entity: string,
     ): Promise<number> => {
-      const { reputationEntries } = await mp.getState(
-        MempoolStateKey.ReputationEntries,
+      const { reputationEntries } = await state.getState(
+        StateKey.ReputationEntries,
       )
       entity = entity.toLowerCase()
       const SAME_UNSTAKED_ENTITY_MEMPOOL_COUNT = 10

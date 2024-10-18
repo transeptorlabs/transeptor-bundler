@@ -1,14 +1,10 @@
 import { Mutex } from 'async-mutex'
-import {
-  MempoolState,
-  MempoolStateKey,
-  MempoolStateService,
-} from './mempool.types.js'
 import { Logger } from '../../../shared/logger/index.js'
+import { State, StateKey, StateService } from './state.types.js'
 
-export const createMempoolState = (): MempoolStateService => {
+export const createState = (): StateService => {
   const mutex = new Mutex()
-  let state: MempoolState = {
+  let state: State = {
     standardPool: {},
     mempoolEntryCount: {},
     bundleTxs: {},
@@ -19,28 +15,31 @@ export const createMempoolState = (): MempoolStateService => {
   }
 
   return {
-    getState: async <K extends keyof MempoolState>(
-      keys: MempoolStateKey | MempoolStateKey[],
-    ): Promise<Pick<MempoolState, K>> => {
+    getState: async <K extends keyof State>(
+      keys: StateKey | StateKey[],
+    ): Promise<Pick<State, K>> => {
+      Logger.debug(
+        `Acquiring Mutex: Reading in-memory state with keys: ${keys}`,
+      )
       const release = await mutex.acquire()
       try {
         if (Array.isArray(keys)) {
-          const selectedState = {} as Pick<MempoolState, K>
+          const selectedState = {} as Pick<State, K>
           keys.forEach((key) => {
             selectedState[key] = state[key]
           })
           return selectedState
         } else {
-          return { [keys]: state[keys] } as Pick<MempoolState, K>
+          return { [keys]: state[keys] } as Pick<State, K>
         }
       } finally {
         release()
       }
     },
 
-    updateState: async <K extends keyof MempoolState>(
-      keys: MempoolStateKey | MempoolStateKey[],
-      updateFn: (currentValue: Pick<MempoolState, K>) => Partial<MempoolState>,
+    updateState: async <K extends keyof State>(
+      keys: StateKey | StateKey[],
+      updateFn: (currentValue: Pick<State, K>) => Partial<State>,
     ): Promise<void> => {
       Logger.debug(
         `Acquiring Mutex: Updating in-memory state with keys: ${keys}`,
@@ -50,7 +49,7 @@ export const createMempoolState = (): MempoolStateService => {
         const newState = { ...state } // Create a shallow copy of the state
 
         if (Array.isArray(keys)) {
-          const currentValues = {} as Pick<MempoolState, K>
+          const currentValues = {} as Pick<State, K>
           keys.forEach((key) => {
             currentValues[key] = state[key]
           })
@@ -73,7 +72,7 @@ export const createMempoolState = (): MempoolStateService => {
 
           // throw error of it contains other keys
           Object.keys(updatedValues).forEach((key) => {
-            if (!keys.includes(key as MempoolStateKey)) {
+            if (!keys.includes(key as StateKey)) {
               throw new Error(
                 `Updated value must only contain the same keys as input: received ${key} (multiple)`,
               )
@@ -85,7 +84,7 @@ export const createMempoolState = (): MempoolStateService => {
             newState[key] = value
           })
         } else {
-          const currentValue = { [keys]: state[keys] } as Pick<MempoolState, K>
+          const currentValue = { [keys]: state[keys] } as Pick<State, K>
           const updatedValue = updateFn(currentValue)
 
           // throw error if empty

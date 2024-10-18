@@ -15,6 +15,7 @@ export type MempoolEntry = {
   // aggregator, if one was found during simulation
   aggregator?: string
 }
+
 /**
  * Hold userOp and status of the operation
  *
@@ -29,13 +30,6 @@ export type StandardPool = Record<string, MempoolEntry>
  */
 export type EntryCount = Record<string, number>
 
-/**
- * Reputation entry per address
- *
- *  The key is the address of an entity(account/paymaster/deployer/aggregator)
- */
-export type ReputationEntries = Record<string, ReputationEntry>
-
 export type BundleTxStatus = 'pending' | 'confirmed' | 'failed'
 
 export type PendingTxDetails = {
@@ -44,6 +38,13 @@ export type PendingTxDetails = {
   status: BundleTxStatus
 }
 
+/**
+ * Reputation entry per address
+ *
+ *  The key is the address of an entity(account/paymaster/deployer/aggregator)
+ */
+export type ReputationEntries = Record<string, ReputationEntry>
+
 /*
  * Hold the pending transactions for each bundle
  *
@@ -51,7 +52,7 @@ export type PendingTxDetails = {
  */
 export type BundleTxs = Record<string, PendingTxDetails>
 
-export type MempoolState = {
+export type State = {
   standardPool: StandardPool
   mempoolEntryCount: EntryCount // count entities in mempool.
   bundleTxs: BundleTxs
@@ -62,7 +63,7 @@ export type MempoolState = {
   reputationEntries: ReputationEntries
 }
 
-export enum MempoolStateKey {
+export enum StateKey {
   StandardPool = 'standardPool',
   MempoolEntryCount = 'mempoolEntryCount',
   BundleTxs = 'bundleTxs',
@@ -71,7 +72,7 @@ export enum MempoolStateKey {
   ReputationEntries = 'reputationEntries',
 }
 
-export type MempoolStateService = {
+export type StateService = {
   /**
    * Getter for the state. It allows for retrieving any part of the state.
    * Consumers of the getState function will get the proper return type based on the key they pass,
@@ -84,20 +85,20 @@ export type MempoolStateService = {
    *
    * @example
    * // single value can be retrieved:
-   * const { standardPool } = await mempoolStateService.getState(MempoolStateKey.StandardPool);
+   * const { standardPool } = await mempoolStateService.getState(StateKey.StandardPool);
    * console.log(standardPool)  // Logs the standardPool value
    *
    * // multiple values can be retrieved at once:
    * const { standardPool, blackList } = await mempoolStateService.getState([
-   *   MempoolStateKey.StandardPool,
-   *   MempoolStateKey.BlackList,
+   *   StateKey.StandardPool,
+   *   StateKey.BlackList,
    * ])
    * console.log(standardPool)  // Logs the standardPool value
    * console.log(blackList)     // Logs the blackList value
    */
-  getState: <K extends keyof MempoolState>(
-    keys: MempoolStateKey | MempoolStateKey[],
-  ) => Promise<Pick<MempoolState, K>>
+  getState: <K extends keyof State>(
+    keys: StateKey | StateKey[],
+  ) => Promise<Pick<State, K>>
 
   /**
    * Single setter to allow for atomic updates of any part of the state.
@@ -111,22 +112,22 @@ export type MempoolStateService = {
    *
    * // single value can be updated:
    * await mempoolStateService.updateState(
-   *  MempoolStateKey.StandardPool,
+   *  StateKey.StandardPool,
    * (currentValue) => {
    *  return { standardPool: { ...currentValue.standardPool, newEntry: 'value' } }
    * })
    *
    * // multiple values can be updated at once:
    * await mempoolStateService.updateState(
-   *  [MempoolStateKey.StandardPool, MempoolStateKey.BlackList],
+   *  [StateKey.StandardPool, StateKey.BlackList],
    * (currentValue) => {
    * return {
    *  standardPool: { ...currentValue.standardPool, newEntry: 'value' },
    *  blackList: [...currentValue.blackList, 'newBlackListedAddress'],
    * }})
    */
-  updateState: <K extends keyof MempoolState>(
-    key: MempoolStateKey | MempoolStateKey[],
-    updateFn: (currentValue: Pick<MempoolState, K>) => Partial<MempoolState>,
+  updateState: <K extends keyof State>(
+    key: StateKey | StateKey[],
+    updateFn: (currentValue: Pick<State, K>) => Partial<State>,
   ) => Promise<void>
 }

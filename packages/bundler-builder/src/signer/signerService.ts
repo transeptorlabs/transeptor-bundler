@@ -3,7 +3,7 @@ import { TransactionRequest } from '@ethersproject/providers'
 import { Wallet, ethers } from 'ethers'
 import { resolveProperties } from 'ethers/lib/utils.js'
 import { Logger } from '../../../shared/logger/index.js'
-import { BundleTxs } from '../mempool/index.js'
+import { BundleTxs } from '../state/index.js'
 import { ProviderService } from '../../../shared/provider/index.js'
 
 export type BundlerSignerWallets = Record<number, Wallet>

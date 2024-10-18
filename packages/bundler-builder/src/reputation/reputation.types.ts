@@ -46,13 +46,23 @@ export type ReputationManager = {
   updateSeenStatus(addr?: string): Promise<void>
 
   /**
+   * Update the last seen status of an entity.
+   *
+   * @param addrs - The addresses of the entities that are seen.
+   */
+  updateSeenStatusBatch(addrs: string[]): Promise<void>
+
+  /**
    * Update the included status of an entity.
    *
    * @param addr - The address of the entity that is included.
    */
   updateIncludedStatus(addr: string): Promise<void>
 
-  getStakeStatus(address: string): Promise<{
+  getStakeStatus(
+    address: string,
+    entryPointAddress: string,
+  ): Promise<{
     stakeInfo: StakeInfo
     isStaked: boolean
   }>
