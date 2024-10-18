@@ -1,10 +1,11 @@
-import { MempoolEntry, MempoolManagerBuilder } from '../mempool/index.js'
+import { MempoolManagerBuilder } from '../mempool/index.js'
 import { Logger } from '../../../shared/logger/index.js'
 import { SendBundleReturn } from '../../../shared/types/index.js'
 
 import { BundleBuilder } from './bundle-builder.js'
 import { BundleProcessor } from './bundle-processor.js'
 import { EventManagerWithListener } from '../event/index.js'
+import { MempoolEntry } from '../state/index.js'
 
 export type BundleManager = {
   /**

@@ -47,7 +47,6 @@ export const createRelayerHandlerRegistry = (
     return 'ok'
   },
   debug_bundler_getStakeStatus: async (params) => {
-    await debug.getStakeStatus(params[0])
-    return null
+    return await debug.getStakeStatus(params[0], params[1])
   },
 })

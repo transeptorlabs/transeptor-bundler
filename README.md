@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  A fast ERC-4337 bundler node with TypeScript-based <strong>compile-time type safety.</strong> 
+  A blazing fast, modular ERC-4337 TypeScript bundler built with the power of declarative functional programming.
 </p>
 
 <p align="center">

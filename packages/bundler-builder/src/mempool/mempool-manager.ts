@@ -8,13 +8,8 @@ import {
   ValidationErrors,
 } from '../../../shared/validatation/index.js'
 import { RpcError, requireCond } from '../../../shared/utils/index.js'
-import {
-  EntryCount,
-  EntryStatus,
-  MempoolEntry,
-  MempoolStateKey,
-  MempoolStateService,
-} from './mempool.types.js'
+import { EntryCount, EntryStatus, MempoolEntry } from '../state/index.js'
+import { StateKey, StateService } from '../state/index.js'
 
 export type MempoolManagerCore = {
   /**
@@ -169,7 +164,7 @@ export const createMempoolManagerBuilder = (
 }
 
 export const createMempoolManagerCore = (
-  mp: MempoolStateService,
+  state: StateService,
   reputationManager: ReputationManager,
   bundleSize: number, // maximum # of pending mempool entities
 ): MempoolManagerCore => {
@@ -227,8 +222,8 @@ export const createMempoolManagerCore = (
 
     await reputationManager.checkBanned(title, stakeInfo)
 
-    const { mempoolEntryCount } = await mp.getState(
-      MempoolStateKey.MempoolEntryCount,
+    const { mempoolEntryCount } = await state.getState(
+      StateKey.MempoolEntryCount,
     )
     const foundCount = mempoolEntryCount[stakeInfo.addr.toLowerCase()] ?? 0
     if (foundCount > THROTTLED_ENTITY_MEMPOOL_COUNT) {
@@ -274,14 +269,14 @@ export const createMempoolManagerCore = (
       if (!(e instanceof RpcError)) throw e
     }
 
-    // TODO: This can be batched to optimize performance
-    await reputationManager.updateSeenStatus(aggregator)
-    await reputationManager.updateSeenStatus(userOp.paymaster)
-    await reputationManager.updateSeenStatus(userOp.factory)
+    const addrs = [userOp.paymaster, userOp.factory, aggregator].filter(
+      (addr) => addr != undefined,
+    ) as string[]
+    await reputationManager.updateSeenStatusBatch(addrs)
   }
 
   const getKnownSenders = async (): Promise<string[]> => {
-    const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+    const { standardPool } = await state.getState(StateKey.StandardPool)
     const entries = Object.values(standardPool)
     if (entries.length === 0) {
       return []
@@ -296,7 +291,7 @@ export const createMempoolManagerCore = (
   }
 
   const getKnownEntities = async (): Promise<string[]> => {
-    const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+    const { standardPool } = await state.getState(StateKey.StandardPool)
     const entries = Object.values(standardPool)
     if (entries.length === 0) {
       return []
@@ -369,7 +364,7 @@ export const createMempoolManagerCore = (
     sender: string,
     nonce: BigNumberish,
   ): Promise<MempoolEntry | undefined> => {
-    const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+    const { standardPool } = await state.getState(StateKey.StandardPool)
     const entries = Object.values(standardPool)
     if (entries.length === 0) {
       return undefined
@@ -414,18 +409,15 @@ export const createMempoolManagerCore = (
       const oldEntry = await findBySenderNonce(userOp.sender, userOp.nonce)
       if (oldEntry) {
         checkReplaceUserOp(oldEntry, entry)
-        await mp.updateState(
-          MempoolStateKey.StandardPool,
-          ({ standardPool }) => {
-            delete standardPool[oldEntry.userOpHash]
-            return {
-              standardPool: {
-                ...standardPool,
-                [userOpHash]: entry,
-              },
-            }
-          },
-        )
+        await state.updateState(StateKey.StandardPool, ({ standardPool }) => {
+          delete standardPool[oldEntry.userOpHash]
+          return {
+            standardPool: {
+              ...standardPool,
+              [userOpHash]: entry,
+            },
+          }
+        })
 
         Logger.debug(
           {
@@ -449,8 +441,8 @@ export const createMempoolManagerCore = (
         Logger.debug(
           'Reputation and throttling checks passed, adding to mempool...',
         )
-        await mp.updateState(
-          [MempoolStateKey.StandardPool, MempoolStateKey.MempoolEntryCount],
+        await state.updateState(
+          [StateKey.StandardPool, StateKey.MempoolEntryCount],
           ({ standardPool, mempoolEntryCount }) => {
             Logger.debug({ addr: userOp.sender }, 'Updating sender count...')
             const sender = userOp.sender.toLowerCase()
@@ -505,7 +497,7 @@ export const createMempoolManagerCore = (
     findByHash: async (
       userOpHash: string,
     ): Promise<MempoolEntry | undefined> => {
-      const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+      const { standardPool } = await state.getState(StateKey.StandardPool)
       return standardPool[userOpHash]
     },
 
@@ -514,7 +506,7 @@ export const createMempoolManagerCore = (
     ): Promise<boolean> => {
       let entry: MempoolEntry | undefined
       if (typeof userOpOrHash === 'string') {
-        const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+        const { standardPool } = await state.getState(StateKey.StandardPool)
         entry = standardPool[userOpOrHash]
       } else {
         entry = await findBySenderNonce(userOpOrHash.sender, userOpOrHash.nonce)
@@ -525,8 +517,8 @@ export const createMempoolManagerCore = (
       }
 
       const userOpHash = entry.userOpHash
-      await mp.updateState(
-        [MempoolStateKey.StandardPool, MempoolStateKey.MempoolEntryCount],
+      await state.updateState(
+        [StateKey.StandardPool, StateKey.MempoolEntryCount],
         ({ standardPool, mempoolEntryCount }) => {
           delete standardPool[userOpHash]
 
@@ -546,7 +538,7 @@ export const createMempoolManagerCore = (
     },
 
     getNextPending: async (): Promise<MempoolEntry[]> => {
-      const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+      const { standardPool } = await state.getState(StateKey.StandardPool)
 
       let count = 0
       const foundPendingEntries: MempoolEntry[] = []
@@ -559,7 +551,7 @@ export const createMempoolManagerCore = (
 
       // Update the status of the entries to 'bundling'
       const userOpHashes = foundPendingEntries.map((entry) => entry.userOpHash)
-      await mp.updateState(MempoolStateKey.StandardPool, ({ standardPool }) => {
+      await state.updateState(StateKey.StandardPool, ({ standardPool }) => {
         userOpHashes.forEach((hash) => {
           standardPool[hash].status = 'bundling'
         })
@@ -570,7 +562,7 @@ export const createMempoolManagerCore = (
     },
 
     getAllPending: async (): Promise<MempoolEntry[]> => {
-      const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+      const { standardPool } = await state.getState(StateKey.StandardPool)
 
       const entries = Object.values(standardPool).filter(
         (entry) => entry.status === 'pending',
@@ -578,7 +570,7 @@ export const createMempoolManagerCore = (
 
       // Update the status of the entries to 'bundling'
       const userOpHashes = entries.map((entry) => entry.userOpHash)
-      await mp.updateState(MempoolStateKey.StandardPool, ({ standardPool }) => {
+      await state.updateState(StateKey.StandardPool, ({ standardPool }) => {
         userOpHashes.forEach((hash) => {
           standardPool[hash].status = 'bundling'
         })
@@ -592,39 +584,36 @@ export const createMempoolManagerCore = (
       userOpHash: string,
       status: EntryStatus,
     ): Promise<void> => {
-      const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+      const { standardPool } = await state.getState(StateKey.StandardPool)
       const entry = standardPool[userOpHash]
       if (entry) {
-        await mp.updateState(
-          MempoolStateKey.StandardPool,
-          ({ standardPool }) => {
-            return {
-              standardPool: {
-                ...standardPool,
-                [userOpHash]: {
-                  ...entry,
-                  status,
-                },
+        await state.updateState(StateKey.StandardPool, ({ standardPool }) => {
+          return {
+            standardPool: {
+              ...standardPool,
+              [userOpHash]: {
+                ...entry,
+                status,
               },
-            }
-          },
-        )
+            },
+          }
+        })
       }
     },
 
     isMempoolOverloaded: async (): Promise<boolean> => {
-      const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+      const { standardPool } = await state.getState(StateKey.StandardPool)
       return Object.keys(standardPool).length >= bundleSize
     },
 
     size: async (): Promise<number> => {
-      const { standardPool } = await mp.getState(MempoolStateKey.StandardPool)
+      const { standardPool } = await state.getState(StateKey.StandardPool)
       return Object.keys(standardPool).length
     },
 
     clearState: async (): Promise<void> => {
-      await mp.updateState(
-        [MempoolStateKey.StandardPool, MempoolStateKey.MempoolEntryCount],
+      await state.updateState(
+        [StateKey.StandardPool, StateKey.MempoolEntryCount],
         (_) => {
           return {
             standardPool: {},
@@ -635,9 +624,9 @@ export const createMempoolManagerCore = (
     },
 
     dump: async (): Promise<UserOperation[]> => {
-      const { standardPool, mempoolEntryCount } = await mp.getState([
-        MempoolStateKey.StandardPool,
-        MempoolStateKey.MempoolEntryCount,
+      const { standardPool, mempoolEntryCount } = await state.getState([
+        StateKey.StandardPool,
+        StateKey.MempoolEntryCount,
       ])
 
       Logger.debug(
@@ -662,7 +651,7 @@ export const createMempoolManagerCore = (
         return
       }
 
-      await mp.updateState(MempoolStateKey.BundleTxs, ({ bundleTxs }) => {
+      await state.updateState(StateKey.BundleTxs, ({ bundleTxs }) => {
         return {
           bundleTxs: {
             ...bundleTxs,

@@ -22,6 +22,7 @@ export type DebugAPI = {
   clearReputation(): Promise<void>
   getStakeStatus(
     address: string,
+    entryPointAddress: string,
   ): Promise<{ stakeInfo: StakeInfo; isStaked: boolean }>
 }
 
@@ -93,11 +94,12 @@ export const createDebugAPI = (
 
     getStakeStatus: async (
       address: string,
+      entryPointAddress: string,
     ): Promise<{
       stakeInfo: StakeInfo
       isStaked: boolean
     }> => {
-      return await reputationManager.getStakeStatus(address)
+      return await reputationManager.getStakeStatus(address, entryPointAddress)
     },
   }
 }

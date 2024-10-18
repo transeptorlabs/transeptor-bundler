@@ -1,6 +1,6 @@
 import { BigNumber, ethers } from 'ethers'
 import { Logger } from '../../../shared/logger/index.js'
-import { MempoolEntry } from '../../../bundler-builder/src/mempool/index.js'
+import { MempoolEntry } from '../state/index.js'
 import { StorageMap, UserOperation } from '../../../shared/types/index.js'
 import { mergeStorageMap } from '../../../shared/utils/index.js'
 import {

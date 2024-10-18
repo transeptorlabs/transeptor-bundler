@@ -4,7 +4,7 @@ import {
   mockBuildRelayUserOpParam,
   mockEntryPointGetUserOpHash,
 } from '../../test/test-helpers.js'
-import { createMempoolState } from './mempool-state.js'
+import { createState } from './mempool-state.js'
 import {
   createMempoolManagerCore,
   MempoolManagerCore,
@@ -19,7 +19,7 @@ describe('MempoolManagerCore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mempoolManager = createMempoolManagerCore(
-      createMempoolState(),
+      createState(),
       mockReputationManager,
       MOCK_BUNDLE_SIZE,
     )

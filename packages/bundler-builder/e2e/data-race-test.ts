@@ -1,18 +1,18 @@
 /* eslint-disable no-console */
-import { createMempoolState } from '../src/mempool/index.js'
+import { createState } from '../src/mempool/index.js'
 import {
-  MempoolStateKey,
-  MempoolStateService,
+  StateKey,
+  StateService,
 } from '../src/mempool/mempool.types.js'
 
-const sharedState = createMempoolState()
+const sharedState = createState()
 
 /**
  * Simulating concurrent requests
  */
 const simulateConcurrentRequests = async () => {
   const incrementPromises = Array.from({ length: 10 }, (_, i) =>
-    sharedState.updateState(MempoolStateKey.StandardPool, (currentValue) => {
+    sharedState.updateState(StateKey.StandardPool, (currentValue) => {
       return {
         standardPool: {
           ...currentValue.standardPool,
@@ -49,7 +49,7 @@ const simulateConcurrentRequests = async () => {
 
   const addEntryCountPromises = Array.from({ length: 5 }, (_, i) =>
     sharedState.updateState(
-      MempoolStateKey.MempoolEntryCount,
+      StateKey.MempoolEntryCount,
       ({ mempoolEntryCount }) => {
         const address = `0x_some_address_${i}`
         if (mempoolEntryCount[address] === undefined) {
@@ -76,8 +76,8 @@ const simulateConcurrentRequests = async () => {
   // Expected output
   console.log('Standard Pool')
   const { standardPool, mempoolEntryCount } = await sharedState.getState([
-    MempoolStateKey.StandardPool,
-    MempoolStateKey.MempoolEntryCount,
+    StateKey.StandardPool,
+    StateKey.MempoolEntryCount,
   ])
   Object.entries(standardPool).forEach(([key, value]) => {
     console.log(`Key: ${key}, Value: ${value}`)
@@ -92,14 +92,14 @@ const simulateConcurrentRequests = async () => {
 /**
  * Simple manager to handle state updates
  *
- * @param passedSharedState - MempoolStateService.
+ * @param passedSharedState - StateService.
  * @returns  - Manager object with methods to update state.
  */
-const createManager = (passedSharedState: MempoolStateService) => {
+const createManager = (passedSharedState: StateService) => {
   return {
     addEntry: async () => {
       await passedSharedState.updateState(
-        MempoolStateKey.MempoolEntryCount,
+        StateKey.MempoolEntryCount,
         ({ mempoolEntryCount }) => {
           const address = '0x_some_address_100'
           return {
@@ -122,7 +122,7 @@ const main = async () => {
   await manager.addEntry()
   console.log('Entry Count After')
   const { mempoolEntryCount } = await sharedState.getState(
-    MempoolStateKey.MempoolEntryCount,
+    StateKey.MempoolEntryCount,
   )
   Object.entries(mempoolEntryCount).forEach(([key, value]) => {
     console.log(`Key: ${key}, Value: ${value}`)
