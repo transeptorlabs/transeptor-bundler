@@ -31,4 +31,5 @@ export const mockReputationManager: ReputationManager = {
   checkThrottled: vi.fn().mockResolvedValue(Promise.resolve()),
   checkStake: vi.fn().mockResolvedValue(Promise.resolve()),
   calculateMaxAllowedMempoolOpsUnstaked: vi.fn().mockResolvedValue(100),
+  updateSeenStatusBatch: vi.fn().mockResolvedValue(Promise.resolve()),
 }

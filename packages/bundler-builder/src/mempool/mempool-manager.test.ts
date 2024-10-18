@@ -4,7 +4,7 @@ import {
   mockBuildRelayUserOpParam,
   mockEntryPointGetUserOpHash,
 } from '../../test/test-helpers.js'
-import { createState } from './mempool-state.js'
+import { createState } from '../state/index.js'
 import {
   createMempoolManagerCore,
   MempoolManagerCore,
