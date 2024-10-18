@@ -1,9 +1,5 @@
 /* eslint-disable no-console */
-import { createState } from '../src/mempool/index.js'
-import {
-  StateKey,
-  StateService,
-} from '../src/mempool/mempool.types.js'
+import { createState, StateKey, StateService } from '../src/state/index.js'
 
 const sharedState = createState()
 

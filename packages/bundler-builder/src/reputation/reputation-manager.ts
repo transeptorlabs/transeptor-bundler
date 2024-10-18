@@ -256,7 +256,7 @@ export const createReputationManager = (
 
     getStakeStatus: async (
       address: string,
-      entryPointAddress: string,
+      _: string,
     ): Promise<{
       stakeInfo: StakeInfo
       isStaked: boolean
