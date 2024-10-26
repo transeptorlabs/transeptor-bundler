@@ -23,6 +23,7 @@ import {
 } from './mempool/index.js'
 import { createEventManagerWithListener } from './event/event-manager-with-reputation.js'
 import { createState } from './state/index.js'
+import { createDepositManager } from './deposit/index.js'
 
 let p2pNode: Libp2pNode = undefined
 
@@ -50,9 +51,11 @@ const runBundlerBuilder = async () => {
   await reputationManager.addBlacklist(config.blacklist)
   reputationManager.startHourlyCron()
 
+  const depositManager = createDepositManager(state, config.entryPointContract)
   const mempoolManagerCore = createMempoolManagerCore(
     state,
     reputationManager,
+    depositManager,
     config.bundleSize,
   )
 

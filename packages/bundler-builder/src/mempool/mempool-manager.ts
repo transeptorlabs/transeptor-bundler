@@ -10,6 +10,7 @@ import {
 import { RpcError, requireCond } from '../../../shared/utils/index.js'
 import { EntryCount, EntryStatus, MempoolEntry } from '../state/index.js'
 import { StateKey, StateService } from '../state/index.js'
+import { DepositManager } from '../deposit/index.js'
 
 export type MempoolManagerCore = {
   /**
@@ -166,6 +167,7 @@ export const createMempoolManagerBuilder = (
 export const createMempoolManagerCore = (
   state: StateService,
   reputationManager: ReputationManager,
+  depositManager: DepositManager,
   bundleSize: number, // maximum # of pending mempool entities
 ): MempoolManagerCore => {
   const MAX_MEMPOOL_USEROPS_PER_SENDER = 4 // max # of pending mempool entities per sender
@@ -396,6 +398,8 @@ export const createMempoolManagerCore = (
         factoryInfo,
         aggregatorInfo,
       } = relayUserOpParam
+
+      await depositManager.checkPaymasterDeposit(userOp)
 
       const entry: MempoolEntry = {
         userOp,
