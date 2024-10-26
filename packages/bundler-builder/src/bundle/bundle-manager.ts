@@ -6,6 +6,8 @@ import { BundleBuilder } from './bundle-builder.js'
 import { BundleProcessor } from './bundle-processor.js'
 import { EventManagerWithListener } from '../event/index.js'
 import { MempoolEntry } from '../state/index.js'
+import { isAccountOrFactoryError } from '../../../shared/utils/index.js'
+import { ReputationManagerUpdater } from '../reputation/index.js'
 
 export type BundleManager = {
   /**
@@ -28,6 +30,7 @@ export const createBundleManager = (
   bundleBuilder: BundleBuilder,
   eventsManager: EventManagerWithListener,
   mempoolManagerBuilder: MempoolManagerBuilder,
+  reputationManagerUpdater: ReputationManagerUpdater,
   isAutoBundle: boolean,
   autoBundleInterval: number,
 ): BundleManager => {
@@ -85,10 +88,33 @@ export const createBundleManager = (
     if (markedToRemoveUserOpsHashes.length > 0) {
       Logger.debug(
         { total: markedToRemoveUserOpsHashes.length },
-        'Bundle full: removing banned UserOps from mempool',
+        'Marked to remove: removing UserOps from mempool',
       )
-      markedToRemoveUserOpsHashes.forEach(async (userOpHash) => {
-        await mempoolManagerBuilder.removeUserOp(userOpHash)
+      markedToRemoveUserOpsHashes.forEach(async (opDetails) => {
+        /**
+         * EREP-015: A `paymaster` should not have its opsSeen incremented on failure of factory or account
+         * When running 2nd validation (before inclusion in a bundle), if a UserOperation fails because of factory or
+         * account error (either a FailOp revert or validation rule), then the paymaster's opsSeen valid is decremented by 1.
+         */
+        if (opDetails.err) {
+          if (
+            opDetails.paymaster != null &&
+            isAccountOrFactoryError(
+              opDetails.err.errorCode,
+              opDetails.err.message,
+            )
+          ) {
+            Logger.debug(
+              opDetails,
+              'Do not blame paymaster, for account/factory failure',
+            )
+            await reputationManagerUpdater.updateSeenStatus(
+              opDetails.paymaster,
+              'decrement',
+            )
+          }
+        }
+        await mempoolManagerBuilder.removeUserOp(opDetails.userOpHash)
       })
     }
 

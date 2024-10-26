@@ -2,9 +2,10 @@ import { BigNumber, ethers } from 'ethers'
 import { Logger } from '../../../shared/logger/index.js'
 import { MempoolEntry } from '../state/index.js'
 import { StorageMap, UserOperation } from '../../../shared/types/index.js'
-import { mergeStorageMap } from '../../../shared/utils/index.js'
+import { mergeStorageMap, RpcError } from '../../../shared/utils/index.js'
 import {
   ValidateUserOpResult,
+  ValidationErrors,
   ValidationService,
 } from '../../../shared/validatation/index.js'
 import { ReputationManager, ReputationStatus } from '../reputation/index.js'
@@ -17,11 +18,20 @@ export type BundleBuilder = {
   ) => Promise<BundleReadyToSend>
 }
 
+type RemoveUserOpDetails = {
+  paymaster: string | undefined
+  userOpHash: string
+  err?: {
+    message: string
+    errorCode: ValidationErrors
+  }
+}
+
 export type BundleReadyToSend = {
   bundle: UserOperation[]
   storageMap: StorageMap
   notIncludedUserOpsHashes: string[]
-  markedToRemoveUserOpsHashes: string[]
+  markedToRemoveUserOpsHashes: RemoveUserOpDetails[]
 }
 
 export const createBundleBuilder = (
@@ -53,7 +63,7 @@ export const createBundleBuilder = (
       const stakedEntityCount: { [addr: string]: number } = {} // throttled paymasters and deployers are allowed only small UserOps per bundle.
       const senders = new Set<string>() // each sender is allowed only once per bundle
       const notIncludedUserOpsHashes: string[] = []
-      const markedToRemoveUserOpsHashes: string[] = []
+      const markedToRemoveUserOpsHashes: RemoveUserOpDetails[] = []
 
       mainLoop: for (let i = 0; i < entries.length; i++) {
         const entry = entries[i]
@@ -69,7 +79,10 @@ export const createBundleBuilder = (
           paymasterStatus === ReputationStatus.BANNED ||
           deployerStatus === ReputationStatus.BANNED
         ) {
-          markedToRemoveUserOpsHashes.push(entry.userOpHash)
+          markedToRemoveUserOpsHashes.push({
+            userOpHash: entry.userOpHash,
+            paymaster: entry.userOp.paymaster,
+          })
           continue
         }
 
@@ -126,7 +139,21 @@ export const createBundleBuilder = (
             { error: e.message, entry: entry },
             'failed 2nd validation, removing from mempool:',
           )
-          markedToRemoveUserOpsHashes.push(entry.userOpHash)
+
+          markedToRemoveUserOpsHashes.push({
+            err:
+              e instanceof RpcError
+                ? {
+                    message: e.message,
+                    errorCode: e.code,
+                  }
+                : {
+                    message: e.message,
+                    errorCode: ValidationErrors.InternalError,
+                  },
+            userOpHash: entry.userOpHash,
+            paymaster,
+          })
           continue
         }
 

@@ -50,7 +50,11 @@ const validateParameters = async (
     )
   }
   // minimal sanity check: userOp exists, and all members are hex
-  requireCond(userOp1 != null, 'No UserOperation param')
+  requireCond(
+    userOp1 != null,
+    'No UserOperation param',
+    ValidationErrors.InvalidFields,
+  )
   const userOp = (await resolveProperties(userOp1)) as any
 
   const fields = ['sender', 'nonce', 'callData']
