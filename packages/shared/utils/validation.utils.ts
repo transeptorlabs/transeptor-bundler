@@ -23,12 +23,12 @@ type ValidationData = {
  * @param mustFields - The fields that must be present.
  * @param optionalFields - The fields that are optional.
  */
-export function requireAddressAndFields(
+export const requireAddressAndFields = (
   userOp: UserOperation,
   addrField: string,
   mustFields: string[],
   optionalFields: string[] = [],
-): void {
+): void => {
   const op = userOp as any
   const addr = op[addrField]
   if (addr == null) {
@@ -64,10 +64,10 @@ export function requireAddressAndFields(
  * @param paymasterValidationData - Paymaster validation data.
  * @returns Aggregator, validAfter, validUntil.
  */
-export function mergeValidationData(
+export const mergeValidationData = (
   accountValidationData: ValidationData,
   paymasterValidationData: ValidationData,
-): ValidationData {
+): ValidationData => {
   return {
     aggregator:
       paymasterValidationData.aggregator !== ethers.constants.AddressZero
@@ -90,9 +90,9 @@ export function mergeValidationData(
  * @param validationData - Validation data.
  * @returns Aggregator, validAfter, validUntil.
  */
-export function parseValidationData(
+export const parseValidationData = (
   validationData: BigNumberish,
-): ValidationData {
+): ValidationData => {
   const data = hexZeroPad(BigNumber.from(validationData).toHexString(), 32)
 
   // string offsets start from left (msb)
@@ -115,12 +115,29 @@ export function parseValidationData(
  * @param paymasterValidationData - Paymaster validation data.
  * @returns Aggregator, validAfter, validUntil.
  */
-export function mergeValidationDataValues(
+export const mergeValidationDataValues = (
   accountValidationData: BigNumberish,
   paymasterValidationData: BigNumberish,
-): ValidationData {
+): ValidationData => {
   return mergeValidationData(
     parseValidationData(accountValidationData),
     parseValidationData(paymasterValidationData),
+  )
+}
+
+/**
+ * Check if the error is related to account or factory.
+ *
+ * @param code - The error code.
+ * @param errorMessage - The error message.
+ * @returns Whether the error is related to account or factory.
+ */
+export const isAccountOrFactoryError = (
+  code: ValidationErrors,
+  errorMessage: string,
+): boolean => {
+  return (
+    code === ValidationErrors.SimulateValidation &&
+    errorMessage.match(/FailedOpWithRevert\(\d+,"AA[21]/) != null
   )
 }

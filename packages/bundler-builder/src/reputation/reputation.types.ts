@@ -42,8 +42,12 @@ export type ReputationManager = {
    * Update the last seen status of an entity.
    *
    * @param addr - The address of the entity that is seen.
+   * @param action - The action to perform (increment or decrement).
    */
-  updateSeenStatus(addr?: string): Promise<void>
+  updateSeenStatus(
+    addr: string | undefined,
+    action: 'increment' | 'decrement',
+  ): Promise<void>
 
   /**
    * Update the last seen status of an entity.
@@ -124,3 +128,8 @@ export type ReputationManager = {
    */
   calculateMaxAllowedMempoolOpsUnstaked(entity: string): Promise<number>
 }
+
+export type ReputationManagerUpdater = Pick<
+  ReputationManager,
+  'updateSeenStatus'
+>

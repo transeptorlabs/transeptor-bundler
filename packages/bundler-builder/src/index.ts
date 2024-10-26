@@ -14,7 +14,10 @@ import { createProviderService } from '../../shared/provider/index.js'
 import { createValidationService } from '../../shared/validatation/index.js'
 import { createSimulator } from '../../shared/sim/index.js'
 import { createSignerService } from './signer/index.js'
-import { createReputationManager } from './reputation/index.js'
+import {
+  createReputationManager,
+  createReputationManagerUpdater,
+} from './reputation/index.js'
 import {
   createMempoolManagerBuilder,
   createMempoolManagerCore,
@@ -89,6 +92,7 @@ const runBundlerBuilder = async () => {
     ),
     eventManager,
     createMempoolManagerBuilder(mempoolManagerCore),
+    createReputationManagerUpdater(reputationManager),
     config.isAutoBundle,
     config.autoBundleInterval,
   )

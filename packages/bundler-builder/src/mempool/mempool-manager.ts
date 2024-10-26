@@ -266,7 +266,7 @@ export const createMempoolManagerCore = (
     userOp: UserOperation,
   ): Promise<void> => {
     try {
-      await reputationManager.updateSeenStatus(userOp.sender)
+      await reputationManager.updateSeenStatus(userOp.sender, 'increment')
     } catch (e: any) {
       if (!(e instanceof RpcError)) throw e
     }

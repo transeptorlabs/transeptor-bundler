@@ -3,7 +3,7 @@ import { hexlify } from 'ethers/lib/utils.js'
 export const requireCond = (
   cond: boolean,
   msg: string,
-  code?: number,
+  code: number,
   data: any = undefined,
 ): void => {
   if (!cond) {
@@ -15,7 +15,7 @@ export class RpcError extends Error {
   // error codes from: https://eips.ethereum.org/EIPS/eip-1474
   constructor(
     msg: string,
-    readonly code?: number,
+    readonly code: number,
     readonly data: any = undefined,
   ) {
     super(msg)

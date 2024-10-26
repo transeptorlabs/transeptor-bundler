@@ -6,6 +6,7 @@ import {
   ReputationManager,
   ReputationParams,
   ReputationStatus,
+  ReputationManagerUpdater,
 } from './reputation.types.js'
 import {
   StakeInfo,
@@ -13,6 +14,14 @@ import {
 } from '../../../shared/validatation/index.js'
 import { requireCond, tostr } from '../../../shared/utils/index.js'
 import { StateService, ReputationEntries, StateKey } from '../state/index.js'
+
+export const createReputationManagerUpdater = (
+  reputationManager: ReputationManager,
+): ReputationManagerUpdater => {
+  return {
+    updateSeenStatus: reputationManager.updateSeenStatus,
+  }
+}
 
 export const createReputationManager = (
   state: StateService,
@@ -138,6 +147,13 @@ export const createReputationManager = (
     const { reputationEntries } = await state.getState(
       StateKey.ReputationEntries,
     )
+
+    await Promise.all([
+      Object.values(reputationEntries).forEach(async (entry) => {
+        const status = await getStatus(entry.address)
+        entry.status = status
+      }),
+    ])
     return Object.values(reputationEntries)
   }
 
@@ -180,8 +196,11 @@ export const createReputationManager = (
       })
     },
 
-    updateSeenStatus: async (addr?: string): Promise<void> => {
-      if (addr == null) {
+    updateSeenStatus: async (
+      addr: string | undefined,
+      action: 'increment' | 'decrement',
+    ): Promise<void> => {
+      if (!addr || addr == null) {
         return
       }
 
@@ -191,12 +210,13 @@ export const createReputationManager = (
         StateKey.ReputationEntries,
         ({ reputationEntries }) => {
           const entry = reputationEntries[addr]
+          const opsSeenValue = action === 'increment' ? 1 : -1
           return {
             reputationEntries: {
               ...reputationEntries,
               [addr]: {
                 address: addr,
-                opsSeen: entry ? entry.opsSeen + 1 : 0,
+                opsSeen: entry ? entry.opsSeen + opsSeenValue : 0,
                 opsIncluded: entry ? entry.opsIncluded : 0,
               },
             },
@@ -303,17 +323,13 @@ export const createReputationManager = (
     setReputation: async (
       reputations: ReputationEntry[],
     ): Promise<ReputationEntry[]> => {
-      if (reputations.length === 0) {
-        return dump()
-      }
-
       const initalReady: ReputationEntries = {}
       const newEntries = reputations.reduce((acc, rep) => {
         const addr = rep.address.toLowerCase()
         acc[addr] = {
           address: addr,
-          opsSeen: rep.opsSeen,
-          opsIncluded: rep.opsIncluded,
+          opsSeen: BigNumber.from(rep.opsSeen).toNumber(),
+          opsIncluded: BigNumber.from(rep.opsIncluded).toNumber(),
         }
         return acc
       }, initalReady)

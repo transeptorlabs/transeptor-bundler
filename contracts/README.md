@@ -8,5 +8,5 @@ Set of helper contracts for the Transeptor bundler.
 ## Compile
 
 ```bash
-npm run build:contracts
+yarn build:contracts
 ```
