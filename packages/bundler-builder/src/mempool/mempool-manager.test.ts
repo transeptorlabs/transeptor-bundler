@@ -9,7 +9,10 @@ import {
   createMempoolManagerCore,
   MempoolManagerCore,
 } from './mempool-manager.js'
-import { mockReputationManager } from '../../test/mocks/index.js'
+import {
+  mockReputationManager,
+  mockDepositManager,
+} from '../../test/mocks/index.js'
 import { BigNumber } from 'ethers'
 
 describe('MempoolManagerCore', () => {
@@ -21,6 +24,7 @@ describe('MempoolManagerCore', () => {
     mempoolManager = createMempoolManagerCore(
       createState(),
       mockReputationManager,
+      mockDepositManager,
       MOCK_BUNDLE_SIZE,
     )
   })
