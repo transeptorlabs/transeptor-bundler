@@ -57,6 +57,10 @@ export interface AccessInfo {
   reads: { [slot: string]: string }
   // count of writes.
   writes: { [slot: string]: number }
+  // count of transient reads
+  transientReads: { [slot: string]: number }
+  // count of transient writes
+  transientWrites: { [slot: string]: number }
 }
 
 export interface LogInfo {
