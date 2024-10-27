@@ -224,6 +224,20 @@ const extractStorageMap = (
 }
 
 /**
+ * Check if the given entity is staked.
+ *
+ * @param entStake - the stake info for the entity.
+ * @returns true if the entity is staked.
+ */
+const isStaked = (entStake?: StakeInfo): boolean => {
+  return (
+    entStake != null &&
+    BigNumber.from(1).lte(entStake.stake) &&
+    BigNumber.from(1).lte(entStake.unstakeDelaySec)
+  )
+}
+
+/**
  * parse collected simulation traces and revert if they break our rules
  *
  * @param userOp the userOperation that was used in this simulation
@@ -249,8 +263,6 @@ export const tracerResultParser = (
     'BASEFEE',
     'BLOCKHASH',
     'NUMBER',
-    'SELFBALANCE',
-    'BALANCE',
     'ORIGIN',
     'GAS',
     'CREATE',
@@ -260,6 +272,9 @@ export const tracerResultParser = (
     'PREVRANDAO',
     'INVALID',
   ])
+
+  // opcodes allowed in staked entities [OP-080]
+  const opcodesOnlyInStakedEntities = new Set(['BALANCE', 'SELFBALANCE'])
 
   if (Object.values(tracerResults.callsFromEntryPoint).length < 1) {
     throw new Error('Unexpected traceCall result: no calls from entrypoint.')
@@ -328,13 +343,20 @@ export const tracerResultParser = (
     )
 
     // opcodes from [OP-011]
-    Object.keys(opcodes).forEach((opcode) =>
+    Object.keys(opcodes).forEach((opcode) => {
       requireCond(
         !bannedOpCodes.has(opcode),
         `${entityTitle} uses banned opcode: ${opcode}`,
         ValidationErrors.OpcodeValidation,
-      ),
-    )
+      )
+
+      // [OP-080]
+      requireCond(
+        !opcodesOnlyInStakedEntities.has(opcode) || isStaked(entStakes),
+        `unstaked ${entityTitle} uses banned opcode: ${opcode}`,
+        ValidationErrors.OpcodeValidation,
+      )
+    })
 
     // [OP-031] - Check CREATE2 opcode for factories
     if (entityTitle === 'factory') {
@@ -475,34 +497,6 @@ export const tracerResultParser = (
         )} slot ${requireStakeSlot}`,
       )
     })
-
-    // [EREP-050]
-    if (entityTitle === 'paymaster') {
-      const validatePaymasterUserOp = callStack.find(
-        (call) =>
-          call.method === 'validatePaymasterUserOp' && call.to === entityAddr,
-      )
-      const context = validatePaymasterUserOp?.return?.context
-      requireCondAndStake(
-        context != null && context !== '0x',
-        entStakes,
-        'unstaked paymaster must not return context',
-      )
-    }
-
-    /**
-     * Check if the given entity is staked.
-     *
-     * @param entStake - the stake info for the entity.
-     * @returns true if the entity is staked.
-     */
-    function isStaked(entStake?: StakeInfo): boolean {
-      return (
-        entStake != null &&
-        BigNumber.from(1).lte(entStake.stake) &&
-        BigNumber.from(1).lte(entStake.unstakeDelaySec)
-      )
-    }
 
     // helper method: if condition is true, then entity must be staked.
     /**
