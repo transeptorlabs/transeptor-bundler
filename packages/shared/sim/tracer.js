@@ -153,7 +153,7 @@ function bundlerCollectorTracer() {
         }
       }
       this.lastOp = opcode;
-      if (opcode === 'SLOAD' || opcode === 'SSTORE') {
+      if (opcode === 'SLOAD' || opcode === 'SSTORE' || opcode === 'TLOAD' || opcode === 'TSTORE') {
         var slot = toWord(log.stack.peek(0).toString(16));
         var slotHex = toHex(slot);
         var addr = log.contract.getAddress();
@@ -162,7 +162,9 @@ function bundlerCollectorTracer() {
         if (access == null) {
           access = {
             reads: {},
-            writes: {}
+            writes: {},
+            transientReads: {},
+            transientWrites: {}
           };
           this.currentLevel.access[addrHex] = access;
         }
@@ -170,8 +172,12 @@ function bundlerCollectorTracer() {
           if (access.reads[slotHex] == null && access.writes[slotHex] == null) {
             access.reads[slotHex] = toHex(db.getState(addr, slot));
           }
-        } else {
-          this.countSlot(access.writes, slotHex);
+        } else if (opcode === 'SSTORE') {
+          this.countSlot(access.writes, slotHex)
+        } else if (opcode === 'TLOAD') {
+          this.countSlot(access.transientReads, slotHex)
+        } else if (opcode === 'TSTORE') {
+          this.countSlot(access.transientWrites, slotHex)
         }
       }
       if (opcode === 'KECCAK256') {

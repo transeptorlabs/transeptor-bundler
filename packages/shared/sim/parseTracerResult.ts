@@ -374,129 +374,147 @@ export const tracerResultParser = (
     }
 
     // testing read/write access on contract "addr"
-    Object.entries(access).forEach(([addr, { reads, writes }]) => {
-      if (addr === sender) {
-        // allowed to access sender's storage
-        // [STO-010]
-        return
-      }
-      if (addr === entryPointAddress) {
-        // ignore storage access on entryPoint (balance/deposit of entities. we block them on method calls: only allowed to deposit, never to read
-        return
-      }
+    Object.entries(access).forEach(
+      ([addr, { reads, writes, transientReads, transientWrites }]) => {
+        if (addr.toLowerCase() === sender.toLowerCase()) {
+          // allowed to access sender's storage
+          // [STO-010]
+          return
+        }
+        if (addr.toLowerCase() === entryPointAddress.toLowerCase()) {
+          // ignore storage access on entryPoint (balance/deposit of entities. we block them on method calls: only allowed to deposit, never to read
+          return
+        }
 
-      /**
-       * Return true if the given slot is associated with the given address, given the known keccak operations.
-       *
-       * @param slot - the SLOAD/SSTORE slot address we're testing
-       * @param addr - the address we try to check for association with
-       * @param entitySlots - a mapping we built for keccak values that contained the address
-       * @returns true if the slot is associated with the address.
-       */
-      function associatedWith(
-        slot: string,
-        addr: string,
-        entitySlots: { [addr: string]: Set<string> },
-      ): boolean {
-        const addrPadded = hexZeroPad(addr, 32).toLowerCase()
-        if (slot === addrPadded) {
-          return true
-        }
-        const k = entitySlots[addr]
-        if (k == null) {
-          return false
-        }
-        const slotN = BigNumber.from(slot)
-        /*
+        /**
+         * Return true if the given slot is associated with the given address, given the known keccak operations.
+         *
+         * @param slot - the SLOAD/SSTORE slot address we're testing
+         * @param addr - the address we try to check for association with
+         * @param entitySlots - a mapping we built for keccak values that contained the address
+         * @returns true if the slot is associated with the address.
+         */
+        function associatedWith(
+          slot: string,
+          addr: string,
+          entitySlots: { [addr: string]: Set<string> },
+        ): boolean {
+          const addrPadded = hexZeroPad(addr, 32).toLowerCase()
+          if (slot === addrPadded) {
+            return true
+          }
+          const k = entitySlots[addr]
+          if (k == null) {
+            return false
+          }
+          const slotN = BigNumber.from(slot)
+          /*
           scan all slot entries to check of the given slot is within a structure, starting at that offset.
           assume a maximum size on a (static) structure size.
         */
-        for (const k1 of k.keys()) {
-          const kn = BigNumber.from(k1)
-          if (slotN.gte(kn) && slotN.lt(kn.add(128))) {
-            return true
+          for (const k1 of k.keys()) {
+            const kn = BigNumber.from(k1)
+            if (slotN.gte(kn) && slotN.lt(kn.add(128))) {
+              return true
+            }
           }
+          return false
         }
-        return false
-      }
 
-      /*
+        /*
+        [OP-070]: Transient Storage slots defined in EIP-1153 and accessed using `TLOAD` (`0x5c`) and `TSTORE` (`0x5d`) opcodes
+        are treated exactly like persistent storage (SLOAD/SSTORE).
+        
         scan all slots. find a referenced slot
         at the end of the scan, we will check if the entity has stake, and report that slot if not.
        */
-      let requireStakeSlot: string | undefined
-      ;[...Object.keys(writes), ...Object.keys(reads)].forEach((slot) => {
-        /*
+        let requireStakeSlot: string | undefined
+        ;[
+          ...Object.keys(writes),
+          ...Object.keys(reads),
+          ...Object.keys(transientWrites ?? {}),
+          ...Object.keys(transientReads ?? {}),
+        ].forEach((slot) => {
+          /*
           slot associated with sender is allowed (e.g. token.balanceOf(sender)
           but during initial UserOp (where there is an initCode), it is allowed only for staked entity
         */
-        if (associatedWith(slot, sender, entitySlots)) {
-          if (userOp.factory != null) {
-            // special case: account.validateUserOp is allowed to use assoc storage if factory is staked.
-            // [STO-022], [STO-021]
+          if (associatedWith(slot, sender, entitySlots)) {
             if (
-              !(entityAddr === sender && isStaked(stakeInfoEntities.factory))
+              userOp.factory != null &&
+              userOp.factory !== ethers.constants.AddressZero
             ) {
-              requireStakeSlot = slot
+              // special case: account.validateUserOp is allowed to use assoc storage if factory is staked.
+              // [STO-022], [STO-021]
+              if (
+                !(entityAddr === sender && isStaked(stakeInfoEntities.factory))
+              ) {
+                requireStakeSlot = slot
+              }
             }
+          } else if (associatedWith(slot, entityAddr, entitySlots)) {
+            // [STO-032]
+            // accessing a slot associated with entityAddr (e.g. token.balanceOf(paymaster)
+            requireStakeSlot = slot
+          } else if (addr.toLowerCase() === entityAddr.toLowerCase()) {
+            // [STO-031]
+            // accessing storage member of entity itself requires stake.
+            requireStakeSlot = slot
+          } else if (writes[slot] == null && transientWrites[slot] == null) {
+            // [STO-033]: staked entity have read-only access to any storage in non-entity contract.
+            requireStakeSlot = slot
+          } else {
+            // accessing arbitrary storage of another contract is not allowed
+            const isWrite =
+              Object.keys(writes).includes(slot) ||
+              Object.keys(transientWrites ?? {}).includes(slot)
+            const isTransient =
+              Object.keys(transientReads ?? {}).includes(slot) ||
+              Object.keys(transientWrites ?? {}).includes(slot)
+            const readWrite = isWrite ? 'write to' : 'read from'
+            const transientStr = isTransient ? 'transient ' : ''
+            requireCond(
+              false,
+              `${entityTitle} has forbidden ${readWrite} ${transientStr}${nameAddr(
+                addr,
+                entityTitle,
+              )} slot ${slot}`,
+              ValidationErrors.OpcodeValidation,
+              { [entityTitle]: entStakes?.addr },
+            )
           }
-        } else if (associatedWith(slot, entityAddr, entitySlots)) {
-          // [STO-032]
-          // accessing a slot associated with entityAddr (e.g. token.balanceOf(paymaster)
-          requireStakeSlot = slot
-        } else if (addr === entityAddr) {
-          // [STO-031]
-          // accessing storage member of entity itself requires stake.
-          requireStakeSlot = slot
-        } else if (writes[slot] == null) {
-          // [STO-033]: staked entity have read-only access to any storage in non-entity contract.
-          requireStakeSlot = slot
-        } else {
-          // accessing arbitrary storage of another contract is not allowed
-          const readWrite = Object.keys(writes).includes(addr)
-            ? 'write to'
-            : 'read from'
-          requireCond(
-            false,
-            `${entityTitle} has forbidden ${readWrite} ${nameAddr(
-              addr,
-              entityTitle,
-            )} slot ${slot}`,
-            ValidationErrors.OpcodeValidation,
-            { [entityTitle]: entStakes?.addr },
-          )
-        }
-      })
+        })
 
-      /*
+        /*
         if addr is current account/paymaster/factory, then return that title
         otherwise, return addr as-is
       */
-      /**
-       * Return the name of the entity associated with the given address.
-       *
-       * @param addr - the address we're checking.
-       * @param _ - the current entity we're checking.
-       * @returns the name of the entity associated with the address.
-       */
-      function nameAddr(addr: string, _: string): string {
-        const [title] =
-          Object.entries(stakeInfoEntities).find(
-            ([_, info]) => info?.addr.toLowerCase() === addr.toLowerCase(),
-          ) ?? []
+        /**
+         * Return the name of the entity associated with the given address.
+         *
+         * @param addr - the address we're checking.
+         * @param _ - the current entity we're checking.
+         * @returns the name of the entity associated with the address.
+         */
+        function nameAddr(addr: string, _: string): string {
+          const [title] =
+            Object.entries(stakeInfoEntities).find(
+              ([_, info]) => info?.addr.toLowerCase() === addr.toLowerCase(),
+            ) ?? []
 
-        return title ?? addr
-      }
+          return title ?? addr
+        }
 
-      requireCondAndStake(
-        requireStakeSlot != null,
-        entStakes,
-        `unstaked ${entityTitle} accessed ${nameAddr(
-          addr,
-          entityTitle,
-        )} slot ${requireStakeSlot}`,
-      )
-    })
+        requireCondAndStake(
+          requireStakeSlot != null,
+          entStakes,
+          `unstaked ${entityTitle} accessed ${nameAddr(
+            addr,
+            entityTitle,
+          )} slot ${requireStakeSlot}`,
+        )
+      },
+    )
 
     // helper method: if condition is true, then entity must be staked.
     /**
