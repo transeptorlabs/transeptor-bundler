@@ -15,7 +15,6 @@ import {
 } from '../../../shared/validatation/index.js'
 import { requireCond, tostr } from '../../../shared/utils/index.js'
 import { StateService, ReputationEntries, StateKey } from '../state/index.js'
-import { P } from 'pino'
 
 export const createReputationManagerUpdater = (
   reputationManager: ReputationManager,
