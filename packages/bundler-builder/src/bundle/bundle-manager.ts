@@ -119,15 +119,32 @@ export const createBundleManager = (
     }
 
     const res = await bundleProcessor.sendBundle(bundle, storageMap)
-    if (res.failedOp) {
-      Logger.error({ failedOp: res.failedOp }, 'Bundle failed')
-      await mempoolManagerBuilder.removeUserOp(res.failedOp)
+
+    // Update reputation status to ban and drop userOp from mempool for entity that caused handleOps to revert
+    if (res.crashedHandleOps) {
+      const { addressToban, failedOp } = res.crashedHandleOps
+      if (addressToban) {
+        Logger.info(`Banning address: ${addressToban} due to failed handleOps`)
+        await mempoolManagerBuilder.removeUserOpsForBannedAddr(addressToban)
+        await reputationManagerUpdater.crashedHandleOps(addressToban)
+      }
+
+      await mempoolManagerBuilder.removeUserOp(failedOp)
     }
 
-    await mempoolManagerBuilder.addBundleTxnConfirmation(
-      res.transactionHash,
-      res.signerIndex,
-    )
+    if (res.transactionHash) {
+      Logger.info(
+        {
+          transactionHash: res.transactionHash,
+          userOpHashes: res.userOpHashes,
+        },
+        'Bundle sent successfully',
+      )
+      await mempoolManagerBuilder.addBundleTxnConfirmation(
+        res.transactionHash,
+        res.signerIndex,
+      )
+    }
 
     return {
       transactionHash: res.transactionHash,

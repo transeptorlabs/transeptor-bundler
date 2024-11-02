@@ -21,5 +21,8 @@ export type SendBundleReturnWithSigner = {
   transactionHash: string
   userOpHashes: string[]
   signerIndex: number
-  failedOp?: UserOperation
+  crashedHandleOps?: {
+    addressToban: string | undefined
+    failedOp: UserOperation
+  }
 }

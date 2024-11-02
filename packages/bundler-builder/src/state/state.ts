@@ -1,5 +1,4 @@
 import { Mutex } from 'async-mutex'
-import { Logger } from '../../../shared/logger/index.js'
 import { State, StateKey, StateService } from './state.types.js'
 
 export const createState = (): StateService => {
@@ -18,9 +17,6 @@ export const createState = (): StateService => {
     getState: async <K extends keyof State>(
       keys: StateKey | StateKey[],
     ): Promise<Pick<State, K>> => {
-      Logger.debug(
-        `Acquiring Mutex: Reading in-memory state with keys: ${keys}`,
-      )
       const release = await mutex.acquire()
       try {
         if (Array.isArray(keys)) {
@@ -41,9 +37,6 @@ export const createState = (): StateService => {
       keys: StateKey | StateKey[],
       updateFn: (currentValue: Pick<State, K>) => Partial<State>,
     ): Promise<void> => {
-      Logger.debug(
-        `Acquiring Mutex: Updating in-memory state with keys: ${keys}`,
-      )
       const release = await mutex.acquire()
       try {
         const newState = { ...state } // Create a shallow copy of the state
@@ -116,7 +109,6 @@ export const createState = (): StateService => {
 
         state = newState
       } finally {
-        Logger.debug('Releasing Mutex: Updated in-memory state')
         release()
       }
     },

@@ -13,7 +13,7 @@ import {
   UserOperation,
 } from '../../../shared/types/index.js'
 import { packUserOps } from '../../../shared/utils/index.js'
-import { ReputationManager } from '../reputation/index.js'
+import { ReputationManagerReader } from '../reputation/index.js'
 import { BundlerSignerWallets, createSignerService } from '../signer/index.js'
 
 export type BundleProcessor = {
@@ -33,7 +33,7 @@ export type BundleProcessor = {
 
 export const createBundleProcessor = (
   providerService: ProviderService,
-  reputationManager: ReputationManager,
+  reputationManager: ReputationManagerReader,
   entryPointContract: ethers.Contract,
   txMode: string,
   beneficiary: string,
@@ -85,6 +85,42 @@ export const createBundleProcessor = (
     return userOpHashes
   }
 
+  const findEntityToBan = async (
+    reasonStr: string,
+    userOp: UserOperation,
+  ): Promise<string | undefined> => {
+    const isAccountStaked = async (userOp: UserOperation): Promise<boolean> => {
+      const senderStakeInfo = await reputationManager.getStakeStatus(
+        userOp.sender,
+        entryPointContract.address,
+      )
+      return senderStakeInfo?.isStaked
+    }
+
+    const isFactoryStaked = async (userOp: UserOperation): Promise<boolean> => {
+      const factoryStakeInfo =
+        userOp.factory == null
+          ? null
+          : await reputationManager.getStakeStatus(
+              userOp.factory,
+              entryPointContract.address,
+            )
+      return factoryStakeInfo?.isStaked ?? false
+    }
+
+    if (reasonStr.startsWith('AA3')) {
+      // [EREP-030]  A Staked Account is accountable for failures in other entities (`paymaster`, `aggregator`) even if they are staked.
+      return (await isAccountStaked(userOp)) ? userOp.sender : userOp.paymaster
+    } else if (reasonStr.startsWith('AA2')) {
+      // [EREP-020] A staked factory is "accountable" for account breaking the rules.
+      return (await isFactoryStaked(userOp)) ? userOp.factory : userOp.sender
+    } else if (reasonStr.startsWith('AA1')) {
+      // (can't have staked account during its creation)
+      return userOp.factory
+    }
+    return undefined
+  }
+
   return {
     sendBundle: async (
       userOps: UserOperation[],
@@ -130,18 +166,17 @@ export const createBundleProcessor = (
               [signedTx, { knownAccounts: storageMap }],
             )
             break
-          case 'base':
-            ret = await providerService.send('eth_sendRawTransaction', [
-              signedTx,
-            ])
+          case 'base': {
+            const respone = await signer.sendTransaction(tx)
+            const receipt = await respone.wait()
+            ret = receipt.transactionHash
             break
+          }
           case 'searcher':
             throw new Error('searcher txMode is not supported')
           default:
             throw new Error(`unknown txMode: ${txMode}`)
         }
-
-        // TODO: parse ret, and revert if needed.
 
         // hashes are needed for debug rpc only.
         const hashes = await getUserOpHashes(userOps)
@@ -153,9 +188,14 @@ export const createBundleProcessor = (
       } catch (e: any) {
         let parsedError: ErrorDescription
         try {
-          parsedError = entryPointContract.interface.parseError(
-            e.data?.data ?? e.data,
-          )
+          let data = e.data?.data ?? e.data
+          const body = e?.error?.error?.body
+          if (body != null) {
+            const jsonbody = JSON.parse(body)
+            data = jsonbody.error.data?.data ?? jsonbody.error.data
+          }
+
+          parsedError = entryPointContract.interface.parseError(data)
         } catch (e1) {
           checkFatal(e)
           Logger.warn({ e }, 'Failed handleOps, but non-FailedOp error')
@@ -166,28 +206,27 @@ export const createBundleProcessor = (
           }
         }
 
-        // update entity reputation staus if it cause handleOps to fail
+        // Find entity address that caused handleOps to fail
         const { opIndex, reason } = parsedError.args
         const userOp = userOps[opIndex]
         const reasonStr: string = reason.toString()
-
-        if (reasonStr.startsWith('AA3')) {
-          reputationManager.crashedHandleOps(userOp.paymaster)
-        } else if (reasonStr.startsWith('AA2')) {
-          reputationManager.crashedHandleOps(userOp.sender)
-        } else if (reasonStr.startsWith('AA1')) {
-          reputationManager.crashedHandleOps(userOp.factory)
-        }
+        const addressToban: string | undefined = await findEntityToBan(
+          reasonStr,
+          userOp,
+        )
 
         Logger.warn(
-          `Failed handleOps sender=${userOp.sender} reason=${reasonStr}`,
+          `Bundle failed': Failed handleOps sender=${userOp.sender} reason=${reasonStr}`,
         )
 
         return {
           transactionHash: '',
           userOpHashes: [],
           signerIndex,
-          failedOp: userOp,
+          crashedHandleOps: {
+            failedOp: userOp,
+            addressToban,
+          },
         }
       }
     },

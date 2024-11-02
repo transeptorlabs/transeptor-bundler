@@ -7,6 +7,7 @@ import {
   ReputationParams,
   ReputationStatus,
   ReputationManagerUpdater,
+  ReputationManagerReader,
 } from './reputation.types.js'
 import {
   StakeInfo,
@@ -20,6 +21,15 @@ export const createReputationManagerUpdater = (
 ): ReputationManagerUpdater => {
   return {
     updateSeenStatus: reputationManager.updateSeenStatus,
+    crashedHandleOps: reputationManager.crashedHandleOps,
+  }
+}
+
+export const createReputationManagerReader = (
+  reputationManager: ReputationManager,
+): ReputationManagerReader => {
+  return {
+    getStakeStatus: reputationManager.getStakeStatus,
   }
 }
 
@@ -148,13 +158,15 @@ export const createReputationManager = (
       StateKey.ReputationEntries,
     )
 
-    await Promise.all([
-      Object.values(reputationEntries).forEach(async (entry) => {
+    const res = await Promise.all(
+      Object.values(reputationEntries).map(async (entry) => {
         const status = await getStatus(entry.address)
         entry.status = status
+        return entry
       }),
-    ])
-    return Object.values(reputationEntries)
+    )
+
+    return res
   }
 
   return {
@@ -297,7 +309,10 @@ export const createReputationManager = (
     },
 
     crashedHandleOps: async (addr: string): Promise<void> => {
-      // TODO: what value to put? how long do we want this banning to hold?
+      if (addr == null) {
+        return
+      }
+
       addr = addr.toLowerCase()
 
       await state.updateState(
