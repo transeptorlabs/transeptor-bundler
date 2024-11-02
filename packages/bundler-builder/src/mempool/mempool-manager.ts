@@ -113,6 +113,13 @@ export type MempoolManagerCore = {
     transactionHash: string,
     signerIndex: number,
   ): Promise<void>
+
+  /**
+   * [GREP-010] - A `BANNED` address is not allowed into the mempool.
+   *
+   * @param addr - The address to remove from the mempool.
+   */
+  removeUserOpsForBannedAddr(addr: string): Promise<void>
 }
 
 export type MempoolManageSender = Pick<MempoolManagerCore, 'addUserOp'>
@@ -130,6 +137,7 @@ export type MempoolManagerBuilder = Pick<
   | 'getKnownSenders'
   | 'updateEntryStatus'
   | 'removeUserOp'
+  | 'removeUserOpsForBannedAddr'
   | 'addBundleTxnConfirmation'
 >
 
@@ -160,6 +168,7 @@ export const createMempoolManagerBuilder = (
     getKnownSenders: mempoolManagerCore.getKnownSenders,
     updateEntryStatus: mempoolManagerCore.updateEntryStatus,
     removeUserOp: mempoolManagerCore.removeUserOp,
+    removeUserOpsForBannedAddr: mempoolManagerCore.removeUserOpsForBannedAddr,
     addBundleTxnConfirmation: mempoolManagerCore.addBundleTxnConfirmation,
   }
 }
@@ -539,6 +548,42 @@ export const createMempoolManagerCore = (
       )
 
       return true
+    },
+
+    removeUserOpsForBannedAddr: async (addr: string): Promise<void> => {
+      const { standardPool } = await state.getState(StateKey.StandardPool)
+      const opsToRemove = Object.values(standardPool).filter((entry) => {
+        const userOp = entry.userOp
+        if (
+          userOp.sender === addr ||
+          userOp.paymaster === addr ||
+          userOp.factory === addr
+        ) {
+          return [userOp, entry.userOpHash] as [UserOperation, string]
+        }
+      })
+
+      await state.updateState(
+        [StateKey.StandardPool, StateKey.MempoolEntryCount],
+        ({ standardPool, mempoolEntryCount }) => {
+          opsToRemove.forEach((entry) => {
+            delete standardPool[entry.userOpHash]
+            delete mempoolEntryCount[entry.userOp.sender]
+
+            if (entry.userOp.paymaster) {
+              delete mempoolEntryCount[entry.userOp.paymaster]
+            }
+
+            if (entry.userOp.factory) {
+              delete mempoolEntryCount[entry.userOp.factory]
+            }
+          })
+          return {
+            standardPool,
+            mempoolEntryCount,
+          }
+        },
+      )
     },
 
     getNextPending: async (): Promise<MempoolEntry[]> => {

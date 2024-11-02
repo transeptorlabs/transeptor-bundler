@@ -131,5 +131,7 @@ export type ReputationManager = {
 
 export type ReputationManagerUpdater = Pick<
   ReputationManager,
-  'updateSeenStatus'
+  'updateSeenStatus' | 'crashedHandleOps'
 >
+
+export type ReputationManagerReader = Pick<ReputationManager, 'getStakeStatus'>

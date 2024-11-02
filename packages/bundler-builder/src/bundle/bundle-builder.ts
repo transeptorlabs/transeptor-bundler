@@ -52,7 +52,7 @@ export const createBundleBuilder = (
       entries: MempoolEntry[],
       knownSenders: string[],
     ): Promise<BundleReadyToSend> => {
-      Logger.debug(
+      Logger.info(
         { total: entries.length },
         'Attepting to create bundle from entries',
       )
