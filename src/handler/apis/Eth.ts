@@ -146,9 +146,8 @@ export const createEthAPI = (
         entryPointInput,
         entryPointContract,
       )
-      const { preOpGas, validAfter, validUntil } = await sim.simulateHandleOp(
-        userOp,
-      )
+      const { preOpGas, validAfter, validUntil } =
+        await sim.simulateHandleOp(userOp)
 
       // TODO: Use simulateHandleOp with proxy contract to estimate callGasLimit too
       const callGasLimit = await ps.estimateGas(
