@@ -1,4 +1,4 @@
-name: Publish Release transeptor docker images
+name: Publish Release transeptor docker image
 
 on:
   workflow_call:
@@ -27,23 +27,13 @@ jobs:
       - name: Get package version
         id: get_version
         run: echo version=$(node -p "require('./package.json').version") >> $GITHUB_OUTPUT
-      - name: Build and push Docker image(Relayer)
+      - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          file: ./Dockerfile.bundler-relayer
+          file: ./Dockerfile
           push: true
           tags: |
-            transeptorlabs/bundler-relayer:${{ steps.get_version.outputs.version }}
-            transeptorlabs/bundler-relayer:latest
-      - name: Build and push Docker image(Builder)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          file: ./Dockerfile.bundler-builder
-          push: true
-          tags: |
-            transeptorlabs/bundler-builder:${{ steps.get_version.outputs.version }}
-            transeptorlabs/bundler-builder:latest
+            transeptorlabs/bundler:${{ steps.get_version.outputs.version }}
+            transeptorlabs/bundler:latest

@@ -1,7 +1,0 @@
-#!/bin/bash
-
-# Private keys are default hardhat accounts.
-export TRANSEPTOR_ENTRYPOINT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
-
-# Simple script to run Transeptor after building from source
-node ./packages/bundler-relayer/dist/bundler-relayer/src/index.js --debug
