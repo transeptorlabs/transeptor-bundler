@@ -14,7 +14,7 @@ import {
 dotenv.config()
 
 const provider = new providers.StaticJsonRpcProvider('http://localhost:8545')
-const relayerNode = new ethers.providers.StaticJsonRpcProvider(
+const bundlerNode = new ethers.providers.StaticJsonRpcProvider(
   'http://localhost:4337/rpc',
 )
 const dummySig =
@@ -205,7 +205,7 @@ async function main() {
   } as UserOperation
 
   // Estimate gas
-  const gasEstimate = await relayerNode
+  const gasEstimate = await bundlerNode
     .send('eth_estimateUserOperationGas', [userOp, epAddress])
     .catch((error: any) => {
       const parseJson = JSON.parse(error.body)
@@ -237,7 +237,7 @@ async function main() {
 
   // Send userOp
   Logger.info({ signedUserOp }, 'Sending UserOp')
-  const userOpHash = await relayerNode
+  const userOpHash = await bundlerNode
     .send('eth_sendUserOperation', [signedUserOp, epAddress])
     .catch((error: any) => {
       const parseJson = JSON.parse(error.body)

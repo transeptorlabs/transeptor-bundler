@@ -108,7 +108,7 @@ Options:
   --network <string>             ETH execution client url. (default: "http://localhost:8545")
   --p2p                          p2p mode enabled (default: false)
   --findPeers                    Search for peers when p2p enabled. (default: false)
-  --port <number>                Bundler-relayer node listening port. (default: "4337")
+  --port <number>                Bundler node listening port. (default: "4337")
   --numberOfSigners <number>     Number of signers HD paths to use from mnmonic (default: "3")
   --minBalance <string>          Maximum ETH balance need for signer address. (default: "1")
   --minStake <string>            Minimum stake a entity has to have to pass reputation system. (default: "1")
@@ -128,7 +128,7 @@ Options:
 
 ### Environment variables
 
-List of all environment variables supported by the Relayer.
+List of all environment variables supported by the node.
 
 ```bash
 # Required for production

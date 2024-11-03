@@ -43,7 +43,7 @@ jobs:
       - name: Get short commit hash
         id: get_short_hash
         run: echo SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7) >> $GITHUB_ENV
-      - name: Build Docker image (Relayer)
+      - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: .

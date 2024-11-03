@@ -31,7 +31,7 @@ We appreciate your cooperation in adhering to the following disclosure timeline:
 
 ### Scope
 
-This policy applies to `relayer` and `bundle-builder` open-source nodes provided by Transeptor Labs.
+This policy applies to bundler open-source nodes provided by Transeptor Labs.
 
 ## Contact
 

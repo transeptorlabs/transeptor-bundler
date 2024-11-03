@@ -88,7 +88,7 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
     )
     .option('--p2p', 'p2p mode enabled', false)
     .option('--findPeers', 'Search for peers when p2p enabled.', false)
-    .option('--port <number>', 'Bundler-relayer node listening port.', '4337')
+    .option('--port <number>', 'Bundler node listening port.', '4337')
     .option(
       '--numberOfSigners <number>',
       'Number of signers HD paths to use from mnmonic',
