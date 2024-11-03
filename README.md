@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  A light weight blazing fast, modular ERC-4337 TypeScript bundler built with the power of declarative functional programming.
+  A light weight blazing fast, modular ERC-4337 TypeScript bundler built with declarative functional programming.
 </p>
 
 <p align="center">
