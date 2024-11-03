@@ -2,7 +2,7 @@
   "name": "root",
   "private": true,
   "version": "0.6.2-alpha.0",
-  "description": "A fast ERC-4337 bundler node with TypeScript-based compile-time type safety.",
+  "description": "A light weight blazing fast, modular ERC-4337 TypeScript bundler built with the power of declarative functional programming.",
   "author": {
     "name": "Transeptor Labs",
     "email": "transeptorhq@gmail.com",
@@ -17,44 +17,48 @@
   "bugs": {
     "url": "https://github.com/transeptorlabs/transeptor-bundler/issues"
   },
-  "workspaces": [
-    "packages/*"
-  ],
+  "type": "module",
+  "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "scripts": {
     "clean": "rm -rf dist",
-    "build": "yarn workspaces foreach --parallel --interlaced --verbose run build",
-    "dev": "yarn workspaces foreach --parallel --interlaced --verbose run dev",
-    "start": "yarn workspaces foreach --parallel --interlaced --verbose run start",
-    "start:prod": "yarn workspaces foreach --parallel --interlaced --verbose run start:prod",
-    "test": "yarn workspaces foreach --parallel --interlaced --verbose run test",
-    "lint": "yarn workspaces foreach --parallel --interlaced --verbose run lint",
-    "lint:fix": "yarn workspaces foreach --parallel --interlaced --verbose run lint:fix",
+    "ls-cmd": "node --import ./register-hook.js ./src/index.ts --help",
+    "build": "npx tsc -p ./tsconfig.json && cp ./src/sim/tracer.js dist/sim",
     "build:contracts": "cd contracts && forge build",
-    "///gK": "________________________RELAYER NODE______________________________",
-    "send-op": "yarn workspace bundler-relayer run send-op",
-    "relayer-dev": "yarn workspace bundler-relayer run dev",
-    "relayer-lint": "yarn workspace bundler-relayer run lint",
-    "relayer-lint:fix": "yarn workspace bundler-relayer run lint:fix",
-    "relayer-test": "yarn workspace bundler-relayer run test",
-    "image:relayer": "docker build -f Dockerfile.bundler-relayer -t bundler-relayer:v-local .",
-    "///gj": "________________________Builder NODE______________________________",
-    "builder-dev": "yarn workspace bundler-builder run dev",
-    "builder-lint": "yarn workspace bundler-builder run lint",
-    "builder-lint:fix": "yarn workspace bundler-builder run lint:fix",
-    "builder-test": "yarn workspace bundler-builder run test",
-    "image:builder": "docker build -f Dockerfile.bundler-builder -t bundler-builder:v-local .",
-    "test:mempool-race": "yarn workspace bundler-builder run test:mempool-race",
-    "///sj": "________________________Shared MODULE ______________________________",
-    "shared-test": "yarn workspace shared run test",
-    "shared-lint": "yarn workspace shared run lint",
-    "shared-lint:fix": "yarn workspace shared run lint:fix",
+    "dev": "nodemon",
+    "start": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "start:unsafe": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
+    "start:metrics": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --metrics --txMode base | pino-pretty",
+    "start:prod": "yarn build && node dist/index.js --httpApi web3,eth,debug --txMode base|  pino-pretty",
+    "test": "vitest --config ./vitest.config.ts",
+    "lint": "eslint . --ext ts",
+    "lint:fix": "yarn lint --fix",
+    "send-op": "node --import ./register-hook.js ./e2e/send-userop.e2e.ts | pino-pretty",
+    "test:mempool-race": "node --import ./register-hook.js ./e2e/data-race-test.ts ",
     "///cK": "________________________DOCKER CONTAINERS______________________________",
-    "start:images": "docker-compose up -d bundler-relayer",
-    "stop:images": "docker-compose down",
-    "build:images": "yarn image:relayer && yarn image:builder",
     "local-eth": "./eth-node",
+    "build:image": "docker build -t bundler-typescript:v-local .",
+    "start:image": "docker-compose up -d bundler-typescript-local",
+    "stop:image": "docker-compose down",
     "influxdb": "docker-compose up influxdb",
     "grafana": "docker-compose up grafana"
+  },
+  "dependencies": {
+    "@chainsafe/libp2p-noise": "^12.0.2",
+    "@influxdata/influxdb-client": "1.33.2",
+    "@libp2p/mplex": "^8.0.4",
+    "@libp2p/tcp": "^7.0.3",
+    "@multiformats/multiaddr": "^12.1.5",
+    "async-mutex": "0.4.0",
+    "commander": "10.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "16.0.3",
+    "ethers": "^5.7.1",
+    "express": "^4.18.3",
+    "helmet": "^7.1.0",
+    "libp2p": "^0.45.9",
+    "os-utils": "0.0.14",
+    "pino": "^8.14.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -67,6 +71,8 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-jsdoc": "^50.2.2",
     "eslint-plugin-prettier": "^5.2.1",
+    "nodemon": "^3.1.0",
+    "pino-pretty": "^10.0.0",
     "prettier": "^3.3.3",
     "ts-node": "10.9.1",
     "typescript": "5.0.4",
@@ -76,5 +82,13 @@
   "packageManager": "yarn@3.2.1",
   "engines": {
     "node": ">=20.11.1"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "src"
+    ],
+    "ext": "ts,json",
+    "ignore": [],
+    "exec": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty"
   }
 }

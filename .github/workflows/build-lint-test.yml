@@ -30,7 +30,7 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   build-docker-images:
-    name: Build Docker Images(Dry run)
+    name: Build Docker Image(Dry run)
     runs-on: ubuntu-latest
     needs: build-lint-test
     steps:
@@ -48,19 +48,10 @@ jobs:
         with:
           context: .
           platforms: linux/amd64
-          file: ./Dockerfile.bundler-relayer
+          file: ./Dockerfile
           push: false
           tags: |
-            transeptorlabs/bundler-relayer:${{ env.SHORT_SHA }}
-      - name: Build Docker image (Builder)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64
-          file: ./Dockerfile.bundler-builder
-          push: false
-          tags: |
-            transeptorlabs/bundler-builder:${{ env.SHORT_SHA }}
+            transeptorlabs/bundler:${{ env.SHORT_SHA }}
       - name: Verify Docker images
         run: |
           docker images

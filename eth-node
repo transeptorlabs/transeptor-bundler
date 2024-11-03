@@ -63,8 +63,7 @@ start_geth() {
   TRANSEPTOR_ENTRYPOINT_ADDRESS_V7=$(echo "$OUTPUT" | grep -o "EntryPoint: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
   TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$(echo "$OUTPUT" | grep -o "SimpleAccountFactory: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
   TRANSEPTOR_E2E_GLOBAL_COUNTER=$(echo "$OUTPUT" | grep -o "GlobalCounter: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
-  echo -e "$(tput setaf 4)▼▼▼ $(tput setaf 7)Please add to local ./packages/bundler-relayer/.env$(tput setaf 4) ▼▼▼$(tput sgr0)\n\nTRANSEPTOR_ENTRYPOINT_ADDRESS=$TRANSEPTOR_ENTRYPOINT_ADDRESS_V7\nTRANSEPTOR_E2E_TRANSEPTOR_MNEMONIC=test test test test test test test test test test test junk\nTRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY\nTRANSEPTOR_E2E_GLOBAL_COUNTER=$TRANSEPTOR_E2E_GLOBAL_COUNTER\n$(tput setaf 6)────────────────────────────────────────────────────────$(tput sgr0)"
-  echo -e "$(tput setaf 4)▼▼▼ $(tput setaf 7)Please add to local ./packages/bundler-builder/.env$(tput setaf 4) ▼▼▼$(tput sgr0)\n\nTRANSEPTOR_MNEMONIC=test test test test test test test test test test test junk\nTRANSEPTOR_ENTRYPOINT_ADDRESS=$TRANSEPTOR_ENTRYPOINT_ADDRESS_V7\nTRANSEPTOR_BENEFICIARY=$TRANSEPTOR_BENEFICIARY\n\n$(tput setaf 6)────────────────────────────────────────────────────────$(tput sgr0)"
+  echo -e "$(tput setaf 4)▼▼▼ $(tput setaf 7)Please add to local .env$(tput setaf 4) ▼▼▼$(tput sgr0)\n\nTRANSEPTOR_MNEMONIC=test test test test test test test test test test test junk\nTRANSEPTOR_ENTRYPOINT_ADDRESS=$TRANSEPTOR_ENTRYPOINT_ADDRESS_V7\nTRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY\nTRANSEPTOR_E2E_GLOBAL_COUNTER=$TRANSEPTOR_E2E_GLOBAL_COUNTER\nTRANSEPTOR_BENEFICIARY=$TRANSEPTOR_BENEFICIARY\n\n$(tput setaf 6)────────────────────────────────────────────────────────$(tput sgr0)"
 }
 
 start_bundler() {

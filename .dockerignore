@@ -1,19 +1,24 @@
 # dependencies
 node_modules
-**/node_modules
 
 # Docker
 Dockerfile
 docker-compose.yml
 
 # build
-**/dist
+dist
 
 # contracts
 contracts
 
 # docs
 docs
+
+# e2e
+e2e
+
+# test
+test
 
 # scripts
 eth-node
@@ -61,4 +66,14 @@ tags.json
 .eslint.cjs
 .nvmrc
 .eslintrc.cjs
-jest.config.js
+register-hooks.js
+vitest.config.js
+vitest.setup.js
+
+# yarn
+.yarn-integrity
+yarn-debug.log*
+yarn-error.log*
+.yarn/cache
+.yarn/unplugged
+.yarn/install-state.gz

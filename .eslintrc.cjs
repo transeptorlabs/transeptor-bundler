@@ -1,12 +1,17 @@
 module.exports = {
   root: true,
   parser: '@typescript-eslint/parser',
+  overrides: [
+    {
+      files: ['src/**/*.ts'],
+    },
+  ],
   plugins: ['@typescript-eslint', 'jsdoc', 'prettier'],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:jsdoc/recommended',
-    'plugin:prettier/recommended'
+    'plugin:prettier/recommended',
   ],
   rules: {
     '@typescript-eslint/explicit-function-return-type': 'off',
@@ -40,7 +45,8 @@ module.exports = {
     '.eslintrc.cjs',
     '**/*.js',
     '**/.cache',
-    '**/dist'
+    '**/dist',
+    '**/contracts',
   ],
   parserOptions: {
     ecmaVersion: 'latest',

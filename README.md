@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  A blazing fast, modular ERC-4337 TypeScript bundler built with the power of declarative functional programming.
+  A light weight blazing fast, modular ERC-4337 TypeScript bundler built with the power of declarative functional programming.
 </p>
 
 <p align="center">
@@ -34,14 +34,13 @@ Everything you need to get started developing with Transeptor.
 5. Start local eth node `yarn local-eth` - Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to the nodes `.env` files.
 6. In a new terminal window start the bundler node with live watch for local dev. `yarn dev`
 
-- The `relayer` node will start on `http://localhost:4337/rpc`. 
-- The `bundle-builder` node will start on `http://localhost:4338/rpc`.
+- The node will start on `http://localhost:4337/rpc`. 
 
 You can now make changes to the code and each node will automatically restart.
 
 #### Local dev e2e scripts 
 
-Make sure both `relayer` and `bundle-builder` nodes are running before running to to send a userOp through the bundler
+Make sure bundler node is running before running to to send a userOp through the bundler
 
 ```bash
 yarn send-op
@@ -72,29 +71,66 @@ You can build Transeptor from source or use the Docker image.
 ### 🔧 Run from source
 1. Use correct node version: `nvm use`
 2. Install dependencies: `yarn install`
-3. Build `bundler-relayer` and `bundler-builder` nodes: `yarn build`
+3. Build node: `yarn build`
 
-Now let's start the bundler nodes.
+Now let's start the bundler node.
 ```bash
-./transeptor-builder
-./transeptor-relayer
+./transeptor --httpApi web3,eth,debug --txMode base
 ```
 
 ### 🐳 Run from Docker images
 
-Build images
+Build image
 ```bash
-yarn build:images
+yarn build:image
 ```
 
-Run images in the background
+Run image in the background
 ```bash
-yarn start:images
+yarn start:image
 ```
 
-stop images
+stop image
 ```bash
-yarn stop:images
+yarn stop:image
+```
+
+## Node Configuration
+
+### Command line arguments
+
+List of all command line arguments supported by the bundler.
+
+```bash
+Options:
+  -V, --version              output the version number
+  --debug                    Enable ERC4337 debug rpc method name space (default: false)
+  --network <string>         ETH execution client url. (default: "http://localhost:8545")
+  --bundlerBuilder <string>  ERC-4337 bundler-builder client url. (default: "http://localhost:4338/rpc")
+  --port <number>            Bundler-relayer node listening port. (default: "4337")
+  --unsafe                   Enable no storage or opcode checks during userOp simulation.
+  --metrics                  Bundler node metrics tracking enabled. (default: false)
+  --influxdbUrl <string>     Url influxdb is running on (requires --metrics to be enabled). (default: "http://localhost:8086")
+  --influxdbOrg <string>     Influxdb org (requires --metrics to be enabled). (default: "transeptor-labs")
+  --influxdbBucket <string>  Influxdb bucket (requires --metrics to be enabled). (default: "transeptor_metrics")
+  -h, --help                 display help for command
+```
+
+### Environment variables
+
+List of all environment variables supported by the Relayer.
+
+```bash
+# Required for production
+TRANSEPTOR_ENTRYPOINT_ADDRESS=0x
+TRANSEPTOR_BENEFICIARY=<address_to_receive_funds>
+TRANSEPTOR_MNEMONIC=<your-mnemonic>
+
+# Optional
+TRANSEPTOR_INFLUX_TOKEN=DEV_TOKEN
+TRANSEPTOR_ALCHEMY_API_KEY=<your-alcemy-api-key>
+TRANSEPTOR_WHITE_LIST=<address_to_whitelist_SEPARATED_BY_COMMA>
+TRANSEPTOR_BLACK_LIST=<address_to_blacklist_SEPARATED_BY_COMMA>
 ```
 
 ## Contribute
