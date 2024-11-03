@@ -18,7 +18,7 @@ mkdir $PWD/influxdb-data
 
 2. Use docker-compose in tool package to run InfluxDB in a docker container.
 ```bash
-npm run influxdb
+yarn influxdb
 ```
 
 ### Set up InfluxDB to store metrics
@@ -99,7 +99,7 @@ mkdir $PWD/grafana-data
 
 2. Use docker-compose in tool package to run Grafana in a container.
 ```bash
-npm run grafana
+yarn grafana
 ```
 
 Grafana can now be reached at `http://localhost:3000`

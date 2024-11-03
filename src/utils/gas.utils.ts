@@ -20,44 +20,51 @@ export type GasOverheads = {
   /**
    * fixed overhead for entire handleOp bundle.
    */
-  fixed: number;
+  fixed: number
 
   /**
    * per userOp overhead, added on top of the above fixed per-bundle.
    */
-  perUserOp: number;
+  perUserOp: number
 
   /**
    * overhead for userOp word (32 bytes) block
    */
-  perUserOpWord: number;
+  perUserOpWord: number
 
   // perCallDataWord: number
 
   /**
    * zero byte cost, for calldata gas cost calculations
    */
-  zeroByte: number;
+  zeroByte: number
 
   /**
    * non-zero byte cost, for calldata gas cost calculations
    */
-  nonZeroByte: number;
+  nonZeroByte: number
 
   /**
    * expected bundle size, to split per-bundle overhead between all ops.
    */
-  bundleSize: number;
+  bundleSize: number
 
   /**
    * expected length of the userOp signature.
    */
-  sigSize: number;
-};
+  sigSize: number
+}
 
+/**
+ * Calculate the gas cost of the pre-verification of the userOp.
+ *
+ * @param userOp - The UserOperation to calculate the gas cost for.
+ * @param overheads - The gas overheads to use for the calculation.
+ * @returns the gas cost of the pre-verification of the userOp
+ */
 export function calcPreVerificationGas(
   userOp: Partial<UserOperation>,
-  overheads?: Partial<GasOverheads>
+  overheads?: Partial<GasOverheads>,
 ): number {
   Logger.debug('Running calcPreVerificationGas on userOp')
   const ov = { ...DefaultGasOverheads, ...(overheads ?? {}) }
@@ -70,12 +77,14 @@ export function calcPreVerificationGas(
 
   const packed = arrayify(encodeUserOp(packUserOp(p), false))
   const lengthInWord = (packed.length + 31) / 32
-  const callDataCost = packed.map(x => x === 0 ? ov.zeroByte : ov.nonZeroByte).reduce((sum, x) => sum + x)
+  const callDataCost = packed
+    .map((x) => (x === 0 ? ov.zeroByte : ov.nonZeroByte))
+    .reduce((sum, x) => sum + x)
   const ret = Math.round(
     callDataCost +
-    ov.fixed / ov.bundleSize +
-    ov.perUserOp +
-    ov.perUserOpWord * lengthInWord
+      ov.fixed / ov.bundleSize +
+      ov.perUserOp +
+      ov.perUserOpWord * lengthInWord,
   )
   return ret
 }

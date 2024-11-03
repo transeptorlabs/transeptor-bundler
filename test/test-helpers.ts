@@ -2,17 +2,25 @@ import { BigNumber, Wallet, BigNumberish } from 'ethers'
 
 import { UserOperation } from '../src/types/index.js'
 
-export function mockUserOperationFactory(
+export const mockUserOperationFactory = (
   sender: string,
+  addFactory: boolean,
   nonce: number,
-  paymaster?:{paymaster: string, paymasterData: string, paymasterPostOpGasLimit: BigNumberish}
-): UserOperation {
+  paymaster?: {
+    paymaster: string
+    paymasterData: string
+    paymasterPostOpGasLimit: BigNumberish
+  },
+): UserOperation => {
   const mockUserOperation: UserOperation = {
     sender: sender,
     nonce: nonce,
-    factory: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
-    factoryData: '0x04',
-    callData: '0xa9e966b7000000000000000000000000000000000000000000000000000000000010f447',
+    factory: addFactory
+      ? '0x0000000071727De22E5E9d8BAf0edAc6f37da032'
+      : undefined,
+    factoryData: addFactory ? '0x0000000000000000' : undefined,
+    callData:
+      '0xa9e966b7000000000000000000000000000000000000000000000000000000000010f447',
     callGasLimit: 0,
     verificationGasLimit: 0,
     preVerificationGas: 0,
@@ -27,7 +35,7 @@ export function mockUserOperationFactory(
   return mockUserOperation
 }
 
-export function mockEntryPointGetUserOpHash(userOp: UserOperation): string {
+export const mockEntryPointGetUserOpHash = (userOp: UserOperation): string => {
   const objString = JSON.stringify(userOp)
   let hash = 0
 
@@ -44,6 +52,27 @@ export function mockEntryPointGetUserOpHash(userOp: UserOperation): string {
   return hash.toString()
 }
 
+export const mockBuildRelayUserOpParam = (
+  addr: string,
+  userOp: UserOperation,
+  userOpHash: string,
+) => {
+  return {
+    userOp,
+    userOpHash,
+    prefund: BigNumber.from('1'),
+    referencedContracts: {
+      addresses: [],
+      hash: '',
+    },
+    senderInfo: {
+      addr,
+      stake: BigNumber.from('1'),
+      unstakeDelaySec: BigNumber.from('8600'),
+    },
+  }
+}
+
 export const MOCK_USER_OPERATION_EVENT = [
   '0x060186e28a01ec7132a8b7da3710396e01d666ce991b4d7577e514470c21ab08',
   '0xFC205D74E4921728c7Bb031FB625d6b29ec641aD',
@@ -54,7 +83,8 @@ export const MOCK_USER_OPERATION_EVENT = [
   BigNumber.from('0x0db560'),
   {
     blockNumber: 9029013,
-    blockHash: '0x8e195b71a6599febbbd6f0348603f6e0a0c0ec1a93339f47474e22f5a24d3775',
+    blockHash:
+      '0x8e195b71a6599febbbd6f0348603f6e0a0c0ec1a93339f47474e22f5a24d3775',
     transactionIndex: 42,
     removed: false,
     address: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
@@ -63,12 +93,14 @@ export const MOCK_USER_OPERATION_EVENT = [
       '0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f',
       '0x060186e28a01ec7132a8b7da3710396e01d666ce991b4d7577e514470c21ab08',
       '0x000000000000000000000000fc205d74e4921728c7bb031fb625d6b29ec641ad',
-      '0x0000000000000000000000000000000000000000000000000000000000000000'
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
     ],
-    transactionHash: '0x53651f0913c51ca9a04b706c003d0bacab12487b5a40feb7268ef197f073ebcc',
+    transactionHash:
+      '0x53651f0913c51ca9a04b706c003d0bacab12487b5a40feb7268ef197f073ebcc',
     logIndex: 113,
     event: 'UserOperationEvent',
-    eventSignature: 'UserOperationEvent(bytes32,address,address,uint256,bool,uint256,uint256)',
+    eventSignature:
+      'UserOperationEvent(bytes32,address,address,uint256,bool,uint256,uint256)',
     args: [
       '0x060186e28a01ec7132a8b7da3710396e01d666ce991b4d7577e514470c21ab08',
       '0xFC205D74E4921728c7Bb031FB625d6b29ec641aD',
@@ -77,26 +109,18 @@ export const MOCK_USER_OPERATION_EVENT = [
       false,
       [BigNumber],
       [BigNumber],
-      {userOpHash: '0x060186e28a01ec7132a8b7da3710396e01d666ce991b4d7577e514470c21ab08'},
-      {sender: '0xFC205D74E4921728c7Bb031FB625d6b29ec641aD'},
-      {paymaster: '0x0000000000000000000000000000000000000000'},
-      {nonce: BigNumber.from('0x00')},
-      {success: false},
-      {actualGasCost: BigNumber.from('0x44ac02f919dce0')},
-      {actualGasUsed: BigNumber.from('0x0db560')}
-    ]
-  }
+      {
+        userOpHash:
+          '0x060186e28a01ec7132a8b7da3710396e01d666ce991b4d7577e514470c21ab08',
+      },
+      { sender: '0xFC205D74E4921728c7Bb031FB625d6b29ec641aD' },
+      { paymaster: '0x0000000000000000000000000000000000000000' },
+      { nonce: BigNumber.from('0x00') },
+      { success: false },
+      { actualGasCost: BigNumber.from('0x44ac02f919dce0') },
+      { actualGasUsed: BigNumber.from('0x0db560') },
+    ],
+  },
 ]
-
-export function setTestConfig() {
-  process.env = {
-    ...process.env,
-    TRANSEPTOR_MNEMONIC: 'test '.repeat(11) + 'junk',
-    TRANSEPTOR_BENEFICIARY: '0xd21934eD8eAf27a67f0A70042Af50A1D6d195E81'
-  }
-  return {
-    args: ['--network', 'hardhat']
-  }
-}
 
 export const testWallet = Wallet.fromMnemonic('test '.repeat(11) + 'junk')

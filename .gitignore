@@ -27,3 +27,10 @@ yarn-error.log*
 /influxdb-data
 /grafana-data
 
+# Yarn
+.yarn-integrity
+yarn-debug.log*
+yarn-error.log*
+.yarn/cache
+.yarn/unplugged
+.yarn/install-state.gz

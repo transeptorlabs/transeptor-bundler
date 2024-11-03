@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
-    "outDir": "dist/esm",
-    "baseUrl": "./",
-    "target": "ES2022",
+    "strict": true,
+    "target": "ESNext",
     "module": "ESNext",
     "esModuleInterop": true,
     "resolveJsonModule": true,
@@ -22,18 +21,22 @@
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
+    "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": false,
+    "outDir": "dist",
+    "baseUrl": "./",
     "paths": {
       "*": ["node_modules/*"]
     },
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.js",
+    "./src/**/*.ts",
   ],
   "exclude": [
-    "./src/p2p/*",
+    "e2e/**",
+    "src/**/*.test.ts",
+    "test/**",
     "./contracts/*",
+    "node_modules"
   ]
 }

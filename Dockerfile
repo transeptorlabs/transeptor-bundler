@@ -1,31 +1,38 @@
 # Stage 1: Build the source code
 FROM node:20-alpine3.18 as build_src
-WORKDIR /usr/app
+WORKDIR /app
 RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
-# Copy the source code
 COPY . .
 
 # Install dependencies and build the project
-RUN npm install
-RUN npm run build
+RUN yarn install
+RUN yarn build
 
 # Stage 2: Build the dependencies
 FROM node:20-alpine3.18 as build_deps
-WORKDIR /usr/app
+WORKDIR /app
 RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
+ENV NODE_ENV production
+
 # Copy ./build files from the previous stage
-COPY --from=build_src /usr/app/ .
+COPY --from=build_src /app/dist ./dist
+COPY --from=build_src /app/package.json ./
 
 # Install production dependencies
-RUN npm install --production --force
+RUN yarn install --frozen-lockfile --production
+RUN yarn cache clean --all
 
 # Stage 3: Create the final image
 FROM node:20-alpine3.18
-WORKDIR /usr/app
+WORKDIR /app
 
 # Copy files from the previous build stage
-COPY --from=build_deps /usr/app .
+COPY --from=build_deps /app .
 
-ENTRYPOINT ["node", "./dist/esm/src/index.js"]
+# Use a non-root user if possible
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+ENTRYPOINT ["node", "./dist/index.js"]

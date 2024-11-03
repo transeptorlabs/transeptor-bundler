@@ -2,15 +2,14 @@
 
 ## Responsible Disclosure Policy
 
-If you have discovered a security vulnerability in any of the systems provided by Transeptor Labs, we encourage you to report it to us as soon as possible. We are committed to maintaining the security of our systems and appreciate the assistance of the security community.
+If you have discovered a security vulnerability in any of the nodes provided by Transeptor Labs, we encourage you to report it to us as soon as possible. We are committed to maintaining the security of our systems and appreciate the assistance of the security community.
 
 ### Reporting Guidelines
 
-We kindly request that you follow these guidelines when reporting security vulnerabilities to us:
+Please follow these guidelines when reporting security vulnerabilities to us:
 
-- Please provide a detailed description of the vulnerability, including a clear explanation of the issue and the potential impact.
-- If applicable, a proof of concept (PoC) or steps to reproduce the vulnerability would be greatly appreciated.
-- We'd like to ask that you make a good-faith effort to avoid privacy violations, data destruction, and disruptions to our services during your testing.
+- Provide a detailed description of the vulnerability, including a clear explanation of the issue and the potential impact.
+- If applicable, a proof of concept (PoC) or steps to reproduce the vulnerability.
 
 ### Reporting Process
 
@@ -32,10 +31,8 @@ We appreciate your cooperation in adhering to the following disclosure timeline:
 
 ### Scope
 
-This policy applies to all systems and projects provided by Transeptor Labs. This includes our open-source projects and any related infrastructure.
+This policy applies to bundler open-source nodes provided by Transeptor Labs.
 
 ## Contact
 
 For any questions or concerns regarding this security policy, don't hesitate to contact us at [transeptorhq@gmail.com](mailto:transeptorhq@gmail.com).
-
-Thank you for helping us keep our systems secure.
