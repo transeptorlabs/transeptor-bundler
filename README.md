@@ -16,6 +16,7 @@
     <img src="https://img.shields.io/codecov/c/github/transeptorlabs/transeptor-bundler.svg?style=flat-square" alt="codecov">
   </a>
   <img src="https://img.shields.io/badge/ESM-supported-brightgreen" alt="ESM Supported">
+  <img src="https://img.shields.io/docker/pulls/transeptorlabs/bundler" alt="Docker pulls">
 </p>
 
 > :warning: **This repository is currently under active development.**
