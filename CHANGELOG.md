@@ -25,6 +25,7 @@
 🚀 **New Feature**
 - Update docs to support both bundler and snap
   
-- ## 1.0.5 - Site Release(11-10-2024)
+- ## 1.0.6 - Site Release(11-10-2024)
 🚀 **New Feature**
 - Drop docs for snap
+- Updgrade to version 3 of Docusaurus
