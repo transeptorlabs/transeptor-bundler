@@ -1,94 +1,65 @@
 {
-  "name": "root",
+  "name": "transeptor-docs",
+  "version": "1.0.5",
   "private": true,
-  "version": "0.7.0-alpha.0",
-  "description": "A light weight blazing fast, modular ERC-4337 TypeScript bundler built with the power of declarative functional programming.",
+  "description": "transeptor Docs",
+  "keywords": [
+    "ERC-4337",
+    "Account Abstraction",
+    "Smart contract account",
+    "Bundler",
+    "Ethereum"
+  ],
   "author": {
     "name": "Transeptor Labs",
     "email": "transeptorhq@gmail.com",
     "url": "https://transeptorlabs.io"
   },
-  "license": "GNU",
-  "homepage": "https://github.com/transeptorlabs/transeptor-bundler#readme",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/transeptorlabs/transeptor-bundler.git"
-  },
-  "bugs": {
-    "url": "https://github.com/transeptorlabs/transeptor-bundler/issues"
-  },
-  "type": "module",
-  "exports": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
   "scripts": {
-    "clean": "rm -rf dist",
-    "ls-cmd": "node --import ./register-hook.js ./src/index.ts --help",
-    "build": "npx tsc -p ./tsconfig.json && cp ./src/sim/tracer.js dist/sim",
-    "build:contracts": "cd contracts && forge build",
-    "dev": "nodemon",
-    "start": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "start:unsafe": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
-    "start:metrics": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --metrics --txMode base | pino-pretty",
-    "start:prod": "yarn build && node dist/index.js --httpApi web3,eth,debug --txMode base|  pino-pretty",
-    "test": "vitest --config ./vitest.config.ts",
-    "lint": "eslint . --ext ts",
-    "lint:fix": "yarn lint --fix",
-    "send-op": "node --import ./register-hook.js ./e2e/send-userop.e2e.ts | pino-pretty",
-    "test:mempool-race": "node --import ./register-hook.js ./e2e/data-race-test.ts ",
-    "///cK": "________________________DOCKER CONTAINERS______________________________",
-    "local-eth": "./eth-node",
-    "build:image": "docker build -t bundler-typescript:v-local .",
-    "start:image": "docker-compose up -d bundler-typescript-local",
-    "stop:image": "docker-compose down",
-    "influxdb": "docker-compose up influxdb",
-    "grafana": "docker-compose up grafana"
+    "docusaurus": "docusaurus",
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "swizzle": "docusaurus swizzle",
+    "deploy": "docusaurus deploy",
+    "clear": "docusaurus clear",
+    "serve": "docusaurus serve",
+    "write-translations": "docusaurus write-translations",
+    "write-heading-ids": "docusaurus write-heading-ids",
+    "typecheck": "tsc",
+    "spellcheck": "cspell \"./src**/*\"",
+    "spellcheck:docs": "cspell \"./docs**/*\""
   },
   "dependencies": {
-    "@chainsafe/libp2p-noise": "^12.0.2",
-    "@influxdata/influxdb-client": "1.33.2",
-    "@libp2p/mplex": "^8.0.4",
-    "@libp2p/tcp": "^7.0.3",
-    "@multiformats/multiaddr": "^12.1.5",
-    "async-mutex": "0.4.0",
-    "commander": "10.0.1",
-    "cors": "^2.8.5",
-    "dotenv": "16.0.3",
-    "ethers": "^5.7.1",
-    "express": "^4.18.3",
-    "helmet": "^7.1.0",
-    "libp2p": "^0.45.9",
-    "os-utils": "0.0.14",
-    "pino": "^8.14.1"
+    "@docusaurus/core": "2.4.1",
+    "@docusaurus/plugin-content-docs": "2.4.1",
+    "@docusaurus/plugin-google-gtag": "^2.4.0",
+    "@docusaurus/preset-classic": "2.4.1",
+    "@mdx-js/react": "^1.6.22",
+    "@typeform/embed-react": "^2.19.0",
+    "clsx": "^1.2.1",
+    "prism-react-renderer": "^1.3.5",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "18.16.3",
-    "@types/os-utils": "^0.0.4",
-    "@typescript-eslint/eslint-plugin": "5.59.2",
-    "@typescript-eslint/parser": "5.59.2",
-    "eslint": "^8.39.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-jsdoc": "^50.2.2",
-    "eslint-plugin-prettier": "^5.2.1",
-    "nodemon": "^3.1.0",
-    "pino-pretty": "^10.0.0",
-    "prettier": "^3.3.3",
-    "ts-node": "10.9.1",
-    "typescript": "5.0.4",
-    "vite": "^5.3.1",
-    "vitest": "^1.6.0"
+    "@docusaurus/module-type-aliases": "2.3.1",
+    "@tsconfig/docusaurus": "^1.0.5",
+    "typescript": "^4.7.4"
   },
-  "packageManager": "yarn@3.2.1",
-  "engines": {
-    "node": ">=20.11.1"
-  },
-  "nodemonConfig": {
-    "watch": [
-      "src"
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
     ],
-    "ext": "ts,json",
-    "ignore": [],
-    "exec": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty"
-  }
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "engines": {
+    "node": ">=16.14"
+  },
+  "packageManager": "yarn@3.2.1"
 }

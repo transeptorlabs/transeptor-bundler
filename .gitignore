@@ -1,15 +1,12 @@
 # Dependencies
-node_modules/
+/node_modules
 
-# test
-coverage
-coverage.json
+# Production
+/build
 
-# production
-dist
-
-# secrets
-.env
+# Generated files
+.docusaurus
+.cache-loader
 
 # Misc
 .DS_Store
@@ -17,15 +14,10 @@ dist
 .env.development.local
 .env.test.local
 .env.production.local
-.vscode
 
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Metrics data
-/influxdb-data
-/grafana-data
 
 # Yarn
 .yarn-integrity
