@@ -7,7 +7,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Transeptor',
-  tagline: 'Unlock the Full Potential of Account Abstraction', 
+  tagline: 'Experience the power of TypeScript and functional programming with Transeptor, the ultimate ERC-4337 bundler for dApp developers.', 
   favicon: 'img/brand/logo-2.png',
   staticDirectories: ['public', 'static'],
 
@@ -87,7 +87,7 @@ const config = {
         items: [
           {
             to:'docs',
-            position: 'left',
+            position: 'right',
             label: 'Docs',
           },
           {
@@ -96,9 +96,10 @@ const config = {
             position: 'right',
           },
           {
-            href: 'https://github.com/transeptorlabs',
-            label: 'GitHub',
+            href: 'https://github.com/transeptorlabs/transeptor-bundler',
             position: 'right',
+            className: 'header-github-link',
+            'aria-label': 'GitHub repository',
           },
         ],
       },
@@ -143,35 +144,35 @@ const config = {
         theme: lightCodeTheme,
         darkTheme: darkCodeTheme,
       },
-      algolia: {
-        // The application ID provided by Algolia
-        appId: 'KUQD34DBOI',
+      // algolia: {
+      //   // The application ID provided by Algolia
+      //   appId: 'KUQD34DBOI',
   
-        // Public API key: it is safe to commit it
-        apiKey: 'a2a09bea095663541c95ed34d802c8e5',
+      //   // Public API key: it is safe to commit it
+      //   apiKey: 'a2a09bea095663541c95ed34d802c8e5',
   
-        indexName: 'transeptorlabs',
+      //   indexName: 'transeptorlabs',
   
-        // Optional: see doc section below
-        contextualSearch: true,
+      //   // Optional: see doc section below
+      //   contextualSearch: true,
   
-        // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
-        // externalUrlRegex: 'external\\.com|domain\\.com',
+      //   // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
+      //   // externalUrlRegex: 'external\\.com|domain\\.com',
   
-        // Optional: Replace parts of the item URLs from Algolia. Useful when using the same search index for multiple deployments using a different baseUrl. You can use regexp or string in the `from` param. For example: localhost:3000 vs myCompany.com/docs
-        replaceSearchResultPathname: {
-          from:  "/",
-          to: process.env.DEST || "/",
-        },
+      //   // Optional: Replace parts of the item URLs from Algolia. Useful when using the same search index for multiple deployments using a different baseUrl. You can use regexp or string in the `from` param. For example: localhost:3000 vs myCompany.com/docs
+      //   replaceSearchResultPathname: {
+      //     from:  "/",
+      //     to: process.env.DEST || "/",
+      //   },
   
-        // Optional: Algolia search parameters
-        searchParameters: {},
+      //   // Optional: Algolia search parameters
+      //   searchParameters: {},
   
-        // Optional: path for search page that enabled by default (`false` to disable it)
-        searchPagePath: 'search',
+      //   // Optional: path for search page that enabled by default (`false` to disable it)
+      //   searchPagePath: 'search',
   
-        //... other Algolia params
-      },
+      //   //... other Algolia params
+      // },
     }),
 };
 

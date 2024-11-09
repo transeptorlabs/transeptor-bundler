@@ -6,15 +6,13 @@ import Link from "@docusaurus/Link";
 
 import styles from './index.module.css';
 import BundlerFeatures from '../components/bundler-features';
-import SnapFeatures from '../components/snap-features';
-import LearnFeatures from '../components/learn-features';
 
 function HomepageHeader() {
   const {siteConfig} = useDocusaurusContext();
   return (
     <header className={clsx('hero hero--primary', styles.heroBanner)}>
       <div className="container">
-        <h1 className="hero__title">Transeptor Labs builder documentation</h1>
+        <h1 className="hero__title">Transeptor bundler documentation</h1>
         <p className="hero__subtitle">{siteConfig.tagline}</p>
         <Link className="button button--secondary button--lg" to="/docs">
           Get started
@@ -29,15 +27,13 @@ export default function Home(): JSX.Element {
   return (
     <Layout
       title={`${siteConfig.title}`}
-      description="Transeptor Labs builder documentation">
+      description="Transeptor bundler documentation">
         <meta name="twitter:title" content={`${siteConfig.title}`}/>
-        <meta name="twitter:description" content="Transeptor Labs builder documentation"/>
+        <meta name="twitter:description" content="Transeptor bundler documentation"/>
       {/* TODO: Add  og:image, twitter:image*/}
       <HomepageHeader />
       <main>
         <BundlerFeatures />
-        <SnapFeatures />
-        <LearnFeatures />
       </main>
     </Layout>
   );

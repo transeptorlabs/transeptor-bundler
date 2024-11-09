@@ -24,3 +24,7 @@
 - ## 1.0.5 - Site Release(06-28-2023)
 🚀 **New Feature**
 - Update docs to support both bundler and snap
+  
+- ## 1.0.5 - Site Release(11-10-2024)
+🚀 **New Feature**
+- Drop docs for snap
