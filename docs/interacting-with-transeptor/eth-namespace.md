@@ -10,33 +10,146 @@ title: eth Namespace
 
 <hr></hr>
 
-## Send User Operation
+## eth_chainId
+Returns [EIP-155](https://eips.ethereum.org/EIPS/eip-155) Chain ID of the current network.
+
+Example Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "eth_chainId",
+  "params": []
+}
+```
+
+Example Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": "0x1"
+}
+```
+
+## eth_supportedEntryPoints
+
+Returns an array of the entryPoint addresses supported by the client.
+
+Example Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "eth_supportedEntryPoints",
+  "params": []
+}
+```
+
+Example Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": [
+    "0xcd01C8aa8995A59eB7B2627E69b40e0524B5ecf8",
+    "0x7A0A0d159218E6a2f407B99173A2b12A6DDfC2a6"
+  ]
+}
+```
+
+## eth_estimateUserOperationGas
+Clients can calculate the gas requirements for a UserOperation by using this method. The method takes a UserOperation as input, including optional gas limits and prices, and returns the required gas limits for the operation.
+
+Example Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "eth_estimateUserOperationGas",
+  "params": [
+    {
+      "sender": "0x1234...5678",
+      "nonce": "0x01", 
+      "initCode": "0x1234...5678",
+      "callData": "0x1234...5678",
+      "callGasLimit": "0x05",
+      "verificationGasLimit": "0x05",
+      "preVerificationGas": "0x05",
+      "maxFeePerGas": "0x05",
+      "maxPriorityFeePerGas": "0x05",
+      "signature": "0x1234...5678"
+    },
+    "0x_entryPoint"
+  ]
+}
+```
+
+Example Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "preVerificationGas": "0x05",
+    "verificationGasLimit": "0x05",
+    "callGasLimit": "0x05"
+  }
+}
+```
+
+## eth_sendUserOperation
 
 Clients can use this method to submit a UserOperation object to the pool of Bundler clients. The response payload will contain the calculated `userOpHash` if and only if the request passes all necessary checks; otherwise, the response payload will return an error code with a failure message.
 
-Example Request: 
+Example Request with no paymaster:
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
   "method": "eth_sendUserOperation",
   "params": [
-    // UserOperation object
     {
-      sender,
-      nonce, 
-      initCode,
-      callData,
-      callGasLimit,
-      verificationGasLimit,
-      preVerificationGas,
-      maxFeePerGas,
-      maxPriorityFeePerGas,
-      paymasterAndData,
-      signature
+      "sender": "0x1234...5678",
+      "nonce": "0x01", 
+      "initCode": "0x1234...5678",
+      "callData": "0x1234...5678",
+      "callGasLimit": "0x05",
+      "verificationGasLimit": "0x05",
+      "preVerificationGas": "0x05",
+      "maxFeePerGas": "0x05",
+      "maxPriorityFeePerGas": "0x05",
+      "signature": "0x1234...5678"
     },
-    // MUST be one of the entry points supportedEntryPoints the RPC call
-    entryPoint
+    "0x_entryPoint"
+  ]
+}
+```
+
+Example Request with paymaster: 
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "eth_sendUserOperation",
+  "params": [
+    {
+    "sender": "0x1234...5678",
+      "nonce": "0x01", 
+      "initCode": "0x1234...5678",
+      "callData": "0x1234...5678",
+      "callGasLimit": "0x05",
+      "verificationGasLimit": "0x05",
+      "preVerificationGas": "0x05",
+      "maxFeePerGas": "0x05",
+      "maxPriorityFeePerGas": "0x05",
+      "paymaster": "0x1234...5678",
+      "paymasterVerificationGasLimit": "0x05",
+      "paymasterPostOpGasLimit": "0x05",
+      "paymasterData": "0x1234...5678",
+      "signature": "0x1234...5678"
+    },
+    "0x_entryPoint"
   ]
 }
 ```
@@ -50,55 +163,35 @@ Example Response:
 }
 ```
 
-<hr></hr>
-
-## Estimate User Operation Gas
-Clients can calculate the gas requirements for a UserOperation by using this method. The method takes a UserOperation as input, including optional gas limits and prices, and returns the required gas limits for the operation.
-
-Example Request:
+Example failure responses:
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "eth_estimateUserOperationGas",
-  "params": [
-    // UserOperation object
-    {
-      sender,
-      nonce, 
-      initCode,
-      callData,
-      callGasLimit,
-      verificationGasLimit,
-      preVerificationGas,
-      maxFeePerGas,
-      maxPriorityFeePerGas,
-      paymasterAndData,
-      signature
-    },
-    // MUST be one of the entry points supportedEntryPoints the RPC call
-    entryPoint
-  ]
-}
-```
-
-Example Response:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  // The return values are in units of wei.
-  "result": {
-    preVerificationGas: "0x05",
-    verificationGasLimit: "0x05",
-    callGasLimit: "0x05"
+  "error": {
+    "message": "AA21 didn't pay prefund",
+    "code": -32500
   }
 }
 ```
 
-<hr></hr>
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "error": {
+    "message": "paymaster stake too low",
+    "data": {
+      "paymaster": "0x123456789012345678901234567890123456790",
+      "minimumStake": "0xde0b6b3a7640000",
+      "minimumUnstakeDelay": "0x15180"
+    },
+    "code": -32504
+  }
+}
+```
 
-## Get User Operation By Hash
+## eth_getUserOperationByHash
 This method allows users to retrieve a UserOperation based on a hash (userOpHash) generated by the eth_sendUserOperation method.
 
 Example Request: 
@@ -131,32 +224,29 @@ or
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-   userOperation: {
+   "userOperation": {
       {
-        sender,
-        nonce, 
-        initCode,
-        callData,
-        callGasLimit,
-        verificationGasLimit,
-        preVerificationGas,
-        maxFeePerGas,
-        maxPriorityFeePerGas,
-        paymasterAndData,
-        signature
+        "sender": "0x1234...5678",
+      "nonce": "0x01", 
+      "initCode": "0x1234...5678",
+      "callData": "0x1234...5678",
+      "callGasLimit": "0x05",
+      "verificationGasLimit": "0x05",
+      "preVerificationGas": "0x05",
+      "maxFeePerGas": "0x05",
+      "maxPriorityFeePerGas": "0x05",
+      "signature": "0x1234...5678"
       },
    },
-   entryPoint,
-   blockNumber,
-   blockHash,
-   transactionHash
+   "entryPoint": "0x_entryPoint",
+   "blockNumber": "1111",
+   "blockHash": "0x_blockHash",
+   "transactionHash": "0x_transactionHash"
   }
 }
 ```
 
-<hr></hr>
-
-## Get User Operation Receipt
+## eth_getUserOperationReceipt
 This method allows users to retrieve a UserOperation receipt by providing a hash (userOpHash) generated by the eth_sendUserOperation method.
 
 Example Request: 
@@ -165,7 +255,7 @@ Example Request:
   "jsonrpc": "2.0",
   "id": 1,
   "method": "eth_getUserOperationReceipt",
-  "params": ["userOpHash"]
+  "params": ["0x_userOpHash"]
 }
 ```
 
@@ -188,68 +278,17 @@ or
   "jsonrpc": "2.0",
   "id": 1,
   "result": {
-    userOpHash,
-    entryPoint,
-    sender,
-    nonce,
-    paymaster,
-    actualGasCost,
-    actualGasUsed,
-    success,
-    reason,
-    logs,
-    receipt,
+    "userOpHash": "0x_userOpHash",
+    "entryPoint": "0x_entryPoint",
+    "sender": "0x_sender",
+    "nonce": "0x01",
+    "paymaster": "0x_paymaster",
+    "actualGasCost": "0x05",
+    "actualGasUsed": "0x05",
+    "success": true,
+    "reason": "If reverted, user operation revert reason",
+    "logs": [],
+    "receipt": {}
   }
-}
-```
-
-<hr></hr>
-
-## Supported Entry Points
-This method returns an array of entryPoint addresses supported by the client, with the client's preferred entryPoint address listed as the first element in the array.
-
-Example Request:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "eth_supportedEntryPoints",
-  "params": []
-}
-```
-
-Example Response:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": [
-    "0xcd01C8aa8995A59eB7B2627E69b40e0524B5ecf8",
-    "0x7A0A0d159218E6a2f407B99173A2b12A6DDfC2a6"
-  ]
-}
-```
-
-<hr></hr>
-
-## ChainId
-Returns [EIP-155](https://eips.ethereum.org/EIPS/eip-155) Chain ID.
-
-Example Request:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "eth_chainId",
-  "params": []
-}
-```
-
-Example Response:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "result": "0x1"
 }
 ```

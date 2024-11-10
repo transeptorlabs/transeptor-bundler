@@ -10,46 +10,162 @@ title: debug Namespace
 
 <hr></hr>
 
-### Error Response Codes
-Below are error codes for `eth_sendUserOperation` , `eth_estimateUserOperationGas` operations.
+## debug_bundler_clearState
+Clears the bundler mempool and reputation data of paymasters/accounts/factories/aggregators.
 
-| Code        | Message                                                                      | Data                              |
-| ----------- | -----------                                                                  |  -----------                      |
-| 32602       | Invalid UserOperation struct/fields                                          |  None                            |
-| 32500       | Transaction rejected by entryPoint’s simulateValidation, during wallet creation or validation                                                                                   |  None                             |
-| 32501       | Transaction rejected by paymaster’s validatePaymasterUserOp                  |  Contain a paymaster value        |
-| 32502       | Transaction rejected because of opcode validation                            |  None                            |
-| 32503       | UserOperation out of time-range: either wallet or paymaster returned a time-range, and it is already expired (or will expire soon)                                          |  Contain the `validUntil` and `validAfter` values or a paymaster value for errors triggered by the `paymaster` |
-| 32504       | Transaction rejected because paymaster (or signature aggregator) is throttled/banned                                          |  Contain a paymaster or aggregator value, depending on the failed entity                            |
-| 32505       | transaction rejected because paymaster (or signature aggregator) stake or unstake-delay is too low                                         |  contain a paymaster or aggregator value, depending on the failed entity or field SHOULD contain a `minimumStake` and `minimumUnstakeDelay`                           |
-| 32506       | Transaction rejected because wallet specified unsupported signature aggregator                                          |  Contain an aggregator value                            |
-| 32507       | Transaction rejected because of wallet signature check failed (or paymaster signature if the paymaster uses its data as signature)                                          |  None                            |
-
-
-Example failure responses:
+Example Request:
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "error": {
-    "message": "AA21 didn't pay prefund",
-    "code": -32500
-  }
+  "method": "debug_bundler_clearState",
+  "params": []
 }
 ```
 
+Example Response:
 ```json
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "error": {
-    "message": "paymaster stake too low",
-    "data": {
-      "paymaster": "0x123456789012345678901234567890123456790",
-      "minimumStake": "0xde0b6b3a7640000",
-      "minimumUnstakeDelay": "0x15180"
-    },
-    "code": -32504
-  }
+  "result": "ok"
+}
+```
+
+## debug_bundler_dumpMempool
+Clears the bundler mempool and reputation data of paymasters/accounts/factories/aggregators.
+
+Example Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "debug_bundler_dumpMempool",
+  "params": ["0x1306b01bC3e4AD202612D3843387e94737673F53"]
+}
+```
+
+Example Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": [
+    {
+      "sender": "0x1234...5678",
+      "nonce": "0x01", 
+      "initCode": "0x1234...5678",
+      "callData": "0x1234...5678",
+      "callGasLimit": "0x05",
+      "verificationGasLimit": "0x05",
+      "preVerificationGas": "0x05",
+      "maxFeePerGas": "0x05",
+      "maxPriorityFeePerGas": "0x05",
+      "signature": "0x1234...5678"
+    }
+  ]
+}
+```
+
+## debug_bundler_sendBundleNow
+Forces the bundler to execute the entire current mempool.
+
+Example Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "debug_bundler_sendBundleNow",
+  "params": []
+}
+```
+
+Example Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": "0xdead9e43632ac70c46b4003434058b18db0ad809617bd29f3448d46ca9085576"
+}
+```
+
+## debug_bundler_setBundlingMode
+Toggles bundling mode between 'auto' and 'manual'.
+
+Example Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "debug_bundler_setBundlingMode",
+  "params": ["manual"]
+}
+```
+
+Example Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": "ok"
+}
+```
+
+## debug_bundler_setReputation
+Sets reputation of given addresses.
+
+Example Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "debug_bundler_setReputation",
+  "params": [
+    [
+      {
+        "address": "0x7A0A0d159218E6a2f407B99173A2b12A6DDfC2a6",
+        "opsSeen": "0x14",
+        "opsIncluded": "0x0D"
+      }
+    ],
+    "0x1306b01bC3e4AD202612D3843387e94737673F53"
+  ]
+}
+```
+
+Example Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": "ok"
+}
+```
+
+## debug_bundler_dumpReputation
+Returns the reputation data of all observed addresses.
+
+Example Request:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "debug_bundler_dumpReputation",
+  "params": ["0x1306b01bC3e4AD202612D3843387e94737673F53"]
+}
+```
+
+Example Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": [
+    { "address": "0x7A0A0d159218E6a2f407B99173A2b12A6DDfC2a6",
+      "opsSeen": "0x14",
+      "opsIncluded": "0x13",
+      "status": "ok"
+    }
+  ]
 }
 ```
