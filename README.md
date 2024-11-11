@@ -1,11 +1,11 @@
 <p align="center">
-  <a href="https://transeptorlabs.io/docs/category/bundler">
-    <img width="500" title="Transeptor" src='https://transeptorlabs.io/img/brand/transeptor.png' />
+  <a href="https://transeptor.transeptorlabs.io/docs">
+    <img width="500" title="Transeptor" src='https://transeptorlabs.io/transeptor.png' />
   </a>
 </p>
 
 <p align="center">
-  A light weight blazing fast, modular ERC-4337 TypeScript bundler built with declarative functional programming.
+  A light weight blazing fast, modular ERC-4337 TypeScript bundler built with functional programming.
 </p>
 
 <p align="center">
