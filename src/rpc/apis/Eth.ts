@@ -19,7 +19,7 @@ import {
 
 import { ProviderService } from '../../provider/index.js'
 import { resolveProperties } from 'ethers/lib/utils.js'
-import { Simulator } from '../../sim/index.js'
+import { Simulator, StateOverride } from '../../sim/index.js'
 import { Logger } from '../../logger/index.js'
 import { ValidationService } from '../../validatation/index.js'
 import { EventManagerWithListener } from '../../event/index.js'
@@ -98,6 +98,7 @@ export type EthAPI = {
   estimateUserOperationGas(
     userOpInput: Partial<UserOperation>,
     entryPointInput: string,
+    stateOverride?: StateOverride,
   ): Promise<EstimateUserOpGasResult>
   sendUserOperation(
     userOp: UserOperation,
@@ -131,14 +132,15 @@ export const createEthAPI = (
     estimateUserOperationGas: async (
       userOpInput: Partial<UserOperation>,
       entryPointInput: string,
+      stateOverride?: StateOverride,
     ): Promise<EstimateUserOpGasResult> => {
       const userOp = {
         // Override gas params to estimate gas defaults
-        maxFeePerGas: BigNumber.from(0).toHexString(),
-        maxPriorityFeePerGas: BigNumber.from(0).toHexString(),
-        preVerificationGas: BigNumber.from(0).toHexString(),
-        verificationGasLimit: BigNumber.from(10e6).toHexString(),
-        callGasLimit: BigNumber.from(10e6).toHexString(),
+        maxFeePerGas: 0,
+        maxPriorityFeePerGas: 0,
+        preVerificationGas: 21000,
+        callGasLimit: 10e6,
+        verificationGasLimit: 10e6,
         ...userOpInput,
       }
       await validateParameters(
@@ -146,8 +148,11 @@ export const createEthAPI = (
         entryPointInput,
         entryPointContract,
       )
+
+      // Simulate the operation to get the gas limits
       const { preOpGas, validAfter, validUntil } = await sim.simulateHandleOp(
         userOp as UserOperation,
+        stateOverride,
       )
 
       // TODO: Use simulateHandleOp with proxy contract to estimate callGasLimit too
@@ -156,8 +161,12 @@ export const createEthAPI = (
         userOp.sender,
         userOp.callData,
       )
+
+      // Estimate the pre-verification gas
+      const chainId = await ps.getChainId()
+      userOp.signature = undefined // ignore signature for gas estimation to allow calcPreVerificationGas to use dummy signature
+      const preVerificationGas = calcPreVerificationGas(userOp, chainId)
       const verificationGasLimit = BigNumber.from(preOpGas).toNumber()
-      const preVerificationGas = calcPreVerificationGas(userOp)
 
       return {
         validAfter,
@@ -165,9 +174,6 @@ export const createEthAPI = (
         preVerificationGas,
         verificationGasLimit,
         callGasLimit,
-        // TODO: Add paymaster gas values
-        // paymasterVerificationGasLimit,
-        // paymasterPostOpGasLimit,
       }
     },
 
@@ -176,10 +182,10 @@ export const createEthAPI = (
       entryPointInput: string,
     ): Promise<string> => {
       Logger.debug('Running checks on userOp')
-      // TODO: This looks like a duplicate of the userOp validateParameters function
       await validateParameters(userOp, entryPointInput, entryPointContract)
       const userOpReady = await resolveProperties(userOp)
-      vs.validateInputParameters(userOp, entryPointInput, true, true)
+      const chainId = await ps.getChainId()
+      vs.validateInputParameters(userOp, entryPointInput, chainId, true, true)
       const validationResult = await vs.validateUserOp(
         userOp,
         isUnsafeMode,

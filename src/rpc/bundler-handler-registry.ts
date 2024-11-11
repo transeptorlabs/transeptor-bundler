@@ -17,7 +17,11 @@ export const createBundlerHandlerRegistry = (
   eth_sendUserOperation: async (params) =>
     eth.sendUserOperation(params[0], params[1]),
   eth_estimateUserOperationGas: async (params) =>
-    eth.estimateUserOperationGas(params[0], params[1]),
+    eth.estimateUserOperationGas(
+      params[0],
+      params[1],
+      params[2] ? params[2] : undefined,
+    ),
   eth_getUserOperationReceipt: async (params) =>
     eth.getUserOperationReceipt(params[0]),
   eth_getUserOperationByHash: async (params) =>
