@@ -156,8 +156,9 @@ export const createEthAPI = (
         userOp.sender,
         userOp.callData,
       )
+      const chainId = await ps.getChainId()
+      const preVerificationGas = calcPreVerificationGas(userOp, chainId)
       const verificationGasLimit = BigNumber.from(preOpGas).toNumber()
-      const preVerificationGas = calcPreVerificationGas(userOp)
 
       return {
         validAfter,
@@ -165,9 +166,6 @@ export const createEthAPI = (
         preVerificationGas,
         verificationGasLimit,
         callGasLimit,
-        // TODO: Add paymaster gas values
-        // paymasterVerificationGasLimit,
-        // paymasterPostOpGasLimit,
       }
     },
 
@@ -179,7 +177,8 @@ export const createEthAPI = (
       // TODO: This looks like a duplicate of the userOp validateParameters function
       await validateParameters(userOp, entryPointInput, entryPointContract)
       const userOpReady = await resolveProperties(userOp)
-      vs.validateInputParameters(userOp, entryPointInput, true, true)
+      const chainId = await ps.getChainId()
+      vs.validateInputParameters(userOp, entryPointInput, chainId, true, true)
       const validationResult = await vs.validateUserOp(
         userOp,
         isUnsafeMode,

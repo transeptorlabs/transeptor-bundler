@@ -46,12 +46,14 @@ export type ValidationService = {
    *
    * @param userOp
    * @param entryPointInput
+   * @param chainId
    * @param requireSignature
    * @param requireGasParams
    */
   validateInputParameters(
     userOp: UserOperation,
     entryPointInput: string,
+    chainId: number,
     requireSignature: boolean,
     requireGasParams: boolean,
   ): void
@@ -190,6 +192,7 @@ export const createValidationService = (
     validateInputParameters: (
       userOp: UserOperation,
       entryPointInput: string,
+      chainId: number,
       requireSignature = true,
       requireGasParams = true,
     ): void => {
@@ -246,7 +249,7 @@ export const createValidationService = (
       )
       requireAddressAndFields(userOp, 'factory', ['factoryData'])
 
-      const calcPreVerificationGas1 = calcPreVerificationGas(userOp)
+      const calcPreVerificationGas1 = calcPreVerificationGas(userOp, chainId)
       requireCond(
         BigNumber.from(userOp.preVerificationGas).gte(
           BigNumber.from(calcPreVerificationGas1),

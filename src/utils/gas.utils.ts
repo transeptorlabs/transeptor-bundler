@@ -1,4 +1,3 @@
-import { BigNumber } from 'ethers'
 import { arrayify, hexlify } from 'ethers/lib/utils.js'
 
 import { Logger } from '../logger/index.js'
@@ -6,85 +5,117 @@ import { UserOperation } from '../types/index.js'
 
 import { packUserOp, encodeUserOp } from './bundle.utils.js'
 
-export const DefaultGasOverheads: GasOverheads = {
-  fixed: 21000,
-  perUserOp: 18300,
-  perUserOpWord: 4,
-  zeroByte: 4,
-  nonZeroByte: 16,
-  bundleSize: 1,
-  sigSize: 65,
+export type PreVerificationGasCalculator = {
+  /**
+   * Cost of sending a basic transaction on the current chain.
+   */
+  readonly transactionGasStipend: number
+  /**
+   * Gas overhead is added to entire 'handleOp' bundle.
+   */
+  readonly fixedGasOverhead: number
+  /**
+   * Gas overhead per UserOperation is added on top of the above fixed per-bundle.
+   */
+  readonly perUserOpGasOverhead: number
+  /**
+   * Gas overhead per single "word" (32 bytes) of an ABI-encoding of the UserOperation.
+   */
+  readonly perUserOpWordGasOverhead: number
+  /**
+   * The gas cost of a single zero byte an ABI-encoding of the UserOperation.
+   */
+  readonly zeroByteGasCost: number
+  /**
+   * The gas cost of a single zero byte an ABI-encoding of the UserOperation.
+   */
+  readonly nonZeroByteGasCost: number
+  /**
+   * The expected average size of a bundle in current network conditions.
+   * This value is used to split the bundle gas overhead between all ops.
+   */
+  readonly expectedBundleSize: number
+  /**
+   * The size of the dummy 'signature' parameter to be used during estimation.
+   */
+  readonly estimationSignatureSize: number
+  /**
+   * The size of the dummy 'paymasterData' parameter to be used during estimation.
+   */
+  readonly estimationPaymasterDataSize: number
 }
 
-export type GasOverheads = {
-  /**
-   * fixed overhead for entire handleOp bundle.
-   */
-  fixed: number
+const mainnetConfig: PreVerificationGasCalculator = {
+  transactionGasStipend: 21000,
+  fixedGasOverhead: 38000,
+  perUserOpGasOverhead: 11000,
+  perUserOpWordGasOverhead: 4,
+  zeroByteGasCost: 4,
+  nonZeroByteGasCost: 16,
+  expectedBundleSize: 1,
+  estimationSignatureSize: 65,
+  estimationPaymasterDataSize: 0,
+}
 
-  /**
-   * per userOp overhead, added on top of the above fixed per-bundle.
-   */
-  perUserOp: number
+const chainConfigs: { [key: number]: PreVerificationGasCalculator } = {
+  1: mainnetConfig,
+  1337: mainnetConfig,
+}
 
-  /**
-   * overhead for userOp word (32 bytes) block
-   */
-  perUserOpWord: number
+const fillUserOpWithDummyData = (
+  userOp: Partial<UserOperation>,
+  gasConfig: PreVerificationGasCalculator,
+): UserOperation => {
+  const filledUserOp: UserOperation = Object.assign({}, userOp) as UserOperation
+  filledUserOp.preVerificationGas = filledUserOp.preVerificationGas ?? 21000
+  filledUserOp.signature =
+    filledUserOp.signature ??
+    hexlify(Buffer.alloc(gasConfig.estimationSignatureSize, 0xff))
+  filledUserOp.paymasterData =
+    filledUserOp.paymasterData ??
+    hexlify(Buffer.alloc(gasConfig.estimationPaymasterDataSize, 0xff))
+  return filledUserOp
+}
 
-  // perCallDataWord: number
+const calculate = (
+  userOp: UserOperation,
+  gasConfig: PreVerificationGasCalculator,
+): number => {
+  const packed = arrayify(encodeUserOp(packUserOp(userOp), false))
+  const lengthInWord = (packed.length + 31) / 32
+  const callDataCost = packed
+    .map((x) =>
+      x === 0 ? gasConfig.zeroByteGasCost : gasConfig.nonZeroByteGasCost,
+    )
+    .reduce((sum, x) => sum + x)
 
-  /**
-   * zero byte cost, for calldata gas cost calculations
-   */
-  zeroByte: number
+  const dataWordsOverhead = lengthInWord * gasConfig.perUserOpWordGasOverhead
+  const specificOverhead =
+    callDataCost + dataWordsOverhead + gasConfig.perUserOpGasOverhead
+  const shareOfBundleCost =
+    gasConfig.fixedGasOverhead / gasConfig.expectedBundleSize
 
-  /**
-   * non-zero byte cost, for calldata gas cost calculations
-   */
-  nonZeroByte: number
-
-  /**
-   * expected bundle size, to split per-bundle overhead between all ops.
-   */
-  bundleSize: number
-
-  /**
-   * expected length of the userOp signature.
-   */
-  sigSize: number
+  return Math.round(specificOverhead + shareOfBundleCost)
 }
 
 /**
  * Calculate the gas cost of the pre-verification of the userOp.
+ * The 'preVerificationGas' is the cost overhead that cannot be calculated precisely or accessed on-chain.
+ * It is dependent on the blockchain parameters defefined for all transactions.
  *
  * @param userOp - The UserOperation to calculate the gas cost for.
- * @param overheads - The gas overheads to use for the calculation.
+ * @param chainId - The chainId of the chain where the operation will be executed.
  * @returns the gas cost of the pre-verification of the userOp
  */
 export function calcPreVerificationGas(
   userOp: Partial<UserOperation>,
-  overheads?: Partial<GasOverheads>,
+  chainId: number,
 ): number {
   Logger.debug('Running calcPreVerificationGas on userOp')
-  const ov = { ...DefaultGasOverheads, ...(overheads ?? {}) }
-  const p: UserOperation = {
-    // dummy value for incomplete userops
-    preVerificationGas: BigNumber.from(21000).toHexString(),
-    signature: hexlify(Buffer.alloc(ov.sigSize, 1)),
-    ...userOp,
-  } as any
-
-  const packed = arrayify(encodeUserOp(packUserOp(p), false))
-  const lengthInWord = (packed.length + 31) / 32
-  const callDataCost = packed
-    .map((x) => (x === 0 ? ov.zeroByte : ov.nonZeroByte))
-    .reduce((sum, x) => sum + x)
-  const ret = Math.round(
-    callDataCost +
-      ov.fixed / ov.bundleSize +
-      ov.perUserOp +
-      ov.perUserOpWord * lengthInWord,
-  )
-  return ret
+  const gasConfig = chainConfigs[chainId]
+  if (!gasConfig) {
+    throw new Error(`Unsupported chainId: ${chainId}`)
+  }
+  const filledUserOp = fillUserOpWithDummyData(userOp, gasConfig)
+  return calculate(filledUserOp, gasConfig)
 }
