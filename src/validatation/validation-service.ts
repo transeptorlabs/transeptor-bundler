@@ -18,6 +18,7 @@ import {
   requireCond,
   requireAddressAndFields,
   calcPreVerificationGas,
+  validatePreVerificationGas,
 } from '../utils/index.js'
 
 import { ProviderService } from '../provider/index.js'
@@ -249,16 +250,16 @@ export const createValidationService = (
       )
       requireAddressAndFields(userOp, 'factory', ['factoryData'])
 
-      const calcPreVerificationGas1 = calcPreVerificationGas(userOp, chainId)
-      requireCond(
-        BigNumber.from(userOp.preVerificationGas).gte(
-          BigNumber.from(calcPreVerificationGas1),
-        ),
-        `preVerificationGas ${BigNumber.from(
-          userOp.preVerificationGas,
-        )} too low: expected at least ${calcPreVerificationGas1}`,
-        ValidationErrors.InvalidFields,
-      )
+      const preVerificationGas = calcPreVerificationGas(userOp, chainId)
+      if (preVerificationGas != null) {
+        const { isPreVerificationGasValid, minRequiredPreVerificationGas } =
+          validatePreVerificationGas(userOp, chainId)
+        requireCond(
+          isPreVerificationGasValid,
+          `preVerificationGas too low: expected at least ${minRequiredPreVerificationGas}, provided only ${BigNumber.from(userOp.preVerificationGas).toNumber()})`,
+          ValidationErrors.InvalidFields,
+        )
+      }
     },
   }
 }

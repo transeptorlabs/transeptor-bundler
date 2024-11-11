@@ -33,17 +33,17 @@ import {
 import { ProviderService } from '../provider/index.js'
 import { tracerResultParser } from './parseTracerResult.js'
 
-interface StakeInfo {
+type StakeInfo = {
   stake: BigNumberish
   unstakeDelaySec: BigNumberish
 }
 
-interface AggregatorStakeInfo {
+type AggregatorStakeInfo = {
   aggregator: string
   stakeInfo: StakeInfo
 }
 
-interface SimulateValidationReturnStruct {
+type SimulateValidationReturnStruct = {
   returnInfo: {
     preOpGas: BigNumberish
     prefund: BigNumberish
@@ -58,13 +58,36 @@ interface SimulateValidationReturnStruct {
   aggregatorInfo: AggregatorStakeInfo
 }
 
-interface ExecutionResultStruct {
+type ExecutionResultStruct = {
   preOpGas: BigNumberish
   paid: BigNumberish
   accountValidationData: BigNumberish
   paymasterValidationData: BigNumberish
   targetSuccess: boolean
   targetResult: BytesLike
+}
+
+export type StateOverride = {
+  /**
+   * Fake balance to set for the account before executing the call.
+   */
+  balance?: BigNumberish
+  /**
+   * Fake nonce to set for the account before executing the call.
+   */
+  nonce?: BigNumberish
+  /**
+   * Fake EVM bytecode to inject into the account before executing the call.
+   */
+  code?: string
+  /**
+   * Fake key-value mapping to override all slots in the account storage before executing the call.
+   */
+  state?: object
+  /**
+   * Fake key-value mapping to override individual slots in the account storage before executing the call.
+   */
+  stateDiff?: object
 }
 
 const parseValidationResult = (
@@ -259,7 +282,10 @@ export type Simulator = {
   fullSimulateValidation(
     userOp: UserOperation,
   ): Promise<[ValidationResult, BundlerCollectorReturn]>
-  simulateHandleOp(userOp: UserOperation): Promise<ExecutionResult>
+  simulateHandleOp(
+    userOp: UserOperation,
+    stateOverride?: StateOverride,
+  ): Promise<ExecutionResult>
   tracerResultParser(
     userOp: UserOperation,
     tracerResults: BundlerCollectorReturn,
@@ -392,14 +418,10 @@ export const createSimulator = (
 
     simulateHandleOp: async (
       userOp: UserOperation,
+      stateOverride?: StateOverride,
     ): Promise<ExecutionResult> => {
       Logger.debug('Running simulateHandleOp on userOp')
       const epAddress = entryPointContract.address
-      const stateOverride = {
-        [epAddress]: {
-          code: EntryPointSimulationsDeployedBytecode,
-        },
-      }
 
       const simulateHandleOpResult = await ps
         .send('eth_call', [
@@ -412,7 +434,13 @@ export const createSimulator = (
             ]),
           },
           'latest',
-          stateOverride,
+          stateOverride
+            ? stateOverride
+            : {
+                [epAddress]: {
+                  code: EntryPointSimulationsDeployedBytecode,
+                },
+              },
         ])
         .catch((e: any) => {
           throw new RpcError(

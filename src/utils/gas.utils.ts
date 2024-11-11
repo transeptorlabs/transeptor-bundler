@@ -1,9 +1,9 @@
 import { arrayify, hexlify } from 'ethers/lib/utils.js'
 
-import { Logger } from '../logger/index.js'
 import { UserOperation } from '../types/index.js'
 
 import { packUserOp, encodeUserOp } from './bundle.utils.js'
+import { BigNumber } from 'ethers'
 
 export type PreVerificationGasCalculator = {
   /**
@@ -57,7 +57,7 @@ const mainnetConfig: PreVerificationGasCalculator = {
   estimationPaymasterDataSize: 0,
 }
 
-const chainConfigs: { [key: number]: PreVerificationGasCalculator } = {
+const chainConfigs: Record<number, PreVerificationGasCalculator> = {
   1: mainnetConfig,
   1337: mainnetConfig,
 }
@@ -107,15 +107,34 @@ const calculate = (
  * @param chainId - The chainId of the chain where the operation will be executed.
  * @returns the gas cost of the pre-verification of the userOp
  */
-export function calcPreVerificationGas(
+export const calcPreVerificationGas = (
   userOp: Partial<UserOperation>,
   chainId: number,
-): number {
-  Logger.debug('Running calcPreVerificationGas on userOp')
+): number => {
   const gasConfig = chainConfigs[chainId]
   if (!gasConfig) {
     throw new Error(`Unsupported chainId: ${chainId}`)
   }
   const filledUserOp = fillUserOpWithDummyData(userOp, gasConfig)
   return calculate(filledUserOp, gasConfig)
+}
+
+export const validatePreVerificationGas = (
+  userOp: UserOperation,
+  chainId: number,
+): {
+  isPreVerificationGasValid: boolean
+  minRequiredPreVerificationGas: number
+} => {
+  const gasConfig = chainConfigs[chainId]
+  if (!gasConfig) {
+    throw new Error(`Unsupported chainId: ${chainId}`)
+  }
+  const minRequiredPreVerificationGas = calculate(userOp, gasConfig)
+  return {
+    minRequiredPreVerificationGas,
+    isPreVerificationGasValid:
+      minRequiredPreVerificationGas <=
+      BigNumber.from(userOp.preVerificationGas).toNumber(),
+  }
 }

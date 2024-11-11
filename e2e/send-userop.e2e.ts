@@ -45,12 +45,15 @@ const epContract = new ethers.Contract(
 const globalCounter = new ethers.Contract(
   globalCounterAddress,
   globalCounterABI,
+  secondWallet,
 )
 const simpleAccountFactory = new ethers.Contract(
   simpleAccountFatoryAddreess,
   simpleAccountFactoryABI,
+  secondWallet,
 )
 const simpleAccountInterface = new utils.Interface(simpleAccountABI)
+const globalCounterInterface = new utils.Interface(globalCounterABI)
 
 const getCfFactoryData = (owner: string) => {
   const salt = BigNumber.from(Math.floor(Math.random() * 10000000)).toNumber() // a random salt
@@ -98,13 +101,11 @@ const getSenderCfAddress = async (initCode: string): Promise<string> => {
   throw new Error('must handle revert')
 }
 
-const getUserOpCallData = (senderAddress: string) => {
-  const simpleAccount = new ethers.Contract(senderAddress, simpleAccountABI)
-
-  return simpleAccount.interface.encodeFunctionData('execute', [
+const getUserOpCallData = () => {
+  return simpleAccountInterface.encodeFunctionData('execute', [
     globalCounterAddress, // to
     BigNumber.from(0), // value
-    globalCounter.interface.encodeFunctionData('increment', []), // data
+    globalCounterInterface.encodeFunctionData('increment', []), // data
   ])
 }
 
@@ -200,7 +201,12 @@ async function main() {
     nonce: BigNumber.from(0).toHexString(),
     factory: factory,
     factoryData: factoryData,
-    callData: getUserOpCallData(senderCfAddress),
+    callData: getUserOpCallData(),
+    maxPriorityFeePerGas:
+      feeData.maxPriorityFeePerGas?.toHexString() ??
+      BigNumber.from(0).toHexString(),
+    maxFeePerGas:
+      feeData.maxFeePerGas?.toHexString() ?? BigNumber.from(0).toHexString(),
     signature: dummySig,
   } as UserOperation
 
@@ -220,13 +226,12 @@ async function main() {
     })
   Logger.info(gasEstimate, 'Gas Estimate')
   userOp.callGasLimit = BigNumber.from(gasEstimate.callGasLimit).toHexString()
-  userOp.verificationGasLimit = BigNumber.from(1000000).toHexString()
-  userOp.preVerificationGas = BigNumber.from(44848).toHexString()
-  userOp.maxPriorityFeePerGas =
-    feeData.maxPriorityFeePerGas?.toHexString() ??
-    BigNumber.from(0).toHexString()
-  userOp.maxFeePerGas =
-    feeData.maxFeePerGas?.toHexString() ?? BigNumber.from(0).toHexString()
+  userOp.verificationGasLimit = BigNumber.from(
+    gasEstimate.verificationGasLimit,
+  ).toHexString()
+  userOp.preVerificationGas = BigNumber.from(
+    gasEstimate.preVerificationGas,
+  ).toHexString()
 
   // Sign userOp
   const userOpHashToSign = ethers.utils.arrayify(
@@ -245,6 +250,20 @@ async function main() {
       throw new Error('Failed to send user operation.')
     })
   Logger.info({ userOpHash }, 'UserOp hash:')
+
+  const res = await bundlerNode
+    .send('debug_bundler_sendBundleNow', [])
+    .catch((error: any) => {
+      const parseJson = JSON.parse(error.body)
+      Logger.error(parseJson, 'Failed to send bundle now.')
+      throw new Error('Failed to send bundle now.')
+    })
+  Logger.info({ res }, 'Sending bundle now...')
+
+  // Check that the global counter has been incremented by reading the currentCount value
+  // TODO: Fix out why the userOp is failing
+  const count = await globalCounter.currentCount()
+  Logger.info({ count: count.toString() }, 'Global Counter count:')
 }
 
 main()

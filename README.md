@@ -32,16 +32,14 @@ Everything you need to get started developing with Transeptor.
 2. Use correct node version `nvm use`
 3. Add `PRIVATE_KEY` to `contracts/.env` file to deploy the entrypoint contract locally.
 4. Install dependencies `yarn install`
-5. Start local eth node `yarn local-eth` - Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to the nodes `.env` files.
-6. In a new terminal window start the bundler node with live watch for local dev. `yarn dev`
+5. Start local eth node `yarn local-eth` - Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to your `.env` files.
+6. In a new terminal window starting the bundler node in dev mode will live watch for changes in `./src` path with auto restarts. `yarn dev`
 
 - The node will start on `http://localhost:4337/rpc`. 
 
-You can now make changes to the code and each node will automatically restart.
-
 #### Local dev e2e scripts 
 
-Make sure bundler node is running before running to to send a userOp through the bundler
+Run script to send a userOp through the bundler.
 
 ```bash
 yarn send-op
@@ -67,7 +65,7 @@ yarn lint:fix
 
 ## Build
 
-You can build Transeptor from source or use the Docker image.
+You can build Transeptor from source.
 
 ### 🔧 Run from source
 1. Use correct node version: `nvm use`
@@ -81,7 +79,7 @@ Now let's start the bundler node.
 
 ### 🐳 Run from Docker images
 
-Build image
+You can build Transeptor as a Docker image.
 ```bash
 yarn build:image
 ```
