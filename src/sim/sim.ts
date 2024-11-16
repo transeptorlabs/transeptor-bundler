@@ -153,7 +153,7 @@ const parseExecutionResult = (res: ExecutionResultStruct): ExecutionResult => {
   }
 }
 
-const getTracerString = () => {
+const getBundlerCollectorTracerString = () => {
   const __filename = fileURLToPath(import.meta.url)
   const __dirname = dirname(__filename)
 
@@ -291,6 +291,11 @@ export type Simulator = {
     tracerResults: BundlerCollectorReturn,
     validationResult: ValidationResult,
   ): [string[], StorageMap]
+  supportsDebugTraceCall(): Promise<boolean>
+  supportsNativeTracer(
+    nativeTracer: string,
+    useNativeTracerProvider?: boolean,
+  ): Promise<boolean>
 }
 
 export const createSimulator = (
@@ -360,7 +365,7 @@ export const createSimulator = (
       Logger.debug(
         'Running full validation with storage/opcode checks on userOp',
       )
-      const stringifiedTracer = getTracerString()
+      const bundlerCollectorTracer = getBundlerCollectorTracerString()
       const encodedData = epSimsInterface.encodeFunctionData(simFunctionName, [
         packUserOp(userOp),
       ])
@@ -376,7 +381,7 @@ export const createSimulator = (
           ),
         },
         {
-          tracer: stringifiedTracer,
+          tracer: bundlerCollectorTracer,
           stateOverrides: {
             [epAddress]: {
               code: EntryPointSimulationsDeployedBytecode,
@@ -467,6 +472,46 @@ export const createSimulator = (
         validationResult,
         entryPointContract,
       )
+    },
+
+    supportsDebugTraceCall: async (): Promise<boolean> => {
+      Logger.debug(
+        'Checking if network provider supports debug_traceCall to run full validation with standard javascript tracer',
+      )
+      const bundlerCollectorTracer = getBundlerCollectorTracerString()
+      const tracerResult: BundlerCollectorReturn = await ps
+        .debug_traceCall(
+          {
+            from: ethers.constants.AddressZero,
+            to: ethers.constants.AddressZero,
+            data: '0x',
+          },
+          {
+            tracer: bundlerCollectorTracer,
+          },
+        )
+        .catch((e) => e)
+
+      return tracerResult.logs != null
+    },
+
+    supportsNativeTracer: async (
+      nativeTracer,
+      useNativeTracerProvider = false,
+    ): Promise<boolean> => {
+      try {
+        await ps.debug_traceCall(
+          {},
+          {
+            tracer: nativeTracer,
+          },
+          useNativeTracerProvider,
+        )
+
+        return true
+      } catch (e) {
+        return false
+      }
     },
   }
 }

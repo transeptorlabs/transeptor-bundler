@@ -11,11 +11,13 @@ import { InfluxdbConnection } from '../metrics/index.js'
 dotenv.config()
 
 const DEFAULT_NETWORK = 'http://localhost:8545'
-const SUPPORTED_MODES = ['base', 'conditional', 'searcher']
+const SUPPORTED_MODES = ['base', 'searcher']
 const nodeVersion = '0.7.0-alpha.0' // manual update on each release
 
 export type Config = {
   provider: providers.JsonRpcProvider
+  nativeTracerProvider: providers.JsonRpcProvider | undefined
+  isNativeTracer: boolean
 
   bundlerSignerWallets: BundlerSignerWallets
   minSignerBalance: BigNumber
@@ -77,17 +79,23 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
   program
     .version(`${nodeVersion}`)
     .option(
+      '--unsafe',
+      'UNSAFE mode: Enable no storage or opcode checks during userOp simulation. SAFE mode(default).',
+    )
+    .option(
+      '--tracerRpcUrl <string>',
+      'Enables native tracer for full vaildation during userOp simulation with prestateTracer native tracer on network provider. requires unsafe=false.',
+    )
+    .option(
+      '--network <string>',
+      'Ethereum network provider.',
+      `${DEFAULT_NETWORK}`,
+    )
+    .option(
       '--httpApi <string>',
       'ERC4337 rpc method name spaces to enable.',
       'web3,eth',
     )
-    .option(
-      '--network <string>',
-      'ETH execution client url.',
-      `${DEFAULT_NETWORK}`,
-    )
-    .option('--p2p', 'p2p mode enabled', false)
-    .option('--findPeers', 'Search for peers when p2p enabled.', false)
     .option('--port <number>', 'Bundler node listening port.', '4337')
     .option(
       '--numberOfSigners <number>',
@@ -127,12 +135,10 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
     )
     .option(
       '--txMode <string>',
-      'Bundler transaction mode (base, conditional, searcher).',
+      `Bundler transaction mode (base, searcher).
+        (base mode): Sends bundles using eth_sendRawTransaction RPC(does not protect against front running).
+        (searcher mode): Sends bundles  using Flashbots Auction to protect the transaction against front running (only available on Mainnet)`,
       'base',
-    )
-    .option(
-      '--unsafe',
-      'Enable no storage or opcode checks during userOp simulation.',
     )
     .option('--metrics', 'Bundler node metrics tracking enabled.', false)
     .option(
@@ -150,6 +156,8 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
       'Influxdb bucket (requires --metrics to be enabled).',
       'transeptor_metrics',
     )
+    .option('--p2p', 'p2p mode enabled', false)
+    .option('--findPeers', 'Search for peers when p2p enabled.', false)
 
   const programOpts: OptionValues = program.parse(args).opts()
 
@@ -157,6 +165,12 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
     programOpts.network as string,
     process.env.TRANSEPTOR_ALCHEMY_API_KEY,
   )
+
+  const isNativeTracer = (programOpts.tracerRpcUrl as string) !== undefined
+  const nativeTracerProvider = !(programOpts.tracerRpcUrl as string)
+    ? undefined
+    : createProvider(programOpts.tracerRpcUrl as string)
+
   const supportedEntryPointAddress =
     process.env.TRANSEPTOR_ENTRYPOINT_ADDRESS || DEFAULT_ENTRY_POINT
 
@@ -239,6 +253,8 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
 
   return {
     provider,
+    nativeTracerProvider,
+    isNativeTracer,
     entryPointContract,
     stakeManagerContract,
 

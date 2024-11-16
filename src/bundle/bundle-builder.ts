@@ -89,7 +89,7 @@ export const createBundleBuilder = (
         // [SREP-030]
         if (
           paymaster != null &&
-          (paymasterStatus === ReputationStatus.THROTTLED ??
+          (paymasterStatus === ReputationStatus.THROTTLED ||
             (stakedEntityCount[paymaster] ?? 0) > THROTTLED_ENTITY_BUNDLE_COUNT)
         ) {
           Logger.debug(
@@ -103,7 +103,7 @@ export const createBundleBuilder = (
         // [SREP-030]
         if (
           factory != null &&
-          (deployerStatus === ReputationStatus.THROTTLED ??
+          (deployerStatus === ReputationStatus.THROTTLED ||
             (stakedEntityCount[factory] ?? 0) > THROTTLED_ENTITY_BUNDLE_COUNT)
         ) {
           Logger.debug(
@@ -214,16 +214,6 @@ export const createBundleBuilder = (
           stakedEntityCount[factory] = (stakedEntityCount[factory] ?? 0) + 1
         }
 
-        // If sender's account already exist: replace with its storage root hash
-        if (opts.txMode === 'conditional' && entry.userOp.factory === null) {
-          // in conditionalRpc: always put root hash (not specific storage slots) for "sender" entries
-          const { storageHash } = await providerService.send('eth_getProof', [
-            entry.userOp.sender,
-            [],
-            'latest',
-          ])
-          storageMap[entry.userOp.sender.toLowerCase()] = storageHash
-        }
         mergeStorageMap(storageMap, validationResult.storageMap)
 
         // add UserOp to bundle
