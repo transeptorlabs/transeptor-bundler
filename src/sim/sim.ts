@@ -32,6 +32,10 @@ import {
 } from '../utils/index.js'
 import { ProviderService } from '../provider/index.js'
 import { tracerResultParser } from './parseTracerResult.js'
+import {
+  bundlerNativeTracerName,
+  prestateTracerName,
+} from './gethTracer.types.js'
 
 type StakeInfo = {
   stake: BigNumberish
@@ -153,7 +157,7 @@ const parseExecutionResult = (res: ExecutionResultStruct): ExecutionResult => {
   }
 }
 
-const getTracerString = () => {
+const getBundlerCollectorTracerString = () => {
   const __filename = fileURLToPath(import.meta.url)
   const __dirname = dirname(__filename)
 
@@ -281,6 +285,7 @@ export type Simulator = {
   partialSimulateValidation(userOp: UserOperation): Promise<ValidationResult>
   fullSimulateValidation(
     userOp: UserOperation,
+    nativeTracerEnabled: boolean,
   ): Promise<[ValidationResult, BundlerCollectorReturn]>
   simulateHandleOp(
     userOp: UserOperation,
@@ -291,6 +296,11 @@ export type Simulator = {
     tracerResults: BundlerCollectorReturn,
     validationResult: ValidationResult,
   ): [string[], StorageMap]
+  supportsDebugTraceCall(): Promise<boolean>
+  supportsNativeTracer(
+    nativeTracer: string,
+    useNativeTracerProvider?: boolean,
+  ): Promise<boolean>
 }
 
 export const createSimulator = (
@@ -356,35 +366,70 @@ export const createSimulator = (
 
     fullSimulateValidation: async (
       userOp: UserOperation,
+      nativeTracerEnabled: boolean,
     ): Promise<[ValidationResult, BundlerCollectorReturn]> => {
       Logger.debug(
+        { nativeTracerEnabled },
         'Running full validation with storage/opcode checks on userOp',
       )
-      const stringifiedTracer = getTracerString()
+      const epAddress = entryPointContract.address
+      const bundlerCollectorTracerString = getBundlerCollectorTracerString()
       const encodedData = epSimsInterface.encodeFunctionData(simFunctionName, [
         packUserOp(userOp),
       ])
 
-      const epAddress = entryPointContract.address
-      const tracerResult: BundlerCollectorReturn = await ps.debug_traceCall(
-        {
-          from: ethers.constants.AddressZero,
-          to: epAddress,
-          data: encodedData,
-          gasLimit: BigNumber.from(userOp.preVerificationGas).add(
-            userOp.verificationGasLimit,
-          ),
+      let tracerResult: BundlerCollectorReturn
+      const tx = {
+        from: ethers.constants.AddressZero,
+        to: epAddress,
+        data: encodedData,
+        gasLimit: BigNumber.from(userOp.preVerificationGas).add(
+          userOp.verificationGasLimit,
+        ),
+      }
+      const stateOverrides = {
+        [epAddress]: {
+          code: EntryPointSimulationsDeployedBytecode,
         },
-        {
-          tracer: stringifiedTracer,
-          stateOverrides: {
-            [epAddress]: {
-              code: EntryPointSimulationsDeployedBytecode,
-            },
-          },
-        },
-      )
+      }
+      if (nativeTracerEnabled) {
+        // First we need preStateTracer from the network provider(main):
+        const preState: { [addr: string]: any } = await ps.debug_traceCall(tx, {
+          tracer: prestateTracerName,
+          stateOverrides,
+        })
 
+        // convert nonce's to hex, and rename storage to state
+        for (const key in preState) {
+          if (preState[key]?.nonce != null) {
+            preState[key].nonce =
+              '0x' + (preState[key].nonce.toString(16) as string)
+          }
+          if (preState[key]?.storage != null) {
+            // rpc expects "state" instead...
+            preState[key].state = preState[key].storage
+            delete preState[key].storage
+          }
+        }
+
+        // Then we use native tracer to run the full validation
+        tracerResult = await ps.debug_traceCall(
+          tx,
+          {
+            tracer: bundlerNativeTracerName,
+            stateOverrides: preState,
+          },
+          true,
+        )
+      } else {
+        // Use standard javascript tracer
+        tracerResult = await ps.debug_traceCall(tx, {
+          tracer: bundlerCollectorTracerString,
+          stateOverrides,
+        })
+      }
+
+      // Parse results
       const lastCallResult = tracerResult.calls.slice(-1)[0]
       const exitInfoData = (lastCallResult as ExitInfo).data
       if (lastCallResult.type === 'REVERT') {
@@ -467,6 +512,46 @@ export const createSimulator = (
         validationResult,
         entryPointContract,
       )
+    },
+
+    supportsDebugTraceCall: async (): Promise<boolean> => {
+      Logger.debug(
+        'Checking if network provider supports debug_traceCall to run full validation with standard javascript tracer',
+      )
+      const bundlerCollectorTracer = getBundlerCollectorTracerString()
+      const tracerResult: BundlerCollectorReturn = await ps
+        .debug_traceCall(
+          {
+            from: ethers.constants.AddressZero,
+            to: ethers.constants.AddressZero,
+            data: '0x',
+          },
+          {
+            tracer: bundlerCollectorTracer,
+          },
+        )
+        .catch((e) => e)
+
+      return tracerResult.logs != null
+    },
+
+    supportsNativeTracer: async (
+      nativeTracer,
+      useNativeTracerProvider = false,
+    ): Promise<boolean> => {
+      try {
+        await ps.debug_traceCall(
+          {},
+          {
+            tracer: nativeTracer,
+          },
+          useNativeTracerProvider,
+        )
+
+        return true
+      } catch (e) {
+        return false
+      }
     },
   }
 }

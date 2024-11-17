@@ -124,7 +124,7 @@ export const createBundleProcessor = (
   return {
     sendBundle: async (
       userOps: UserOperation[],
-      storageMap: StorageMap,
+      _: StorageMap,
     ): Promise<SendBundleReturnWithSigner> => {
       // TODO: use ss.getReadySigner() instead of signers[0]
       const signerIndex = 0
@@ -132,40 +132,14 @@ export const createBundleProcessor = (
       const beneficiary = await selectBeneficiary(signer)
 
       try {
-        const [feeData, chainId, nonce] = await Promise.all([
-          providerService.getFeeData(),
-          providerService.getChainId(),
-          ss.getTransactionCount(signer),
-        ])
-
         // populate the transaction (e.g to, data, and value)
         const tx = await entryPointContract.populateTransaction.handleOps(
           packUserOps(userOps),
           beneficiary,
         )
 
-        const signedTx = await ss.signTransaction(
-          {
-            ...tx,
-            chainId,
-            type: 2,
-            nonce,
-            gasLimit: BigNumber.from(10e6),
-            maxPriorityFeePerGas:
-              feeData.maxPriorityFeePerGas ?? BigNumber.from(0),
-            maxFeePerGas: feeData.maxFeePerGas ?? BigNumber.from(0),
-          },
-          signer,
-        )
-
         let ret: string
         switch (txMode) {
-          case 'conditional':
-            ret = await providerService.send(
-              'eth_sendRawTransactionConditional',
-              [signedTx, { knownAccounts: storageMap }],
-            )
-            break
           case 'base': {
             const respone = await signer.sendTransaction(tx)
             const receipt = await respone.wait()

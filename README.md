@@ -32,10 +32,13 @@ Everything you need to get started developing with Transeptor.
 2. Use correct node version `nvm use`
 3. Add `PRIVATE_KEY` to `contracts/.env` file to deploy the entrypoint contract locally.
 4. Install dependencies `yarn install`
-5. Start local eth node `yarn local-eth` - Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to your `.env` files.
-6. In a new terminal window starting the bundler node in dev mode will live watch for changes in `./src` path with auto restarts. `yarn dev`
+5. Start local `geth node` and `geth-tracer-node`. Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to your `.env` files: `yarn local-eth` 
+6. In a new terminal window starting the bundler node in dev mode will live watch for changes in `./src` path with auto restarts. There are three different modes to start the bundler node:
+  - `yarn dev` - To start bundler node in safe mode with full storage and opcode checks.
+  - `yarn dev:unsafe` - To start bundler node in unsafe mode with no storage or opcode checks.
+  - `yarn dev:native-tracer` - To start bundler node in safe mode with full storage and opcode checks with native tracer enabled.
 
-- The node will start on `http://localhost:4337/rpc`. 
+- The bundler node will start on `http://localhost:4337/rpc`. 
 
 #### Local dev e2e scripts 
 
@@ -103,10 +106,10 @@ List of all command line arguments supported by the bundler.
 ```bash
 Options:
   -V, --version                  output the version number
+  --unsafe                       UNSAFE mode: Enable no storage or opcode checks during userOp simulation. SAFE mode(default).
+  --tracerRpcUrl <string>        Enables native tracer for full vaildation during userOp simulation with prestateTracer native tracer on network provider. requires unsafe=false.
+  --network <string>             Ethereum network provider. (default: "http://localhost:8545")
   --httpApi <string>             ERC4337 rpc method name spaces to enable. (default: "web3,eth")
-  --network <string>             ETH execution client url. (default: "http://localhost:8545")
-  --p2p                          p2p mode enabled (default: false)
-  --findPeers                    Search for peers when p2p enabled. (default: false)
   --port <number>                Bundler node listening port. (default: "4337")
   --numberOfSigners <number>     Number of signers HD paths to use from mnmonic (default: "3")
   --minBalance <string>          Maximum ETH balance need for signer address. (default: "1")
@@ -116,12 +119,15 @@ Options:
   --maxBundleGas <number>        Max gas the bundler will use in transactions. (default: "5000000")
   --auto                         Automatic bundling. (default: false)
   --autoBundleInterval <number>  Auto bundler interval in (ms). (default: "12000")
-  --txMode <string>              Bundler transaction mode (base, conditional, searcher). (default: "base")
-  --unsafe                       Enable no storage or opcode checks during userOp simulation.
+  --txMode <string>              Bundler transaction mode (base, searcher).
+    (base mode): Sends bundles using eth_sendRawTransaction RPC(does not protect against front running).
+    (searcher mode): Sends bundles  using Flashbots Auction to protect the transaction against front running (only available on Mainnet) (default: "base")
   --metrics                      Bundler node metrics tracking enabled. (default: false)
   --influxdbUrl <string>         Url influxdb is running on (requires --metrics to be enabled). (default: "http://localhost:8086")
   --influxdbOrg <string>         Influxdb org (requires --metrics to be enabled). (default: "transeptor-labs")
   --influxdbBucket <string>      Influxdb bucket (requires --metrics to be enabled). (default: "transeptor_metrics")
+  --p2p                          p2p mode enabled (default: false)
+  --findPeers                    Search for peers when p2p enabled. (default: false)
   -h, --help                     display help for command
 ```
 
@@ -137,7 +143,6 @@ TRANSEPTOR_MNEMONIC=<your-mnemonic>
 
 # Optional
 TRANSEPTOR_INFLUX_TOKEN=DEV_TOKEN
-TRANSEPTOR_ALCHEMY_API_KEY=<your-alcemy-api-key>
 TRANSEPTOR_WHITE_LIST=<address_to_whitelist_SEPARATED_BY_COMMA>
 TRANSEPTOR_BLACK_LIST=<address_to_blacklist_SEPARATED_BY_COMMA>
 ```

@@ -11,7 +11,6 @@ import { RpcError } from '../utils/index.js'
 export type ProviderService = {
   getNetwork(): Promise<ethers.providers.Network>
   checkContractDeployment(contractAddress: string): Promise<boolean>
-  supportsRpcMethod(method: string): Promise<boolean>
   clientVerion(): Promise<string>
   getChainId(): Promise<number>
   getBlockNumber(): Promise<number>
@@ -26,6 +25,7 @@ export type ProviderService = {
   debug_traceCall(
     tx: Deferrable<TransactionRequest>,
     options: TraceOptions,
+    useNativeTracerProvider?: boolean,
   ): Promise<TraceResult | any>
   execAndTrace(
     tx: Deferrable<TransactionRequest>,
@@ -40,10 +40,13 @@ export type ProviderService = {
     ctrParams: Parameters<T['getDeployTransaction']>,
   ): Promise<Result>
   getTransactionReceipt(txHash: string): Promise<providers.TransactionReceipt>
+  getSupportedNetworks(): number[]
+  isNativeTracerAndNetworkProviderChainMatch(): Promise<boolean>
 }
 
 export const createProviderService = (
-  provider: providers.JsonRpcProvider,
+  networkProvider: providers.JsonRpcProvider,
+  nativeTracerProvider: providers.JsonRpcProvider | undefined,
 ): ProviderService => {
   /**
    * Note that the contract deployment will cost gas, so it is not free to run this function.
@@ -61,7 +64,7 @@ export const createProviderService = (
     ctrParams: Parameters<T['getDeployTransaction']>,
   ): Promise<Result> => {
     const tx = c.getDeployTransaction(...ctrParams)
-    const ret = await provider.call(tx)
+    const ret = await networkProvider.call(tx)
     const parsed = ContractFactory.getInterface(c.interface).parseError(ret)
     if (parsed == null)
       throw new Error('unable to parse script (error) response: ' + ret)
@@ -69,15 +72,34 @@ export const createProviderService = (
   }
 
   return {
+    getSupportedNetworks: (): number[] => {
+      return [1, 31337, 1337]
+    },
+
+    isNativeTracerAndNetworkProviderChainMatch: async (): Promise<boolean> => {
+      if (nativeTracerProvider === undefined) {
+        throw new Error('nativeTracerProvider is not defined')
+      }
+      const [networkProviderChainId, nativeTracerProviderChainId] =
+        await Promise.all([
+          networkProvider.getNetwork(),
+          nativeTracerProvider.getNetwork(),
+        ])
+
+      return (
+        nativeTracerProviderChainId.chainId === networkProviderChainId.chainId
+      )
+    },
+
     getNetwork: async (): Promise<ethers.providers.Network> => {
-      return await provider.getNetwork()
+      return await networkProvider.getNetwork()
     },
 
     checkContractDeployment: async (
       contractAddress: string,
     ): Promise<boolean> => {
       // Get the bytecode of the deployed contract and compare it to the empty bytecode
-      const bytecode = await provider.getCode(contractAddress)
+      const bytecode = await networkProvider.getCode(contractAddress)
       if (bytecode !== '0x') {
         return true
       } else {
@@ -85,35 +107,22 @@ export const createProviderService = (
       }
     },
 
-    supportsRpcMethod: async (method: string): Promise<boolean> => {
-      const ret = await provider.send(method, []).catch((e) => e)
-      let code
-      if (ret.url && ret.body && ret.url.includes('alchemy.com')) {
-        // const alchemyRet = JSON.parse(ret.body)
-        // code = alchemyRet.error?.code ?? alchemyRet.code
-        code === ValidationErrors.InvalidFields // wrong params (meaning, method exists) alchemy can not support full validation
-      } else {
-        code = ret.error?.code ?? ret.code
-      }
-      return code === ValidationErrors.InvalidFields // wrong params (meaning, method exists)
-    },
-
     clientVerion: async (): Promise<string> => {
-      const ret = await provider.send('web3_clientVersion', [])
+      const ret = await networkProvider.send('web3_clientVersion', [])
       return ret.result
     },
 
     getChainId: async (): Promise<number> => {
-      const { chainId } = await provider.getNetwork()
+      const { chainId } = await networkProvider.getNetwork()
       return chainId
     },
 
     getBlockNumber: async (): Promise<number> => {
-      return await provider.getBlockNumber()
+      return await networkProvider.getBlockNumber()
     },
 
     getFeeData: async (): Promise<ethers.providers.FeeData> => {
-      return await provider.getFeeData()
+      return await networkProvider.getFeeData()
     },
 
     estimateGas: async (
@@ -121,7 +130,7 @@ export const createProviderService = (
       to: string,
       data: string | ethers.utils.Bytes,
     ): Promise<number> => {
-      const gasLimit = await provider
+      const gasLimit = await networkProvider
         .estimateGas({
           from,
           to,
@@ -137,11 +146,11 @@ export const createProviderService = (
     },
 
     send: async (method: string, params: any[]): Promise<any> => {
-      return await provider.send(method, params)
+      return await networkProvider.send(method, params)
     },
 
     call: async (contractAddress: string, data: string): Promise<any> => {
-      return await provider.call({
+      return await networkProvider.call({
         to: contractAddress,
         data: data,
       })
@@ -150,7 +159,15 @@ export const createProviderService = (
     debug_traceCall: async (
       tx: Deferrable<TransactionRequest>,
       options: TraceOptions,
+      useNativeTracerProvider = false,
     ): Promise<TraceResult | any> => {
+      const provider = useNativeTracerProvider
+        ? nativeTracerProvider
+        : networkProvider
+      if (!provider) {
+        throw new Error('provider not found')
+      }
+
       const tx1 = await resolveProperties(tx)
       const ret = await provider
         .send('debug_traceCall', [tx1, 'latest', options])
@@ -166,15 +183,23 @@ export const createProviderService = (
       tx: Deferrable<TransactionRequest>,
       options: TraceOptions,
     ): Promise<TraceResult | any> => {
-      const hash = await provider.getSigner().sendUncheckedTransaction(tx)
-      return await provider.send('debug_traceTransaction', [hash, options])
+      const hash = await networkProvider
+        .getSigner()
+        .sendUncheckedTransaction(tx)
+      return await networkProvider.send('debug_traceTransaction', [
+        hash,
+        options,
+      ])
     },
 
     debug_traceTransaction: async (
       hash: string,
       options: TraceOptions,
     ): Promise<TraceResult | any> => {
-      const ret = await provider.send('debug_traceTransaction', [hash, options])
+      const ret = await networkProvider.send('debug_traceTransaction', [
+        hash,
+        options,
+      ])
       return ret
     },
 
@@ -188,7 +213,7 @@ export const createProviderService = (
     getTransactionReceipt: async (
       txHash: string,
     ): Promise<providers.TransactionReceipt> => {
-      return await provider.getTransactionReceipt(txHash)
+      return await networkProvider.getTransactionReceipt(txHash)
     },
   }
 }

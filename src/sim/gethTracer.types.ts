@@ -2,6 +2,16 @@
 import { BigNumber } from 'ethers'
 
 /**
+ * Name of the native tracer that is equivalent to the standard javascript
+ */
+export const bundlerNativeTracerName = 'bundlerCollectorTracer'
+
+/**
+ * Name of the prestate tracer
+ */
+export const prestateTracerName = 'prestateTracer'
+
+/**
  * a function returning a LogTracer.
  * the function's body must be "{ return {...} }"
  * the body is executed as "geth" tracer, and thus must be self-contained (no external functions or references)

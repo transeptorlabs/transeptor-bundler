@@ -60,6 +60,7 @@ const mainnetConfig: PreVerificationGasCalculator = {
 const chainConfigs: Record<number, PreVerificationGasCalculator> = {
   1: mainnetConfig,
   1337: mainnetConfig,
+  31337: mainnetConfig,
 }
 
 const fillUserOpWithDummyData = (
