@@ -30,14 +30,12 @@ export type ValidationService = {
    * one item to check that was un-modified is the aggregator.
    *
    * @param userOp - The UserOperation to validate.
-   * @param isUnsafeMode - Whether to skip the full validation with custom tracer and only run the partial validation with no stake or opcode checks.
    * @param checkStakes - Whether to check the stakes of the user.
    * @param previousCodeHashes - The code hashes of the contracts that were previously validated.
    * @returns The result of the validation.
    */
   validateUserOp(
     userOp: UserOperation,
-    isUnsafeMode: boolean,
     checkStakes: boolean,
     previousCodeHashes?: ReferencedCodeHashes,
   ): Promise<ValidateUserOpResult>
@@ -64,6 +62,8 @@ export const createValidationService = (
   ps: ProviderService,
   sim: Simulator,
   entryPointAddress: string,
+  isUnsafeMode: boolean,
+  nativeTracerEnabled: boolean,
 ): ValidationService => {
   const HEX_REGEX = /^0x[a-fA-F\d]*$/i
   const VALID_UNTIL_FUTURE_SECONDS = 30 // how much time into the future a UserOperation must be valid in order to be accepted
@@ -75,7 +75,6 @@ export const createValidationService = (
   return {
     validateUserOp: async (
       userOp: UserOperation,
-      isUnsafeMode: boolean,
       checkStakes: boolean,
       previousCodeHashes?: ReferencedCodeHashes,
     ): Promise<ValidateUserOpResult> => {
@@ -107,7 +106,7 @@ export const createValidationService = (
       if (!isUnsafeMode) {
         let tracerResult: BundlerCollectorReturn
         ;[res, tracerResult] = await sim
-          .fullSimulateValidation(userOp)
+          .fullSimulateValidation(userOp, nativeTracerEnabled)
           .catch((e) => {
             throw e
           })

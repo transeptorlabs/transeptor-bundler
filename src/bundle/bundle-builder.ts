@@ -40,7 +40,6 @@ export const createBundleBuilder = (
   reputationManager: ReputationManager,
   opts: {
     maxBundleGas: number
-    isUnsafeMode: boolean
     txMode: string
     entryPointContract: ethers.Contract
   },
@@ -130,7 +129,6 @@ export const createBundleBuilder = (
           // re-validate UserOp. no need to check stake, since it cannot be reduced between first and 2nd validation
           validationResult = await validationService.validateUserOp(
             entry.userOp,
-            opts.isUnsafeMode,
             false,
             entry.referencedContracts,
           )

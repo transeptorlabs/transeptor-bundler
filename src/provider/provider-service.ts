@@ -41,6 +41,7 @@ export type ProviderService = {
   ): Promise<Result>
   getTransactionReceipt(txHash: string): Promise<providers.TransactionReceipt>
   getSupportedNetworks(): number[]
+  isNativeTracerAndNetworkProviderChainMatch(): Promise<boolean>
 }
 
 export const createProviderService = (
@@ -73,6 +74,21 @@ export const createProviderService = (
   return {
     getSupportedNetworks: (): number[] => {
       return [1, 31337, 1337]
+    },
+
+    isNativeTracerAndNetworkProviderChainMatch: async (): Promise<boolean> => {
+      if (nativeTracerProvider === undefined) {
+        throw new Error('nativeTracerProvider is not defined')
+      }
+      const [networkProviderChainId, nativeTracerProviderChainId] =
+        await Promise.all([
+          networkProvider.getNetwork(),
+          nativeTracerProvider.getNetwork(),
+        ])
+
+      return (
+        nativeTracerProviderChainId.chainId === networkProviderChainId.chainId
+      )
     },
 
     getNetwork: async (): Promise<ethers.providers.Network> => {

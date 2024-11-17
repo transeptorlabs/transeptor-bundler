@@ -120,7 +120,6 @@ export const createEthAPI = (
   eventsManager: EventManagerWithListener,
   mempoolManageSender: MempoolManageSender,
   entryPointContract: ethers.Contract,
-  isUnsafeMode: boolean,
 ): EthAPI => {
   return {
     /*
@@ -186,12 +185,7 @@ export const createEthAPI = (
       const userOpReady = await resolveProperties(userOp)
       const chainId = await ps.getChainId()
       vs.validateInputParameters(userOp, entryPointInput, chainId, true, true)
-      const validationResult = await vs.validateUserOp(
-        userOp,
-        isUnsafeMode,
-        true,
-        undefined,
-      )
+      const validationResult = await vs.validateUserOp(userOp, true, undefined)
 
       const userOpHash = await entryPointContract.getUserOpHash(
         packUserOp(userOpReady),

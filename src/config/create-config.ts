@@ -17,7 +17,7 @@ const nodeVersion = '0.7.0-alpha.0' // manual update on each release
 export type Config = {
   provider: providers.JsonRpcProvider
   nativeTracerProvider: providers.JsonRpcProvider | undefined
-  isNativeTracer: boolean
+  nativeTracerEnabled: boolean
 
   bundlerSignerWallets: BundlerSignerWallets
   minSignerBalance: BigNumber
@@ -161,12 +161,9 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
 
   const programOpts: OptionValues = program.parse(args).opts()
 
-  const provider = createProvider(
-    programOpts.network as string,
-    process.env.TRANSEPTOR_ALCHEMY_API_KEY,
-  )
+  const provider = createProvider(programOpts.network as string)
 
-  const isNativeTracer = (programOpts.tracerRpcUrl as string) !== undefined
+  const nativeTracerEnabled = (programOpts.tracerRpcUrl as string) !== undefined
   const nativeTracerProvider = !(programOpts.tracerRpcUrl as string)
     ? undefined
     : createProvider(programOpts.tracerRpcUrl as string)
@@ -224,12 +221,6 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
     throw new Error('Invalid bundler mode')
   }
 
-  if ((programOpts.txMode as string) === 'searcher') {
-    if (!process.env.TRANSEPTOR_ALCHEMY_API_KEY) {
-      throw new Error('TRANSEPTOR_ALCHEMY_API_KEY env var not set')
-    }
-  }
-
   // set metric config
   const isMetricsEnabled = programOpts.metrics as boolean
   if (isMetricsEnabled && !process.env.TRANSEPTOR_INFLUX_TOKEN) {
@@ -254,7 +245,7 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
   return {
     provider,
     nativeTracerProvider,
-    isNativeTracer,
+    nativeTracerEnabled,
     entryPointContract,
     stakeManagerContract,
 

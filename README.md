@@ -32,10 +32,13 @@ Everything you need to get started developing with Transeptor.
 2. Use correct node version `nvm use`
 3. Add `PRIVATE_KEY` to `contracts/.env` file to deploy the entrypoint contract locally.
 4. Install dependencies `yarn install`
-5. Start local eth node `yarn local-eth` - Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to your `.env` files.
-6. In a new terminal window starting the bundler node in dev mode will live watch for changes in `./src` path with auto restarts. `yarn dev`
+5. Start local `geth node` and `geth-tracer-node`. Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to your `.env` files: `yarn local-eth` 
+6. In a new terminal window starting the bundler node in dev mode will live watch for changes in `./src` path with auto restarts. There are three different modes to start the bundler node:
+  - `yarn dev` - To start bundler node in safe mode with full storage and opcode checks.
+  - `yarn dev:unsafe` - To start bundler node in unsafe mode with no storage or opcode checks.
+  - `yarn dev:native-tracer` - To start bundler node in safe mode with full storage and opcode checks with native tracer enabled.
 
-- The node will start on `http://localhost:4337/rpc`. 
+- The bundler node will start on `http://localhost:4337/rpc`. 
 
 #### Local dev e2e scripts 
 
@@ -140,7 +143,6 @@ TRANSEPTOR_MNEMONIC=<your-mnemonic>
 
 # Optional
 TRANSEPTOR_INFLUX_TOKEN=DEV_TOKEN
-TRANSEPTOR_ALCHEMY_API_KEY=<your-alcemy-api-key>
 TRANSEPTOR_WHITE_LIST=<address_to_whitelist_SEPARATED_BY_COMMA>
 TRANSEPTOR_BLACK_LIST=<address_to_blacklist_SEPARATED_BY_COMMA>
 ```
