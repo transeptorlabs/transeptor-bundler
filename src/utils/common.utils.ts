@@ -1,6 +1,4 @@
-import { ethers, BigNumber, BytesLike } from 'ethers'
-import { BigNumberish } from 'ethers/lib/ethers'
-import { hexlify, hexZeroPad } from 'ethers/lib/utils.js'
+import { isAddress, BytesLike, BigNumberish, hexlify, ethers } from 'ethers'
 
 /**
  * Check if the address is valid.
@@ -9,7 +7,7 @@ import { hexlify, hexZeroPad } from 'ethers/lib/utils.js'
  * @returns Whether the address is valid.
  */
 export const isValidAddress = (address: string): boolean => {
-  return ethers.utils.isAddress(address)
+  return isAddress(address)
 }
 
 /**
@@ -19,15 +17,15 @@ export const isValidAddress = (address: string): boolean => {
  * @returns The string representation of the big number.
  */
 export const tostr = (s: BigNumberish): string => {
-  return BigNumber.from(s).toString()
+  return BigInt(s).toString()
 }
 
 /**
- * Convert a string to a big number.
+ * Padding a string to 32 bytes.
  *
- * @param b - The bytes to convert.
- * @returns The big number representation of the bytes.
+ * @param b - The bytes to pad.
+ * @returns The padded bytes.
  */
-export const toBytes32 = (b: BytesLike | number): string => {
-  return hexZeroPad(hexlify(b).toLowerCase(), 32)
+export const toBytes32 = (b: BytesLike): string => {
+  return ethers.zeroPadValue(hexlify(b).toLowerCase(), 32)
 }

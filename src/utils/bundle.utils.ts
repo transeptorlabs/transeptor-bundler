@@ -1,12 +1,13 @@
-import { BigNumber, BigNumberish, BytesLike, ethers } from 'ethers'
 import {
-  hexConcat,
-  hexDataLength,
-  hexDataSlice,
-  hexZeroPad,
-  defaultAbiCoder,
+  BigNumberish,
+  BytesLike,
+  hexlify,
   keccak256,
-} from 'ethers/lib/utils.js'
+  zeroPadValue,
+  ethers,
+  AbiCoder,
+  toBeHex,
+} from 'ethers'
 
 import {
   SlotMap,
@@ -59,11 +60,8 @@ export function mergeStorageMap(
  * @param low128 - low 128 bits
  * @returns packed uint256.
  */
-export function packUint(high128: BigNumberish, low128: BigNumberish): string {
-  return hexZeroPad(
-    BigNumber.from(high128).shl(128).add(low128).toHexString(),
-    32,
-  )
+function packUint(high128: BigNumberish, low128: BigNumberish): string {
+  return zeroPadValue(toBeHex((BigInt(high128) << 128n) + BigInt(low128)), 32)
 }
 
 /**
@@ -72,14 +70,10 @@ export function packUint(high128: BigNumberish, low128: BigNumberish): string {
  * @param packed - packed uint
  * @returns high128, low128
  */
-export function unpackUint(
-  packed: BytesLike,
-): [high128: BigNumber, low128: BigNumber] {
-  const packedNumber: BigNumber = BigNumber.from(packed)
-  return [
-    packedNumber.shr(128),
-    packedNumber.and(BigNumber.from(1).shl(128).sub(1)),
-  ]
+function unpackUint(packed: BytesLike): [high128: bigint, low128: bigint] {
+  const packedNumber = BigInt(hexlify(packed))
+
+  return [packedNumber >> 128n, packedNumber & ((1n << 128n) - 1n)]
 }
 
 /**
@@ -91,17 +85,50 @@ export function unpackUint(
  * @param paymasterData - optional data to be passed to the paymaster contract.
  * @returns packed paymaster data.
  */
-export function packPaymasterData(
+function packPaymasterData(
   paymaster: string,
   paymasterVerificationGasLimit: BigNumberish,
   postOpGasLimit: BigNumberish,
   paymasterData?: BytesLike,
 ): BytesLike {
-  return ethers.utils.hexConcat([
+  return hexConcat([
     paymaster,
     packUint(paymasterVerificationGasLimit, postOpGasLimit),
     paymasterData ?? '0x',
   ])
+}
+
+/**
+ * Check if the value is a hex string.
+ *
+ * @param value - value to check
+ * @param length - length of the hex string
+ * @returns true if the value is a hex string
+ */
+function isHexString(value: any, length?: number): boolean {
+  if (typeof value !== 'string' || !value.match(/^0x[0-9A-Fa-f]*$/)) {
+    return false
+  }
+  if (length && value.length !== 2 + 2 * length) {
+    return false
+  }
+  return true
+}
+
+/**
+ * Get the length of the hex data.
+ *
+ * @param data - hex data
+ * @returns length of the data
+ */
+function hexDataLength(data: BytesLike) {
+  if (typeof data !== 'string') {
+    data = hexlify(data)
+  } else if (!isHexString(data) || data.length % 2) {
+    return null
+  }
+
+  return (data.length - 2) / 2
 }
 
 /**
@@ -110,10 +137,10 @@ export function packPaymasterData(
  * @param paymasterAndData - packed paymaster data.
  * @returns paymaster, paymasterVerificationGas, postOpGasLimit, paymasterData
  */
-export function unpackPaymasterAndData(paymasterAndData: BytesLike): {
+function unpackPaymasterAndData(paymasterAndData: BytesLike): {
   paymaster: string
-  paymasterVerificationGas: BigNumber
-  postOpGasLimit: BigNumber
+  paymasterVerificationGas: bigint
+  postOpGasLimit: bigint
   paymasterData: BytesLike
 } | null {
   if (paymasterAndData.length <= 2) return null
@@ -122,14 +149,28 @@ export function unpackPaymasterAndData(paymasterAndData: BytesLike): {
     throw new Error(`invalid PaymasterAndData: ${paymasterAndData as string}`)
   }
   const [paymasterVerificationGas, postOpGasLimit] = unpackUint(
-    hexDataSlice(paymasterAndData, 20, 52),
+    ethers.dataSlice(paymasterAndData, 20, 52),
   )
   return {
-    paymaster: hexDataSlice(paymasterAndData, 0, 20),
+    paymaster: ethers.dataSlice(paymasterAndData, 0, 20),
     paymasterVerificationGas,
     postOpGasLimit,
-    paymasterData: hexDataSlice(paymasterAndData, 52),
+    paymasterData: ethers.dataSlice(paymasterAndData, 52),
   }
+}
+
+/**
+ * Concatenate multiple byte arrays.
+ *
+ * @param items - array of bytes
+ * @returns concatenated bytes
+ */
+function hexConcat(items: ReadonlyArray<BytesLike>): string {
+  let result = '0x'
+  items.forEach((item) => {
+    result += hexlify(item).substring(2)
+  })
+  return result
 }
 
 /**
@@ -200,8 +241,8 @@ export function unpackUserOp(packedUserOp: PackedUserOperation): UserOperation {
     signature: packedUserOp.signature,
   }
   if (packedUserOp.initCode != null && packedUserOp.initCode.length > 2) {
-    const factory = hexDataSlice(packedUserOp.initCode, 0, 20)
-    const factoryData = hexDataSlice(packedUserOp.initCode, 20)
+    const factory = ethers.dataSlice(packedUserOp.initCode, 0, 20)
+    const factoryData = ethers.dataSlice(packedUserOp.initCode, 20)
     ret = {
       ...ret,
       factory,
@@ -250,8 +291,9 @@ export function encodeUserOp(
   } else {
     op = op1
   }
+
   if (forSignature) {
-    return defaultAbiCoder.encode(
+    return AbiCoder.defaultAbiCoder().encode(
       [
         'address',
         'uint256',
@@ -275,7 +317,7 @@ export function encodeUserOp(
     )
   } else {
     // for the purpose of calculating gas cost encode also signature (and no keccak of bytes)
-    return defaultAbiCoder.encode(
+    return AbiCoder.defaultAbiCoder().encode(
       [
         'address',
         'uint256',

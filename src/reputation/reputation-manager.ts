@@ -1,4 +1,4 @@
-import { BigNumber, ethers } from 'ethers'
+import { ethers } from 'ethers'
 
 import { Logger } from '../logger/index.js'
 import {
@@ -32,8 +32,8 @@ export const createReputationManagerReader = (
 
 export const createReputationManager = (
   state: StateService,
-  minStake: BigNumber,
-  minUnstakeDelay: number,
+  minStake: bigint,
+  minUnstakeDelay: bigint,
   stakeManagerContract: ethers.Contract,
 ): ReputationManager => {
   let interval: NodeJS.Timer | null = null
@@ -292,8 +292,8 @@ export const createReputationManager = (
     }> => {
       const info = await stakeManagerContract.getDepositInfo(address)
       const isStaked =
-        BigNumber.from(info.stake).gte(minStake) &&
-        BigNumber.from(info.unstakeDelaySec).gte(minUnstakeDelay)
+        BigInt(info.stake) >= minStake &&
+        BigInt(info.unstakeDelaySec) >= minUnstakeDelay
 
       return {
         stakeInfo: {
@@ -340,8 +340,8 @@ export const createReputationManager = (
         const addr = rep.address.toLowerCase()
         acc[addr] = {
           address: addr,
-          opsSeen: BigNumber.from(rep.opsSeen).toNumber(),
-          opsIncluded: BigNumber.from(rep.opsIncluded).toNumber(),
+          opsSeen: Number(BigInt(rep.opsSeen)),
+          opsIncluded: Number(BigInt(rep.opsIncluded)),
         }
         return acc
       }, initalReady)
@@ -406,7 +406,7 @@ export const createReputationManager = (
 
       // Check if min stake and unstake delay are met
       requireCond(
-        BigNumber.from(info.stake).gte(minStake),
+        BigInt(info.stake) >= minStake,
         `${title} ${info.addr} stake ${tostr(info.stake)} is too low (min=${tostr(
           minStake,
         )})`,
@@ -414,9 +414,7 @@ export const createReputationManager = (
       )
 
       requireCond(
-        BigNumber.from(info.unstakeDelaySec).gte(
-          BigNumber.from(minUnstakeDelay),
-        ),
+        BigInt(info.unstakeDelaySec) >= minUnstakeDelay,
         `${title} ${info.addr} unstake delay ${tostr(
           info.unstakeDelaySec,
         )} is too low (min=${minUnstakeDelay})`,

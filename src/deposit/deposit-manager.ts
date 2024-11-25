@@ -1,4 +1,4 @@
-import { BigNumber, ethers } from 'ethers'
+import { ethers } from 'ethers'
 import { UserOperation } from '../types/index.js'
 import { StateService, StateKey } from '../state/index.js'
 import { getUserOpMaxCost, requireCond } from '../utils/index.js'
@@ -24,23 +24,23 @@ export const createDepositManager = (
       if (
         paymaster == null ||
         paymaster === '0x' ||
-        paymaster === ethers.constants.AddressZero
+        paymaster === ethers.ZeroAddress
       ) {
         return
       }
 
-      let deposit = await entryPointContract.balanceOf(paymaster)
-      deposit = deposit.sub(getUserOpMaxCost(userOp))
+      let deposit = (await entryPointContract.balanceOf(paymaster)) as bigint
+      deposit = deposit - getUserOpMaxCost(userOp)
 
       const { standardPool } = await state.getState(StateKey.StandardPool)
       Object.values(standardPool).forEach((entry) => {
         if (entry.userOp.paymaster === paymaster) {
-          deposit = deposit.sub(BigNumber.from(getUserOpMaxCost(userOp)))
+          deposit = deposit - BigInt(getUserOpMaxCost(userOp))
         }
       })
 
       requireCond(
-        deposit.gte(0),
+        deposit >= BigInt(0),
         'paymaster deposit too low for all mempool UserOps',
         ValidationErrors.PaymasterDepositTooLow,
       )

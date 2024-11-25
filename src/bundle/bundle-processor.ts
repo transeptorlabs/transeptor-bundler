@@ -1,5 +1,4 @@
-import { ErrorDescription } from '@ethersproject/abi/lib/interface'
-import { BigNumber, ContractFactory, ethers, Wallet } from 'ethers'
+import { ContractFactory, ErrorDescription, ethers, Wallet } from 'ethers'
 
 import {
   GET_USEROP_HASHES_ABI,
@@ -14,7 +13,7 @@ import {
 } from '../types/index.js'
 import { packUserOps } from '../utils/index.js'
 import { ReputationManagerReader } from '../reputation/index.js'
-import { BundlerSignerWallets, createSignerService } from '../signer/index.js'
+import { BundlerSignerWallets } from '../signer/index.js'
 
 export type BundleProcessor = {
   /**
@@ -37,11 +36,9 @@ export const createBundleProcessor = (
   entryPointContract: ethers.Contract,
   txMode: string,
   beneficiary: string,
-  minSignerBalance: BigNumber,
+  minSignerBalance: bigint,
   signers: BundlerSignerWallets,
 ): BundleProcessor => {
-  const ss = createSignerService(providerService)
-
   /**
    * Determine who should receive the proceedings of the request.
    * if signer balance is too low, send it to signer. otherwise, send to configured beneficiary.
@@ -50,11 +47,11 @@ export const createBundleProcessor = (
    * @returns the address of the beneficiary.
    */
   const selectBeneficiary = async (signer: Wallet): Promise<string> => {
-    const currentBalance = await ss.getSignerBalance(signer)
+    const currentBalance = await providerService.getBalance(signer.address)
     let beneficiaryToUse = beneficiary
     // below min-balance redeem to the signer, to keep it active.
-    if (currentBalance.lte(minSignerBalance)) {
-      beneficiaryToUse = await ss.getSignerAddress(signer)
+    if (currentBalance <= minSignerBalance) {
+      beneficiaryToUse = await signer.getAddress()
       Logger.debug(
         `low balance. using, ${beneficiaryToUse}, as beneficiary instead of , ${beneficiary}`,
       )
@@ -77,9 +74,10 @@ export const createBundleProcessor = (
       GET_USEROP_HASHES_BYTECODE,
     ) as ContractFactory
 
-    const { userOpHashes } = await providerService.getCodeHashes(
+    const epAddress = await entryPointContract.getAddress()
+    const { userOpHashes } = await providerService.runContractScript(
       getUserOpCodeHashesFactory,
-      [entryPointContract.address, packUserOps(userOps)],
+      [epAddress, packUserOps(userOps)],
     )
 
     return userOpHashes
@@ -90,21 +88,20 @@ export const createBundleProcessor = (
     userOp: UserOperation,
   ): Promise<string | undefined> => {
     const isAccountStaked = async (userOp: UserOperation): Promise<boolean> => {
+      const epAddress = await entryPointContract.getAddress()
       const senderStakeInfo = await reputationManager.getStakeStatus(
         userOp.sender,
-        entryPointContract.address,
+        epAddress,
       )
       return senderStakeInfo?.isStaked
     }
 
     const isFactoryStaked = async (userOp: UserOperation): Promise<boolean> => {
+      const epAddress = await entryPointContract.getAddress()
       const factoryStakeInfo =
         userOp.factory == null
           ? null
-          : await reputationManager.getStakeStatus(
-              userOp.factory,
-              entryPointContract.address,
-            )
+          : await reputationManager.getStakeStatus(userOp.factory, epAddress)
       return factoryStakeInfo?.isStaked ?? false
     }
 
@@ -126,14 +123,13 @@ export const createBundleProcessor = (
       userOps: UserOperation[],
       _: StorageMap,
     ): Promise<SendBundleReturnWithSigner> => {
-      // TODO: use ss.getReadySigner() instead of signers[0]
       const signerIndex = 0
-      const signer = signers[signerIndex]
+      const signer = signers[signerIndex] // Default to the first signer for now
       const beneficiary = await selectBeneficiary(signer)
 
       try {
         // populate the transaction (e.g to, data, and value)
-        const tx = await entryPointContract.populateTransaction.handleOps(
+        const tx = await entryPointContract.handleOps.populateTransaction(
           packUserOps(userOps),
           beneficiary,
         )
@@ -143,23 +139,32 @@ export const createBundleProcessor = (
           case 'base': {
             const respone = await signer.sendTransaction(tx)
             const receipt = await respone.wait()
-            ret = receipt.transactionHash
+            ret = receipt.hash
             break
           }
-          case 'searcher':
-            throw new Error('searcher txMode is not supported')
+          case 'searcher': {
+            await providerService.sendBundleFlashbots(signer, tx)
+            break
+          }
           default:
             throw new Error(`unknown txMode: ${txMode}`)
         }
 
         // hashes are needed for debug rpc only.
-        const hashes = await getUserOpHashes(userOps)
+        const hashes = await getUserOpHashes(userOps).catch((e) => {
+          Logger.warn(
+            { e },
+            'Failed to get userOpHashes, but bundle was sent successfully',
+          )
+          return []
+        })
         return {
           transactionHash: ret,
           userOpHashes: hashes,
           signerIndex,
         } as SendBundleReturnWithSigner
       } catch (e: any) {
+        Logger.debug('Failed handleOps, attempting to parse error...')
         let parsedError: ErrorDescription
         try {
           let data = e.data?.data ?? e.data
@@ -172,7 +177,10 @@ export const createBundleProcessor = (
           parsedError = entryPointContract.interface.parseError(data)
         } catch (e1) {
           checkFatal(e)
-          Logger.warn({ e }, 'Failed handleOps, but non-FailedOp error')
+          Logger.warn(
+            { e, e1 },
+            'Failed handleOps(could not parse error), but non-FailedOp error',
+          )
           return {
             transactionHash: '',
             userOpHashes: [],

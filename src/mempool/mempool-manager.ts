@@ -1,4 +1,4 @@
-import { BigNumber, BigNumberish } from 'ethers'
+import { BigNumberish } from 'ethers'
 
 import { Logger } from '../logger/index.js'
 import { ReputationManager } from '../reputation/index.js'
@@ -186,16 +186,14 @@ export const createMempoolManagerCore = (
     oldEntry: MempoolEntry,
     entry: MempoolEntry,
   ): void => {
-    const oldMaxPriorityFeePerGas = BigNumber.from(
-      oldEntry.userOp.maxPriorityFeePerGas,
-    ).toNumber()
-    const newMaxPriorityFeePerGas = BigNumber.from(
-      entry.userOp.maxPriorityFeePerGas,
-    ).toNumber()
-    const oldMaxFeePerGas = BigNumber.from(
-      oldEntry.userOp.maxFeePerGas,
-    ).toNumber()
-    const newMaxFeePerGas = BigNumber.from(entry.userOp.maxFeePerGas).toNumber()
+    const oldMaxPriorityFeePerGas = Number(
+      BigInt(oldEntry.userOp.maxPriorityFeePerGas),
+    )
+    const newMaxPriorityFeePerGas = Number(
+      BigInt(entry.userOp.maxPriorityFeePerGas),
+    )
+    const oldMaxFeePerGas = Number(BigInt(oldEntry.userOp.maxFeePerGas))
+    const newMaxFeePerGas = Number(BigInt(entry.userOp.maxFeePerGas))
     // the error is "invalid fields", even though it is detected only after validation
     requireCond(
       newMaxPriorityFeePerGas >= oldMaxPriorityFeePerGas * 1.1,
@@ -381,7 +379,7 @@ export const createMempoolManagerCore = (
     const res = entries.find((entry) => {
       return (
         entry.userOp.sender.toLowerCase() === sender.toLowerCase() &&
-        BigNumber.from(entry.userOp.nonce).eq(nonce)
+        BigInt(entry.userOp.nonce) === BigInt(nonce)
       )
     })
 

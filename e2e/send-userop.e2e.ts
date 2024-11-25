@@ -165,9 +165,49 @@ const decodeSCAccountRevertReason = (error: string): any => {
   return null
 }
 
-// Run user operation through bundler
+const estimateUserOpGas = async (
+  userOp: UserOperation,
+): Promise<UserOperation> => {
+  const gasEstimate = await bundlerNode
+    .send('eth_estimateUserOperationGas', [userOp, epAddress])
+    .catch((error: any) => {
+      const parseJson = JSON.parse(error.body)
+      Logger.error(
+        {
+          ...parseJson,
+          parsedErrorData: decodeSCAccountRevertReason(parseJson.error.data),
+        },
+        'Failed to Estimate gas',
+      )
+      throw new Error('Failed to estimate gas.')
+    })
+
+  Logger.info(gasEstimate, 'Gas Estimate')
+  return {
+    ...userOp,
+    callGasLimit: BigNumber.from(gasEstimate.callGasLimit).toHexString(),
+    verificationGasLimit: BigNumber.from(
+      gasEstimate.verificationGasLimit,
+    ).toHexString(),
+    preVerificationGas: BigNumber.from(
+      gasEstimate.preVerificationGas,
+    ).toHexString(),
+  }
+}
+
+const signUserOp = async (userOp: UserOperation): Promise<UserOperation> => {
+  const userOpHashToSign = ethers.utils.arrayify(
+    await epContract.getUserOpHash(packUserOp(userOp)),
+  )
+  const signature = await secondWallet.signMessage(userOpHashToSign)
+  return {
+    ...userOp,
+    signature,
+  }
+}
+
 /**
- *
+ * Run user operation through bundler
  */
 async function main() {
   Logger.info('Sending user operation...')
@@ -176,8 +216,13 @@ async function main() {
     ethers.utils.hexConcat([factory, factoryData]),
   )
 
-  const ownerBalance = await provider.getBalance(secondWallet.address)
-  const smartActBalance = await provider.getBalance(senderCfAddress)
+  const [ownerBalance, smartActBalance, countBefore, feeData] =
+    await Promise.all([
+      provider.getBalance(secondWallet.address),
+      provider.getBalance(senderCfAddress),
+      globalCounter.currentCount() as BigNumber,
+      provider.getFeeData(),
+    ])
   Logger.info(
     {
       owner: {
@@ -192,11 +237,10 @@ async function main() {
   )
 
   // Deposit to the sender CF address
-  const feeData = await provider.getFeeData()
   await sendDeposit(senderCfAddress, feeData)
 
   // build userOp
-  const userOp = {
+  const userOp = await estimateUserOpGas({
     sender: senderCfAddress,
     nonce: BigNumber.from(0).toHexString(),
     factory: factory,
@@ -208,42 +252,13 @@ async function main() {
     maxFeePerGas:
       feeData.maxFeePerGas?.toHexString() ?? BigNumber.from(0).toHexString(),
     signature: dummySig,
-  } as UserOperation
-
-  // Estimate gas
-  const gasEstimate = await bundlerNode
-    .send('eth_estimateUserOperationGas', [userOp, epAddress])
-    .catch((error: any) => {
-      const parseJson = JSON.parse(error.body)
-      Logger.error(
-        {
-          ...parseJson,
-          parsedErrorData: decodeSCAccountRevertReason(parseJson.error.data),
-        },
-        'Failed to Estimate gas',
-      )
-      throw new Error('Failed to estimate gas.')
-    })
-  Logger.info(gasEstimate, 'Gas Estimate')
-  userOp.callGasLimit = BigNumber.from(gasEstimate.callGasLimit).toHexString()
-  userOp.verificationGasLimit = BigNumber.from(
-    gasEstimate.verificationGasLimit,
-  ).toHexString()
-  userOp.preVerificationGas = BigNumber.from(
-    gasEstimate.preVerificationGas,
-  ).toHexString()
-
-  // Sign userOp
-  const userOpHashToSign = ethers.utils.arrayify(
-    await epContract.getUserOpHash(packUserOp(userOp)),
-  )
-  const signature = await secondWallet.signMessage(userOpHashToSign)
-  const signedUserOp = deepHexlify({ ...userOp, signature })
+  } as UserOperation)
+  const signedUserOp = await signUserOp(userOp)
 
   // Send userOp
-  Logger.info({ signedUserOp }, 'Sending UserOp')
+  Logger.info({ signedUserOp }, 'Sending UserOp to increment Global Counter...')
   const userOpHash = await bundlerNode
-    .send('eth_sendUserOperation', [signedUserOp, epAddress])
+    .send('eth_sendUserOperation', [deepHexlify(signedUserOp), epAddress])
     .catch((error: any) => {
       const parseJson = JSON.parse(error.body)
       Logger.error(parseJson, 'Failed to send user operation.')
@@ -261,14 +276,21 @@ async function main() {
   Logger.info({ res }, 'Sending bundle now...')
 
   // Check that the global counter has been incremented by reading the currentCount value
-  // TODO: Fix out why the userOp is failing
-  const count = await globalCounter.currentCount()
-  Logger.info({ count: count.toString() }, 'Global Counter count:')
+  const countAfter = (await globalCounter.currentCount()) as BigNumber
+  Logger.info(
+    { countBefore: countBefore.toString(), countAfter: countAfter.toString() },
+    'Global Counter count info:',
+  )
+
+  // TODO: Wait for userOp to get included on-chain
+  if (!countBefore.add(1).eq(countAfter)) {
+    throw new Error('UserOp failed to increment Global counter')
+  }
 }
 
 main()
   .then(() => process.exit(0))
-  .catch(() => {
-    Logger.error('Script failed')
+  .catch((err: any) => {
+    Logger.error(err, 'Script failed')
     process.exit(1)
   })

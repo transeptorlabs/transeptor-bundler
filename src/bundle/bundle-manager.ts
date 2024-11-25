@@ -78,7 +78,7 @@ export const createBundleManager = (
     if (notIncludedUserOpsHashes.length > 0) {
       Logger.debug(
         { total: notIncludedUserOpsHashes.length },
-        'Bundle full: sending unbundled UserOps back to mempool with status of pending',
+        'Sending userOps not included in built bundle back to mempool with status of pending',
       )
       notIncludedUserOpsHashes.forEach(async (userOpHash) => {
         await mempoolManagerBuilder.updateEntryStatus(userOpHash, 'pending')

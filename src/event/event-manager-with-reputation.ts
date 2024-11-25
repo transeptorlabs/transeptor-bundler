@@ -1,5 +1,4 @@
-import { ethers } from 'ethers'
-import { Log } from '@ethersproject/providers'
+import { ethers, EventFragment, Log } from 'ethers'
 
 import { Logger } from '../logger/index.js'
 import { ProviderService } from '../provider/index.js'
@@ -12,7 +11,7 @@ export type EventManagerWithListener = {
    */
   handlePastEvents: () => Promise<void>
 
-  getUserOperationEvent(userOpHash: string): Promise<ethers.Event>
+  getUserOperationEvent(userOpHash: string): Promise<ethers.EventLog>
 
   /**
    * Filter full bundle logs, and leave only logs for the given userOpHash
@@ -20,7 +19,7 @@ export type EventManagerWithListener = {
    * @param userOpEvent - the event of our UserOp (known to exist in the logs)
    * @param logs - full bundle logs. after each group of logs there is a single UserOperationEvent with unique hash.
    */
-  filterLogs(userOpEvent: ethers.Event, logs: Log[]): Log[]
+  filterLogs(userOpEvent: ethers.EventLog, logs: readonly Log[]): Log[]
 }
 
 export const createEventManagerWithListener = (
@@ -38,16 +37,16 @@ export const createEventManagerWithListener = (
    *
    * @param ev - the event
    */
-  const handleEvent = async (ev: ethers.Event): Promise<void> => {
-    switch (ev.event) {
+  const handleEvent = async (ev: ethers.EventLog): Promise<void> => {
+    switch (ev.fragment.name) {
       case 'UserOperationEvent':
-        await handleUserOperationEvent(ev as any)
+        await handleUserOperationEvent(ev)
         break
       case 'AccountDeployed':
-        handleAccountDeployedEvent(ev as any)
+        handleAccountDeployedEvent(ev)
         break
       case 'SignatureAggregatorChanged':
-        handleAggregatorChangedEvent(ev as any)
+        handleAggregatorChangedEvent(ev)
         break
     }
     lastBlock = ev.blockNumber + 1
@@ -85,7 +84,9 @@ export const createEventManagerWithListener = (
    *
    * @param ev - the event
    */
-  const handleUserOperationEvent = async (ev: any): Promise<void> => {
+  const handleUserOperationEvent = async (
+    ev: ethers.EventLog,
+  ): Promise<void> => {
     const userOpHash = ev.args.userOpHash
     const sucess = ev.args.success
 
@@ -114,11 +115,11 @@ export const createEventManagerWithListener = (
    *
    * @param ev - the event
    */
-  const handleAccountDeployedEvent = (ev: any): void => {
+  const handleAccountDeployedEvent = (ev: ethers.EventLog): void => {
     includedAddress(ev.args.factory)
   }
 
-  const handleAggregatorChangedEvent = (ev: any): void => {
+  const handleAggregatorChangedEvent = (ev: ethers.EventLog): void => {
     eventAggregator = ev.args.aggregator
     eventAggregatorTxHash = ev.transactionHash
   }
@@ -127,6 +128,7 @@ export const createEventManagerWithListener = (
    * Automatically listen to all UserOperationEvent events and will flush mempool from already-included UserOperations
    */
   const initEventListener = (): void => {
+    // TODO: Fix this since it is aync function
     entryPointContract.on('UserOperationEvent', (...args) => {
       const ev = args.slice(-1)[0]
       void handleEvent(ev as any)
@@ -136,50 +138,79 @@ export const createEventManagerWithListener = (
     )
   }
 
-  initEventListener()
+  // initEventListener()
 
   return {
     handlePastEvents: async (): Promise<void> => {
       if (!lastBlock) {
         lastBlock = Math.max(1, (await providerService.getBlockNumber()) - 1000)
       }
-      const events = await entryPointContract.queryFilter(
-        { address: entryPointContract.address },
-        lastBlock,
+
+      // get all events since last run for each filter
+      const filters = [
+        entryPointContract.filters.UserOperationEvent(),
+        entryPointContract.filters.AccountDeployed(),
+        entryPointContract.filters.SignatureAggregatorChanged(),
+      ]
+      const allEventLogs = await Promise.all(
+        filters.map((filter) =>
+          entryPointContract.queryFilter(filter, lastBlock),
+        ),
       )
+      const events = allEventLogs.flat()
 
       Logger.debug(
         { lastBlock: lastBlock, events: events.length },
         'Handling past Entrypoint events since last run',
       )
-      for (const ev of events) {
-        await handleEvent(ev)
+      for (const event of events) {
+        if ('args' in event && 'eventName' in event) {
+          await handleEvent(event)
+        } else {
+          // We are not interested in raw logs
+        }
       }
     },
 
     getUserOperationEvent: async (
       userOpHash: string,
-    ): Promise<ethers.Event> => {
+    ): Promise<ethers.EventLog> => {
       // TODO: eth_getLogs is throttled. must be acceptable for finding a UserOperation by hash
-      const event = await entryPointContract.queryFilter(
+      const events = await entryPointContract.queryFilter(
         entryPointContract.filters.UserOperationEvent(userOpHash),
       )
-      return event[0]
+
+      if (events.length === 0 || !events[0]) {
+        return null
+      }
+
+      const ev = events[0]
+      if ('args' in ev) {
+        return ev
+      }
+
+      return null
     },
 
-    filterLogs: (userOpEvent: ethers.Event, logs: Log[]): Log[] => {
+    filterLogs: (userOpEvent: ethers.EventLog, logs: readonly Log[]): Log[] => {
       let startIndex = -1
       let endIndex = -1
-      const events = Object.values(entryPointContract.interface.events)
-      const foundEvent = events.find((e) => e.name === 'BeforeExecution')
-      if (!foundEvent) {
+
+      const events = entryPointContract.interface.fragments.filter(
+        (fragment) => fragment.type === 'event',
+      ) as EventFragment[]
+
+      // Find the "BeforeExecution" event fragment
+      const beforeExecutionEvent = events.find(
+        (e) => e.name === 'BeforeExecution',
+      )
+
+      if (!beforeExecutionEvent) {
         throw new Error('fatal: no BeforeExecution event found')
       }
 
-      const beforeExecutionTopic =
-        entryPointContract.interface.getEventTopic(foundEvent)
       logs.forEach((log, index) => {
-        if (log?.topics[0] === beforeExecutionTopic) {
+        if (log?.topics[0] === beforeExecutionEvent.topicHash) {
           // all UserOp execution events start after the "BeforeExecution" event.
           startIndex = endIndex = index
         } else if (log?.topics[0] === userOpEvent.topics[0]) {

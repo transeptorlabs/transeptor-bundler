@@ -13,7 +13,6 @@ import {
   mockReputationManager,
   mockDepositManager,
 } from '../../test/mocks/index.js'
-import { BigNumber } from 'ethers'
 
 describe('MempoolManagerCore', () => {
   let mempoolManager: MempoolManagerCore
@@ -248,7 +247,7 @@ describe('MempoolManagerCore', () => {
     const userOp3 = mockUserOperationFactory('x0003', false, 1, {
       paymaster: 'x000_mock_paymaster',
       paymasterData: '0x',
-      paymasterPostOpGasLimit: BigNumber.from('1'),
+      paymasterPostOpGasLimit: BigInt('1'),
     })
 
     const userOpHash1 = mockEntryPointGetUserOpHash(userOp1)

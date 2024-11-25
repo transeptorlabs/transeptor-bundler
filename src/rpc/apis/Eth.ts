@@ -1,4 +1,4 @@
-import { BigNumber, ethers } from 'ethers'
+import { ethers, resolveProperties } from 'ethers'
 import {
   EstimateUserOpGasResult,
   PackedUserOperation,
@@ -18,7 +18,6 @@ import {
 } from '../../utils/index.js'
 
 import { ProviderService } from '../../provider/index.js'
-import { resolveProperties } from 'ethers/lib/utils.js'
 import { Simulator, StateOverride } from '../../sim/index.js'
 import { Logger } from '../../logger/index.js'
 import { ValidationService } from '../../validatation/index.js'
@@ -40,12 +39,10 @@ const validateParameters = async (
     ValidationErrors.InvalidFields,
   )
 
-  if (
-    entryPointInput?.toString().toLowerCase() !==
-    entryPointContract.address.toLowerCase()
-  ) {
+  const epAddress = await entryPointContract.getAddress()
+  if (entryPointInput?.toString().toLowerCase() !== epAddress.toLowerCase()) {
     throw new Error(
-      `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${entryPointContract.address}`,
+      `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${epAddress}`,
     )
   }
   // minimal sanity check: userOp exists, and all members are hex
@@ -104,7 +101,7 @@ export type EthAPI = {
     userOp: UserOperation,
     entryPointInput: string,
   ): Promise<string>
-  getSupportedEntryPoints(): string[]
+  getSupportedEntryPoints(): Promise<string[]>
   getUserOperationReceipt(
     userOpHash: string,
   ): Promise<UserOperationReceipt | null>
@@ -147,6 +144,7 @@ export const createEthAPI = (
         entryPointInput,
         entryPointContract,
       )
+      const epAddress = await entryPointContract.getAddress()
 
       // Simulate the operation to get the gas limits
       const { preOpGas, validAfter, validUntil } = await sim.simulateHandleOp(
@@ -156,7 +154,7 @@ export const createEthAPI = (
 
       // TODO: Use simulateHandleOp with proxy contract to estimate callGasLimit too
       const callGasLimit = await ps.estimateGas(
-        entryPointContract.address,
+        epAddress,
         userOp.sender,
         userOp.callData,
       )
@@ -165,7 +163,7 @@ export const createEthAPI = (
       const chainId = await ps.getChainId()
       userOp.signature = undefined // ignore signature for gas estimation to allow calcPreVerificationGas to use dummy signature
       const preVerificationGas = calcPreVerificationGas(userOp, chainId)
-      const verificationGasLimit = BigNumber.from(preOpGas).toNumber()
+      const verificationGasLimit = preOpGas
 
       return {
         validAfter,
@@ -211,8 +209,9 @@ export const createEthAPI = (
       return userOpHash
     },
 
-    getSupportedEntryPoints(): string[] {
-      return [entryPointContract.address]
+    getSupportedEntryPoints: async (): Promise<string[]> => {
+      const epAddress = await entryPointContract.getAddress()
+      return [epAddress]
     },
 
     getUserOperationReceipt: async (
@@ -229,7 +228,7 @@ export const createEthAPI = (
       }
       const receipt = await event.getTransactionReceipt()
       const logs = eventsManager.filterLogs(event, receipt.logs)
-      return deepHexlify({
+      return {
         userOpHash,
         sender: event.args.sender,
         nonce: event.args.nonce,
@@ -237,8 +236,25 @@ export const createEthAPI = (
         actualGasUsed: event.args.actualGasUsed,
         success: event.args.success,
         logs,
-        receipt,
-      })
+        receipt: {
+          to: receipt.to,
+          from: receipt.from,
+          contractAddress: receipt.contractAddress,
+          transactionIndex: receipt.index,
+          root: receipt.root,
+          gasUsed: receipt.gasUsed,
+          logsBloom: receipt.logsBloom,
+          blockHash: receipt.blockHash,
+          transactionHash: receipt.hash,
+          logs: receipt.logs,
+          blockNumber: receipt.blockNumber,
+          confirmations: await receipt.confirmations(),
+          cumulativeGasUsed: receipt.cumulativeGasUsed,
+          effectiveGasPrice: receipt.gasPrice,
+          type: receipt.type,
+          status: receipt.status,
+        },
+      }
     },
 
     getUserOperationByHash: async (
@@ -258,7 +274,8 @@ export const createEthAPI = (
         return null
       }
       const tx = await event.getTransaction()
-      if (tx.to !== entryPointContract.address) {
+      const entryPointAddress = await entryPointContract.getAddress()
+      if (tx.to !== entryPointAddress) {
         throw new Error('unable to parse transaction')
       }
 
@@ -271,7 +288,7 @@ export const createEthAPI = (
       const op = ops.find(
         (op) =>
           op.sender === event.args?.sender &&
-          BigNumber.from(op.nonce).eq(event.args?.nonce),
+          BigInt(op.nonce) === BigInt(event.args?.nonce),
       )
       if (op == null) {
         throw new Error('unable to find userOp in transaction')

@@ -16,11 +16,15 @@ const createSuccessResponse = (
   id: number | string,
   result: any,
 ): JsonRpcSuccessResponse => {
-  const hexlifyResult = deepHexlify(result)
-  return {
-    jsonrpc: '2.0',
-    id,
-    result: hexlifyResult,
+  try {
+    const hexlifyResult = deepHexlify(result)
+    return {
+      jsonrpc: '2.0',
+      id,
+      result: hexlifyResult,
+    }
+  } catch (error) {
+    throw new RpcError('Error hexlifying result', -32603, error)
   }
 }
 

@@ -1,7 +1,7 @@
 import { packUserOp } from '../../utils/index.js'
 import { SendBundleReturn, UserOperation } from '../../types/index.js'
 import { StakeInfo } from '../../validatation/index.js'
-import { ethers, BigNumber } from 'ethers'
+import { ethers } from 'ethers'
 import { ReputationEntry, ReputationManager } from '../../reputation/index.js'
 import { BundleManager } from '../../bundle/index.js'
 import { MempoolManagerCore } from '../../mempool/index.js'
@@ -74,7 +74,7 @@ export const createDebugAPI = (
         await mempoolManagerCore.addUserOp({
           userOp,
           userOpHash,
-          prefund: BigNumber.from(0),
+          prefund: BigInt(0),
           referencedContracts: null,
           senderInfo: null,
         })

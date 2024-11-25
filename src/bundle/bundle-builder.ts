@@ -1,4 +1,4 @@
-import { BigNumber, ethers } from 'ethers'
+import { ethers } from 'ethers'
 import { Logger } from '../logger/index.js'
 import { MempoolEntry } from '../state/index.js'
 import { StorageMap, UserOperation } from '../types/index.js'
@@ -57,8 +57,8 @@ export const createBundleBuilder = (
       )
       const bundle: UserOperation[] = []
       const storageMap: StorageMap = {}
-      let totalGas = BigNumber.from(0)
-      const paymasterDeposit: { [paymaster: string]: BigNumber } = {} // paymaster deposit should be enough for all UserOps in the bundle.
+      let totalGas = BigInt(0)
+      const paymasterDeposit: { [paymaster: string]: bigint } = {} // paymaster deposit should be enough for all UserOps in the bundle.
       const stakedEntityCount: { [addr: string]: number } = {} // throttled paymasters and deployers are allowed only small UserOps per bundle.
       const senders = new Set<string>() // each sender is allowed only once per bundle
       const notIncludedUserOpsHashes: string[] = []
@@ -171,11 +171,11 @@ export const createBundleBuilder = (
         }
 
         // TODO: we could "cram" more UserOps into a bundle.
-        const userOpGasCost = BigNumber.from(
-          validationResult.returnInfo.preOpGas,
-        ).add(entry.userOp.callGasLimit)
-        const newTotalGas = totalGas.add(userOpGasCost)
-        if (newTotalGas.gt(opts.maxBundleGas)) {
+        const userOpGasCost =
+          BigInt(validationResult.returnInfo.preOpGas) +
+          BigInt(entry.userOp.callGasLimit)
+        const newTotalGas = totalGas + userOpGasCost
+        if (newTotalGas > BigInt(opts.maxBundleGas)) {
           Logger.debug(
             { stopIndex: i, entriesLength: entries.length },
             'Bundle is full sending user ops back to mempool with status pending',
@@ -195,16 +195,17 @@ export const createBundleBuilder = (
               await opts.entryPointContract.balanceOf(paymaster)
           }
           if (
-            paymasterDeposit[paymaster].lt(validationResult.returnInfo.prefund)
+            paymasterDeposit[paymaster] >
+            BigInt(validationResult.returnInfo.prefund)
           ) {
             // not enough balance in paymaster to pay for all UserOp
             // (but it passed validation, so it can sponsor them separately
             continue
           }
           stakedEntityCount[paymaster] = (stakedEntityCount[paymaster] ?? 0) + 1
-          paymasterDeposit[paymaster] = paymasterDeposit[paymaster].sub(
-            validationResult.returnInfo.prefund,
-          )
+          paymasterDeposit[paymaster] =
+            paymasterDeposit[paymaster] -
+            BigInt(validationResult.returnInfo.prefund)
         }
 
         // get factory stakedEntityCount

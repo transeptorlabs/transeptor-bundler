@@ -1,7 +1,4 @@
-import { Deferrable } from '@ethersproject/properties'
-import { TransactionRequest } from '@ethersproject/providers'
-import { Wallet, ethers } from 'ethers'
-import { resolveProperties } from 'ethers/lib/utils.js'
+import { Wallet } from 'ethers'
 import { Logger } from '../logger/index.js'
 import { BundleTxs } from '../state/index.js'
 import { ProviderService } from '../provider/index.js'
@@ -16,17 +13,6 @@ export type SignerService = {
    * @returns - Return the index of the available signer, -1 if all are busy, or 0 immediately if bundleTxs is empty.
    */
   getReadySigner(bundleTxs: BundleTxs): Promise<number>
-
-  getSignerBalance(signer: Wallet): Promise<ethers.BigNumber>
-
-  getSignerAddress(signer: Wallet): Promise<string>
-
-  getTransactionCount(signer: Wallet): Promise<number>
-
-  signTransaction(
-    tx: Deferrable<TransactionRequest>,
-    signer: Wallet,
-  ): Promise<string>
 }
 
 // Utility function to check if a transaction is pending
@@ -63,26 +49,6 @@ export const createSignerService = (ps: ProviderService): SignerService => {
       )
 
       return availableSigner ? availableSigner[0] : -1
-    },
-
-    getSignerBalance: async (signer: Wallet): Promise<ethers.BigNumber> => {
-      return await signer.getBalance()
-    },
-
-    getSignerAddress: async (signer: Wallet): Promise<string> => {
-      return await signer.getAddress()
-    },
-
-    getTransactionCount: async (signer: Wallet): Promise<number> => {
-      return await signer.getTransactionCount()
-    },
-
-    signTransaction: async (
-      tx: Deferrable<TransactionRequest>,
-      signer: Wallet,
-    ): Promise<string> => {
-      const tx1 = await resolveProperties(tx)
-      return signer.signTransaction(tx1)
     },
   }
 }

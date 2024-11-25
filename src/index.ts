@@ -21,7 +21,6 @@ import {
   createSimulator,
   prestateTracerName,
 } from './sim/index.js'
-import { createSignerService } from './signer/index.js'
 import {
   createReputationManager,
   createReputationManagerUpdater,
@@ -51,12 +50,13 @@ const runBundler = async () => {
   const state = createState()
 
   // Create services
+  const epAddress = await config.entryPointContract.getAddress()
   const ps = createProviderService(config.provider, config.nativeTracerProvider)
-  const sim = createSimulator(ps, config.entryPointContract)
+  const sim = createSimulator(ps, epAddress)
   const vs = createValidationService(
     ps,
     sim,
-    config.entryPointContract.address,
+    epAddress,
     config.isUnsafeMode,
     config.nativeTracerEnabled,
   )
@@ -140,9 +140,10 @@ const runBundler = async () => {
   )
   await bundlerServer.start(async () => {
     const { name, chainId } = await ps.getNetwork()
+    const chainIdNum = Number(chainId)
 
     const supportedNetworks = ps.getSupportedNetworks()
-    if (!supportedNetworks.includes(chainId)) {
+    if (!supportedNetworks.includes(chainIdNum)) {
       throw new Error(
         `Network not supported. Supported networks: ${supportedNetworks.join(
           ', ',
@@ -151,10 +152,8 @@ const runBundler = async () => {
     }
 
     // Make sure the entry point contract is deployed to the network
-    if (chainId === 31337 || chainId === 1337) {
-      const isDeployed = await ps.checkContractDeployment(
-        config.entryPointContract.address,
-      )
+    if (chainIdNum === 31337 || chainIdNum === 1337) {
+      const isDeployed = await ps.checkContractDeployment(epAddress)
       if (!isDeployed) {
         throw new Error(
           'Entry point contract is not deployed to the network. Please use a pre-deployed contract or deploy the contract first if you are using a local network.',
@@ -163,11 +162,10 @@ const runBundler = async () => {
     }
 
     // Check if the signer accounts have enough balance
-    const ss = createSignerService(ps)
     const signerDetails = await Promise.all(
       Object.values(config.bundlerSignerWallets).map(async (signer) => {
-        const bal = await ss.getSignerBalance(signer)
-        if (bal.eq(config.minSignerBalance)) {
+        const bal = await ps.getBalance(signer.address)
+        if (bal === config.minSignerBalance) {
           throw new Error(
             `Bundler signer account(${signer.address}) is not funded: Min balance required: ${config.minSignerBalance}`,
           )

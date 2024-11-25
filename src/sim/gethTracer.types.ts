@@ -1,5 +1,4 @@
 // This is the same GethTracer from github.com/eth-infinitism/bundler
-import { BigNumber } from 'ethers'
 
 /**
  * Name of the native tracer that is equivalent to the standard javascript
@@ -59,7 +58,7 @@ export interface LogContext {
   gasUsed: number //  Number, amount of gas used in executing the transaction (excludes txdata costs)
   gasPrice: number // Number, gas price configured in the transaction being executed
   intrinsicGas: number // Number, intrinsic gas for the transaction being executed
-  value: BigNumber // big.Int, amount to be transferred in wei
+  value: bigint // big.Int, amount to be transferred in wei
   block: number // Number, block number
   output: Buffer // Buffer, value returned from EVM
   time: string // String, execution runtime
@@ -104,7 +103,7 @@ export interface LogCallFrame {
   // - returns a Number which has the amount of gas provided for the frame
   getGas: () => number
   // - returns a big.Int with the amount to be transferred only if available, otherwise undefined
-  getValue: () => BigNumber
+  getValue: () => bigint
 }
 
 export interface LogFrameResult {
@@ -133,7 +132,7 @@ export interface LogStack {
 export interface LogContract {
   getCaller: () => any // returns the address of the caller
   getAddress: () => string // returns the address of the current contract
-  getValue: () => BigNumber // returns the amount of value sent from caller to contract as a big.Int
+  getValue: () => bigint // returns the amount of value sent from caller to contract as a big.Int
   getInput: () => any // returns the input data passed to the contract
 }
 
@@ -153,7 +152,7 @@ export interface LogStep {
 }
 
 export interface LogDb {
-  getBalance: (address: string) => BigNumber // - returns a big.Int with the specified account’s balance
+  getBalance: (address: string) => bigint // - returns a big.Int with the specified account’s balance
   getNonce: (address: string) => number // returns a Number with the specified account’s nonce
   getCode: (address: string) => any // returns a byte slice with the code for the specified account
   getState: (address: string, hash: string) => any // returns the state value for the specified account and the specified hash

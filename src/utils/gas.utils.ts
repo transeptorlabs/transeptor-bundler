@@ -1,9 +1,7 @@
-import { arrayify, hexlify } from 'ethers/lib/utils.js'
-
+import { ethers, hexlify } from 'ethers'
 import { UserOperation } from '../types/index.js'
 
 import { packUserOp, encodeUserOp } from './bundle.utils.js'
-import { BigNumber } from 'ethers'
 
 export type PreVerificationGasCalculator = {
   /**
@@ -61,6 +59,7 @@ const chainConfigs: Record<number, PreVerificationGasCalculator> = {
   1: mainnetConfig,
   1337: mainnetConfig,
   31337: mainnetConfig,
+  11155111: mainnetConfig,
 }
 
 const fillUserOpWithDummyData = (
@@ -68,13 +67,18 @@ const fillUserOpWithDummyData = (
   gasConfig: PreVerificationGasCalculator,
 ): UserOperation => {
   const filledUserOp: UserOperation = Object.assign({}, userOp) as UserOperation
+  const uint8ArraySignature = new Uint8Array(
+    Buffer.alloc(gasConfig.estimationSignatureSize, 0xff),
+  )
+  const uint8ArrayPaymasterData = new Uint8Array(
+    Buffer.alloc(gasConfig.estimationPaymasterDataSize, 0xff),
+  )
+
   filledUserOp.preVerificationGas = filledUserOp.preVerificationGas ?? 21000
   filledUserOp.signature =
-    filledUserOp.signature ??
-    hexlify(Buffer.alloc(gasConfig.estimationSignatureSize, 0xff))
+    filledUserOp.signature ?? hexlify(uint8ArraySignature)
   filledUserOp.paymasterData =
-    filledUserOp.paymasterData ??
-    hexlify(Buffer.alloc(gasConfig.estimationPaymasterDataSize, 0xff))
+    filledUserOp.paymasterData ?? hexlify(uint8ArrayPaymasterData)
   return filledUserOp
 }
 
@@ -82,7 +86,7 @@ const calculate = (
   userOp: UserOperation,
   gasConfig: PreVerificationGasCalculator,
 ): number => {
-  const packed = arrayify(encodeUserOp(packUserOp(userOp), false))
+  const packed = ethers.getBytes(encodeUserOp(packUserOp(userOp), false))
   const lengthInWord = (packed.length + 31) / 32
   const callDataCost = packed
     .map((x) =>
@@ -136,6 +140,6 @@ export const validatePreVerificationGas = (
     minRequiredPreVerificationGas,
     isPreVerificationGasValid:
       minRequiredPreVerificationGas <=
-      BigNumber.from(userOp.preVerificationGas).toNumber(),
+      Number(BigInt(userOp.preVerificationGas)),
   }
 }
