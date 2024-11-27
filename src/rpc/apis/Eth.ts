@@ -7,7 +7,7 @@ import {
   UserOperationByHashResponse,
   UserOperationReceipt,
 } from '../../types/index.js'
-import { ValidationErrors } from '../../validatation/index.js'
+import { ValidationErrors } from '../../validation/index.js'
 import {
   deepHexlify,
   requireCond,
@@ -20,7 +20,7 @@ import {
 import { ProviderService } from '../../provider/index.js'
 import { Simulator, StateOverride } from '../../sim/index.js'
 import { Logger } from '../../logger/index.js'
-import { ValidationService } from '../../validatation/index.js'
+import { ValidationService } from '../../validation/index.js'
 import { EventManagerWithListener } from '../../event/index.js'
 import { MempoolManageSender } from '../../mempool/index.js'
 

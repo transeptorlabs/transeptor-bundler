@@ -1,7 +1,7 @@
 import { BigNumberish, ethers, zeroPadValue, dataSlice, toBeHex } from 'ethers'
 
 import { UserOperation } from '../types/index.js'
-import { ValidationErrors } from '../validatation/index.js'
+import { ValidationErrors } from '../validation/index.js'
 
 import { requireCond } from './rpc.utils.js'
 

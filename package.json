@@ -46,7 +46,6 @@
   },
   "dependencies": {
     "@chainsafe/libp2p-noise": "^12.0.2",
-    "@flashbots/ethers-provider-bundle": "^1.0.0",
     "@influxdata/influxdb-client": "1.33.2",
     "@libp2p/mplex": "^8.0.4",
     "@libp2p/tcp": "^7.0.3",

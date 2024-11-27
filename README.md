@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  A light weight blazing fast, modular ERC-4337 TypeScript bundler built with functional programming.
+ A lightweight, blazing-fast, modular ERC-4337 TypeScript bundler built with functional programming.
 </p>
 
 <p align="center">
@@ -21,68 +21,79 @@
 
 > :warning: **This repository is currently under active development.**
 > 
-> Support ERC-4337 Entrypoint contract [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7)
+> Supports ERC-4337 Entrypoint contract [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7)
 
-## 🚀 Development
+## Prerequisites
+- [NodeJS](https://nodejs.org/) (>=20.11.1)
+- [Yarn](https://classic.yarnpkg.com/lang/en/)
 
-Everything you need to get started developing with Transeptor.
+## Development
 
-### Run local development
+Follow these instructions to get the project up and running on your local machine for development purposes:
 1. `git submodule update --init`
-2. Use correct node version `nvm use`
-3. Add `PRIVATE_KEY` to `contracts/.env` file to deploy the entrypoint contract locally.
+2. Use the correct node version `nvm use`
+3. Add `PRIVATE_KEY` to the `contracts/.env` file to deploy the entrypoint contract locally.
 4. Install dependencies `yarn install`
-5. Start local `geth node` and `geth-tracer-node`. Will also deploy the entrypoint contract please wait for environment vars to be printed in the console and copy it to your `.env` files: `yarn local-eth` 
-6. In a new terminal window starting the bundler node in dev mode will live watch for changes in `./src` path with auto restarts. There are three different modes to start the bundler node:
-  - `yarn dev` - To start bundler node in safe mode with full storage and opcode checks.
-  - `yarn dev:unsafe` - To start bundler node in unsafe mode with no storage or opcode checks.
-  - `yarn dev:native-tracer` - To start bundler node in safe mode with full storage and opcode checks with native tracer enabled.
+5. Start local `geth node` and `geth-tracer-node`: `yarn local-eth`
+    - Deploys the entrypoint contract to the local network.
+   - Please wait for environment vars to be printed in the console and copy it to your `.env` files.
+6. In a new terminal window, start the bundler node in dev mode with a live watch for changes in the `./src` path with auto restarts. There are three different dev modes:
+   - `yarn dev` - To start the bundler node in safe mode with full storage and opcode checks.
+   - `yarn dev:unsafe` - To start the bundler node in unsafe mode with no storage or opcode checks.
+   - `yarn dev:native-tracer` - To start the bundler node in safe mode with full storage and opcode checks enabled by the native tracer.
 
 - The bundler node will start on `http://localhost:4337/rpc`. 
 
-#### Local dev e2e scripts 
-
-Run script to send a userOp through the bundler.
-
-```bash
-yarn send-op
-```
-
 ### Test
 
+Run the test suite.
 ```bash
 yarn test
+```
+
+Run an e2e script to send a userOp through the bundler.
+```bash
+yarn send-op
 ```
 
 ### Lint
 
 ```bash
 yarn lint
-```
-
-or
-
-```bash
 yarn lint:fix
 ```
 
-## Build
+## Running Transeptor
 
-You can build Transeptor from source.
+Transeptor offers many options for installing and running the bundler node.
 
-### 🔧 Run from source
-1. Use correct node version: `nvm use`
-2. Install dependencies: `yarn install`
-3. Build node: `yarn build`
+## Build from source
 
-Now let's start the bundler node.
+Building Transeptor from source requires NodeJS and Yarn. Once you have installed the prerequisites, follow these steps to build Transeptor:
 ```bash
-./transeptor --httpApi web3,eth,debug --txMode base
+nvm use
+yarn install
+yarn build
+./transeptor --help
 ```
 
-### 🐳 Run from Docker images
+## Docker
+Quickly get Transeptor running on your machine using Docker.
 
-You can build Transeptor as a Docker image.
+The following commond will start Transeptor using the latest stable release. Replace `<.path_to_your-env_file>` with the path to your `.env` file and `<http://your_ethererm_network_provider_url>` with the URL of your Ethereum network provider.
+```bash
+docker run -d --name transeptor -p 4337:4337 --env-file <.path_to_your-env_file> transeptorlabs/bundler:latest \
+ --httpApi web3,eth,debug \
+ --txMode base \
+ --port 4337 \
+ --network <http://your_ethererm_network_provider_url> \
+ --auto 
+```
+
+### Building Docker image
+
+Building the Docker image from the source code requires that the Docker be installed on your machine. Once you have installed Docker, follow these steps to build the Docker image from soruce.
+
 ```bash
 yarn build:image
 ```
@@ -107,13 +118,13 @@ List of all command line arguments supported by the bundler.
 Options:
   -V, --version                  output the version number
   --unsafe                       UNSAFE mode: Enable no storage or opcode checks during userOp simulation. SAFE mode(default).
-  --tracerRpcUrl <string>        Enables native tracer for full vaildation during userOp simulation with prestateTracer native tracer on network provider. requires unsafe=false.
+  --tracerRpcUrl <string>        Enables native tracer for full validation during userOp simulation with prestateTracer native tracer on the network provider. requires unsafe=false.
   --network <string>             Ethereum network provider. (default: "http://localhost:8545")
-  --httpApi <string>             ERC4337 rpc method name spaces to enable. (default: "web3,eth")
+  --httpApi <string>             ERC4337 rpc method namespaces to enable. (default: "web3,eth")
   --port <number>                Bundler node listening port. (default: "4337")
-  --numberOfSigners <number>     Number of signers HD paths to use from mnmonic (default: "3")
-  --minBalance <string>          Maximum ETH balance need for signer address. (default: "1")
-  --minStake <string>            Minimum stake a entity has to have to pass reputation system. (default: "1")
+  --numberOfSigners <number>     Number of signers HD paths to use from mnemonic (default: "3")
+  --minBalance <string>          Maximum ETH balance needed for signer address. (default: "1")
+  --mistake <string>            Minimum stake an entity has to have to pass the reputation system. (default: "1")
   --minUnstakeDelay <number>     Time paymaster has to wait to unlock the stake(seconds). (default: "0")
   --bundleSize <number>          Maximum number of pending mempool entities to start auto bundler. (default: "10")
   --maxBundleGas <number>        Max gas the bundler will use in transactions. (default: "5000000")
@@ -127,7 +138,7 @@ Options:
   --influxdbOrg <string>         Influxdb org (requires --metrics to be enabled). (default: "transeptor-labs")
   --influxdbBucket <string>      Influxdb bucket (requires --metrics to be enabled). (default: "transeptor_metrics")
   --p2p                          p2p mode enabled (default: false)
-  --findPeers                    Search for peers when p2p enabled. (default: false)
+  --findPeers                    Search for peers when p2p is enabled. (default: false)
   -h, --help                     display help for command
 ```
 
@@ -149,13 +160,11 @@ TRANSEPTOR_BLACK_LIST=<address_to_blacklist_SEPARATED_BY_COMMA>
 
 ## Contribute
 
-We welcome contributions to enhance our ERC-4337 Bundler. If you would like to contribute, please follow these guidelines [here](https://github.com/transeptorlabs/transeptor-bundler/blob/main/CONTRIBUTING.md). There are a few things you can do right now to help out:
-
-- Add tests. There can never be enough tests.
+We welcome contributions to enhance our ERC-4337 Bundler. If you would like to contribute, please follow these guidelines [here](https://github.com/transeptorlabs/transeptor-bundler/blob/main/CONTRIBUTING.md).
 
 ## Contact Us
 
-If you have any questions or feedback about the ERC-4337 Bundler project, please feel free to reach out to us.
+If you have any questions or feedback about Transeptor, please contact us.
 
 - **Twitter**: [@transeptorlabs](https://twitter.com/transeptorlabs)
 - **Telegram**: [Telegram channel](https://t.me/+eUGda3KIND4zMjRh)
@@ -166,10 +175,6 @@ Licensed under the [GPL-3.0 License](https://github.com/transeptorlabs/transepto
 
 ## Acknowledgements
 
-We want to express our gratitude to the following individuals and organizations for their contributions and support in making this project possible:
+We are grateful to the open-source community and the countless developers who have shared their knowledge and resources, enabling us to build upon their work:
 
 - [Infinitism](https://github.com/eth-infinitism/bundler) - for inspiring our project and serving as a reference for implementation techniques.
-
-We are grateful to the open-source community and the countless developers who have shared their knowledge and resources, enabling us to build upon their work.
-
-Thank you all for your support!

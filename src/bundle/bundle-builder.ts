@@ -7,9 +7,8 @@ import {
   ValidateUserOpResult,
   ValidationErrors,
   ValidationService,
-} from '../validatation/index.js'
+} from '../validation/index.js'
 import { ReputationManager, ReputationStatus } from '../reputation/index.js'
-import { ProviderService } from '../provider/provider-service.js'
 
 export type BundleBuilder = {
   createBundle: (
@@ -35,7 +34,6 @@ export type BundleReadyToSend = {
 }
 
 export const createBundleBuilder = (
-  providerService: ProviderService,
   validationService: ValidationService,
   reputationManager: ReputationManager,
   opts: {
@@ -53,7 +51,7 @@ export const createBundleBuilder = (
     ): Promise<BundleReadyToSend> => {
       Logger.info(
         { total: entries.length },
-        'Attepting to create bundle from entries',
+        'Attempting to create bundle from entries',
       )
       const bundle: UserOperation[] = []
       const storageMap: StorageMap = {}

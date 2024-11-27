@@ -1,6 +1,6 @@
 import { packUserOp } from '../../utils/index.js'
 import { SendBundleReturn, UserOperation } from '../../types/index.js'
-import { StakeInfo } from '../../validatation/index.js'
+import { StakeInfo } from '../../validation/index.js'
 import { ethers } from 'ethers'
 import { ReputationEntry, ReputationManager } from '../../reputation/index.js'
 import { BundleManager } from '../../bundle/index.js'

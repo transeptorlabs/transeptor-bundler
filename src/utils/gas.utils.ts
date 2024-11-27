@@ -106,7 +106,7 @@ const calculate = (
 /**
  * Calculate the gas cost of the pre-verification of the userOp.
  * The 'preVerificationGas' is the cost overhead that cannot be calculated precisely or accessed on-chain.
- * It is dependent on the blockchain parameters defefined for all transactions.
+ * It is dependent on the blockchain parameters defined for all transactions.
  *
  * @param userOp - The UserOperation to calculate the gas cost for.
  * @param chainId - The chainId of the chain where the operation will be executed.

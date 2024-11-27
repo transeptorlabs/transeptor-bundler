@@ -129,7 +129,25 @@ export const createBundleProcessor = (
 
       try {
         // populate the transaction (e.g to, data, and value)
-        const tx = await entryPointContract.handleOps.populateTransaction(
+        const { to, data, value } =
+          await entryPointContract.handleOps.populateTransaction(
+            packUserOps(userOps),
+            beneficiary,
+          )
+
+        const feeData = await providerService.getFeeData()
+        const nonce = await signer.getNonce('pending')
+        const tx: ethers.TransactionRequest = {
+          to,
+          data,
+          value,
+          from: signer.address,
+          nonce,
+          type: 2,
+          maxFeePerGas: feeData.maxFeePerGas.toString(),
+          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas.toString(),
+        }
+        tx.gasLimit = await entryPointContract.handleOps.estimateGas(
           packUserOps(userOps),
           beneficiary,
         )
@@ -143,7 +161,11 @@ export const createBundleProcessor = (
             break
           }
           case 'searcher': {
-            await providerService.sendBundleFlashbots(signer, tx)
+            const signedTx = await signer.signTransaction(tx)
+            ret = await providerService.sendTransactionToFlashbots(
+              signedTx,
+              signer.address,
+            )
             break
           }
           default:

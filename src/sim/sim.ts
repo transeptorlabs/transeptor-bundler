@@ -32,7 +32,7 @@ import {
   StakeInfo as StakeInfoWithAddr,
   ValidationErrors,
   ValidationResult,
-} from '../validatation/index.js'
+} from '../validation/index.js'
 import {
   RpcError,
   mergeValidationDataValues,

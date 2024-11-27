@@ -1,6 +1,6 @@
 import { Command, OptionValues } from 'commander'
 import dotenv from 'dotenv'
-import { ethers, JsonRpcProvider, Wallet } from 'ethers'
+import { ethers, HDNodeWallet, JsonRpcProvider, Mnemonic, Wallet } from 'ethers'
 import { createProvider } from '../provider/index.js'
 import { IENTRY_POINT_ABI, IStakeManager } from '../abis/index.js'
 import { DEFAULT_ENTRY_POINT } from '../constants/index.js'
@@ -60,27 +60,19 @@ const getBundlerSignerWallets = (
     throw new Error('TRANSEPTOR_MNEMONIC env var not set')
   }
 
-  const masterWallet = Wallet.fromPhrase(mnemonic)
-  const intialValue: BundlerSignerWallets = {
-    0: new Wallet(masterWallet.privateKey).connect(provider),
-  }
-
-  return intialValue
-
-  // TODO: Fix this
-  // return Array.from({ length: numberOfSigners }, (_, i) => {
-  //   const path = `m/44'/60'/0'/0/${i}`
-  //   const masterWallet = HDNodeWallet.fromPhrase(mnemonic)
-  //   const childWallet = masterWallet.derivePath(path)
-  //   const wTuple: [number, Wallet] = [
-  //     i,
-  //     new Wallet(childWallet.privateKey).connect(provider),
-  //   ]
-  //   return wTuple
-  // }).reduce((acc, [index, wallet]) => {
-  //   acc[index] = wallet
-  //   return acc
-  // }, intialValue)
+  const initialValue: BundlerSignerWallets = {}
+  return Array.from({ length: numberOfSigners }, (_, i) => {
+    const hdNodeWallet = HDNodeWallet.fromMnemonic(
+      Mnemonic.fromPhrase(mnemonic),
+      `m/44'/60'/0'/0/${i}`,
+    )
+    const wallet = new Wallet(hdNodeWallet.privateKey).connect(provider)
+    const wTuple: [number, Wallet] = [i, wallet]
+    return wTuple
+  }).reduce((acc, [index, wallet]) => {
+    acc[index] = wallet
+    return acc
+  }, initialValue)
 }
 
 export const createBuilderConfig = (args: readonly string[]): Config => {
@@ -95,7 +87,7 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
     )
     .option(
       '--tracerRpcUrl <string>',
-      'Enables native tracer for full vaildation during userOp simulation with prestateTracer native tracer on network provider. requires unsafe=false.',
+      'Enables native tracer for full validation during userOp simulation with prestateTracer native tracer on the network provider. requires unsafe=false.',
     )
     .option(
       '--network <string>',
@@ -104,24 +96,23 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
     )
     .option(
       '--httpApi <string>',
-      'ERC4337 rpc method name spaces to enable.',
+      'ERC4337 rpc method namespaces to enable.',
       'web3,eth',
     )
     .option('--port <number>', 'Bundler node listening port.', '4337')
-    // TODO: Fix this to allow multiple signers from mnemonic
-    // .option(
-    //   '--numberOfSigners <number>',
-    //   'Number of signers HD paths to use from mnmonic',
-    //   '1',
-    // )
+    .option(
+      '--numberOfSigners <number>',
+      'Number of signers HD paths to use from mnemonic',
+      '1',
+    )
     .option(
       '--minBalance <string>',
-      'Maximum ETH balance need for signer address.',
+      'Maximum ETH balance needed for signer address.',
       '1',
     )
     .option(
       '--minStake <string>',
-      'Minimum stake a entity has to have to pass reputation system.',
+      'Minimum stake an entity has to have to pass the reputation system.',
       '1',
     ) // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
     .option(
@@ -169,7 +160,7 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
       'transeptor_metrics',
     )
     .option('--p2p', 'p2p mode enabled', false)
-    .option('--findPeers', 'Search for peers when p2p enabled.', false)
+    .option('--findPeers', 'Search for peers when p2p is enabled.', false)
 
   const programOpts: OptionValues = program.parse(args).opts()
 
@@ -201,7 +192,10 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
   )
 
   // Set up signers
-  const bundlerSignerWallets = getBundlerSignerWallets(1, provider)
+  const bundlerSignerWallets = getBundlerSignerWallets(
+    parseInt(programOpts.numberOfSigners),
+    provider,
+  )
   if (!process.env.TRANSEPTOR_BENEFICIARY) {
     throw new Error('TRANSEPTOR_BENEFICIARY env var not set')
   }

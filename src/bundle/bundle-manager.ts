@@ -53,7 +53,7 @@ export const createBundleManager = (
   const doAttemptBundle = async (
     force?: boolean,
   ): Promise<SendBundleReturn> => {
-    // Flush the mempool to remove succeful userOps update failed userOps status
+    // Flush the mempool to remove successful userOps update failed userOps status
     await eventsManager.handlePastEvents()
 
     const entries = await getEntries(force)
@@ -169,7 +169,7 @@ export const createBundleManager = (
       try {
         await doAttemptBundle()
       } catch (error: any) {
-        Logger.error({ error: error.mesage }, 'Error running auto bundle:')
+        Logger.error({ error: error.message }, 'Error running auto bundle:')
       }
     }, autoBundleInterval)
   }

@@ -16,8 +16,8 @@ import {
   ValidationErrors,
   ValidationResult,
   StakeInfo,
-} from '../validatation/index.js'
-import { requireCond, toBytes32 } from '../utils/index.js'
+} from '../validation/index.js'
+import { requireCond, toBytes32, toJsonString } from '../utils/index.js'
 import { Logger } from '../logger/index.js'
 
 interface CallEntry {
@@ -532,7 +532,7 @@ export const tracerResultParser = (
       }
       if (entStake == null) {
         throw new Error(
-          `internal: ${entityTitle} not in userOp, but has storage accesses in ${JSON.stringify(access)}`,
+          `internal: ${entityTitle} not in userOp, but has storage accesses in ${toJsonString(access)}`,
         )
       }
       requireCond(

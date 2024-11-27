@@ -1,4 +1,11 @@
-import { isAddress, BytesLike, BigNumberish, hexlify, ethers } from 'ethers'
+import {
+  isAddress,
+  BytesLike,
+  BigNumberish,
+  hexlify,
+  ethers,
+  toBeHex,
+} from 'ethers'
 
 /**
  * Check if the address is valid.
@@ -28,4 +35,15 @@ export const tostr = (s: BigNumberish): string => {
  */
 export const toBytes32 = (b: BytesLike): string => {
   return ethers.zeroPadValue(hexlify(b).toLowerCase(), 32)
+}
+
+export const toJsonString = (obj: any): string => {
+  return JSON.stringify(
+    obj,
+    (_, value: any) =>
+      typeof value === 'bigint' || typeof value === 'number'
+        ? toBeHex(value)
+        : value,
+    2,
+  )
 }

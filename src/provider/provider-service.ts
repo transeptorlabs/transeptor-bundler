@@ -10,21 +10,18 @@ import {
   resolveProperties,
   BytesLike,
   hexlify,
+  toBeHex,
 } from 'ethers'
 
 import { Logger } from '../logger/index.js'
 import { TraceOptions, TraceResult } from '../sim/index.js'
-import { ValidationErrors } from '../validatation/index.js'
+import { ValidationErrors } from '../validation/index.js'
 import { RpcError } from '../utils/index.js'
-import {
-  FlashbotsBundleProvider,
-  FlashbotsTransaction,
-} from '@flashbots/ethers-provider-bundle'
 
 export type ProviderService = {
   getNetwork(): Promise<Network>
   checkContractDeployment(contractAddress: string): Promise<boolean>
-  clientVerion(): Promise<string>
+  clientVersion(): Promise<string>
   getChainId(): Promise<number>
   getBlockNumber(): Promise<number>
   getFeeData(): Promise<FeeData>
@@ -47,10 +44,10 @@ export type ProviderService = {
   getTransactionReceipt(txHash: string): Promise<TransactionReceipt>
   getSupportedNetworks(): number[]
   isNativeTracerAndNetworkProviderChainMatch(): Promise<boolean>
-  sendBundleFlashbots(
-    signer: ethers.Wallet,
-    transaction: TransactionRequest,
-  ): Promise<FlashbotsTransaction>
+  sendTransactionToFlashbots(
+    signedTransaction: string,
+    refundAddress: string,
+  ): Promise<string>
   getBalance(address: string): Promise<bigint>
 }
 
@@ -141,7 +138,7 @@ export const createProviderService = (
       }
     },
 
-    clientVerion: async (): Promise<string> => {
+    clientVersion: async (): Promise<string> => {
       const ret = await networkProvider.send('web3_clientVersion', [])
       return ret.result
     },
@@ -250,10 +247,10 @@ export const createProviderService = (
       return await networkProvider.getTransactionReceipt(txHash)
     },
 
-    sendBundleFlashbots: async (
-      signer: ethers.Wallet,
-      transaction: TransactionRequest,
-    ): Promise<FlashbotsTransaction> => {
+    sendTransactionToFlashbots: async (
+      signedTransaction: string,
+      refundAddress: string,
+    ): Promise<string> => {
       const { chainId } = await networkProvider.getNetwork()
       const relayUrl = FLASHBOTS_BUNDLE_RELAY_URL[Number(chainId)]
       if (relayUrl === undefined) {
@@ -262,24 +259,52 @@ export const createProviderService = (
         )
       }
 
-      const flashbotsProvider = new FlashbotsBundleProvider(
-        networkProvider,
-        signer,
-        relayUrl,
-        await networkProvider.getNetwork(),
+      const network: ethers.Network = new ethers.Network(
+        'flashbot-relay',
+        BigInt(chainId),
       )
+      const flashbotsProvider = new JsonRpcProvider(relayUrl, network, {
+        staticNetwork: network,
+      })
 
-      const signedBundle = await flashbotsProvider.signBundle([
-        {
-          signer,
-          transaction,
-        },
-      ])
+      const blockNum = await networkProvider.getBlockNumber()
+      const maxBlockNumber = blockNum + 5
 
-      const blockNumber = await networkProvider.getBlockNumber()
+      // Send to Flashbots relay rpc: https://docs.flashbots.net/flashbots-auction/advanced/rpc-endpoint#eth_sendprivatetransaction
+      return await flashbotsProvider
+        .send('eth_sendPrivateTransaction', [
+          {
+            tx: signedTransaction,
+            maxBlockNumber: toBeHex(maxBlockNumber),
+            preferences: {
+              fast: true,
+              privacy: {
+                hints: ['contract_address', 'transaction_hash'],
+                builders: ['default'],
+              },
+              validity: {
+                refund: [{ address: refundAddress, percent: 50 }],
+              },
+            },
+          },
+        ])
+        .catch((e) => {
+          Logger.warn(
+            {
+              error: e,
+            },
+            'error sending transaction to Flashbots relay',
+          )
 
-      // TODO: Complete the implementation of sendRawBundle
-      return await flashbotsProvider.sendRawBundle(signedBundle, blockNumber)
+          const body = e.body
+          if (body != null) {
+            const jsonbody = JSON.parse(body)
+            throw new Error(
+              `error sending eth_sendPrivateTransaction to Flashbots relay- ${jsonbody.error.message}`,
+            )
+          }
+          throw e
+        })
     },
   }
 }

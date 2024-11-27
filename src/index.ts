@@ -15,7 +15,7 @@ import {
 import { Libp2pNode } from './p2p/index.js'
 
 import { createProviderService } from './provider/index.js'
-import { createValidationService } from './validatation/index.js'
+import { createValidationService } from './validation/index.js'
 import {
   bundlerNativeTracerName,
   createSimulator,
@@ -97,7 +97,7 @@ const runBundler = async () => {
       config.minSignerBalance,
       config.bundlerSignerWallets,
     ),
-    createBundleBuilder(ps, vs, reputationManager, {
+    createBundleBuilder(vs, reputationManager, {
       maxBundleGas: config.maxBundleGas,
       txMode: config.txMode,
       entryPointContract: config.entryPointContract,
@@ -217,7 +217,7 @@ const runBundler = async () => {
       } else {
         if (!(await sim.supportsDebugTraceCall())) {
           throw new Error(
-            'Full validation requires (debug_traceCall) method on network provider for standard javascript tracer. For UNSAFE mode: use --unsafe',
+            'Full validation requires (debug_traceCall) method on the network provider for standard javascript tracer. For UNSAFE mode: use --unsafe',
           )
         }
       }

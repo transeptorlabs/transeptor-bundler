@@ -1,6 +1,7 @@
 import { BigNumberish } from 'ethers'
 
 import { UserOperation } from '../src/types/index.js'
+import { toJsonString } from '../src/utils/index.js'
 
 export const mockUserOperationFactory = (
   sender: string,
@@ -36,7 +37,7 @@ export const mockUserOperationFactory = (
 }
 
 export const mockEntryPointGetUserOpHash = (userOp: UserOperation): string => {
-  const objString = JSON.stringify(userOp)
+  const objString = toJsonString(userOp)
   let hash = 0
 
   if (objString.length === 0) {

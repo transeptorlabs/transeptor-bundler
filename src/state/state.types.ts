@@ -1,6 +1,6 @@
 import { BigNumberish } from 'ethers'
 
-import { ReferencedCodeHashes } from '../validatation/index.js'
+import { ReferencedCodeHashes } from '../validation/index.js'
 import { UserOperation } from '../types/index.js'
 import { ReputationEntry } from '../reputation/index.js'
 

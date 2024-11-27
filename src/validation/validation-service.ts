@@ -19,6 +19,7 @@ import {
   requireAddressAndFields,
   calcPreVerificationGas,
   validatePreVerificationGas,
+  toJsonString,
 } from '../utils/index.js'
 
 import { ProviderService } from '../provider/index.js'
@@ -229,7 +230,7 @@ export const createValidationService = (
         const value: string = (userOp as any)[key]?.toString()
         requireCond(
           value != null,
-          'Missing userOp field: ' + key + ' ' + JSON.stringify(userOp),
+          'Missing userOp field: ' + key + ' ' + toJsonString(userOp),
           ValidationErrors.InvalidFields,
         )
         requireCond(

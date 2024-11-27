@@ -95,6 +95,6 @@ export class Libp2pNode {
       throw new Error('Libp2p node is not created')
     }
     await this.node.stop()
-    Logger.info('Stoping libp2p node')
+    Logger.info('Stopping libp2p node')
   }
 }

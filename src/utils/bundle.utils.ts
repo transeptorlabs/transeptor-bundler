@@ -165,7 +165,7 @@ function unpackPaymasterAndData(paymasterAndData: BytesLike): {
  * @param items - array of bytes
  * @returns concatenated bytes
  */
-function hexConcat(items: ReadonlyArray<BytesLike>): string {
+export function hexConcat(items: ReadonlyArray<BytesLike>): string {
   let result = '0x'
   items.forEach((item) => {
     result += hexlify(item).substring(2)

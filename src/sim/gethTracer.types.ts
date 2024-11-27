@@ -109,7 +109,7 @@ export interface LogCallFrame {
 export interface LogFrameResult {
   getGasUsed: () => number // - returns amount of gas used throughout the frame as a Number
   getOutput: () => Buffer // - returns the output as a buffer
-  getError: () => any // - returns an error if one occured during execution and undefined` otherwise
+  getError: () => any // - returns an error if one occurred during execution and undefined` otherwise
 }
 
 export interface LogOpCode {

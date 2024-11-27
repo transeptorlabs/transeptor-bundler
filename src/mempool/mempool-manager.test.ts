@@ -241,7 +241,7 @@ describe('MempoolManagerCore', () => {
     expect(knownSenders).includes('x0003')
   })
 
-  it('should return addresses that are currently known to be any kind of entity according to the current mempool exculding "sender"', async () => {
+  it('should return addresses that are currently known to be any kind of entity according to the current mempool excluding "sender"', async () => {
     const userOp1 = mockUserOperationFactory('x0001', false, 1)
     const userOp2 = mockUserOperationFactory('x0002', false, 1)
     const userOp3 = mockUserOperationFactory('x0003', false, 1, {

@@ -9,7 +9,7 @@ import {
   ReputationManagerUpdater,
   ReputationManagerReader,
 } from './reputation.types.js'
-import { StakeInfo, ValidationErrors } from '../validatation/index.js'
+import { StakeInfo, ValidationErrors } from '../validation/index.js'
 import { requireCond, tostr } from '../utils/index.js'
 import { StateService, ReputationEntries, StateKey } from '../state/index.js'
 
@@ -68,7 +68,7 @@ export const createReputationManager = (
      *
      * This function is typically run on an hourly basis (as implied by its name).
      * It gradually reduces the `opsSeen` and `opsIncluded` values for each entry,
-     * simulating a decay or cooldown effect over time. Entries are removed if
+     * simulating a decay or cool down effect over time. Entries are removed if
      * both `opsSeen` and `opsIncluded` are reduced to zero.
      *
      */
@@ -335,7 +335,7 @@ export const createReputationManager = (
     setReputation: async (
       reputations: ReputationEntry[],
     ): Promise<ReputationEntry[]> => {
-      const initalReady: ReputationEntries = {}
+      const initialReady: ReputationEntries = {}
       const newEntries = reputations.reduce((acc, rep) => {
         const addr = rep.address.toLowerCase()
         acc[addr] = {
@@ -344,7 +344,7 @@ export const createReputationManager = (
           opsIncluded: Number(BigInt(rep.opsIncluded)),
         }
         return acc
-      }, initalReady)
+      }, initialReady)
 
       await state.updateState(
         StateKey.ReputationEntries,

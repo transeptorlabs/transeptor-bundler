@@ -88,9 +88,9 @@ export const createEventManagerWithListener = (
     ev: ethers.EventLog,
   ): Promise<void> => {
     const userOpHash = ev.args.userOpHash
-    const sucess = ev.args.success
+    const success = ev.args.success
 
-    if (sucess) {
+    if (success) {
       Logger.debug(
         { userOpHash },
         'UserOperationEvent success. Removing from mempool',
@@ -128,17 +128,20 @@ export const createEventManagerWithListener = (
    * Automatically listen to all UserOperationEvent events and will flush mempool from already-included UserOperations
    */
   const initEventListener = (): void => {
-    // TODO: Fix this since it is aync function
-    entryPointContract.on('UserOperationEvent', (...args) => {
-      const ev = args.slice(-1)[0]
-      void handleEvent(ev as any)
+    entryPointContract.on('UserOperationEvent', async (...args) => {
+      const ev = args.slice(-1)[0] // last argument is the event
+      if (ev.args == null) {
+        Logger.error('UserOperationEvent event without args')
+        return
+      }
+      await handleEvent(ev as any)
     })
     Logger.debug(
-      'Entrypoint contract EventListener listening to events(UserOperationEvent, AccountDeployed, SignatureAggregatorChanged)',
+      'Entrypoint contract EventListener listening to events(UserOperationEvent)',
     )
   }
 
-  // initEventListener()
+  initEventListener()
 
   return {
     handlePastEvents: async (): Promise<void> => {

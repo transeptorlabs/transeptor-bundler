@@ -1,5 +1,5 @@
 import type { BigNumberish, BytesLike, ethers } from 'ethers'
-import type { ReferencedCodeHashes, StakeInfo } from '../validatation/index.js'
+import type { ReferencedCodeHashes, StakeInfo } from '../validation/index.js'
 
 // New transaction types for account-abstracted transactions
 export type UserOperation = {

@@ -316,15 +316,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@flashbots/ethers-provider-bundle@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "@flashbots/ethers-provider-bundle@npm:1.0.0"
-  peerDependencies:
-    ethers: 6.7.1
-  checksum: 036041cce2e8f8bfc98c8be7c1c8b4f735ce7e6506f049a82024e45ceace20f0f05207f165f248eb1caa529aad90d72ba87e3b56eb4982865231716ceb70ed81
-  languageName: node
-  linkType: hard
-
 "@humanwhocodes/config-array@npm:^0.13.0":
   version: 0.13.0
   resolution: "@humanwhocodes/config-array@npm:0.13.0"
@@ -5069,7 +5060,6 @@ __metadata:
   resolution: "root@workspace:."
   dependencies:
     "@chainsafe/libp2p-noise": ^12.0.2
-    "@flashbots/ethers-provider-bundle": ^1.0.0
     "@influxdata/influxdb-client": 1.33.2
     "@libp2p/mplex": ^8.0.4
     "@libp2p/tcp": ^7.0.3
