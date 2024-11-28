@@ -17,6 +17,12 @@ jobs:
           node-version: 18
           cache: yarn
 
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Prepare Yarn
+        run: corepack prepare yarn@3.2.1 --activate
+
       - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Test build website
