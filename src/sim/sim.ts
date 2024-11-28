@@ -2,8 +2,16 @@ import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'url'
 
-import { BigNumber, BigNumberish, BytesLike, ethers, utils } from 'ethers'
-import { Interface } from 'ethers/lib/utils.js'
+import {
+  AbiCoder,
+  BigNumberish,
+  BytesLike,
+  ethers,
+  Interface,
+  keccak256,
+  toUtf8Bytes,
+  TransactionRequest,
+} from 'ethers'
 
 import {
   EntryPointSimulationsDeployedBytecode,
@@ -24,7 +32,7 @@ import {
   StakeInfo as StakeInfoWithAddr,
   ValidationErrors,
   ValidationResult,
-} from '../validatation/index.js'
+} from '../validation/index.js'
 import {
   RpcError,
   mergeValidationDataValues,
@@ -114,7 +122,7 @@ const parseValidationResult = (
     addr: string | undefined,
     info: any,
   ): StakeInfoWithAddr | undefined {
-    if (addr == null || addr === ethers.constants.AddressZero) return undefined
+    if (addr == null || addr === ethers.ZeroAddress) return undefined
     return {
       addr,
       stake: info.stake,
@@ -123,7 +131,7 @@ const parseValidationResult = (
   }
 
   const returnInfo = {
-    sigFailed: mergedValidation.aggregator !== ethers.constants.AddressZero,
+    sigFailed: mergedValidation.aggregator !== ethers.ZeroAddress,
     validUntil: mergedValidation.validUntil,
     validAfter: mergedValidation.validAfter,
     preOpGas: res.returnInfo.preOpGas,
@@ -193,17 +201,18 @@ const decodeErrorReason = (
     error = (err.data ?? err.error.data) as string
   }
 
-  const ErrorSig = utils.keccak256(Buffer.from('Error(string)')).slice(0, 10)
-  const FailedOpSig = utils
-    .keccak256(Buffer.from('FailedOp(uint256,string)'))
-    .slice(0, 10)
+  const ErrorSig = keccak256(toUtf8Bytes('Error(string)')).slice(0, 10)
+  const FailedOpSig = keccak256(toUtf8Bytes('FailedOp(uint256,string)')).slice(
+    0,
+    10,
+  )
   const dataParams = '0x' + error.substring(10)
 
   if (error.startsWith(ErrorSig)) {
-    const [message] = utils.defaultAbiCoder.decode(['string'], dataParams)
+    const [message] = AbiCoder.defaultAbiCoder().decode(['string'], dataParams)
     return { reason: message }
   } else if (error.startsWith(FailedOpSig)) {
-    const [opIndex, message] = utils.defaultAbiCoder.decode(
+    const [opIndex, message] = AbiCoder.defaultAbiCoder().decode(
       ['uint256', 'string'],
       dataParams,
     )
@@ -220,9 +229,9 @@ const decodeRevertReason = (
   nullIfNoMatch = true,
 ): string | null => {
   const decodeRevertReasonContracts = new Interface([
-    ...new utils.Interface(IENTRY_POINT_ABI).fragments,
-    ...new utils.Interface(I_TestPaymasterRevertCustomError_abi).fragments,
-    ...new utils.Interface(I_TestERC20_factory_ABI).fragments, // for OZ errors,
+    ...new Interface(IENTRY_POINT_ABI).fragments,
+    ...new Interface(I_TestPaymasterRevertCustomError_abi).fragments,
+    ...new Interface(I_TestERC20_factory_ABI).fragments, // for OZ errors,
     'error ECDSAInvalidSignature()',
   ])
 
@@ -250,11 +259,11 @@ const decodeRevertReason = (
 
   // can't add Error(string) to xface...
   if (methodSig === '0x08c379a0') {
-    const [err] = ethers.utils.defaultAbiCoder.decode(['string'], dataParams)
+    const [err] = AbiCoder.defaultAbiCoder().decode(['string'], dataParams)
     // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     return `Error(${err})`
   } else if (methodSig === '0x4e487b71') {
-    const [code] = ethers.utils.defaultAbiCoder.decode(['uint256'], dataParams)
+    const [code] = AbiCoder.defaultAbiCoder().decode(['uint256'], dataParams)
     return `Panic(${panicCodes[code] ?? code} + ')`
   }
 
@@ -262,7 +271,7 @@ const decodeRevertReason = (
     const err = decodeRevertReasonContracts.parseError(data)
     // treat any error "bytes" argument as possible error to decode (e.g. FailedOpWithRevert, PostOpReverted)
     const args = err.args.map((arg: any, index) => {
-      switch (err.errorFragment.inputs[index].type) {
+      switch (err.fragment.inputs[index].type) {
         case 'bytes':
           return decodeRevertReason(arg)
         case 'string':
@@ -305,9 +314,9 @@ export type Simulator = {
 
 export const createSimulator = (
   ps: ProviderService,
-  entryPointContract: ethers.Contract,
+  epAddress: string,
 ): Simulator => {
-  const epSimsInterface = new utils.Interface(I_ENTRY_POINT_SIMULATIONS)
+  const epSimsInterface = new Interface(I_ENTRY_POINT_SIMULATIONS)
   const simFunctionName = 'simulateValidation'
 
   return {
@@ -317,7 +326,6 @@ export const createSimulator = (
       Logger.debug(
         'Running partial validation no stake or opcode checks on userOp',
       )
-      const epAddress = entryPointContract.address
       const stateOverride = {
         [epAddress]: {
           code: EntryPointSimulationsDeployedBytecode,
@@ -372,21 +380,22 @@ export const createSimulator = (
         { nativeTracerEnabled },
         'Running full validation with storage/opcode checks on userOp',
       )
-      const epAddress = entryPointContract.address
       const bundlerCollectorTracerString = getBundlerCollectorTracerString()
       const encodedData = epSimsInterface.encodeFunctionData(simFunctionName, [
         packUserOp(userOp),
       ])
 
       let tracerResult: BundlerCollectorReturn
-      const tx = {
-        from: ethers.constants.AddressZero,
+      const tx: TransactionRequest = {
+        from: ethers.ZeroAddress,
         to: epAddress,
         data: encodedData,
-        gasLimit: BigNumber.from(userOp.preVerificationGas).add(
-          userOp.verificationGasLimit,
-        ),
+        gasLimit: (
+          BigInt(userOp.preVerificationGas) +
+          BigInt(userOp.verificationGasLimit)
+        ).toString(),
       }
+
       const stateOverrides = {
         [epAddress]: {
           code: EntryPointSimulationsDeployedBytecode,
@@ -466,7 +475,6 @@ export const createSimulator = (
       stateOverride?: StateOverride,
     ): Promise<ExecutionResult> => {
       Logger.debug('Running simulateHandleOp on userOp')
-      const epAddress = entryPointContract.address
 
       const simulateHandleOpResult = await ps
         .send('eth_call', [
@@ -474,7 +482,7 @@ export const createSimulator = (
             to: epAddress,
             data: epSimsInterface.encodeFunctionData('simulateHandleOp', [
               packUserOp(userOp),
-              ethers.constants.AddressZero,
+              ethers.ZeroAddress,
               '0x',
             ]),
           },
@@ -510,7 +518,7 @@ export const createSimulator = (
         userOp,
         tracerResults,
         validationResult,
-        entryPointContract,
+        epAddress,
       )
     },
 
@@ -522,8 +530,8 @@ export const createSimulator = (
       const tracerResult: BundlerCollectorReturn = await ps
         .debug_traceCall(
           {
-            from: ethers.constants.AddressZero,
-            to: ethers.constants.AddressZero,
+            from: ethers.ZeroAddress,
+            to: ethers.ZeroAddress,
             data: '0x',
           },
           {

@@ -1,4 +1,4 @@
-import { BigNumber, ContractFactory, ethers } from 'ethers'
+import { ContractFactory, ethers } from 'ethers'
 
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from '../abis/index.js'
 import { Simulator } from '../sim/index.js'
@@ -19,6 +19,7 @@ import {
   requireAddressAndFields,
   calcPreVerificationGas,
   validatePreVerificationGas,
+  toJsonString,
 } from '../utils/index.js'
 
 import { ProviderService } from '../provider/index.js'
@@ -82,7 +83,7 @@ export const createValidationService = (
         previousCodeHashes != null &&
         previousCodeHashes.addresses.length > 0
       ) {
-        const { hash: codeHashes } = await ps.getCodeHashes(
+        const { hash: codeHashes } = await ps.runContractScript(
           getCodeHashesFactory,
           [previousCodeHashes.addresses],
         )
@@ -120,7 +121,7 @@ export const createValidationService = (
 
         // if no previous contract hashes, then calculate hashes of contracts
         if (previousCodeHashes == null) {
-          const { hash } = await ps.getCodeHashes(getCodeHashesFactory, [
+          const { hash } = await ps.runContractScript(getCodeHashesFactory, [
             contractAddresses,
           ])
 
@@ -169,12 +170,10 @@ export const createValidationService = (
         ValidationErrors.UnsupportedSignatureAggregator,
       )
 
-      const verificationCost = BigNumber.from(res.returnInfo.preOpGas).sub(
-        userOp.preVerificationGas,
-      )
-      const extraGas = BigNumber.from(userOp.verificationGasLimit)
-        .sub(verificationCost)
-        .toNumber()
+      const verificationCost =
+        BigInt(res.returnInfo.preOpGas) - BigInt(userOp.preVerificationGas)
+      const extraGas =
+        BigInt(userOp.verificationGasLimit) - BigInt(verificationCost)
       requireCond(
         extraGas >= 2000,
         `verificationGas should have extra 2000 gas. has only ${extraGas}`,
@@ -231,7 +230,7 @@ export const createValidationService = (
         const value: string = (userOp as any)[key]?.toString()
         requireCond(
           value != null,
-          'Missing userOp field: ' + key + ' ' + JSON.stringify(userOp),
+          'Missing userOp field: ' + key + ' ' + toJsonString(userOp),
           ValidationErrors.InvalidFields,
         )
         requireCond(
@@ -255,7 +254,7 @@ export const createValidationService = (
           validatePreVerificationGas(userOp, chainId)
         requireCond(
           isPreVerificationGasValid,
-          `preVerificationGas too low: expected at least ${minRequiredPreVerificationGas}, provided only ${BigNumber.from(userOp.preVerificationGas).toNumber()})`,
+          `preVerificationGas too low: expected at least ${minRequiredPreVerificationGas}, provided only ${Number(BigInt(userOp.preVerificationGas))})`,
           ValidationErrors.InvalidFields,
         )
       }

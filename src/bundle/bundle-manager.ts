@@ -53,7 +53,7 @@ export const createBundleManager = (
   const doAttemptBundle = async (
     force?: boolean,
   ): Promise<SendBundleReturn> => {
-    // Flush the mempool to remove succeful userOps update failed userOps status
+    // Flush the mempool to remove successful userOps update failed userOps status
     await eventsManager.handlePastEvents()
 
     const entries = await getEntries(force)
@@ -78,7 +78,7 @@ export const createBundleManager = (
     if (notIncludedUserOpsHashes.length > 0) {
       Logger.debug(
         { total: notIncludedUserOpsHashes.length },
-        'Bundle full: sending unbundled UserOps back to mempool with status of pending',
+        'Sending userOps not included in built bundle back to mempool with status of pending',
       )
       notIncludedUserOpsHashes.forEach(async (userOpHash) => {
         await mempoolManagerBuilder.updateEntryStatus(userOpHash, 'pending')
@@ -169,7 +169,7 @@ export const createBundleManager = (
       try {
         await doAttemptBundle()
       } catch (error: any) {
-        Logger.error({ error: error.mesage }, 'Error running auto bundle:')
+        Logger.error({ error: error.message }, 'Error running auto bundle:')
       }
     }, autoBundleInterval)
   }

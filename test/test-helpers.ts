@@ -1,6 +1,7 @@
-import { BigNumber, Wallet, BigNumberish } from 'ethers'
+import { BigNumberish } from 'ethers'
 
 import { UserOperation } from '../src/types/index.js'
+import { toJsonString } from '../src/utils/index.js'
 
 export const mockUserOperationFactory = (
   sender: string,
@@ -36,7 +37,7 @@ export const mockUserOperationFactory = (
 }
 
 export const mockEntryPointGetUserOpHash = (userOp: UserOperation): string => {
-  const objString = JSON.stringify(userOp)
+  const objString = toJsonString(userOp)
   let hash = 0
 
   if (objString.length === 0) {
@@ -60,15 +61,15 @@ export const mockBuildRelayUserOpParam = (
   return {
     userOp,
     userOpHash,
-    prefund: BigNumber.from('1'),
+    prefund: BigInt('1'),
     referencedContracts: {
       addresses: [],
       hash: '',
     },
     senderInfo: {
       addr,
-      stake: BigNumber.from('1'),
-      unstakeDelaySec: BigNumber.from('8600'),
+      stake: BigInt('1'),
+      unstakeDelaySec: BigInt('8600'),
     },
   }
 }
@@ -77,10 +78,10 @@ export const MOCK_USER_OPERATION_EVENT = [
   '0x060186e28a01ec7132a8b7da3710396e01d666ce991b4d7577e514470c21ab08',
   '0xFC205D74E4921728c7Bb031FB625d6b29ec641aD',
   '0x0000000000000000000000000000000000000000',
-  BigNumber.from('0x00'),
+  BigInt('0x00'),
   false,
-  BigNumber.from('0x44ac02f919dce0'),
-  BigNumber.from('0x0db560'),
+  BigInt('0x44ac02f919dce0'),
+  BigInt('0x0db560'),
   {
     blockNumber: 9029013,
     blockHash:
@@ -105,22 +106,20 @@ export const MOCK_USER_OPERATION_EVENT = [
       '0x060186e28a01ec7132a8b7da3710396e01d666ce991b4d7577e514470c21ab08',
       '0xFC205D74E4921728c7Bb031FB625d6b29ec641aD',
       '0x0000000000000000000000000000000000000000',
-      [BigNumber],
+      [BigInt],
       false,
-      [BigNumber],
-      [BigNumber],
+      [BigInt],
+      [BigInt],
       {
         userOpHash:
           '0x060186e28a01ec7132a8b7da3710396e01d666ce991b4d7577e514470c21ab08',
       },
       { sender: '0xFC205D74E4921728c7Bb031FB625d6b29ec641aD' },
       { paymaster: '0x0000000000000000000000000000000000000000' },
-      { nonce: BigNumber.from('0x00') },
+      { nonce: BigInt('0x00') },
       { success: false },
-      { actualGasCost: BigNumber.from('0x44ac02f919dce0') },
-      { actualGasUsed: BigNumber.from('0x0db560') },
+      { actualGasCost: BigInt('0x44ac02f919dce0') },
+      { actualGasUsed: BigInt('0x0db560') },
     ],
   },
 ]
-
-export const testWallet = Wallet.fromMnemonic('test '.repeat(11) + 'junk')

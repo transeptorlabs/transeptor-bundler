@@ -1,6 +1,6 @@
 import { Command, OptionValues } from 'commander'
 import dotenv from 'dotenv'
-import { BigNumber, ethers, providers, Wallet } from 'ethers'
+import { ethers, HDNodeWallet, JsonRpcProvider, Mnemonic, Wallet } from 'ethers'
 import { createProvider } from '../provider/index.js'
 import { IENTRY_POINT_ABI, IStakeManager } from '../abis/index.js'
 import { DEFAULT_ENTRY_POINT } from '../constants/index.js'
@@ -15,12 +15,12 @@ const SUPPORTED_MODES = ['base', 'searcher']
 const nodeVersion = '0.7.0-alpha.0' // manual update on each release
 
 export type Config = {
-  provider: providers.JsonRpcProvider
-  nativeTracerProvider: providers.JsonRpcProvider | undefined
+  provider: JsonRpcProvider
+  nativeTracerProvider: JsonRpcProvider | undefined
   nativeTracerEnabled: boolean
 
   bundlerSignerWallets: BundlerSignerWallets
-  minSignerBalance: BigNumber
+  minSignerBalance: bigint
   numberOfSigners: number
   beneficiaryAddr: string
 
@@ -33,8 +33,8 @@ export type Config = {
   whitelist: string[]
   blacklist: string[]
 
-  minStake: BigNumber
-  minUnstakeDelay: number
+  minStake: bigint
+  minUnstakeDelay: bigint
 
   bundleSize: number
   maxBundleGas: number
@@ -53,23 +53,26 @@ export type Config = {
 
 const getBundlerSignerWallets = (
   numberOfSigners: number,
-  provider: ethers.providers.JsonRpcProvider,
+  provider: ethers.JsonRpcProvider,
 ): BundlerSignerWallets => {
   const mnemonic = process.env.TRANSEPTOR_MNEMONIC
   if (!mnemonic) {
     throw new Error('TRANSEPTOR_MNEMONIC env var not set')
   }
 
-  const intialValue: BundlerSignerWallets = {}
+  const initialValue: BundlerSignerWallets = {}
   return Array.from({ length: numberOfSigners }, (_, i) => {
-    const path = `m/44'/60'/0'/0/${i}`
-    const wallet = Wallet.fromMnemonic(mnemonic, path).connect(provider)
+    const hdNodeWallet = HDNodeWallet.fromMnemonic(
+      Mnemonic.fromPhrase(mnemonic),
+      `m/44'/60'/0'/0/${i}`,
+    )
+    const wallet = new Wallet(hdNodeWallet.privateKey).connect(provider)
     const wTuple: [number, Wallet] = [i, wallet]
     return wTuple
   }).reduce((acc, [index, wallet]) => {
     acc[index] = wallet
     return acc
-  }, intialValue)
+  }, initialValue)
 }
 
 export const createBuilderConfig = (args: readonly string[]): Config => {
@@ -84,7 +87,7 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
     )
     .option(
       '--tracerRpcUrl <string>',
-      'Enables native tracer for full vaildation during userOp simulation with prestateTracer native tracer on network provider. requires unsafe=false.',
+      'Enables native tracer for full validation during userOp simulation with prestateTracer native tracer on the network provider. requires unsafe=false.',
     )
     .option(
       '--network <string>',
@@ -93,23 +96,23 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
     )
     .option(
       '--httpApi <string>',
-      'ERC4337 rpc method name spaces to enable.',
+      'ERC4337 rpc method namespaces to enable.',
       'web3,eth',
     )
     .option('--port <number>', 'Bundler node listening port.', '4337')
     .option(
       '--numberOfSigners <number>',
-      'Number of signers HD paths to use from mnmonic',
-      '3',
+      'Number of signers HD paths to use from mnemonic',
+      '1',
     )
     .option(
       '--minBalance <string>',
-      'Maximum ETH balance need for signer address.',
+      'Maximum ETH balance needed for signer address.',
       '1',
     )
     .option(
       '--minStake <string>',
-      'Minimum stake a entity has to have to pass reputation system.',
+      'Minimum stake an entity has to have to pass the reputation system.',
       '1',
     ) // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
     .option(
@@ -157,7 +160,7 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
       'transeptor_metrics',
     )
     .option('--p2p', 'p2p mode enabled', false)
-    .option('--findPeers', 'Search for peers when p2p enabled.', false)
+    .option('--findPeers', 'Search for peers when p2p is enabled.', false)
 
   const programOpts: OptionValues = program.parse(args).opts()
 
@@ -181,6 +184,7 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
     IENTRY_POINT_ABI,
     provider,
   )
+
   const stakeManagerContract = new ethers.Contract(
     supportedEntryPointAddress,
     IStakeManager,
@@ -251,15 +255,15 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
 
     bundlerSignerWallets,
     beneficiaryAddr: process.env.TRANSEPTOR_BENEFICIARY as string,
-    minSignerBalance: ethers.utils.parseEther(programOpts.minBalance as string),
+    minSignerBalance: ethers.parseEther(programOpts.minBalance as string),
     numberOfSigners: parseInt(programOpts.numberOfSigners),
 
     clientVersion: nodeVersion,
     httpApis: httpApis,
     port: parseInt(programOpts.port as string),
 
-    minStake: ethers.utils.parseEther(programOpts.minStake as string),
-    minUnstakeDelay: parseInt(programOpts.minUnstakeDelay as string),
+    minStake: ethers.parseEther(programOpts.minStake as string),
+    minUnstakeDelay: BigInt(parseInt(programOpts.minUnstakeDelay as string)),
     whitelist,
     blacklist,
 

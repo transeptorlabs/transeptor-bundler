@@ -54,7 +54,7 @@ export const createRpcServerWithHandlers = (
     },
 
     stop: async (): Promise<void> => {
-      Logger.info('Stoping server')
+      Logger.info('Stopping server')
       return new Promise((resolve, reject) => {
         httpServer.close((err) => {
           if (err) {

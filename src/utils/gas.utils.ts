@@ -1,9 +1,7 @@
-import { arrayify, hexlify } from 'ethers/lib/utils.js'
-
+import { ethers, hexlify } from 'ethers'
 import { UserOperation } from '../types/index.js'
 
 import { packUserOp, encodeUserOp } from './bundle.utils.js'
-import { BigNumber } from 'ethers'
 
 export type PreVerificationGasCalculator = {
   /**
@@ -61,6 +59,7 @@ const chainConfigs: Record<number, PreVerificationGasCalculator> = {
   1: mainnetConfig,
   1337: mainnetConfig,
   31337: mainnetConfig,
+  11155111: mainnetConfig,
 }
 
 const fillUserOpWithDummyData = (
@@ -68,13 +67,18 @@ const fillUserOpWithDummyData = (
   gasConfig: PreVerificationGasCalculator,
 ): UserOperation => {
   const filledUserOp: UserOperation = Object.assign({}, userOp) as UserOperation
+  const uint8ArraySignature = new Uint8Array(
+    Buffer.alloc(gasConfig.estimationSignatureSize, 0xff),
+  )
+  const uint8ArrayPaymasterData = new Uint8Array(
+    Buffer.alloc(gasConfig.estimationPaymasterDataSize, 0xff),
+  )
+
   filledUserOp.preVerificationGas = filledUserOp.preVerificationGas ?? 21000
   filledUserOp.signature =
-    filledUserOp.signature ??
-    hexlify(Buffer.alloc(gasConfig.estimationSignatureSize, 0xff))
+    filledUserOp.signature ?? hexlify(uint8ArraySignature)
   filledUserOp.paymasterData =
-    filledUserOp.paymasterData ??
-    hexlify(Buffer.alloc(gasConfig.estimationPaymasterDataSize, 0xff))
+    filledUserOp.paymasterData ?? hexlify(uint8ArrayPaymasterData)
   return filledUserOp
 }
 
@@ -82,7 +86,7 @@ const calculate = (
   userOp: UserOperation,
   gasConfig: PreVerificationGasCalculator,
 ): number => {
-  const packed = arrayify(encodeUserOp(packUserOp(userOp), false))
+  const packed = ethers.getBytes(encodeUserOp(packUserOp(userOp), false))
   const lengthInWord = (packed.length + 31) / 32
   const callDataCost = packed
     .map((x) =>
@@ -102,7 +106,7 @@ const calculate = (
 /**
  * Calculate the gas cost of the pre-verification of the userOp.
  * The 'preVerificationGas' is the cost overhead that cannot be calculated precisely or accessed on-chain.
- * It is dependent on the blockchain parameters defefined for all transactions.
+ * It is dependent on the blockchain parameters defined for all transactions.
  *
  * @param userOp - The UserOperation to calculate the gas cost for.
  * @param chainId - The chainId of the chain where the operation will be executed.
@@ -136,6 +140,6 @@ export const validatePreVerificationGas = (
     minRequiredPreVerificationGas,
     isPreVerificationGasValid:
       minRequiredPreVerificationGas <=
-      BigNumber.from(userOp.preVerificationGas).toNumber(),
+      Number(BigInt(userOp.preVerificationGas)),
   }
 }
