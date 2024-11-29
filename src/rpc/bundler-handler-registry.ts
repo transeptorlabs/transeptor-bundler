@@ -65,4 +65,8 @@ export const createBundlerHandlerRegistry = (
   debug_bundler_getStakeStatus: async (params) => {
     return await debug.getStakeStatus(params[0], params[1])
   },
+  debug_bundler_setConfiguration: async (params) => {
+    await debug.setGasConfig(params[0])
+    return {}
+  },
 })

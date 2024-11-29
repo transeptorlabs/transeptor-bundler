@@ -35,6 +35,7 @@ import { createEventManagerWithListener } from './event/event-manager-with-reput
 import { createState } from './state/index.js'
 import { createDepositManager } from './deposit/index.js'
 import { createMetricsTracker } from './metrics/index.js'
+import { createPreVerificationGasCalculator } from './gas/index.js'
 
 const p2pNode: Libp2pNode | undefined = undefined
 
@@ -48,14 +49,19 @@ const runBundler = async () => {
   const args = process.argv
   const config = createBuilderConfig(args)
   const state = createState()
+  const ps = createProviderService(config.provider, config.nativeTracerProvider)
+
+  const { name, chainId } = await ps.getNetwork()
+  const chainIdNum = Number(chainId)
 
   // Create services
   const epAddress = await config.entryPointContract.getAddress()
-  const ps = createProviderService(config.provider, config.nativeTracerProvider)
+  const pvgc = createPreVerificationGasCalculator(chainIdNum)
   const sim = createSimulator(ps, epAddress)
   const vs = createValidationService(
     ps,
     sim,
+    pvgc,
     epAddress,
     config.isUnsafeMode,
     config.nativeTracerEnabled,
@@ -123,6 +129,7 @@ const runBundler = async () => {
         vs,
         eventManager,
         createMempoolManageSender(mempoolManagerCore),
+        pvgc,
         config.entryPointContract,
       ),
       createWeb3API(config.clientVersion),
@@ -131,6 +138,7 @@ const runBundler = async () => {
         reputationManager,
         mempoolManagerCore,
         eventManager,
+        pvgc,
         config.entryPointContract,
       ),
       ps,
@@ -139,9 +147,6 @@ const runBundler = async () => {
     config.port,
   )
   await bundlerServer.start(async () => {
-    const { name, chainId } = await ps.getNetwork()
-    const chainIdNum = Number(chainId)
-
     const supportedNetworks = ps.getSupportedNetworks()
     if (!supportedNetworks.includes(chainIdNum)) {
       throw new Error(
