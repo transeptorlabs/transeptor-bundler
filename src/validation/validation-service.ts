@@ -17,12 +17,11 @@ import {
 import {
   requireCond,
   requireAddressAndFields,
-  calcPreVerificationGas,
-  validatePreVerificationGas,
   toJsonString,
 } from '../utils/index.js'
 
 import { ProviderService } from '../provider/index.js'
+import { PreVerificationGasCalculator } from '../gas/index.js'
 
 export type ValidationService = {
   /**
@@ -46,14 +45,12 @@ export type ValidationService = {
    *
    * @param userOp
    * @param entryPointInput
-   * @param chainId
    * @param requireSignature
    * @param requireGasParams
    */
   validateInputParameters(
     userOp: UserOperation,
     entryPointInput: string,
-    chainId: number,
     requireSignature: boolean,
     requireGasParams: boolean,
   ): void
@@ -62,6 +59,7 @@ export type ValidationService = {
 export const createValidationService = (
   ps: ProviderService,
   sim: Simulator,
+  pvgc: PreVerificationGasCalculator,
   entryPointAddress: string,
   isUnsafeMode: boolean,
   nativeTracerEnabled: boolean,
@@ -191,7 +189,6 @@ export const createValidationService = (
     validateInputParameters: (
       userOp: UserOperation,
       entryPointInput: string,
-      chainId: number,
       requireSignature = true,
       requireGasParams = true,
     ): void => {
@@ -248,10 +245,10 @@ export const createValidationService = (
       )
       requireAddressAndFields(userOp, 'factory', ['factoryData'])
 
-      const preVerificationGas = calcPreVerificationGas(userOp, chainId)
+      const preVerificationGas = pvgc.calcPreVerificationGas(userOp)
       if (preVerificationGas != null) {
         const { isPreVerificationGasValid, minRequiredPreVerificationGas } =
-          validatePreVerificationGas(userOp, chainId)
+          pvgc.validatePreVerificationGas(userOp)
         requireCond(
           isPreVerificationGasValid,
           `preVerificationGas too low: expected at least ${minRequiredPreVerificationGas}, provided only ${Number(BigInt(userOp.preVerificationGas))})`,

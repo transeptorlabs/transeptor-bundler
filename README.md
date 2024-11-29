@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
- A lightweight, blazing-fast, modular ERC-4337 TypeScript bundler built with functional programming.
+ A lightweight, blazing-fast, modular ERC-4337 TypeScript bundler built with functional programming
 </p>
 
 <p align="center">
@@ -19,9 +19,9 @@
   <img src="https://img.shields.io/docker/pulls/transeptorlabs/bundler" alt="Docker pulls">
 </p>
 
-> :warning: **This repository is currently under active development.**
-> 
-> Supports ERC-4337 Entrypoint contract [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7)
+> :warning: **Please note that while the software is fully functional, it is important to know that it may contain bugs and incomplete features and undergo frequent updates.**
+
+- Supports ERC-4337 Entrypoint contract [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7)
 
 ## Prerequisites
 - [NodeJS](https://nodejs.org/) (>=20.11.1)
@@ -67,7 +67,7 @@ yarn lint:fix
 
 Transeptor offers many options for installing and running the bundler node.
 
-## Build from source
+### Build from source
 
 Building Transeptor from source requires NodeJS and Yarn. Once you have installed the prerequisites, follow these steps to build Transeptor:
 ```bash
@@ -77,10 +77,10 @@ yarn build
 ./transeptor --help
 ```
 
-## Docker
+### Docker
 Quickly get Transeptor running on your machine using Docker.
 
-The following commond will start Transeptor using the latest stable release. Replace `<.path_to_your-env_file>` with the path to your `.env` file and `<http://your_ethererm_network_provider_url>` with the URL of your Ethereum network provider.
+The following command will start Transeptor using the latest stable release. Replace `<.path_to_your-env_file>` with the path to your `.env` file and `<http://your_ethererm_network_provider_url>` with the URL of your Ethereum network provider.
 ```bash
 docker run -d --name transeptor -p 4337:4337 --env-file <.path_to_your-env_file> transeptorlabs/bundler:latest \
  --httpApi web3,eth,debug \
@@ -90,7 +90,7 @@ docker run -d --name transeptor -p 4337:4337 --env-file <.path_to_your-env_file>
  --auto 
 ```
 
-### Building Docker image
+#### Building Docker image
 
 Building the Docker image from the source code requires that the Docker be installed on your machine. Once you have installed Docker, follow these steps to build the Docker image from soruce.
 

@@ -1,9 +1,28 @@
 import { ethers, hexlify } from 'ethers'
 import { UserOperation } from '../types/index.js'
 
-import { packUserOp, encodeUserOp } from './bundle.utils.js'
+import { packUserOp, encodeUserOp } from '../utils/bundle.utils.js'
 
 export type PreVerificationGasCalculator = {
+  /**
+   * Calculate the gas cost of the pre-verification of the userOp.
+   * The 'preVerificationGas' is the cost overhead that cannot be calculated precisely or accessed on-chain.
+   * It is dependent on the blockchain parameters defined for all transactions.
+   *
+   * @param userOp - The UserOperation to calculate the gas cost for.
+   * @returns the gas cost of the pre-verification of the userOp
+   */
+  calcPreVerificationGas: (userOp: Partial<UserOperation>) => number
+
+  validatePreVerificationGas: (userOp: UserOperation) => {
+    isPreVerificationGasValid: boolean
+    minRequiredPreVerificationGas: number
+  }
+
+  updateGasConfig: (config: Partial<PreVerificationGasConfig>) => void
+}
+
+export type PreVerificationGasConfig = {
   /**
    * Cost of sending a basic transaction on the current chain.
    */
@@ -43,7 +62,7 @@ export type PreVerificationGasCalculator = {
   readonly estimationPaymasterDataSize: number
 }
 
-const mainnetConfig: PreVerificationGasCalculator = {
+const MAINNET_CONFIG: PreVerificationGasConfig = {
   transactionGasStipend: 21000,
   fixedGasOverhead: 38000,
   perUserOpGasOverhead: 11000,
@@ -55,16 +74,16 @@ const mainnetConfig: PreVerificationGasCalculator = {
   estimationPaymasterDataSize: 0,
 }
 
-const chainConfigs: Record<number, PreVerificationGasCalculator> = {
-  1: mainnetConfig,
-  1337: mainnetConfig,
-  31337: mainnetConfig,
-  11155111: mainnetConfig,
+const CHAIN_CONFIG: Record<number, PreVerificationGasConfig> = {
+  1: MAINNET_CONFIG,
+  1337: MAINNET_CONFIG,
+  31337: MAINNET_CONFIG,
+  11155111: MAINNET_CONFIG,
 }
 
 const fillUserOpWithDummyData = (
   userOp: Partial<UserOperation>,
-  gasConfig: PreVerificationGasCalculator,
+  gasConfig: PreVerificationGasConfig,
 ): UserOperation => {
   const filledUserOp: UserOperation = Object.assign({}, userOp) as UserOperation
   const uint8ArraySignature = new Uint8Array(
@@ -84,7 +103,7 @@ const fillUserOpWithDummyData = (
 
 const calculate = (
   userOp: UserOperation,
-  gasConfig: PreVerificationGasCalculator,
+  gasConfig: PreVerificationGasConfig,
 ): number => {
   const packed = ethers.getBytes(encodeUserOp(packUserOp(userOp), false))
   const lengthInWord = (packed.length + 31) / 32
@@ -103,43 +122,36 @@ const calculate = (
   return Math.round(specificOverhead + shareOfBundleCost)
 }
 
-/**
- * Calculate the gas cost of the pre-verification of the userOp.
- * The 'preVerificationGas' is the cost overhead that cannot be calculated precisely or accessed on-chain.
- * It is dependent on the blockchain parameters defined for all transactions.
- *
- * @param userOp - The UserOperation to calculate the gas cost for.
- * @param chainId - The chainId of the chain where the operation will be executed.
- * @returns the gas cost of the pre-verification of the userOp
- */
-export const calcPreVerificationGas = (
-  userOp: Partial<UserOperation>,
+export const createPreVerificationGasCalculator = (
   chainId: number,
-): number => {
-  const gasConfig = chainConfigs[chainId]
+): PreVerificationGasCalculator => {
+  let gasConfig = CHAIN_CONFIG[chainId]
   if (!gasConfig) {
     throw new Error(`Unsupported chainId: ${chainId}`)
   }
-  const filledUserOp = fillUserOpWithDummyData(userOp, gasConfig)
-  return calculate(filledUserOp, gasConfig)
-}
 
-export const validatePreVerificationGas = (
-  userOp: UserOperation,
-  chainId: number,
-): {
-  isPreVerificationGasValid: boolean
-  minRequiredPreVerificationGas: number
-} => {
-  const gasConfig = chainConfigs[chainId]
-  if (!gasConfig) {
-    throw new Error(`Unsupported chainId: ${chainId}`)
-  }
-  const minRequiredPreVerificationGas = calculate(userOp, gasConfig)
   return {
-    minRequiredPreVerificationGas,
-    isPreVerificationGasValid:
-      minRequiredPreVerificationGas <=
-      Number(BigInt(userOp.preVerificationGas)),
+    updateGasConfig: (config: Partial<PreVerificationGasConfig>): void => {
+      gasConfig = Object.assign({}, gasConfig, config)
+    },
+    calcPreVerificationGas: (userOp: Partial<UserOperation>): number => {
+      const filledUserOp = fillUserOpWithDummyData(userOp, gasConfig)
+      return calculate(filledUserOp, gasConfig)
+    },
+
+    validatePreVerificationGas: (
+      userOp: UserOperation,
+    ): {
+      isPreVerificationGasValid: boolean
+      minRequiredPreVerificationGas: number
+    } => {
+      const minRequiredPreVerificationGas = calculate(userOp, gasConfig)
+      return {
+        minRequiredPreVerificationGas,
+        isPreVerificationGasValid:
+          minRequiredPreVerificationGas <=
+          Number(BigInt(userOp.preVerificationGas)),
+      }
+    },
   }
 }

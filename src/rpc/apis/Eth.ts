@@ -14,7 +14,6 @@ import {
   packUserOp,
   unpackUserOp,
   requireAddressAndFields,
-  calcPreVerificationGas,
 } from '../../utils/index.js'
 
 import { ProviderService } from '../../provider/index.js'
@@ -23,6 +22,7 @@ import { Logger } from '../../logger/index.js'
 import { ValidationService } from '../../validation/index.js'
 import { EventManagerWithListener } from '../../event/index.js'
 import { MempoolManageSender } from '../../mempool/index.js'
+import { PreVerificationGasCalculator } from '../../gas/index.js'
 
 const HEX_REGEX = /^0x[a-fA-F\d]*$/i
 
@@ -116,6 +116,7 @@ export const createEthAPI = (
   vs: ValidationService,
   eventsManager: EventManagerWithListener,
   mempoolManageSender: MempoolManageSender,
+  pvgc: PreVerificationGasCalculator,
   entryPointContract: ethers.Contract,
 ): EthAPI => {
   return {
@@ -160,9 +161,8 @@ export const createEthAPI = (
       )
 
       // Estimate the pre-verification gas
-      const chainId = await ps.getChainId()
       userOp.signature = undefined // ignore signature for gas estimation to allow calcPreVerificationGas to use dummy signature
-      const preVerificationGas = calcPreVerificationGas(userOp, chainId)
+      const preVerificationGas = pvgc.calcPreVerificationGas(userOp)
       const verificationGasLimit = preOpGas
 
       return {
@@ -181,8 +181,7 @@ export const createEthAPI = (
       Logger.debug('Running checks on userOp')
       await validateParameters(userOp, entryPointInput, entryPointContract)
       const userOpReady = await resolveProperties(userOp)
-      const chainId = await ps.getChainId()
-      vs.validateInputParameters(userOp, entryPointInput, chainId, true, true)
+      vs.validateInputParameters(userOp, entryPointInput, true, true)
       const validationResult = await vs.validateUserOp(userOp, true, undefined)
 
       const userOpHash = await entryPointContract.getUserOpHash(
