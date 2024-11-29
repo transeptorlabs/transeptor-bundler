@@ -6,12 +6,12 @@ const CardListBundler: CardItem[] = [
     title: "⚙️ Install Transeptor",
     link: "/docs#quick-start",
     description: (
-      <>Everything you need to get started running the Transeptor bundler node.</>
+      <>Quick start guide to get you up and running with Transeptor</>
     ),
   },
   {
     title: "⌨️ Command line Options",
-    link: "/docs#command-line-arguments",
+    link: "/docs/running-transeptor#command-line-arguments", 
     description: (
       <>List of all command line arguments supported by the bundler.</>
     ),
@@ -31,7 +31,7 @@ export default function BundlerFeatures(): JSX.Element {
         Bundlers are crucial components of the ERC-4337. Increase Bundler
         diversity by running our open-source ERC-4337 Bundler Transeptor.
         Transeptor is a light weight blazing fast, modular ERC-4337 TypeScript
-        bundler built with declarative{" "}
+        bundler built with {" "}
         <a href="https://en.wikipedia.org/wiki/Functional_programming">
           functional programming
         </a>

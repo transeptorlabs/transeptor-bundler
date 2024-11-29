@@ -29,3 +29,7 @@
 🚀 **New Feature**
 - Drop docs for snap
 - Updgrade to version 3 of Docusaurus
+
+- ## 1.2.0 - [Unreleased]
+🚀 **New Feature**
+- Update docs for 0.8.0-alpha with support for native tracer

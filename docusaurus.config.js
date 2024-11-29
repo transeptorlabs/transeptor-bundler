@@ -8,7 +8,7 @@ const darkCodeTheme = themes.dracula;
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Transeptor',
-  tagline: 'Experience the power of TypeScript and functional programming with Transeptor, the ultimate ERC-4337 bundler for dApp developers.', 
+  tagline: 'Lightweight, blazing-fast, modular ERC-4337 TypeScript bundler built with functional programming', 
   favicon: 'img/brand/logo-2.png',
   staticDirectories: ['public', 'static'],
 
