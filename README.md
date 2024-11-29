@@ -80,7 +80,7 @@ yarn build
 ### Docker
 Quickly get Transeptor running on your machine using Docker.
 
-The following commond will start Transeptor using the latest stable release. Replace `<.path_to_your-env_file>` with the path to your `.env` file and `<http://your_ethererm_network_provider_url>` with the URL of your Ethereum network provider.
+The following command will start Transeptor using the latest stable release. Replace `<.path_to_your-env_file>` with the path to your `.env` file and `<http://your_ethererm_network_provider_url>` with the URL of your Ethereum network provider.
 ```bash
 docker run -d --name transeptor -p 4337:4337 --env-file <.path_to_your-env_file> transeptorlabs/bundler:latest \
  --httpApi web3,eth,debug \
