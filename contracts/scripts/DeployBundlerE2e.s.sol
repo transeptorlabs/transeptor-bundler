@@ -21,7 +21,7 @@ contract DeployBundlerDev is Script{
         address simpleFactroyAddress;
         address globalCounterAddress;
 
-        IEntryPoint entryPoint = IEntryPoint(0xYourEntryPointAddressHere);
+        IEntryPoint entryPoint = IEntryPoint(entryPointAddress_);
         SimpleAccountFactory simpleFactroy = new SimpleAccountFactory(entryPoint);
         GlobalCounter globalCounter = new GlobalCounter();
 
