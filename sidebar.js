@@ -12,8 +12,8 @@
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebar = {
   bundlerSidebar: [
-    "introduction",
     "index",
+    "get-started",
     "running-transeptor",
     {
       type: "category",

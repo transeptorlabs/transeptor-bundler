@@ -46,7 +46,7 @@ const config = {
           routeBasePath: "docs",
           breadcrumbs: true,
           sidebarPath: require.resolve('./sidebar.js'),
-          editUrl: "https://github.com/transeptorlabs/transeptor-docs/edit/main/",
+          editUrl: "https://github.com/transeptorlabs/transeptor-bundler/edit/website/",
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),

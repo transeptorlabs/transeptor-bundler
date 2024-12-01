@@ -9,20 +9,20 @@ title: Running Transeptor
 
 ## Features
 
-- **Full Validation** - Full spec storage access rules and opcode banning. Requires a connection to a geth node that supports `debug_traceCall` method.
-- **Partial Validation** - No storage access rules and opcode banning. Use `--unsafe` flag to enable. Intended for experimental and development purposes.
-- **Metrics** - Metrics give insight into the bundler node, allowing for performance tuning and debugging. Transeptor bundler can be configured to store metrics using a push(InfluxDB) and pull(Prometheus) metrics system. Grafana is used to visualize all the metrics. Use `--metrics` flag to enable.
-- **Entity Reputation System** - When staked(i.e., with an entrypoint contract), an entity is also allowed to use its own associated storage and senders' associated storage as ETH. The node can be pre-configured to blocklist and allowlist entities on startup.
-- **Native Tracer** - Supports native tracer to enforce ERC-7562: Account Abstraction Validation Scope Rules. [accountabstraction/geth-native-tracer](https://hub.docker.com/r/accountabstraction/geth-native-tracer)
-- **Entrypoint contract** - Supports Entrypoint contract [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7)
-- **p2p mempol** - Coming soon.
+- **Metrics** - Transeptor bundler can be configured to store metrics using a push(InfluxDB) and pull(Prometheus) metrics system. Grafana is used to visualize all the metrics. Use `--metrics` flag to enable.
+- **Entity Reputation System** - When staked(i.e., with an entrypoint contract), an entity can also use its own associated storage and senders' associated storage as ETH. Transeptor can be pre-configured to blocklist and allowlist entities on startup.
+- **Native Tracer** - Supports native tracer to enforce ERC-7562: Account Abstraction Validation Scope Rules. [accountabstraction/geth-native-tracer](https://hub.docker.com/r/accountabstraction/geth-native-tracer) node.
+- **Entrypoint contract** - Supports Entrypoint contract [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7).
+- **p2p mempool** - Coming soon.
 
 
-To run Transeptor with [ERC-7562: Account Abstraction Validation Rules](https://eips.ethereum.org/EIPS/eip-7562) a fully synced geth node or a native tracer node must be running alongside the bundler. Both options require `debug_traceCall` to be enabled on the node.
+To run Transeptor with [ERC-7562: Account Abstraction Validation Rules](https://eips.ethereum.org/EIPS/eip-7562), a fully synced geth node or a native tracer node must be running alongside the bundler. Both options require the node to be enabled with `debug_traceCall`.
+
+> A native tracer node does not need to be fully synced. To reduce infrastructure overhead, we recommend running Transpetor with a native tracer node.
 
 ## Modes
 
-> It is recommend not to run Transpetor with `--unsafe` in production. This flag is disable by default and is only intended for experimental and development purposes. Running Transeptor with `--unsafe` will disable all storage access rules, opcode banning, and code rules validation.
+> It is recommended not to run Transpetor with `--unsafe` in production. This flag is disabled by default and is only intended for experimental and development purposes. Running Transeptor with `--unsafe` will disable all storage access rules, opcode banning, and code rule validation.
 
 
 | Feature                                | Base (No Native Tracer)                                        | Base (Native Tracer)                                                                                    | Searcher (No Native Tracer)                                                                                       | Searcher (Native Tracer)                                                                                          |
@@ -30,15 +30,15 @@ To run Transeptor with [ERC-7562: Account Abstraction Validation Rules](https://
 | Mempool Support                        | Private mempool                                                | Private mempool                                                                                         | Private mempool                                                                                                   | Private mempool                                                                                                   |
 | EVM Networks                           | All EVM clients                                                | All EVM clients                                                                                         | Ethereum and Sepolia                                                                                              | Ethereum and Sepolia                                                                                              |
 | Bundle Sending Strategy                | Uses `eth_sendRawTransaction` RPC                              | Uses `eth_sendRawTransaction` RPC                                                                       | Uses [Flashbots](https://docs.flashbots.net/flashbots-auction/searchers/quick-start) `eth_sendPrivateTransaction` | Uses [Flashbots](https://docs.flashbots.net/flashbots-auction/searchers/quick-start) `eth_sendPrivateTransaction` |
-| Ethereum Network Provider              | fully synced [geth](https://geth.ethereum.org/docs/getting-started)         | Node services like Infura, Alchemy, etc                                                                 | fully synced [geth](https://geth.ethereum.org/docs/getting-started)                                                            | Node services like Infura, Alchemy, etc                                                                           |
-| Ethereum Network Provider Requirements | Must support `debug_traceCall` with standard javascript tracer | Must support `debug_traceCall` with prestateTracer                                                      | Must support `debug_traceCall` with standard javascript tracer                                                    | Must support `debug_traceCall` with prestateTracer                                                                |
-| Native Tracer Provider                 | N/A                                                            | [accountabstraction/geth-native-tracer](https://hub.docker.com/r/accountabstraction/geth-native-tracer) | No                                                                                                                | [accountabstraction/geth-native-tracer](https://hub.docker.com/r/accountabstraction/geth-native-tracer)           |
-| Native Tracer Provider Requirements    | N/A                                                            | Must support `debug_traceCall` with tracer name: `bundlerCollectorTracer`                               | N/A                                                                                                               | Tracer name: `bundlerCollectorTracer`                                                                             |
+| Ethereum Network Provider              | fully synced [geth](https://geth.ethereum.org/docs/getting-started) node         | Node services like Infura, Alchemy, etc                                                                 | fully synced [geth](https://geth.ethereum.org/docs/getting-started) node                                                            | Node services like Infura, Alchemy, etc                                                                           |
+| Ethereum Network Provider Requirements | Must support `debug_traceCall` with standard javascript tracer | Must support `debug_traceCall` with `prestateTracer`                                                      | Must support `debug_traceCall` with standard javascript tracer                                                    | Must support `debug_traceCall` with `prestateTracer`                                                                |
+| Native Tracer Provider                 | No                                                            | [accountabstraction/geth-native-tracer](https://hub.docker.com/r/accountabstraction/geth-native-tracer) node | No                                                                                                                | [accountabstraction/geth-native-tracer](https://hub.docker.com/r/accountabstraction/geth-native-tracer) node           |
+| Native Tracer Provider Requirements    | No                                                            | Must support `debug_traceCall` with tracer name: `bundlerCollectorTracer` | No                                                                                                               | Tracer name: `bundlerCollectorTracer` |
 
 
 ## Command line arguments
 
-List of all command line arguments supported by the bundler.
+List of all command line arguments supported by the Transeptor.
 
 ```bash
 docker run -p 4337:4337 --env-file .env transeptorlabs/bundler:latest --help
@@ -61,8 +61,8 @@ Options:
   --auto                         Automatic bundling. (default: false)
   --autoBundleInterval <number>  Auto bundler interval in (ms). (default: "12000")
   --txMode <string>              Bundler transaction mode (base, searcher).
-    (base mode): Sends bundles using eth_sendRawTransaction RPC(does not protect against front running).
-    (searcher mode): Sends bundles  using Flashbots Auction to protect the transaction against front running (only available on Mainnet) (default: "base")
+ (base mode): Sends bundles using eth_sendRawTransaction RPC(does not protect against front running).
+ (searcher mode): Sends bundles  using Flashbots Auction to protect the transaction against front running (only available on Mainnet) (default: "base")
   --metrics                      Bundler node metrics tracking enabled. (default: false)
   --influxdbUrl <string>         Url influxdb is running on (requires --metrics to be enabled). (default: "http://localhost:8086")
   --influxdbOrg <string>         Influxdb org (requires --metrics to be enabled). (default: "transeptor-labs")
