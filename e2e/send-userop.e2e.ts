@@ -25,13 +25,24 @@ import {
 } from './abi.e2e.js'
 dotenv.config()
 
-const network: ethers.Network = new ethers.Network('localhost', BigInt(1337))
-const provider = new JsonRpcProvider('http://localhost:8545', network, {
-  staticNetwork: network,
-})
-const bundlerNode = new JsonRpcProvider('http://localhost:4337/rpc', network, {
-  staticNetwork: network,
-})
+const network: ethers.Network = new ethers.Network(
+  'localhost',
+  BigInt(parseInt(process.env.TRANSEPTOR_E2E_CHAIN_ID as string)),
+)
+const provider = new JsonRpcProvider(
+  process.env.TRANSEPTOR_E2E_NETWORK_PROVIDER_URL as string,
+  network,
+  {
+    staticNetwork: network,
+  },
+)
+const bundlerNode = new JsonRpcProvider(
+  process.env.TRANSEPTOR_E2E_BUNDLER_URL as string,
+  network,
+  {
+    staticNetwork: network,
+  },
+)
 const dummySig =
   '0xfffffffffffffffffffffffffffffff0000000000000000000000000000000007aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1c'
 
@@ -64,12 +75,13 @@ const simpleAccountFactory = new ethers.Contract(
   simpleAccountFactoryABI,
   secondWallet,
 )
+
 const simpleAccountInterface = new Interface(simpleAccountABI)
 const globalCounterInterface = new Interface(globalCounterABI)
 const accountFactoryInterface = new Interface(simpleAccountFactoryABI)
 
 const getCfFactoryData = async (owner: Wallet) => {
-  const salt = BigInt(Math.floor(Math.random() * 10000000)).toString() // a random salt
+  const salt = BigInt(0).toString() // static salt so address is the same
   return {
     factory: await simpleAccountFactory.getAddress(),
     factoryData: accountFactoryInterface.encodeFunctionData('createAccount', [
@@ -123,7 +135,15 @@ const getUserOpCallData = (globalCounterAddress: string) => {
 }
 
 const sendDeposit = async (senderAddress: string, feeData: FeeData) => {
-  const depositInWei = ethers.parseEther('1')
+  const senderDeposit = await getDeposit(senderAddress)
+  const minSenderDeposit = process.env
+    .TRANSEPTOR_E2E_MIN_SENDER_DEPOSIT as string
+  if (senderDeposit >= ethers.parseEther(minSenderDeposit)) {
+    Logger.info(`Current deposit: ${senderDeposit.toString()} wei`)
+    return
+  }
+
+  const depositInWei = ethers.parseEther(minSenderDeposit)
   const { to, data, value } = await epContract.depositTo.populateTransaction(
     senderAddress,
     { value: depositInWei.toString() },
@@ -143,14 +163,9 @@ const sendDeposit = async (senderAddress: string, feeData: FeeData) => {
   const res = await secondWallet.sendTransaction(tx)
   await res.wait()
 
-  const senderDeposit = await getDeposit(senderAddress)
-  if (senderDeposit !== depositInWei) {
-    Logger.error(
-      `Deposit failed: ${senderDeposit.toString()} != ${depositInWei.toString()}`,
-    )
-    throw new Error('Deposit failed')
-  }
-  Logger.info(`Sender deposit: ${await getDeposit(senderAddress)} wei`)
+  Logger.info(
+    `Sender deposit(sent deposit): ${await getDeposit(senderAddress)} wei`,
+  )
 }
 
 const getDeposit = async (accountAddr: string): Promise<bigint> => {
@@ -189,7 +204,7 @@ const estimateUserOpGas = async (
   userOp: UserOperation,
 ): Promise<UserOperation> => {
   const gasEstimate = await bundlerNode
-    .send('eth_estimateUserOperationGas', [userOp, epAddress])
+    .send('eth_estimateUserOperationGas', [deepHexlify(userOp), epAddress])
     .catch((error: any) => {
       const parseJson = JSON.parse(error.body)
       Logger.error(
@@ -268,6 +283,12 @@ const parseUserOpRevertReason = (
   return 'Unknown error'
 }
 
+const checkAccountDeployed = async (
+  addressToCheck: string,
+): Promise<boolean> => {
+  return (await provider.getCode(addressToCheck)) !== '0x'
+}
+
 /**
  * Run user operation through bundler
  */
@@ -278,26 +299,49 @@ async function main() {
     hexConcat([factory, factoryData]),
   )
 
-  const [ownerBalance, smartActBalance, countBefore, feeData] =
+  const simpleAccountContract = new ethers.Contract(
+    senderCfAddress,
+    simpleAccountABI,
+    secondWallet,
+  )
+
+  const [ownerBalance, smartActBalance, countBefore, feeData, senderDeposit] =
     await Promise.all([
       provider.getBalance(secondWallet.address),
       provider.getBalance(senderCfAddress),
       globalCounter.currentCount(),
       provider.getFeeData(),
+      getDeposit(senderCfAddress),
     ])
+
+  const isAccountDeployed = await checkAccountDeployed(senderCfAddress)
+
+  const nonce = isAccountDeployed
+    ? ((await simpleAccountContract.getNonce()) as bigint)
+    : BigInt(0)
+
   Logger.info(
     {
-      owner: {
+      eoaOwner: {
         address: secondWallet.address,
-        balance: `${ownerBalance.toString()} wei`,
+        balance: `${ownerBalance.toString()} wei or ${ethers.formatEther(ownerBalance.toString())} ETH`,
       },
-      senderCfAddress: senderCfAddress,
-      balance: `${smartActBalance.toString()} wei`,
+      smartAccount: {
+        senderCfAddress,
+        senderDeposit: `${senderDeposit.toString()} wei or ${ethers.formatEther(senderDeposit.toString())} ETH`,
+        balance: `${smartActBalance.toString()} wei or ${ethers.formatEther(smartActBalance.toString())} ETH`,
+        nonce,
+        salt,
+      },
       countBefore,
-      salt,
     },
     'Smart Account details:',
   )
+
+  if (ownerBalance === BigInt(0)) {
+    Logger.error('Signer account balance is zero.')
+    throw new Error('Signer account balance is zero.')
+  }
 
   // Deposit to the sender CF address
   await sendDeposit(senderCfAddress, feeData)
@@ -305,9 +349,9 @@ async function main() {
   // build userOp
   const userOp = await estimateUserOpGas({
     sender: senderCfAddress,
-    nonce: toBeHex(BigInt(0)),
-    factory: factory,
-    factoryData: factoryData,
+    nonce: nonce as bigint,
+    factory: !isAccountDeployed ? factory : undefined,
+    factoryData: !isAccountDeployed ? factoryData : undefined,
     callData: getUserOpCallData(await globalCounter.getAddress()),
     maxPriorityFeePerGas: toBeHex(feeData.maxPriorityFeePerGas ?? BigInt(0)),
     maxFeePerGas: toBeHex(feeData.maxFeePerGas ?? BigInt(0)),

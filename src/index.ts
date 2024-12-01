@@ -170,7 +170,7 @@ const runBundler = async () => {
     const signerDetails = await Promise.all(
       Object.values(config.bundlerSignerWallets).map(async (signer) => {
         const bal = await ps.getBalance(signer.address)
-        if (bal === config.minSignerBalance) {
+        if (bal >= config.minSignerBalance) {
           throw new Error(
             `Bundler signer account(${signer.address}) is not funded: Min balance required: ${config.minSignerBalance}`,
           )

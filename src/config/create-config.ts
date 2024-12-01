@@ -107,7 +107,7 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
     )
     .option(
       '--minBalance <string>',
-      'Maximum ETH balance needed for signer address.',
+      'Minimum ETH balance needed for signer address.',
       '1',
     )
     .option(
