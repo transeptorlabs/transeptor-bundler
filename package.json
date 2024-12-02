@@ -26,7 +26,7 @@
     "build": "npx tsc -p ./tsconfig.json && cp ./src/sim/tracer.js dist/sim",
     "build:contracts": "cd contracts && forge build",
     "dev": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "dev:native-tracer": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base --tracerRpcUrl http://host.docker.internal:8888 | pino-pretty",
+    "dev:native-tracer": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base --tracerRpcUrl http://localhost:8888 | pino-pretty",
     "dev:unsafe": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
     "dev:metrics": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --metrics --txMode base | pino-pretty",
     "start": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",

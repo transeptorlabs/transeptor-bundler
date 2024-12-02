@@ -9,7 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Support native tracer ([#93](https://github.com/transeptorlabs/transeptor-bundler/pull/93))
+- Support native tracer([#93](https://github.com/transeptorlabs/transeptor-bundler/pull/93))
+- Send bundles with Flashbots ([#94](https://github.com/transeptorlabs/transeptor-bundler/pull/94))
+- Introduce change log ([#96](https://github.com/transeptorlabs/transeptor-bundler/pull/96))
+- Add `debug_bundler_setConfiguration` rpc ([#96](https://github.com/transeptorlabs/transeptor-bundler/pull/96))
 
 ### Fixed
 
@@ -17,7 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Upgrade to ethers.js [v6.13.4](https://github.com/ethers-io/ethers.js/releases/tag/v6.13.4) ([#92](https://github.com/transeptorlabs/transeptor-bundler/pull/92))
+- Upgrade to ethers.js [v6.13.4](https://github.com/ethers-io/ethers.js/releases/tag/v6.13.4) ([#94](https://github.com/transeptorlabs/transeptor-bundler/pull/94))
+- Update Security Policy ([#96](https://github.com/transeptorlabs/transeptor-bundler/pull/96))
+- Move pre-verification calculator to gas module ([#96](https://github.com/transeptorlabs/transeptor-bundler/pull/96))
 
 ## [v0.7.0-alpha.0] - 2024-11-03
 

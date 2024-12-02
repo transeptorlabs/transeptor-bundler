@@ -27,7 +27,7 @@ docker run -d --name geth-native-tracer -p 8888:8888 accountabstraction/geth-nat
     --http.api eth,net,web3,debug \
     --http.corsdomain '*' \
     --http.addr "0.0.0.0" \
-    --networkid 11155111 \
+    --networkid 1337 \
     --dev \
     --dev.period 0 \
     --allow-insecure-unlock \
@@ -58,7 +58,7 @@ docker run -d --name transeptor -p 4337:4337 --env-file .env.test bundler-typesc
     --httpApi web3,eth,debug \
     --txMode searcher \
     --port 4337 \
-    --minBalance 2 \
+    --minBalance 0.01 \
     --network https://sepolia.infura.io/v3/your-project-id \
     --tracerRpcUrl http://host.docker.internal:8888 \
     --auto
