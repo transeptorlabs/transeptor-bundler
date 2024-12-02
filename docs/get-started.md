@@ -31,10 +31,9 @@ Follow the steps below to get started with Transeptor:
 
 To connect the Transeptor to the Ethereum network on the Sepolia testnet, you can use public Ethereum networks like Infura.
 
-To get your network provider URL, sign up for an account on [Infura](https://infura.io/) or [Alchemy](https://www.alchemy.com/).
+To get your network provider URL, sign up for an account on [Infura](https://infura.io/). Your network provider needs to [debug_traceCall](https://docs.metamask.io/services/reference/mantle/json-rpc-methods/debug/debug_tracecall/) with support for `prestateTracer.` The Infura `Developer` price plan will give access to Debug / Trace API.
 
-An Infura network provider URL should look like `https://sepolia.infura.io/v3/<your-project-id>`. Ensure the provider has [debug_traceCall](https://docs.metamask.io/services/reference/mantle/json-rpc-methods/debug/debug_tracecall/) enabled with support for `prestateTracer.`
-
+An Infura network provider URL should look like `https://sepolia.infura.io/v3/<your-project-id>`. 
 
 ### Pull Transeptor Docker image
 
@@ -69,7 +68,7 @@ docker run -d --name geth-native-tracer -p 8888:8888 accountabstraction/geth-nat
     --http.api eth,net,web3,debug \
     --http.corsdomain '*' \
     --http.addr "0.0.0.0" \
-    --networkid 11155111 \
+    --networkid 1337 \
     --dev \
     --dev.period 0 \
     --allow-insecure-unlock \
@@ -87,13 +86,13 @@ With the Geth native tracer node running, you can now start Transeptor. You can 
 
 ```bash
 docker run -d --name transeptor -p 4337:4337 --env-file <path_to_your_.env> transeptorlabs/bundler:latest \
-    --httpApi web3,eth,debug \
-    --txMode searcher \
-    --port 4337 \
-    --minBalance yourDesiredBalanceInEth \
-    --network https://sepolia.infura.io/v3/<your-project-id \
-    --tracerRpcUrl http://localhost:8888 \
-    --auto
+  --httpApi web3,eth,debug \
+  --txMode searcher \
+  --port 4337 \
+  --minBalance yourDesiredBalanceInEth \
+  --network https://sepolia.infura.io/v3/your-project-id \
+  --tracerRpcUrl http://host.docker.internal:8888 \
+  --auto
 ```
 
 Traneptor will start on `http://localhost:4437/rpc`. Run curl command to check if the Transeptor is running:
