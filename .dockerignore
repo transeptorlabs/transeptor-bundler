@@ -31,6 +31,7 @@ grafana-data
 # secrets
 .env
 .env.sample
+.env.test
 
 #Ignoring git and cache folders
 .git

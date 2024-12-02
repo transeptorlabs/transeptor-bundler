@@ -10,6 +10,7 @@ dist
 
 # secrets
 .env
+.env.test
 
 # Misc
 .DS_Store

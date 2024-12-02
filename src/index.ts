@@ -157,20 +157,18 @@ const runBundler = async () => {
     }
 
     // Make sure the entry point contract is deployed to the network
-    if (chainIdNum === 31337 || chainIdNum === 1337) {
-      const isDeployed = await ps.checkContractDeployment(epAddress)
-      if (!isDeployed) {
-        throw new Error(
-          'Entry point contract is not deployed to the network. Please use a pre-deployed contract or deploy the contract first if you are using a local network.',
-        )
-      }
+    const isDeployed = await ps.checkContractDeployment(epAddress)
+    if (!isDeployed) {
+      throw new Error(
+        'Entry point contract is not deployed to the network. Please use a pre-deployed contract or deploy the contract first if you are using a local network.',
+      )
     }
 
     // Check if the signer accounts have enough balance
     const signerDetails = await Promise.all(
       Object.values(config.bundlerSignerWallets).map(async (signer) => {
         const bal = await ps.getBalance(signer.address)
-        if (bal === config.minSignerBalance) {
+        if (!(bal >= config.minSignerBalance)) {
           throw new Error(
             `Bundler signer account(${signer.address}) is not funded: Min balance required: ${config.minSignerBalance}`,
           )
@@ -192,15 +190,11 @@ const runBundler = async () => {
       }
     } else {
       if (config.nativeTracerEnabled) {
-        const [
-          supportsPrestateTracer,
-          supportsBundlerCollectorTracer,
-          isNativeTracerAndNetworkProviderChainMatch,
-        ] = await Promise.all([
-          sim.supportsNativeTracer(prestateTracerName),
-          sim.supportsNativeTracer(bundlerNativeTracerName, true),
-          ps.isNativeTracerAndNetworkProviderChainMatch(),
-        ])
+        const [supportsPrestateTracer, supportsBundlerCollectorTracer] =
+          await Promise.all([
+            sim.supportsNativeTracer(prestateTracerName),
+            sim.supportsNativeTracer(bundlerNativeTracerName, true),
+          ])
 
         if (!supportsPrestateTracer) {
           throw new Error(
@@ -211,12 +205,6 @@ const runBundler = async () => {
         if (!supportsBundlerCollectorTracer) {
           throw new Error(
             'Full validation requires native tracer provider to support bundlerCollectorTracer. For UNSAFE mode: use --unsafe',
-          )
-        }
-
-        if (!isNativeTracerAndNetworkProviderChainMatch) {
-          throw new Error(
-            'Native tracer provider and network provider do not match. Please make sure the native tracer provider is running on the same network as the network provider',
           )
         }
       } else {

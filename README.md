@@ -123,7 +123,7 @@ Options:
   --httpApi <string>             ERC4337 rpc method namespaces to enable. (default: "web3,eth")
   --port <number>                Bundler node listening port. (default: "4337")
   --numberOfSigners <number>     Number of signers HD paths to use from mnemonic (default: "3")
-  --minBalance <string>          Maximum ETH balance needed for signer address. (default: "1")
+  --minBalance <string>          Minimum ETH balance needed for signer address. (default: "1")
   --mistake <string>            Minimum stake an entity has to have to pass the reputation system. (default: "1")
   --minUnstakeDelay <number>     Time paymaster has to wait to unlock the stake(seconds). (default: "0")
   --bundleSize <number>          Maximum number of pending mempool entities to start auto bundler. (default: "10")
