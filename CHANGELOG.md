@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgrade to ethers.js [v6.13.4](https://github.com/ethers-io/ethers.js/releases/tag/v6.13.4) ([#94](https://github.com/transeptorlabs/transeptor-bundler/pull/94))
 - Update Security Policy ([#96](https://github.com/transeptorlabs/transeptor-bundler/pull/96))
 - Move pre-verification calculator to gas module ([#96](https://github.com/transeptorlabs/transeptor-bundler/pull/96))
+- Update send userOp script to allow running on testnet. ([#98](https://github.com/transeptorlabs/transeptor-bundler/pull/98))
 
 ## [v0.7.0-alpha.0] - 2024-11-03
 
