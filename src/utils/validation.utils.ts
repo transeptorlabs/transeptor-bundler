@@ -1,13 +1,12 @@
-import { BigNumber, BigNumberish, ethers } from 'ethers'
-import { hexDataSlice, hexZeroPad } from 'ethers/lib/utils.js'
+import { BigNumberish, ethers, zeroPadValue, dataSlice, toBeHex } from 'ethers'
 
 import { UserOperation } from '../types/index.js'
-import { ValidationErrors } from '../validatation/index.js'
+import { ValidationErrors } from '../validation/index.js'
 
 import { requireCond } from './rpc.utils.js'
 
 export const maxUint48 = 2 ** 48 - 1
-export const SIG_VALIDATION_FAILED = hexZeroPad('0x01', 20)
+export const SIG_VALIDATION_FAILED = zeroPadValue('0x01', 20)
 
 type ValidationData = {
   aggregator: string
@@ -70,7 +69,7 @@ export const mergeValidationData = (
 ): ValidationData => {
   return {
     aggregator:
-      paymasterValidationData.aggregator !== ethers.constants.AddressZero
+      paymasterValidationData.aggregator !== ethers.ZeroAddress
         ? SIG_VALIDATION_FAILED
         : accountValidationData.aggregator,
     validAfter: Math.max(
@@ -93,13 +92,13 @@ export const mergeValidationData = (
 export const parseValidationData = (
   validationData: BigNumberish,
 ): ValidationData => {
-  const data = hexZeroPad(BigNumber.from(validationData).toHexString(), 32)
+  const data = zeroPadValue(toBeHex(BigInt(validationData)), 32)
 
   // string offsets start from left (msb)
-  const aggregator = hexDataSlice(data, 32 - 20)
-  let validUntil = parseInt(hexDataSlice(data, 32 - 26, 32 - 20))
+  const aggregator = dataSlice(data, 32 - 20)
+  let validUntil = parseInt(dataSlice(data, 32 - 26, 32 - 20))
   if (validUntil === 0) validUntil = maxUint48
-  const validAfter = parseInt(hexDataSlice(data, 0, 6))
+  const validAfter = parseInt(dataSlice(data, 0, 6))
 
   return {
     aggregator,

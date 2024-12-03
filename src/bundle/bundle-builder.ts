@@ -1,4 +1,4 @@
-import { BigNumber, ethers } from 'ethers'
+import { ethers } from 'ethers'
 import { Logger } from '../logger/index.js'
 import { MempoolEntry } from '../state/index.js'
 import { StorageMap, UserOperation } from '../types/index.js'
@@ -7,9 +7,8 @@ import {
   ValidateUserOpResult,
   ValidationErrors,
   ValidationService,
-} from '../validatation/index.js'
+} from '../validation/index.js'
 import { ReputationManager, ReputationStatus } from '../reputation/index.js'
-import { ProviderService } from '../provider/provider-service.js'
 
 export type BundleBuilder = {
   createBundle: (
@@ -35,12 +34,10 @@ export type BundleReadyToSend = {
 }
 
 export const createBundleBuilder = (
-  providerService: ProviderService,
   validationService: ValidationService,
   reputationManager: ReputationManager,
   opts: {
     maxBundleGas: number
-    isUnsafeMode: boolean
     txMode: string
     entryPointContract: ethers.Contract
   },
@@ -54,12 +51,12 @@ export const createBundleBuilder = (
     ): Promise<BundleReadyToSend> => {
       Logger.info(
         { total: entries.length },
-        'Attepting to create bundle from entries',
+        'Attempting to create bundle from entries',
       )
       const bundle: UserOperation[] = []
       const storageMap: StorageMap = {}
-      let totalGas = BigNumber.from(0)
-      const paymasterDeposit: { [paymaster: string]: BigNumber } = {} // paymaster deposit should be enough for all UserOps in the bundle.
+      let totalGas = BigInt(0)
+      const paymasterDeposit: { [paymaster: string]: bigint } = {} // paymaster deposit should be enough for all UserOps in the bundle.
       const stakedEntityCount: { [addr: string]: number } = {} // throttled paymasters and deployers are allowed only small UserOps per bundle.
       const senders = new Set<string>() // each sender is allowed only once per bundle
       const notIncludedUserOpsHashes: string[] = []
@@ -89,7 +86,7 @@ export const createBundleBuilder = (
         // [SREP-030]
         if (
           paymaster != null &&
-          (paymasterStatus === ReputationStatus.THROTTLED ??
+          (paymasterStatus === ReputationStatus.THROTTLED ||
             (stakedEntityCount[paymaster] ?? 0) > THROTTLED_ENTITY_BUNDLE_COUNT)
         ) {
           Logger.debug(
@@ -103,7 +100,7 @@ export const createBundleBuilder = (
         // [SREP-030]
         if (
           factory != null &&
-          (deployerStatus === ReputationStatus.THROTTLED ??
+          (deployerStatus === ReputationStatus.THROTTLED ||
             (stakedEntityCount[factory] ?? 0) > THROTTLED_ENTITY_BUNDLE_COUNT)
         ) {
           Logger.debug(
@@ -130,7 +127,6 @@ export const createBundleBuilder = (
           // re-validate UserOp. no need to check stake, since it cannot be reduced between first and 2nd validation
           validationResult = await validationService.validateUserOp(
             entry.userOp,
-            opts.isUnsafeMode,
             false,
             entry.referencedContracts,
           )
@@ -173,11 +169,11 @@ export const createBundleBuilder = (
         }
 
         // TODO: we could "cram" more UserOps into a bundle.
-        const userOpGasCost = BigNumber.from(
-          validationResult.returnInfo.preOpGas,
-        ).add(entry.userOp.callGasLimit)
-        const newTotalGas = totalGas.add(userOpGasCost)
-        if (newTotalGas.gt(opts.maxBundleGas)) {
+        const userOpGasCost =
+          BigInt(validationResult.returnInfo.preOpGas) +
+          BigInt(entry.userOp.callGasLimit)
+        const newTotalGas = totalGas + userOpGasCost
+        if (newTotalGas > BigInt(opts.maxBundleGas)) {
           Logger.debug(
             { stopIndex: i, entriesLength: entries.length },
             'Bundle is full sending user ops back to mempool with status pending',
@@ -197,16 +193,17 @@ export const createBundleBuilder = (
               await opts.entryPointContract.balanceOf(paymaster)
           }
           if (
-            paymasterDeposit[paymaster].lt(validationResult.returnInfo.prefund)
+            paymasterDeposit[paymaster] >
+            BigInt(validationResult.returnInfo.prefund)
           ) {
             // not enough balance in paymaster to pay for all UserOp
             // (but it passed validation, so it can sponsor them separately
             continue
           }
           stakedEntityCount[paymaster] = (stakedEntityCount[paymaster] ?? 0) + 1
-          paymasterDeposit[paymaster] = paymasterDeposit[paymaster].sub(
-            validationResult.returnInfo.prefund,
-          )
+          paymasterDeposit[paymaster] =
+            paymasterDeposit[paymaster] -
+            BigInt(validationResult.returnInfo.prefund)
         }
 
         // get factory stakedEntityCount
@@ -214,16 +211,6 @@ export const createBundleBuilder = (
           stakedEntityCount[factory] = (stakedEntityCount[factory] ?? 0) + 1
         }
 
-        // If sender's account already exist: replace with its storage root hash
-        if (opts.txMode === 'conditional' && entry.userOp.factory === null) {
-          // in conditionalRpc: always put root hash (not specific storage slots) for "sender" entries
-          const { storageHash } = await providerService.send('eth_getProof', [
-            entry.userOp.sender,
-            [],
-            'latest',
-          ])
-          storageMap[entry.userOp.sender.toLowerCase()] = storageHash
-        }
         mergeStorageMap(storageMap, validationResult.storageMap)
 
         // add UserOp to bundle

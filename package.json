@@ -25,16 +25,17 @@
     "ls-cmd": "node --import ./register-hook.js ./src/index.ts --help",
     "build": "npx tsc -p ./tsconfig.json && cp ./src/sim/tracer.js dist/sim",
     "build:contracts": "cd contracts && forge build",
-    "dev": "nodemon",
+    "dev": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "dev:native-tracer": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base --tracerRpcUrl http://localhost:8888 | pino-pretty",
+    "dev:unsafe": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
+    "dev:metrics": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --metrics --txMode base | pino-pretty",
     "start": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "start:unsafe": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
-    "start:metrics": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --metrics --txMode base | pino-pretty",
-    "start:prod": "yarn build && node dist/index.js --httpApi web3,eth,debug --txMode base|  pino-pretty",
+    "start:prod": "yarn build && node dist/index.js --httpApi web3,eth,debug --txMode base | pino-pretty",
     "test": "vitest --config ./vitest.config.ts",
     "lint": "eslint . --ext ts",
     "lint:fix": "yarn lint --fix",
     "send-op": "node --import ./register-hook.js ./e2e/send-userop.e2e.ts | pino-pretty",
-    "test:mempool-race": "node --import ./register-hook.js ./e2e/data-race-test.ts ",
+    "test:mempool-race": "node --import ./register-hook.js ./e2e/data-race-test.ts",
     "///cK": "________________________DOCKER CONTAINERS______________________________",
     "local-eth": "./eth-node",
     "build:image": "docker build -t bundler-typescript:v-local .",
@@ -53,7 +54,7 @@
     "commander": "10.0.1",
     "cors": "^2.8.5",
     "dotenv": "16.0.3",
-    "ethers": "^5.7.1",
+    "ethers": "^6.13.4",
     "express": "^4.18.3",
     "helmet": "^7.1.0",
     "libp2p": "^0.45.9",
@@ -88,7 +89,6 @@
       "src"
     ],
     "ext": "ts,json",
-    "ignore": [],
-    "exec": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty"
+    "ignore": []
   }
 }

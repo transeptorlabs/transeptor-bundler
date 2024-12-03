@@ -1,11 +1,15 @@
 import { packUserOp } from '../../utils/index.js'
 import { SendBundleReturn, UserOperation } from '../../types/index.js'
-import { StakeInfo } from '../../validatation/index.js'
-import { ethers, BigNumber } from 'ethers'
+import { StakeInfo } from '../../validation/index.js'
+import { ethers } from 'ethers'
 import { ReputationEntry, ReputationManager } from '../../reputation/index.js'
 import { BundleManager } from '../../bundle/index.js'
 import { MempoolManagerCore } from '../../mempool/index.js'
 import { EventManagerWithListener } from '../../event/index.js'
+import {
+  PreVerificationGasCalculator,
+  PreVerificationGasConfig,
+} from '../../gas/index.js'
 
 export type DebugAPI = {
   clearState(): Promise<void>
@@ -21,6 +25,7 @@ export type DebugAPI = {
     address: string,
     entryPointAddress: string,
   ): Promise<{ stakeInfo: StakeInfo; isStaked: boolean }>
+  setGasConfig(config: Partial<PreVerificationGasConfig>): Promise<void>
 }
 
 export const createDebugAPI = (
@@ -28,6 +33,7 @@ export const createDebugAPI = (
   reputationManager: ReputationManager,
   mempoolManagerCore: MempoolManagerCore,
   eventsManager: EventManagerWithListener,
+  pvgc: PreVerificationGasCalculator,
   entryPointContract: ethers.Contract,
 ): DebugAPI => {
   return {
@@ -67,6 +73,8 @@ export const createDebugAPI = (
     },
 
     addUserOps: async (userOps: UserOperation[]): Promise<void> => {
+      // TODO: Accept UserOperations into the mempool.
+      // Assume the given UserOperations all pass validation (without actually validating them), and accept them directly into th mempool
       for (const userOp of userOps) {
         const userOpHash = await entryPointContract.getUserOpHash(
           packUserOp(userOp),
@@ -74,7 +82,7 @@ export const createDebugAPI = (
         await mempoolManagerCore.addUserOp({
           userOp,
           userOpHash,
-          prefund: BigNumber.from(0),
+          prefund: BigInt(0),
           referencedContracts: null,
           senderInfo: null,
         })
@@ -97,6 +105,12 @@ export const createDebugAPI = (
       isStaked: boolean
     }> => {
       return await reputationManager.getStakeStatus(address, entryPointAddress)
+    },
+
+    setGasConfig: async (
+      config: Partial<PreVerificationGasConfig>,
+    ): Promise<void> => {
+      await pvgc.updateGasConfig(config)
     },
   }
 }

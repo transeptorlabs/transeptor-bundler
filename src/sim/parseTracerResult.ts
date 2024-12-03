@@ -1,5 +1,4 @@
-import { BigNumber, BigNumberish, ethers, utils } from 'ethers'
-import { hexZeroPad, Interface, keccak256 } from 'ethers/lib/utils.js'
+import { BigNumberish, ethers, Interface, keccak256 } from 'ethers'
 
 import {
   IENTRY_POINT_ABI,
@@ -17,8 +16,9 @@ import {
   ValidationErrors,
   ValidationResult,
   StakeInfo,
-} from '../validatation/index.js'
-import { requireCond, toBytes32 } from '../utils/index.js'
+} from '../validation/index.js'
+import { requireCond, toBytes32, toJsonString } from '../utils/index.js'
+import { Logger } from '../logger/index.js'
 
 interface CallEntry {
   to: string
@@ -90,10 +90,7 @@ const parseCallStack = (tracerResults: BundlerCollectorReturn): CallEntry[] => {
             return: `len=${returnData.length}`,
           })
         } else {
-          const method = callCatch(
-            () => xfaces.getFunction(top.method),
-            top.method,
-          )
+          const method = xfaces.getFunction(top.method) ?? top.method
           if (c.type === 'REVERT') {
             const parsedError = callCatch(
               () => xfaces.parseError(returnData),
@@ -103,7 +100,7 @@ const parseCallStack = (tracerResults: BundlerCollectorReturn): CallEntry[] => {
               to: top.to,
               from: top.from,
               type: top.type,
-              method: method.name,
+              method: method.name ?? method,
               value: top.value,
               revert: parsedError,
             })
@@ -169,11 +166,12 @@ const parseEntitySlots = (
 
 // method-signature for calls from entryPoint
 const callsFromEntryPointMethodSigs: { [key: string]: string } = {
-  factory: new utils.Interface(SENDER_CREATOR_ABI).getSighash('createSender'),
-  account: new utils.Interface(IACCOUNT_ABI).getSighash('validateUserOp'),
-  paymaster: new utils.Interface(IPAYMASTER_ABI).getSighash(
+  factory: new Interface(SENDER_CREATOR_ABI).getFunction('createSender')
+    .selector,
+  account: new Interface(IACCOUNT_ABI).getFunction('validateUserOp').selector,
+  paymaster: new Interface(IPAYMASTER_ABI).getFunction(
     'validatePaymasterUserOp',
-  ),
+  ).selector,
 }
 
 // Helper function to find call info for the entry point
@@ -197,7 +195,7 @@ const findIllegalNonZeroValueCall = (
 ): CallEntry | undefined => {
   return callStack.find(
     (call) =>
-      call.to !== entryPointAddress && !BigNumber.from(call.value ?? 0).eq(0),
+      call.to !== entryPointAddress && !(BigInt(call.value ?? 0) === BigInt(0)),
   )
 }
 
@@ -232,8 +230,8 @@ const extractStorageMap = (
 const isStaked = (entStake?: StakeInfo): boolean => {
   return (
     entStake != null &&
-    BigNumber.from(1).lte(entStake.stake) &&
-    BigNumber.from(1).lte(entStake.unstakeDelaySec)
+    BigInt(1) <= BigInt(entStake.stake) &&
+    BigInt(1) <= BigInt(entStake.unstakeDelaySec)
   )
 }
 
@@ -243,16 +241,17 @@ const isStaked = (entStake?: StakeInfo): boolean => {
  * @param userOp the userOperation that was used in this simulation
  * @param tracerResults the tracer return value
  * @param validationResult output from simulateValidation
- * @param entryPoint the entryPoint that hosted the "simulatedValidation" traced call.
+ * @param epAddress the entryPoint address that hosted the "simulatedValidation" traced call.
  * @returns list of contract addresses referenced by this UserOp
  */
 export const tracerResultParser = (
   userOp: UserOperation,
   tracerResults: BundlerCollectorReturn,
   validationResult: ValidationResult,
-  entryPoint: ethers.Contract,
+  epAddress: string,
 ): [string[], StorageMap] => {
-  const entryPointAddress = entryPoint.address.toLowerCase()
+  Logger.debug('Running tracerResultParser on full validation results')
+  const entryPointAddress = epAddress.toLowerCase()
 
   // banned opcodes from [OP-011]
   const bannedOpCodes = new Set([
@@ -399,7 +398,7 @@ export const tracerResultParser = (
           addr: string,
           entitySlots: { [addr: string]: Set<string> },
         ): boolean {
-          const addrPadded = hexZeroPad(addr, 32).toLowerCase()
+          const addrPadded = ethers.zeroPadValue(addr, 32).toLowerCase()
           if (slot === addrPadded) {
             return true
           }
@@ -407,14 +406,14 @@ export const tracerResultParser = (
           if (k == null) {
             return false
           }
-          const slotN = BigNumber.from(slot)
+          const slotN = BigInt(slot)
           /*
           scan all slot entries to check of the given slot is within a structure, starting at that offset.
           assume a maximum size on a (static) structure size.
         */
           for (const k1 of k.keys()) {
-            const kn = BigNumber.from(k1)
-            if (slotN.gte(kn) && slotN.lt(kn.add(128))) {
+            const kn = BigInt(k1)
+            if (slotN >= kn && slotN < kn + BigInt(128)) {
               return true
             }
           }
@@ -442,7 +441,7 @@ export const tracerResultParser = (
           if (associatedWith(slot, sender, entitySlots)) {
             if (
               userOp.factory != null &&
-              userOp.factory !== ethers.constants.AddressZero
+              userOp.factory !== ethers.ZeroAddress
             ) {
               // special case: account.validateUserOp is allowed to use assoc storage if factory is staked.
               // [STO-022], [STO-021]
@@ -533,7 +532,7 @@ export const tracerResultParser = (
       }
       if (entStake == null) {
         throw new Error(
-          `internal: ${entityTitle} not in userOp, but has storage accesses in ${JSON.stringify(access)}`,
+          `internal: ${entityTitle} not in userOp, but has storage accesses in ${toJsonString(access)}`,
         )
       }
       requireCond(

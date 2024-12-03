@@ -15,9 +15,12 @@ import {
 import { Libp2pNode } from './p2p/index.js'
 
 import { createProviderService } from './provider/index.js'
-import { createValidationService } from './validatation/index.js'
-import { createSimulator } from './sim/index.js'
-import { createSignerService } from './signer/index.js'
+import { createValidationService } from './validation/index.js'
+import {
+  bundlerNativeTracerName,
+  createSimulator,
+  prestateTracerName,
+} from './sim/index.js'
 import {
   createReputationManager,
   createReputationManagerUpdater,
@@ -32,6 +35,7 @@ import { createEventManagerWithListener } from './event/event-manager-with-reput
 import { createState } from './state/index.js'
 import { createDepositManager } from './deposit/index.js'
 import { createMetricsTracker } from './metrics/index.js'
+import { createPreVerificationGasCalculator } from './gas/index.js'
 
 const p2pNode: Libp2pNode | undefined = undefined
 
@@ -45,11 +49,23 @@ const runBundler = async () => {
   const args = process.argv
   const config = createBuilderConfig(args)
   const state = createState()
+  const ps = createProviderService(config.provider, config.nativeTracerProvider)
+
+  const { name, chainId } = await ps.getNetwork()
+  const chainIdNum = Number(chainId)
 
   // Create services
-  const ps = createProviderService(config.provider)
-  const sim = createSimulator(ps, config.entryPointContract)
-  const vs = createValidationService(ps, sim, config.entryPointContract.address)
+  const epAddress = await config.entryPointContract.getAddress()
+  const pvgc = createPreVerificationGasCalculator(chainIdNum)
+  const sim = createSimulator(ps, epAddress)
+  const vs = createValidationService(
+    ps,
+    sim,
+    pvgc,
+    epAddress,
+    config.isUnsafeMode,
+    config.nativeTracerEnabled,
+  )
 
   // Create manager instances
   const reputationManager = createReputationManager(
@@ -87,9 +103,8 @@ const runBundler = async () => {
       config.minSignerBalance,
       config.bundlerSignerWallets,
     ),
-    createBundleBuilder(ps, vs, reputationManager, {
+    createBundleBuilder(vs, reputationManager, {
       maxBundleGas: config.maxBundleGas,
-      isUnsafeMode: config.isUnsafeMode,
       txMode: config.txMode,
       entryPointContract: config.entryPointContract,
     }),
@@ -114,15 +129,16 @@ const runBundler = async () => {
         vs,
         eventManager,
         createMempoolManageSender(mempoolManagerCore),
+        pvgc,
         config.entryPointContract,
-        config.isUnsafeMode,
       ),
-      createWeb3API(config.clientVersion, config.isUnsafeMode),
+      createWeb3API(config.clientVersion),
       createDebugAPI(
         bundleManager,
         reputationManager,
         mempoolManagerCore,
         eventManager,
+        pvgc,
         config.entryPointContract,
       ),
       ps,
@@ -131,45 +147,28 @@ const runBundler = async () => {
     config.port,
   )
   await bundlerServer.start(async () => {
-    const ss = createSignerService(ps)
-    const { name, chainId } = await ps.getNetwork()
+    const supportedNetworks = ps.getSupportedNetworks()
+    if (!supportedNetworks.includes(chainIdNum)) {
+      throw new Error(
+        `Network not supported. Supported networks: ${supportedNetworks.join(
+          ', ',
+        )}`,
+      )
+    }
 
     // Make sure the entry point contract is deployed to the network
-    if (chainId === 31337 || chainId === 1337) {
-      const isDeployed = await ps.checkContractDeployment(
-        config.entryPointContract.address,
-      )
-      if (!isDeployed) {
-        throw new Error(
-          'Entry point contract is not deployed to the network. Please use a pre-deployed contract or deploy the contract first if you are using a local network.',
-        )
-      }
-    }
-
-    // safe mode: full validation requires (debug_traceCall) method on eth node geth
-    if (
-      !config.isUnsafeMode &&
-      !(await ps.supportsRpcMethod('debug_traceCall'))
-    ) {
+    const isDeployed = await ps.checkContractDeployment(epAddress)
+    if (!isDeployed) {
       throw new Error(
-        'Full validation requires (debug_traceCall) method on eth node geth. For local UNSAFE mode: use --unsafe',
-      )
-    }
-
-    if (
-      config.txMode === 'conditional' &&
-      !(await ps.supportsRpcMethod('eth_sendRawTransactionConditional'))
-    ) {
-      throw new Error(
-        '(conditional mode requires connection to a node that support eth_sendRawTransactionConditional',
+        'Entry point contract is not deployed to the network. Please use a pre-deployed contract or deploy the contract first if you are using a local network.',
       )
     }
 
     // Check if the signer accounts have enough balance
     const signerDetails = await Promise.all(
       Object.values(config.bundlerSignerWallets).map(async (signer) => {
-        const bal = await ss.getSignerBalance(signer)
-        if (bal.eq(config.minSignerBalance)) {
+        const bal = await ps.getBalance(signer.address)
+        if (!(bal >= config.minSignerBalance)) {
           throw new Error(
             `Bundler signer account(${signer.address}) is not funded: Min balance required: ${config.minSignerBalance}`,
           )
@@ -182,12 +181,51 @@ const runBundler = async () => {
       }),
     )
 
+    // Validate provider supports required methods
+    if (config.isUnsafeMode) {
+      if (config.nativeTracerEnabled) {
+        throw new Error(
+          'Can not run in unsafe mode with native tracer. Please use a remote tracer',
+        )
+      }
+    } else {
+      if (config.nativeTracerEnabled) {
+        const [supportsPrestateTracer, supportsBundlerCollectorTracer] =
+          await Promise.all([
+            sim.supportsNativeTracer(prestateTracerName),
+            sim.supportsNativeTracer(bundlerNativeTracerName, true),
+          ])
+
+        if (!supportsPrestateTracer) {
+          throw new Error(
+            'Full validation requires the network provider to support prestateTracer. For UNSAFE mode: use --unsafe',
+          )
+        }
+
+        if (!supportsBundlerCollectorTracer) {
+          throw new Error(
+            'Full validation requires native tracer provider to support bundlerCollectorTracer. For UNSAFE mode: use --unsafe',
+          )
+        }
+      } else {
+        if (!(await sim.supportsDebugTraceCall())) {
+          throw new Error(
+            'Full validation requires (debug_traceCall) method on the network provider for standard javascript tracer. For UNSAFE mode: use --unsafe',
+          )
+        }
+      }
+    }
+
     Logger.info(
       {
         signerDetails,
         network: { chainId, name },
+        mode: config.isUnsafeMode ? 'UNSAFE' : 'SAFE',
+        nativeTracerEnabled: config.nativeTracerEnabled,
+        txMode: config.txMode,
+        version: config.clientVersion,
       },
-      'Builder passed preflight check',
+      'Builder passed preflight checks',
     )
   })
 

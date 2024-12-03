@@ -2,8 +2,16 @@ import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'url'
 
-import { BigNumber, BigNumberish, BytesLike, ethers, utils } from 'ethers'
-import { Interface } from 'ethers/lib/utils.js'
+import {
+  AbiCoder,
+  BigNumberish,
+  BytesLike,
+  ethers,
+  Interface,
+  keccak256,
+  toUtf8Bytes,
+  TransactionRequest,
+} from 'ethers'
 
 import {
   EntryPointSimulationsDeployedBytecode,
@@ -24,7 +32,7 @@ import {
   StakeInfo as StakeInfoWithAddr,
   ValidationErrors,
   ValidationResult,
-} from '../validatation/index.js'
+} from '../validation/index.js'
 import {
   RpcError,
   mergeValidationDataValues,
@@ -32,18 +40,22 @@ import {
 } from '../utils/index.js'
 import { ProviderService } from '../provider/index.js'
 import { tracerResultParser } from './parseTracerResult.js'
+import {
+  bundlerNativeTracerName,
+  prestateTracerName,
+} from './gethTracer.types.js'
 
-interface StakeInfo {
+type StakeInfo = {
   stake: BigNumberish
   unstakeDelaySec: BigNumberish
 }
 
-interface AggregatorStakeInfo {
+type AggregatorStakeInfo = {
   aggregator: string
   stakeInfo: StakeInfo
 }
 
-interface SimulateValidationReturnStruct {
+type SimulateValidationReturnStruct = {
   returnInfo: {
     preOpGas: BigNumberish
     prefund: BigNumberish
@@ -58,13 +70,36 @@ interface SimulateValidationReturnStruct {
   aggregatorInfo: AggregatorStakeInfo
 }
 
-interface ExecutionResultStruct {
+type ExecutionResultStruct = {
   preOpGas: BigNumberish
   paid: BigNumberish
   accountValidationData: BigNumberish
   paymasterValidationData: BigNumberish
   targetSuccess: boolean
   targetResult: BytesLike
+}
+
+export type StateOverride = {
+  /**
+   * Fake balance to set for the account before executing the call.
+   */
+  balance?: BigNumberish
+  /**
+   * Fake nonce to set for the account before executing the call.
+   */
+  nonce?: BigNumberish
+  /**
+   * Fake EVM bytecode to inject into the account before executing the call.
+   */
+  code?: string
+  /**
+   * Fake key-value mapping to override all slots in the account storage before executing the call.
+   */
+  state?: object
+  /**
+   * Fake key-value mapping to override individual slots in the account storage before executing the call.
+   */
+  stateDiff?: object
 }
 
 const parseValidationResult = (
@@ -87,7 +122,7 @@ const parseValidationResult = (
     addr: string | undefined,
     info: any,
   ): StakeInfoWithAddr | undefined {
-    if (addr == null || addr === ethers.constants.AddressZero) return undefined
+    if (addr == null || addr === ethers.ZeroAddress) return undefined
     return {
       addr,
       stake: info.stake,
@@ -96,7 +131,7 @@ const parseValidationResult = (
   }
 
   const returnInfo = {
-    sigFailed: mergedValidation.aggregator !== ethers.constants.AddressZero,
+    sigFailed: mergedValidation.aggregator !== ethers.ZeroAddress,
     validUntil: mergedValidation.validUntil,
     validAfter: mergedValidation.validAfter,
     preOpGas: res.returnInfo.preOpGas,
@@ -130,7 +165,7 @@ const parseExecutionResult = (res: ExecutionResultStruct): ExecutionResult => {
   }
 }
 
-const getTracerString = () => {
+const getBundlerCollectorTracerString = () => {
   const __filename = fileURLToPath(import.meta.url)
   const __dirname = dirname(__filename)
 
@@ -166,17 +201,18 @@ const decodeErrorReason = (
     error = (err.data ?? err.error.data) as string
   }
 
-  const ErrorSig = utils.keccak256(Buffer.from('Error(string)')).slice(0, 10)
-  const FailedOpSig = utils
-    .keccak256(Buffer.from('FailedOp(uint256,string)'))
-    .slice(0, 10)
+  const ErrorSig = keccak256(toUtf8Bytes('Error(string)')).slice(0, 10)
+  const FailedOpSig = keccak256(toUtf8Bytes('FailedOp(uint256,string)')).slice(
+    0,
+    10,
+  )
   const dataParams = '0x' + error.substring(10)
 
   if (error.startsWith(ErrorSig)) {
-    const [message] = utils.defaultAbiCoder.decode(['string'], dataParams)
+    const [message] = AbiCoder.defaultAbiCoder().decode(['string'], dataParams)
     return { reason: message }
   } else if (error.startsWith(FailedOpSig)) {
-    const [opIndex, message] = utils.defaultAbiCoder.decode(
+    const [opIndex, message] = AbiCoder.defaultAbiCoder().decode(
       ['uint256', 'string'],
       dataParams,
     )
@@ -193,9 +229,9 @@ const decodeRevertReason = (
   nullIfNoMatch = true,
 ): string | null => {
   const decodeRevertReasonContracts = new Interface([
-    ...new utils.Interface(IENTRY_POINT_ABI).fragments,
-    ...new utils.Interface(I_TestPaymasterRevertCustomError_abi).fragments,
-    ...new utils.Interface(I_TestERC20_factory_ABI).fragments, // for OZ errors,
+    ...new Interface(IENTRY_POINT_ABI).fragments,
+    ...new Interface(I_TestPaymasterRevertCustomError_abi).fragments,
+    ...new Interface(I_TestERC20_factory_ABI).fragments, // for OZ errors,
     'error ECDSAInvalidSignature()',
   ])
 
@@ -223,11 +259,11 @@ const decodeRevertReason = (
 
   // can't add Error(string) to xface...
   if (methodSig === '0x08c379a0') {
-    const [err] = ethers.utils.defaultAbiCoder.decode(['string'], dataParams)
+    const [err] = AbiCoder.defaultAbiCoder().decode(['string'], dataParams)
     // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     return `Error(${err})`
   } else if (methodSig === '0x4e487b71') {
-    const [code] = ethers.utils.defaultAbiCoder.decode(['uint256'], dataParams)
+    const [code] = AbiCoder.defaultAbiCoder().decode(['uint256'], dataParams)
     return `Panic(${panicCodes[code] ?? code} + ')`
   }
 
@@ -235,7 +271,7 @@ const decodeRevertReason = (
     const err = decodeRevertReasonContracts.parseError(data)
     // treat any error "bytes" argument as possible error to decode (e.g. FailedOpWithRevert, PostOpReverted)
     const args = err.args.map((arg: any, index) => {
-      switch (err.errorFragment.inputs[index].type) {
+      switch (err.fragment.inputs[index].type) {
         case 'bytes':
           return decodeRevertReason(arg)
         case 'string':
@@ -258,20 +294,29 @@ export type Simulator = {
   partialSimulateValidation(userOp: UserOperation): Promise<ValidationResult>
   fullSimulateValidation(
     userOp: UserOperation,
+    nativeTracerEnabled: boolean,
   ): Promise<[ValidationResult, BundlerCollectorReturn]>
-  simulateHandleOp(userOp: UserOperation): Promise<ExecutionResult>
+  simulateHandleOp(
+    userOp: UserOperation,
+    stateOverride?: StateOverride,
+  ): Promise<ExecutionResult>
   tracerResultParser(
     userOp: UserOperation,
     tracerResults: BundlerCollectorReturn,
     validationResult: ValidationResult,
   ): [string[], StorageMap]
+  supportsDebugTraceCall(): Promise<boolean>
+  supportsNativeTracer(
+    nativeTracer: string,
+    useNativeTracerProvider?: boolean,
+  ): Promise<boolean>
 }
 
 export const createSimulator = (
   ps: ProviderService,
-  entryPointContract: ethers.Contract,
+  epAddress: string,
 ): Simulator => {
-  const epSimsInterface = new utils.Interface(I_ENTRY_POINT_SIMULATIONS)
+  const epSimsInterface = new Interface(I_ENTRY_POINT_SIMULATIONS)
   const simFunctionName = 'simulateValidation'
 
   return {
@@ -281,7 +326,6 @@ export const createSimulator = (
       Logger.debug(
         'Running partial validation no stake or opcode checks on userOp',
       )
-      const epAddress = entryPointContract.address
       const stateOverride = {
         [epAddress]: {
           code: EntryPointSimulationsDeployedBytecode,
@@ -330,35 +374,71 @@ export const createSimulator = (
 
     fullSimulateValidation: async (
       userOp: UserOperation,
+      nativeTracerEnabled: boolean,
     ): Promise<[ValidationResult, BundlerCollectorReturn]> => {
       Logger.debug(
+        { nativeTracerEnabled },
         'Running full validation with storage/opcode checks on userOp',
       )
-      const stringifiedTracer = getTracerString()
+      const bundlerCollectorTracerString = getBundlerCollectorTracerString()
       const encodedData = epSimsInterface.encodeFunctionData(simFunctionName, [
         packUserOp(userOp),
       ])
 
-      const epAddress = entryPointContract.address
-      const tracerResult: BundlerCollectorReturn = await ps.debug_traceCall(
-        {
-          from: ethers.constants.AddressZero,
-          to: epAddress,
-          data: encodedData,
-          gasLimit: BigNumber.from(userOp.preVerificationGas).add(
-            userOp.verificationGasLimit,
-          ),
-        },
-        {
-          tracer: stringifiedTracer,
-          stateOverrides: {
-            [epAddress]: {
-              code: EntryPointSimulationsDeployedBytecode,
-            },
-          },
-        },
-      )
+      let tracerResult: BundlerCollectorReturn
+      const tx: TransactionRequest = {
+        from: ethers.ZeroAddress,
+        to: epAddress,
+        data: encodedData,
+        gasLimit: (
+          BigInt(userOp.preVerificationGas) +
+          BigInt(userOp.verificationGasLimit)
+        ).toString(),
+      }
 
+      const stateOverrides = {
+        [epAddress]: {
+          code: EntryPointSimulationsDeployedBytecode,
+        },
+      }
+      if (nativeTracerEnabled) {
+        // First we need preStateTracer from the network provider(main):
+        const preState: { [addr: string]: any } = await ps.debug_traceCall(tx, {
+          tracer: prestateTracerName,
+          stateOverrides,
+        })
+
+        // convert nonce's to hex, and rename storage to state
+        for (const key in preState) {
+          if (preState[key]?.nonce != null) {
+            preState[key].nonce =
+              '0x' + (preState[key].nonce.toString(16) as string)
+          }
+          if (preState[key]?.storage != null) {
+            // rpc expects "state" instead...
+            preState[key].state = preState[key].storage
+            delete preState[key].storage
+          }
+        }
+
+        // Then we use native tracer to run the full validation
+        tracerResult = await ps.debug_traceCall(
+          tx,
+          {
+            tracer: bundlerNativeTracerName,
+            stateOverrides: preState,
+          },
+          true,
+        )
+      } else {
+        // Use standard javascript tracer
+        tracerResult = await ps.debug_traceCall(tx, {
+          tracer: bundlerCollectorTracerString,
+          stateOverrides,
+        })
+      }
+
+      // Parse results
       const lastCallResult = tracerResult.calls.slice(-1)[0]
       const exitInfoData = (lastCallResult as ExitInfo).data
       if (lastCallResult.type === 'REVERT') {
@@ -392,14 +472,9 @@ export const createSimulator = (
 
     simulateHandleOp: async (
       userOp: UserOperation,
+      stateOverride?: StateOverride,
     ): Promise<ExecutionResult> => {
       Logger.debug('Running simulateHandleOp on userOp')
-      const epAddress = entryPointContract.address
-      const stateOverride = {
-        [epAddress]: {
-          code: EntryPointSimulationsDeployedBytecode,
-        },
-      }
 
       const simulateHandleOpResult = await ps
         .send('eth_call', [
@@ -407,12 +482,18 @@ export const createSimulator = (
             to: epAddress,
             data: epSimsInterface.encodeFunctionData('simulateHandleOp', [
               packUserOp(userOp),
-              ethers.constants.AddressZero,
+              ethers.ZeroAddress,
               '0x',
             ]),
           },
           'latest',
-          stateOverride,
+          stateOverride
+            ? stateOverride
+            : {
+                [epAddress]: {
+                  code: EntryPointSimulationsDeployedBytecode,
+                },
+              },
         ])
         .catch((e: any) => {
           throw new RpcError(
@@ -437,8 +518,48 @@ export const createSimulator = (
         userOp,
         tracerResults,
         validationResult,
-        entryPointContract,
+        epAddress,
       )
+    },
+
+    supportsDebugTraceCall: async (): Promise<boolean> => {
+      Logger.debug(
+        'Checking if network provider supports debug_traceCall to run full validation with standard javascript tracer',
+      )
+      const bundlerCollectorTracer = getBundlerCollectorTracerString()
+      const tracerResult: BundlerCollectorReturn = await ps
+        .debug_traceCall(
+          {
+            from: ethers.ZeroAddress,
+            to: ethers.ZeroAddress,
+            data: '0x',
+          },
+          {
+            tracer: bundlerCollectorTracer,
+          },
+        )
+        .catch((e) => e)
+
+      return tracerResult.logs != null
+    },
+
+    supportsNativeTracer: async (
+      nativeTracer,
+      useNativeTracerProvider = false,
+    ): Promise<boolean> => {
+      try {
+        await ps.debug_traceCall(
+          {},
+          {
+            tracer: nativeTracer,
+          },
+          useNativeTracerProvider,
+        )
+
+        return true
+      } catch (e) {
+        return false
+      }
     },
   }
 }

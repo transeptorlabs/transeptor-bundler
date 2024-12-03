@@ -1,4 +1,4 @@
-import { hexlify } from 'ethers/lib/utils.js'
+import { toBeHex } from 'ethers'
 
 export const requireCond = (
   cond: boolean,
@@ -32,8 +32,10 @@ export const deepHexlify = (obj: any): any => {
 
   if (obj == null || typeof obj === 'string' || typeof obj === 'boolean') {
     return obj
-  } else if (obj._isBigNumber != null || typeof obj !== 'object') {
-    return hexlify(obj).replace(/^0x0/, '0x')
+  }
+
+  if (typeof obj === 'bigint' || typeof obj === 'number') {
+    return toBeHex(obj)
   }
 
   if (Array.isArray(obj)) {

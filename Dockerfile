@@ -1,5 +1,5 @@
 # Stage 1: Build the source code
-FROM node:20-alpine3.18 as build_src
+FROM node:20-alpine3.18 AS build_src
 WORKDIR /app
 RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
@@ -10,11 +10,11 @@ RUN yarn install
 RUN yarn build
 
 # Stage 2: Build the dependencies
-FROM node:20-alpine3.18 as build_deps
+FROM node:20-alpine3.18 AS build_deps
 WORKDIR /app
 RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 # Copy ./build files from the previous stage
 COPY --from=build_src /app/dist ./dist

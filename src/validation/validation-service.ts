@@ -1,4 +1,4 @@
-import { BigNumber, ContractFactory, ethers } from 'ethers'
+import { ContractFactory, ethers } from 'ethers'
 
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from '../abis/index.js'
 import { Simulator } from '../sim/index.js'
@@ -17,10 +17,11 @@ import {
 import {
   requireCond,
   requireAddressAndFields,
-  calcPreVerificationGas,
+  toJsonString,
 } from '../utils/index.js'
 
 import { ProviderService } from '../provider/index.js'
+import { PreVerificationGasCalculator } from '../gas/index.js'
 
 export type ValidationService = {
   /**
@@ -29,14 +30,12 @@ export type ValidationService = {
    * one item to check that was un-modified is the aggregator.
    *
    * @param userOp - The UserOperation to validate.
-   * @param isUnsafeMode - Whether to skip the full validation with custom tracer and only run the partial validation with no stake or opcode checks.
    * @param checkStakes - Whether to check the stakes of the user.
    * @param previousCodeHashes - The code hashes of the contracts that were previously validated.
    * @returns The result of the validation.
    */
   validateUserOp(
     userOp: UserOperation,
-    isUnsafeMode: boolean,
     checkStakes: boolean,
     previousCodeHashes?: ReferencedCodeHashes,
   ): Promise<ValidateUserOpResult>
@@ -60,7 +59,10 @@ export type ValidationService = {
 export const createValidationService = (
   ps: ProviderService,
   sim: Simulator,
+  pvgc: PreVerificationGasCalculator,
   entryPointAddress: string,
+  isUnsafeMode: boolean,
+  nativeTracerEnabled: boolean,
 ): ValidationService => {
   const HEX_REGEX = /^0x[a-fA-F\d]*$/i
   const VALID_UNTIL_FUTURE_SECONDS = 30 // how much time into the future a UserOperation must be valid in order to be accepted
@@ -72,7 +74,6 @@ export const createValidationService = (
   return {
     validateUserOp: async (
       userOp: UserOperation,
-      isUnsafeMode: boolean,
       checkStakes: boolean,
       previousCodeHashes?: ReferencedCodeHashes,
     ): Promise<ValidateUserOpResult> => {
@@ -80,7 +81,7 @@ export const createValidationService = (
         previousCodeHashes != null &&
         previousCodeHashes.addresses.length > 0
       ) {
-        const { hash: codeHashes } = await ps.getCodeHashes(
+        const { hash: codeHashes } = await ps.runContractScript(
           getCodeHashesFactory,
           [previousCodeHashes.addresses],
         )
@@ -104,7 +105,7 @@ export const createValidationService = (
       if (!isUnsafeMode) {
         let tracerResult: BundlerCollectorReturn
         ;[res, tracerResult] = await sim
-          .fullSimulateValidation(userOp)
+          .fullSimulateValidation(userOp, nativeTracerEnabled)
           .catch((e) => {
             throw e
           })
@@ -118,7 +119,7 @@ export const createValidationService = (
 
         // if no previous contract hashes, then calculate hashes of contracts
         if (previousCodeHashes == null) {
-          const { hash } = await ps.getCodeHashes(getCodeHashesFactory, [
+          const { hash } = await ps.runContractScript(getCodeHashesFactory, [
             contractAddresses,
           ])
 
@@ -167,12 +168,10 @@ export const createValidationService = (
         ValidationErrors.UnsupportedSignatureAggregator,
       )
 
-      const verificationCost = BigNumber.from(res.returnInfo.preOpGas).sub(
-        userOp.preVerificationGas,
-      )
-      const extraGas = BigNumber.from(userOp.verificationGasLimit)
-        .sub(verificationCost)
-        .toNumber()
+      const verificationCost =
+        BigInt(res.returnInfo.preOpGas) - BigInt(userOp.preVerificationGas)
+      const extraGas =
+        BigInt(userOp.verificationGasLimit) - BigInt(verificationCost)
       requireCond(
         extraGas >= 2000,
         `verificationGas should have extra 2000 gas. has only ${extraGas}`,
@@ -228,7 +227,7 @@ export const createValidationService = (
         const value: string = (userOp as any)[key]?.toString()
         requireCond(
           value != null,
-          'Missing userOp field: ' + key + ' ' + JSON.stringify(userOp),
+          'Missing userOp field: ' + key + ' ' + toJsonString(userOp),
           ValidationErrors.InvalidFields,
         )
         requireCond(
@@ -246,16 +245,16 @@ export const createValidationService = (
       )
       requireAddressAndFields(userOp, 'factory', ['factoryData'])
 
-      const calcPreVerificationGas1 = calcPreVerificationGas(userOp)
-      requireCond(
-        BigNumber.from(userOp.preVerificationGas).gte(
-          BigNumber.from(calcPreVerificationGas1),
-        ),
-        `preVerificationGas ${BigNumber.from(
-          userOp.preVerificationGas,
-        )} too low: expected at least ${calcPreVerificationGas1}`,
-        ValidationErrors.InvalidFields,
-      )
+      const preVerificationGas = pvgc.calcPreVerificationGas(userOp)
+      if (preVerificationGas != null) {
+        const { isPreVerificationGasValid, minRequiredPreVerificationGas } =
+          pvgc.validatePreVerificationGas(userOp)
+        requireCond(
+          isPreVerificationGasValid,
+          `preVerificationGas too low: expected at least ${minRequiredPreVerificationGas}, provided only ${Number(BigInt(userOp.preVerificationGas))})`,
+          ValidationErrors.InvalidFields,
+        )
+      }
     },
   }
 }

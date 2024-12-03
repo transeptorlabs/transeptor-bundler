@@ -1,4 +1,4 @@
-import { BigNumber, ethers } from 'ethers'
+import { ethers } from 'ethers'
 
 import { Logger } from '../logger/index.js'
 import {
@@ -9,7 +9,7 @@ import {
   ReputationManagerUpdater,
   ReputationManagerReader,
 } from './reputation.types.js'
-import { StakeInfo, ValidationErrors } from '../validatation/index.js'
+import { StakeInfo, ValidationErrors } from '../validation/index.js'
 import { requireCond, tostr } from '../utils/index.js'
 import { StateService, ReputationEntries, StateKey } from '../state/index.js'
 
@@ -32,8 +32,8 @@ export const createReputationManagerReader = (
 
 export const createReputationManager = (
   state: StateService,
-  minStake: BigNumber,
-  minUnstakeDelay: number,
+  minStake: bigint,
+  minUnstakeDelay: bigint,
   stakeManagerContract: ethers.Contract,
 ): ReputationManager => {
   let interval: NodeJS.Timer | null = null
@@ -68,7 +68,7 @@ export const createReputationManager = (
      *
      * This function is typically run on an hourly basis (as implied by its name).
      * It gradually reduces the `opsSeen` and `opsIncluded` values for each entry,
-     * simulating a decay or cooldown effect over time. Entries are removed if
+     * simulating a decay or cool down effect over time. Entries are removed if
      * both `opsSeen` and `opsIncluded` are reduced to zero.
      *
      */
@@ -292,8 +292,8 @@ export const createReputationManager = (
     }> => {
       const info = await stakeManagerContract.getDepositInfo(address)
       const isStaked =
-        BigNumber.from(info.stake).gte(minStake) &&
-        BigNumber.from(info.unstakeDelaySec).gte(minUnstakeDelay)
+        BigInt(info.stake) >= minStake &&
+        BigInt(info.unstakeDelaySec) >= minUnstakeDelay
 
       return {
         stakeInfo: {
@@ -335,16 +335,16 @@ export const createReputationManager = (
     setReputation: async (
       reputations: ReputationEntry[],
     ): Promise<ReputationEntry[]> => {
-      const initalReady: ReputationEntries = {}
+      const initialReady: ReputationEntries = {}
       const newEntries = reputations.reduce((acc, rep) => {
         const addr = rep.address.toLowerCase()
         acc[addr] = {
           address: addr,
-          opsSeen: BigNumber.from(rep.opsSeen).toNumber(),
-          opsIncluded: BigNumber.from(rep.opsIncluded).toNumber(),
+          opsSeen: Number(BigInt(rep.opsSeen)),
+          opsIncluded: Number(BigInt(rep.opsIncluded)),
         }
         return acc
-      }, initalReady)
+      }, initialReady)
 
       await state.updateState(
         StateKey.ReputationEntries,
@@ -406,7 +406,7 @@ export const createReputationManager = (
 
       // Check if min stake and unstake delay are met
       requireCond(
-        BigNumber.from(info.stake).gte(minStake),
+        BigInt(info.stake) >= minStake,
         `${title} ${info.addr} stake ${tostr(info.stake)} is too low (min=${tostr(
           minStake,
         )})`,
@@ -414,9 +414,7 @@ export const createReputationManager = (
       )
 
       requireCond(
-        BigNumber.from(info.unstakeDelaySec).gte(
-          BigNumber.from(minUnstakeDelay),
-        ),
+        BigInt(info.unstakeDelaySec) >= minUnstakeDelay,
         `${title} ${info.addr} unstake delay ${tostr(
           info.unstakeDelaySec,
         )} is too low (min=${minUnstakeDelay})`,

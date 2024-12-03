@@ -85,7 +85,7 @@ export const createState = (): StateService => {
             throw new Error('Updated value must not be empty(single)')
           }
 
-          // throw errror if more than one key
+          // throw error if more than one key
           if (Object.keys(updatedValue).length > 1) {
             throw new Error(
               `Updated value must contain a single key as input, received ${Object.keys(updatedValue).length} keys(single)`,

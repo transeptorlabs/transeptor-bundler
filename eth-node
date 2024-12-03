@@ -1,15 +1,11 @@
 #!/bin/bash
 
 GETH_PORT=8545
-TRANSEPTOR_PORT=4337
+GETH_NATIVE_TRACER_PORT=8888
 NETWORK_ID=1337
-START_BUNDLER=false
 TRANSEPTOR_ENTRYPOINT_ADDRESS_V7=""
 TRANSEPTOR_BENEFICIARY="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
-
-if [ "$1" == "-b" ]; then
-  START_BUNDLER=true
-fi
+DEV_MNEMONIC="test test test test test test test test test test test junk"
 
 start_geth() {
   # first 3 accounts default hardhat accounts
@@ -22,21 +18,23 @@ start_geth() {
     docker rm -f geth-transeptor
   fi
 
-  echo -e "Starting local eth node at http://localhost:$GETH_PORT on network $NETWORK_ID\n"
+  echo -e "Starting local geth node at http://localhost:$GETH_PORT on network $NETWORK_ID\n"
   geth_container_id=$(docker run -d --name geth-transeptor -p $GETH_PORT:$GETH_PORT ethereum/client-go:v1.14.5 \
-    --dev \
-    --nodiscover \
+    --verbosity 1 \
+    --http.vhosts '*,localhost,host.docker.internal'\
     --http \
-    --dev.gaslimit  12000000 \
+    --http.port $GETH_PORT \
     --http.api eth,net,web3,debug \
-    --http.corsdomain *://localhost:* \
-    --http.vhosts *,localhost,host.docker.internal \
-    --http.addr 0.0.0.0 \
-    --networkid  1337 \
-    --verbosity 2 \
+    --http.corsdomain '*' \
+    --http.addr "0.0.0.0" \
+    --networkid  $NETWORK_ID \
+    --dev \
+    --dev.period 0 \
     --maxpeers 0 \
+    --nodiscover \
     --allow-insecure-unlock \
-    --rpc.allow-unprotected-txs)
+    --rpc.allow-unprotected-txs \
+    --dev.gaslimit  12000000 )
 
   sleep 4
 
@@ -63,47 +61,61 @@ start_geth() {
   TRANSEPTOR_ENTRYPOINT_ADDRESS_V7=$(echo "$OUTPUT" | grep -o "EntryPoint: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
   TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$(echo "$OUTPUT" | grep -o "SimpleAccountFactory: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
   TRANSEPTOR_E2E_GLOBAL_COUNTER=$(echo "$OUTPUT" | grep -o "GlobalCounter: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
-  echo -e "$(tput setaf 4)▼▼▼ $(tput setaf 7)Please add to local .env$(tput setaf 4) ▼▼▼$(tput sgr0)\n\nTRANSEPTOR_MNEMONIC=test test test test test test test test test test test junk\nTRANSEPTOR_ENTRYPOINT_ADDRESS=$TRANSEPTOR_ENTRYPOINT_ADDRESS_V7\nTRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY\nTRANSEPTOR_E2E_GLOBAL_COUNTER=$TRANSEPTOR_E2E_GLOBAL_COUNTER\nTRANSEPTOR_BENEFICIARY=$TRANSEPTOR_BENEFICIARY\n\n$(tput setaf 6)────────────────────────────────────────────────────────$(tput sgr0)"
+  echo -e "$(tput setaf 4)▼▼▼ $(tput setaf 7)Please add to local .env$(tput setaf 4) ▼▼▼$(tput sgr0)\n
+  TRANSEPTOR_MNEMONIC=$DEV_MNEMONIC
+  TRANSEPTOR_ENTRYPOINT_ADDRESS=$TRANSEPTOR_ENTRYPOINT_ADDRESS_V7
+  TRANSEPTOR_BENEFICIARY=$TRANSEPTOR_BENEFICIARY\n
+  TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY
+  TRANSEPTOR_E2E_GLOBAL_COUNTER=$TRANSEPTOR_E2E_GLOBAL_COUNTER
+  TRANSEPTOR_E2E_TRANSEPTOR_MNEMONIC=$DEV_MNEMONIC
+  TRANSEPTOR_E2E_CHAIN_ID=$NETWORK_ID
+  TRANSEPTOR_E2E_NETWORK_PROVIDER_URL=http://localhost:$GETH_PORT
+  TRANSEPTOR_E2E_BUNDLER_URL=http://localhost:4337/rpc
+  TRANSEPTOR_E2E_MIN_SENDER_DEPOSIT=2
+  $(tput setaf 6)────────────────────────────────────────────────────────$(tput sgr0)"
 }
 
-start_bundler() {
-  if docker ps -a | grep -q transeptor-dev; then
-  echo -e "Removing existing transeptor container\n"
-  docker rm -f transeptor-dev
+start_geth_native_tracer() {
+  if docker ps -a | grep -q geth-native-tracer; then
+    echo -e "Removing existing geth-native-tracer container\n"
+    docker rm -f geth-native-tracer
   fi
 
-  export TRANSEPTOR_ENTRYPOINT_ADDRESS=$TRANSEPTOR_ENTRYPOINT_ADDRESS_V7
-  echo -e "Starting bundler at http://localhost:$TRANSEPTOR_PORT/rpc on network $NETWORK_ID\n"
-  transeptor_container_id=$(docker run -d --name transeptor-dev -p $TRANSEPTOR_PORT:$TRANSEPTOR_PORT --env-file $PWD/.env bundler-typescript:v-local \
-    --port $TRANSEPTOR_PORT \
-    --network http://host.docker.internal:$GETH_PORT \
-    --txMode base \
-    --unsafe \
-    --httpApi web3,eth,debug \
-    --auto \
-    --autoBundleInterval 12000)
+  echo -e "Starting local geth-native-tracer node at http://localhost:$GETH_NATIVE_TRACER_PORT on network $NETWORK_ID\n"
+  geth_native_tracer_container_id=$(docker run -d --name geth-native-tracer -p $GETH_NATIVE_TRACER_PORT:$GETH_NATIVE_TRACER_PORT accountabstraction/geth-native-tracer \
+    --verbosity 1 \
+    --http.vhosts '*,localhost,host.docker.internal' \
+    --http \
+    --http.port $GETH_NATIVE_TRACER_PORT \
+    --http.api eth,net,web3,debug \
+    --http.corsdomain '*' \
+    --http.addr "0.0.0.0" \
+    --networkid $NETWORK_ID \
+    --dev \
+    --dev.period 0 \
+    --allow-insecure-unlock \
+    --rpc.allow-unprotected-txs \
+    --dev.gaslimit 20000000)
+
+  sleep 3
 }
 
 stop_all() {
   docker stop $geth_container_id > /dev/null
   docker rm $geth_container_id > /dev/null
 
-  if [ "$START_BUNDLER" = true ]; then
-    docker stop $transeptor_container_id > /dev/null
-    docker rm $transeptor_container_id > /dev/null
-  fi
+  docker stop $geth_native_tracer_container_id > /dev/null
+  docker rm $geth_native_tracer_container_id > /dev/null
 
   exit 0
 }
 
-# Start eth-node
+# Start geth and geth-native-tracer
+start_geth_native_tracer
 start_geth
-if [ "$START_BUNDLER" = true ]; then
-  start_bundler
-fi
 
 trap stop_all SIGINT 
-echo -e "Press Ctrl+C to stop the eth-node."
+echo -e "Press Ctrl+C to stop the local geth node and geth-native-tracer."
 while true; do
   sleep 1
 done
