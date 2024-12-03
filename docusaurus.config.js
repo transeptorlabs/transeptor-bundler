@@ -8,7 +8,7 @@ const darkCodeTheme = themes.dracula;
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Transeptor',
-  tagline: 'Experience the power of TypeScript and functional programming with Transeptor, the ultimate ERC-4337 bundler for dApp developers.', 
+  tagline: 'Lightweight, blazing-fast, modular ERC-4337 TypeScript bundler built with functional programming', 
   favicon: 'img/brand/logo-2.png',
   staticDirectories: ['public', 'static'],
 
@@ -46,7 +46,7 @@ const config = {
           routeBasePath: "docs",
           breadcrumbs: true,
           sidebarPath: require.resolve('./sidebar.js'),
-          editUrl: "https://github.com/transeptorlabs/transeptor-docs/edit/main/",
+          editUrl: "https://github.com/transeptorlabs/transeptor-bundler/edit/website/",
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),

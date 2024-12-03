@@ -14,7 +14,7 @@ function HomepageHeader() {
       <div className="container">
         <h1 className="hero__title">Transeptor bundler documentation</h1>
         <p className="hero__subtitle">{siteConfig.tagline}</p>
-        <Link className="button button--secondary button--lg" to="/docs">
+        <Link className="button button--secondary button--lg" to="/docs/get-started#quick-start">
           Get started
         </Link>
       </div>

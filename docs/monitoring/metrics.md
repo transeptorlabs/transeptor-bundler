@@ -7,12 +7,12 @@ title: Metrics
 
 # Monitoring Transeptor with InfluxDB and Grafana
 
-Metrics give insight into the bundler node, allowing for performance tuning and debugging. The Transeptor bundler can be configured to store metrics using a push(InfluxDB) metrics system. Grafana visualizes all the metrics.
+Transeptor can be configured to store metrics using a push(InfluxDB) metrics system. Grafana visualizes all the metrics.
 
 ## Prerequisites
 
 To set up monitoring for Transeptor, you will need the following installed on your local machine:
-1. Runnin Transeptor node see [Get Started](../index.md)
+1. Running Transeptor node see [Get Started](./docs/get-started#quick-start)
 2. InfluxDB(docker image) - `influxdb:2.7.1`
 
 ## Setting up InfluxDB Docker
@@ -42,15 +42,15 @@ The following example command configures InfluxDB in non-interactive mode with a
 
 ```bash
 influx setup \
-  --username 'admin' \
+ --username 'admin' \
   --password 'adminpwd' \
-  --token 'ADMIN_TOKEN' \
+ --token 'ADMIN_TOKEN' \
   --org 'transeptor-labs' \
-  --bucket 'transeptor_metrics' \
+ --bucket 'transeptor_metrics' \
   --force
 ```
 
-Now that we are all set up with the initial admin user let's create a user for the Transeptor node. For local development, we use the default user credentials below:
+Now that we are all set up with the initial admin user, let's create a user for the Transeptor node. For local development, we use the default user credentials below:
 
 - username 'transeptor'
 - password 'mydevpwd'
@@ -72,9 +72,9 @@ influx bucket list
 Use the bucket ID to create a read token for the bucket with:
 ```bash
 influx auth create \
-  --org transeptor-labs \
+ --org transeptor-labs \
   --read-bucket <your_bucket_id> \
-  --write-bucket <your_bucket_id> \
+ --write-bucket <your_bucket_id> \
   --user transeptor   
 ```
 
@@ -104,11 +104,11 @@ docker run -d --name grafana -p 3000:3000 grafana/grafana-enterprise
 Grafana can now be reached at `http://localhost:3000`
 
 1. User your browser to navigate `http://localhost:3000` to access a visualization dashboard. 
-2. On the sign in page, enter admin for username and password(username=`admin` password=`admin`).
+2. On the sign-in page, enter admin for your username and password(username=`admin` password=`admin`).
 3. Make sure to update the admin password when prompted.
 
 ### Adding Data sources
-To visualize metrics with InfluxDB and Prometheus, we will need to add a data source to Grafana. Follow these steps to add a data source to Grafana.
+To visualize metrics with InfluxDB and Prometheus, we must add a data source to Grafana. Follow these steps to add a data source to Grafana.
 
 #### InfluxDB
 Grafana supports two query languages for InfluxDB: InfluxQL and Flux. InfluxQL is the default query language for InfluxDB 1.x. Flux is the default query language for InfluxDB 2.0. We will add two data sources for InfluxDB, one for each query language.
