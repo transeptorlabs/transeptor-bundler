@@ -12,7 +12,7 @@ dotenv.config()
 
 const DEFAULT_NETWORK = 'http://localhost:8545'
 const SUPPORTED_MODES = ['base', 'searcher']
-const nodeVersion = '0.7.0-alpha.0' // manual update on each release
+const nodeVersion = '0.8.0-alpha.0' // manual update on each release
 
 export type Config = {
   provider: JsonRpcProvider
