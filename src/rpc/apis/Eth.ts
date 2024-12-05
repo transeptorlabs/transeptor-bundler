@@ -29,7 +29,7 @@ const HEX_REGEX = /^0x[a-fA-F\d]*$/i
 const validateParameters = async (
   userOp1: UserOperation,
   entryPointInput: string,
-  entryPointContract: ethers.Contract,
+  entryPointAddress: string,
   requireSignature = true,
   requireGasParams = true,
 ): Promise<void> => {
@@ -38,11 +38,12 @@ const validateParameters = async (
     'No entryPoint param',
     ValidationErrors.InvalidFields,
   )
-
-  const epAddress = await entryPointContract.getAddress()
-  if (entryPointInput?.toString().toLowerCase() !== epAddress.toLowerCase()) {
+  if (
+    entryPointInput?.toString().toLowerCase() !==
+    entryPointAddress.toLowerCase()
+  ) {
     throw new Error(
-      `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${epAddress}`,
+      `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${entryPointAddress}`,
     )
   }
   // minimal sanity check: userOp exists, and all members are hex
@@ -117,7 +118,10 @@ export const createEthAPI = (
   eventsManager: EventManagerWithListener,
   mempoolManageSender: MempoolManageSender,
   pvgc: PreVerificationGasCalculator,
-  entryPointContract: ethers.Contract,
+  entryPoint: {
+    contract: ethers.Contract
+    address: string
+  },
 ): EthAPI => {
   return {
     /*
@@ -143,9 +147,8 @@ export const createEthAPI = (
       await validateParameters(
         deepHexlify(userOp),
         entryPointInput,
-        entryPointContract,
+        entryPoint.address,
       )
-      const epAddress = await entryPointContract.getAddress()
 
       // Simulate the operation to get the gas limits
       const { preOpGas, validAfter, validUntil } = await sim.simulateHandleOp(
@@ -155,7 +158,7 @@ export const createEthAPI = (
 
       // TODO: Use simulateHandleOp with proxy contract to estimate callGasLimit too
       const callGasLimit = await ps.estimateGas(
-        epAddress,
+        entryPoint.address,
         userOp.sender,
         userOp.callData,
       )
@@ -179,12 +182,12 @@ export const createEthAPI = (
       entryPointInput: string,
     ): Promise<string> => {
       Logger.debug('Running checks on userOp')
-      await validateParameters(userOp, entryPointInput, entryPointContract)
+      await validateParameters(userOp, entryPointInput, entryPoint.address)
       const userOpReady = await resolveProperties(userOp)
       vs.validateInputParameters(userOp, entryPointInput, true, true)
       const validationResult = await vs.validateUserOp(userOp, true, undefined)
 
-      const userOpHash = await entryPointContract.getUserOpHash(
+      const userOpHash = await entryPoint.contract.getUserOpHash(
         packUserOp(userOpReady),
       )
       const relayedOp: RelayUserOpParam = {
@@ -209,8 +212,7 @@ export const createEthAPI = (
     },
 
     getSupportedEntryPoints: async (): Promise<string[]> => {
-      const epAddress = await entryPointContract.getAddress()
-      return [epAddress]
+      return [entryPoint.address]
     },
 
     getUserOperationReceipt: async (
@@ -273,12 +275,11 @@ export const createEthAPI = (
         return null
       }
       const tx = await event.getTransaction()
-      const entryPointAddress = await entryPointContract.getAddress()
-      if (tx.to !== entryPointAddress) {
+      if (tx.to !== entryPoint.address) {
         throw new Error('unable to parse transaction')
       }
 
-      const parsed = entryPointContract.interface.parseTransaction(tx)
+      const parsed = entryPoint.contract.interface.parseTransaction(tx)
       const ops: PackedUserOperation[] = parsed?.args.ops
       if (ops == null) {
         throw new Error('failed to parse transaction')
@@ -295,7 +296,7 @@ export const createEthAPI = (
 
       return deepHexlify({
         userOperation: unpackUserOp(op),
-        entryPoint: entryPointContract.address,
+        entryPoint: entryPoint.address,
         transactionHash: tx.hash,
         blockHash: tx.blockHash ?? '',
         blockNumber: tx.blockNumber ?? 0,

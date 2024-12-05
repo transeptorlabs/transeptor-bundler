@@ -25,9 +25,8 @@ export const createState = (): StateService => {
             selectedState[key] = state[key]
           })
           return selectedState
-        } else {
-          return { [keys]: state[keys] } as Pick<State, K>
         }
+        return { [keys]: state[keys] } as Pick<State, K>
       } finally {
         release()
       }
@@ -39,72 +38,66 @@ export const createState = (): StateService => {
     ): Promise<void> => {
       const release = await mutex.acquire()
       try {
-        const newState = { ...state } // Create a shallow copy of the state
+        const newState = { ...state }
 
+        // Helper functions
+        const validateNonEmpty = (
+          updatedValues: Partial<State>,
+          keyType: 'single' | 'multiple',
+        ) => {
+          if (Object.keys(updatedValues).length === 0) {
+            throw new Error(`Updated value must not be empty(${keyType})`)
+          }
+        }
+
+        const validateKeysMatch = (
+          updatedKeys: string[],
+          expectedKeys: string[],
+          keyType: 'single' | 'multiple',
+        ) => {
+          const missingKeys = expectedKeys.filter(
+            (key) => !updatedKeys.includes(key),
+          )
+          if (missingKeys.length > 0) {
+            throw new Error(
+              `Updated value must contain the same keys as input, missing ${missingKeys.join(', ')}(${keyType})`,
+            )
+          }
+
+          const extraKeys = updatedKeys.filter(
+            (key) => !expectedKeys.includes(key),
+          )
+          if (extraKeys.length > 0) {
+            throw new Error(
+              `Updated value must only contain the same keys as input: received ${extraKeys.join(', ')}(${keyType})`,
+            )
+          }
+        }
+
+        // Process state update
         if (Array.isArray(keys)) {
-          const currentValues = {} as Pick<State, K>
-          keys.forEach((key) => {
-            currentValues[key] = state[key]
-          })
+          const currentValues = keys.reduce(
+            (acc, key) => {
+              acc[key] = state[key]
+              return acc
+            },
+            {} as Pick<State, K>,
+          )
 
           const updatedValues = updateFn(currentValues)
 
-          // throw error if empty
-          if (Object.keys(updatedValues).length === 0) {
-            throw new Error('Updated value must not be empty(multiple)')
-          }
+          validateNonEmpty(updatedValues, 'multiple')
+          validateKeysMatch(Object.keys(updatedValues), keys, 'multiple')
 
-          // throw error if does not have the same key
-          keys.forEach((key) => {
-            if (!updatedValues[key]) {
-              throw new Error(
-                `Updated value must contain the same key as input, missing ${key}(multiple)`,
-              )
-            }
-          })
-
-          // throw error of it contains other keys
-          Object.keys(updatedValues).forEach((key) => {
-            if (!keys.includes(key as StateKey)) {
-              throw new Error(
-                `Updated value must only contain the same keys as input: received ${key} (multiple)`,
-              )
-            }
-          })
-
-          // Destructure keys from updatedValues
-          Object.entries(updatedValues).forEach(([key, value]) => {
-            newState[key] = value
-          })
+          Object.assign(newState, updatedValues)
         } else {
           const currentValue = { [keys]: state[keys] } as Pick<State, K>
           const updatedValue = updateFn(currentValue)
 
-          // throw error if empty
-          if (Object.keys(updatedValue).length === 0) {
-            throw new Error('Updated value must not be empty(single)')
-          }
+          validateNonEmpty(updatedValue, 'single')
+          validateKeysMatch(Object.keys(updatedValue), [keys], 'single')
 
-          // throw error if more than one key
-          if (Object.keys(updatedValue).length > 1) {
-            throw new Error(
-              `Updated value must contain a single key as input, received ${Object.keys(updatedValue).length} keys(single)`,
-            )
-          }
-
-          // throw error if does not have the same key
-          Object.keys(updatedValue).forEach((key) => {
-            if (key !== keys) {
-              throw new Error(
-                `Updated value expected ${keys}, but found ${key}(single)`,
-              )
-            }
-          })
-
-          // Destructure keys from updatedValues
-          Object.entries(updatedValue).forEach(([key, value]) => {
-            newState[key] = value
-          })
+          Object.assign(newState, updatedValue)
         }
 
         state = newState

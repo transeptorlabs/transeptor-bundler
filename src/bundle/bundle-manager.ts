@@ -53,9 +53,6 @@ export const createBundleManager = (
   const doAttemptBundle = async (
     force?: boolean,
   ): Promise<SendBundleReturn> => {
-    // Flush the mempool to remove successful userOps update failed userOps status
-    await eventsManager.handlePastEvents()
-
     const entries = await getEntries(force)
     if (entries.length === 0) {
       Logger.debug('No entries to bundle')
@@ -64,6 +61,9 @@ export const createBundleManager = (
         userOpHashes: [],
       }
     }
+
+    // Flush the mempool to remove successful userOps update failed userOps status
+    await eventsManager.handlePastEvents()
 
     const knownSenders = await mempoolManagerBuilder.getKnownSenders()
 
