@@ -47,7 +47,7 @@ const stopLibp2p = async () => {
 
 const runBundler = async () => {
   const args = process.argv
-  const config = createBuilderConfig(args)
+  const config = await createBuilderConfig(args)
   const state = createState()
   const ps = createProviderService(config.provider, config.nativeTracerProvider)
 
@@ -55,14 +55,13 @@ const runBundler = async () => {
   const chainIdNum = Number(chainId)
 
   // Create services
-  const epAddress = await config.entryPointContract.getAddress()
   const pvgc = createPreVerificationGasCalculator(chainIdNum)
-  const sim = createSimulator(ps, epAddress)
+  const sim = createSimulator(ps, config.entryPoint.address)
   const vs = createValidationService(
     ps,
     sim,
     pvgc,
-    epAddress,
+    config.entryPoint.address,
     config.isUnsafeMode,
     config.nativeTracerEnabled,
   )
@@ -78,7 +77,7 @@ const runBundler = async () => {
   await reputationManager.addBlacklist(config.blacklist)
   reputationManager.startHourlyCron()
 
-  const depositManager = createDepositManager(state, config.entryPointContract)
+  const depositManager = createDepositManager(state, config.entryPoint.contract)
   const mempoolManagerCore = createMempoolManagerCore(
     state,
     reputationManager,
@@ -90,14 +89,14 @@ const runBundler = async () => {
     ps,
     reputationManager,
     createMempoolManageUpdater(mempoolManagerCore),
-    config.entryPointContract,
+    config.entryPoint.contract,
   )
 
   const bundleManager = createBundleManager(
     createBundleProcessor(
       ps,
       reputationManager,
-      config.entryPointContract,
+      config.entryPoint,
       config.txMode,
       config.beneficiaryAddr,
       config.minSignerBalance,
@@ -106,7 +105,7 @@ const runBundler = async () => {
     createBundleBuilder(vs, reputationManager, {
       maxBundleGas: config.maxBundleGas,
       txMode: config.txMode,
-      entryPointContract: config.entryPointContract,
+      entryPointContract: config.entryPoint.contract,
     }),
     eventManager,
     createMempoolManagerBuilder(mempoolManagerCore),
@@ -130,7 +129,7 @@ const runBundler = async () => {
         eventManager,
         createMempoolManageSender(mempoolManagerCore),
         pvgc,
-        config.entryPointContract,
+        config.entryPoint,
       ),
       createWeb3API(config.clientVersion),
       createDebugAPI(
@@ -139,7 +138,7 @@ const runBundler = async () => {
         mempoolManagerCore,
         eventManager,
         pvgc,
-        config.entryPointContract,
+        config.entryPoint.contract,
       ),
       ps,
     ),
@@ -157,7 +156,9 @@ const runBundler = async () => {
     }
 
     // Make sure the entry point contract is deployed to the network
-    const isDeployed = await ps.checkContractDeployment(epAddress)
+    const isDeployed = await ps.checkContractDeployment(
+      config.entryPoint.address,
+    )
     if (!isDeployed) {
       throw new Error(
         'Entry point contract is not deployed to the network. Please use a pre-deployed contract or deploy the contract first if you are using a local network.',

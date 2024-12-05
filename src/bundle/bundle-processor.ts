@@ -33,7 +33,10 @@ export type BundleProcessor = {
 export const createBundleProcessor = (
   providerService: ProviderService,
   reputationManager: ReputationManagerReader,
-  entryPointContract: ethers.Contract,
+  entryPoint: {
+    contract: ethers.Contract
+    address: string
+  },
   txMode: string,
   beneficiary: string,
   minSignerBalance: bigint,
@@ -74,10 +77,9 @@ export const createBundleProcessor = (
       GET_USEROP_HASHES_BYTECODE,
     ) as ContractFactory
 
-    const epAddress = await entryPointContract.getAddress()
     const { userOpHashes } = await providerService.runContractScript(
       getUserOpCodeHashesFactory,
-      [epAddress, packUserOps(userOps)],
+      [entryPoint.address, packUserOps(userOps)],
     )
 
     return userOpHashes
@@ -88,20 +90,21 @@ export const createBundleProcessor = (
     userOp: UserOperation,
   ): Promise<string | undefined> => {
     const isAccountStaked = async (userOp: UserOperation): Promise<boolean> => {
-      const epAddress = await entryPointContract.getAddress()
       const senderStakeInfo = await reputationManager.getStakeStatus(
         userOp.sender,
-        epAddress,
+        entryPoint.address,
       )
       return senderStakeInfo?.isStaked
     }
 
     const isFactoryStaked = async (userOp: UserOperation): Promise<boolean> => {
-      const epAddress = await entryPointContract.getAddress()
       const factoryStakeInfo =
         userOp.factory == null
           ? null
-          : await reputationManager.getStakeStatus(userOp.factory, epAddress)
+          : await reputationManager.getStakeStatus(
+              userOp.factory,
+              entryPoint.address,
+            )
       return factoryStakeInfo?.isStaked ?? false
     }
 
@@ -130,7 +133,7 @@ export const createBundleProcessor = (
       try {
         // populate the transaction (e.g to, data, and value)
         const { to, data, value } =
-          await entryPointContract.handleOps.populateTransaction(
+          await entryPoint.contract.handleOps.populateTransaction(
             packUserOps(userOps),
             beneficiary,
           )
@@ -147,7 +150,7 @@ export const createBundleProcessor = (
           maxFeePerGas: feeData.maxFeePerGas.toString(),
           maxPriorityFeePerGas: feeData.maxPriorityFeePerGas.toString(),
         }
-        tx.gasLimit = await entryPointContract.handleOps.estimateGas(
+        tx.gasLimit = await entryPoint.contract.handleOps.estimateGas(
           packUserOps(userOps),
           beneficiary,
         )
@@ -196,7 +199,7 @@ export const createBundleProcessor = (
             data = jsonbody.error.data?.data ?? jsonbody.error.data
           }
 
-          parsedError = entryPointContract.interface.parseError(data)
+          parsedError = entryPoint.contract.interface.parseError(data)
         } catch (e1) {
           checkFatal(e)
           Logger.warn(

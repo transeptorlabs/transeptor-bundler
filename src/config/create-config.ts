@@ -27,7 +27,10 @@ export type Config = {
   clientVersion: string
   httpApis: string[]
   port: number
-  entryPointContract: ethers.Contract
+  entryPoint: {
+    contract: ethers.Contract
+    address: string
+  }
   stakeManagerContract: ethers.Contract
 
   whitelist: string[]
@@ -75,7 +78,9 @@ const getBundlerSignerWallets = (
   }, initialValue)
 }
 
-export const createBuilderConfig = (args: readonly string[]): Config => {
+export const createBuilderConfig = async (
+  args: readonly string[],
+): Promise<Config> => {
   const program = new Command()
   const SUPPORTED_NAMESPACES = ['web3', 'eth', 'debug']
 
@@ -250,7 +255,10 @@ export const createBuilderConfig = (args: readonly string[]): Config => {
     provider,
     nativeTracerProvider,
     nativeTracerEnabled,
-    entryPointContract,
+    entryPoint: {
+      contract: entryPointContract,
+      address: await entryPointContract.getAddress(),
+    },
     stakeManagerContract,
 
     bundlerSignerWallets,
