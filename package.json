@@ -37,6 +37,7 @@
     "lint:fix": "yarn lint --fix",
     "send-op": "node --import ./register-hook.js ./e2e/send-userop.e2e.ts | pino-pretty",
     "test:mempool-race": "node --import ./register-hook.js ./e2e/data-race-test.ts",
+    "test-fp": "node --import ./register-hook.js ./e2e/either-monad-test.ts | pino-pretty",
     "///cK": "________________________DOCKER CONTAINERS______________________________",
     "local-eth": "./eth-node",
     "build:image": "docker build -t bundler-typescript:v-local .",
