@@ -4,13 +4,13 @@ export abstract class Either<L, R> {
   /**
    * Transforms the value in a `Right`, does nothing for a `Left`.
    */
-  abstract map(f: (value: R) => any): Either<L, any>
+  abstract map<U>(f: (value: R) => U): Either<L, U>
 
   /**
    * Chains computations that return an `Either`.
    * Propagates `Left` if the current value is `Left`.
    */
-  abstract flatMap(f: (value: R) => Either<L, R>): Either<L, any>
+  abstract flatMap<U>(f: (value: R) => Either<L, U>): Either<L, U>
 
   /**
    * Returns the value inside a `Right` or the provided default value if `Left`.
@@ -29,8 +29,13 @@ export abstract class Either<L, R> {
 
   /**
    * Returns a string representation of the instance.
+   *
+   * @returns A string representation of the instance.
    */
-  abstract toString(): string
+  toString(): string {
+    const str = JSON.stringify(this.value)
+    return `${this.isLeft() ? 'Left' : 'Right'}: (${str})`
+  }
 
   /**
    * Handles both `Left` and `Right` cases with provided functions.
@@ -76,20 +81,18 @@ export abstract class Either<L, R> {
 
 class Left<L, R> extends Either<L, R> {
   constructor(value: L) {
-    // TODO: Force Left to be of type BundlerRpcError at compile time using TypeScript
-    // intead of runtime check throwing an error
-    // if (!(value instanceof BundlerRpcError)) {
-    //   throw new Error('Left must be of type BundlerRpcError')
-    // }
+    if (!(value instanceof Error)) {
+      throw new Error('Left must be an instance of Error')
+    }
     super(value)
   }
 
-  map(_: (value: R) => any): Either<L, any> {
-    return this
+  map<U>(_: (value: R) => U): Either<L, U> {
+    return this as unknown as Either<L, U>
   }
 
-  flatMap(_: (value: R) => Either<L, any>): Either<L, any> {
-    return this
+  flatMap<U>(_: (value: R) => Either<L, U>): Either<L, U> {
+    return this as unknown as Either<L, U>
   }
 
   getOrElse(defaultValue: R): R {
@@ -102,11 +105,6 @@ class Left<L, R> extends Either<L, R> {
 
   isRight(): boolean {
     return false
-  }
-
-  toString() {
-    const str = JSON.stringify(this.value)
-    return `Left(${str})`
   }
 }
 

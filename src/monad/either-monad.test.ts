@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { Either } from './either-monad'
+import { RpcError } from '../utils/rpc.utils'
 
 /**
  * Set of helper functions to test the Either monad
@@ -50,7 +51,7 @@ describe('Either monad', () => {
         const rightHello = Either.Right('Hello world')
 
         const resRight = rightHello.map(worldToLogTranseptor)
-        const mutatedVal = resRight.getOrElse(null)
+        const mutatedVal = resRight.getOrElse('')
 
         expect(resRight.isRight()).toEqual(true)
         expect(mutatedVal).toEqual('Hello LogTranseptor')
@@ -73,7 +74,7 @@ describe('Either monad', () => {
           .flatMap(stringifyResult) // Formats the result as a string
 
         // result
-        const chainComputationVal = res.getOrElse(null)
+        const chainComputationVal = res.getOrElse('')
         expect(res.isRight()).toEqual(true)
         expect(chainComputationVal).toEqual('Result is: 15')
 
@@ -102,6 +103,15 @@ describe('Either monad', () => {
         )
       })
     })
+
+    describe('getOrElse', () => {
+      it('should return value inside Right ', async () => {
+        const { worldToLogTranseptor } = helpers()
+        const res = Either.Right('Hello world').map(worldToLogTranseptor)
+        const mutatedVal = res.getOrElse('')
+        expect(mutatedVal).toEqual('Hello LogTranseptor')
+      })
+    })
   })
 
   describe('Left', () => {
@@ -111,13 +121,13 @@ describe('Either monad', () => {
         const worldToLogTranseptorSpy = vi.spyOn(hp, 'worldToLogTranseptor')
         const { worldToLogTranseptor } = hp
 
-        const leftError = Either.Left(new Error('Sorry got an error'))
+        const leftError = Either.Left(new RpcError('Sorry got an error', 0))
 
         const resLeft = leftError.map(worldToLogTranseptor)
-        const mutatedVal = resLeft.getOrElse(null)
+        const mutatedVal = resLeft.getOrElse('')
 
         expect(resLeft.isLeft()).toEqual(true)
-        expect(mutatedVal).toEqual(null)
+        expect(mutatedVal).toEqual('')
         expect(worldToLogTranseptorSpy).not.toHaveBeenCalled()
       })
     })
@@ -138,9 +148,9 @@ describe('Either monad', () => {
           .flatMap(stringifyResult) // Formats the result as a string (should not be called)
 
         // result
-        const chainComputationVal = res.getOrElse(null)
+        const chainComputationVal = res.getOrElse('')
         expect(res.isLeft()).toEqual(true)
-        expect(chainComputationVal).toEqual(null)
+        expect(chainComputationVal).toEqual('')
 
         // calls
         expect(parseNumberSpy).toHaveBeenCalledOnce()
@@ -165,6 +175,22 @@ describe('Either monad', () => {
             expect(true).toEqual(false)
           },
         )
+      })
+    })
+
+    describe('getOrElse', () => {
+      it('should return provided default value if Left', async () => {
+        const hp = helpers()
+        const worldToLogTranseptorSpy = vi.spyOn(hp, 'worldToLogTranseptor')
+
+        const { worldToLogTranseptor } = hp
+        const resLeft = Either.Left(new Error('Sorry got an error')).map(
+          worldToLogTranseptor,
+        )
+        const mutatedVal = resLeft.getOrElse('')
+
+        expect(mutatedVal).toEqual('')
+        expect(worldToLogTranseptorSpy).not.toHaveBeenCalled()
       })
     })
   })
