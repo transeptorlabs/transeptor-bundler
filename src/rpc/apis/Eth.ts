@@ -14,6 +14,7 @@ import {
   packUserOp,
   unpackUserOp,
   requireAddressAndFields,
+  RpcError,
 } from '../../utils/index.js'
 
 import { ProviderService } from '../../provider/index.js'
@@ -23,36 +24,41 @@ import { ValidationService } from '../../validation/index.js'
 import { EventManagerWithListener } from '../../event/index.js'
 import { MempoolManageSender } from '../../mempool/index.js'
 import { PreVerificationGasCalculator } from '../../gas/index.js'
+import { Either, unwrapLeftMap } from '../../monad/index.js'
 
 const HEX_REGEX = /^0x[a-fA-F\d]*$/i
 
-const validateParameters = async (
-  userOp1: UserOperation,
+const validateParameters = (
+  userOp: UserOperation,
   entryPointInput: string,
   entryPointAddress: string,
   requireSignature = true,
   requireGasParams = true,
-): Promise<void> => {
-  requireCond(
-    entryPointInput != null,
-    'No entryPoint param',
-    ValidationErrors.InvalidFields,
-  )
+): Either<RpcError, boolean> => {
+  // entryPointInput != null,
+  if (!entryPointInput) {
+    return Either.Left(
+      new RpcError('No entryPoint param', ValidationErrors.InvalidFields),
+    )
+  }
   if (
     entryPointInput?.toString().toLowerCase() !==
     entryPointAddress.toLowerCase()
   ) {
-    throw new Error(
-      `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${entryPointAddress}`,
+    return Either.Left(
+      new RpcError(
+        `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${entryPointAddress}`,
+        ValidationErrors.InvalidFields,
+      ),
     )
   }
   // minimal sanity check: userOp exists, and all members are hex
-  requireCond(
-    userOp1 != null,
-    'No UserOperation param',
-    ValidationErrors.InvalidFields,
-  )
-  const userOp = (await resolveProperties(userOp1)) as any
+  // userOp != null,
+  if (!userOp) {
+    return Either.Left(
+      new RpcError('No UserOperation param', ValidationErrors.InvalidFields),
+    )
+  }
 
   const fields = ['sender', 'nonce', 'callData']
   if (requireSignature) {
@@ -68,19 +74,26 @@ const validateParameters = async (
     )
   }
   fields.forEach((key) => {
-    requireCond(
-      userOp[key] != null,
-      'Missing userOp field: ' + key,
-      ValidationErrors.InvalidFields,
-      userOp,
-    )
+    // userOp[key] != null
+    if (!userOp[key]) {
+      return Either.Left(
+        new RpcError(
+          `Missing userOp field: ${key}`,
+          ValidationErrors.InvalidFields,
+        ),
+      )
+    }
+
     const value: string = userOp[key].toString()
-    requireCond(
-      value.match(HEX_REGEX) != null,
-      `Invalid hex value for property ${key} in UserOp`,
-      ValidationErrors.InvalidFields,
-      userOp[key],
-    )
+    // value.match(HEX_REGEX) != null
+    if (!value.match(HEX_REGEX)) {
+      return Either.Left(
+        new RpcError(
+          `Invalid hex value for property ${key} in UserOp`,
+          ValidationErrors.InvalidFields,
+        ),
+      )
+    }
   })
 
   requireAddressAndFields(
@@ -90,6 +103,8 @@ const validateParameters = async (
     ['paymasterData'],
   )
   requireAddressAndFields(userOp, 'factory', ['factoryData'])
+
+  return Either.Right(true)
 }
 
 export type EthAPI = {
@@ -97,11 +112,11 @@ export type EthAPI = {
     userOpInput: Partial<UserOperation>,
     entryPointInput: string,
     stateOverride?: StateOverride,
-  ): Promise<EstimateUserOpGasResult>
+  ): Promise<Either<RpcError, EstimateUserOpGasResult>>
   sendUserOperation(
     userOp: UserOperation,
     entryPointInput: string,
-  ): Promise<string>
+  ): Promise<Either<RpcError, string>>
   getSupportedEntryPoints(): Promise<string[]>
   getUserOperationReceipt(
     userOpHash: string,
@@ -134,7 +149,7 @@ export const createEthAPI = (
       userOpInput: Partial<UserOperation>,
       entryPointInput: string,
       stateOverride?: StateOverride,
-    ): Promise<EstimateUserOpGasResult> => {
+    ): Promise<Either<RpcError, EstimateUserOpGasResult>> => {
       const userOp = {
         // Override gas params to estimate gas defaults
         maxFeePerGas: 0,
@@ -144,11 +159,14 @@ export const createEthAPI = (
         verificationGasLimit: 10e6,
         ...userOpInput,
       }
-      await validateParameters(
+      const validRes = validateParameters(
         deepHexlify(userOp),
         entryPointInput,
         entryPoint.address,
       )
+      if (validRes.isLeft()) {
+        unwrapLeftMap(validRes)
+      }
 
       // Simulate the operation to get the gas limits
       const { preOpGas, validAfter, validUntil } = await sim.simulateHandleOp(
@@ -164,25 +182,34 @@ export const createEthAPI = (
       )
 
       // Estimate the pre-verification gas
-      userOp.signature = undefined // ignore signature for gas estimation to allow calcPreVerificationGas to use dummy signature
-      const preVerificationGas = pvgc.calcPreVerificationGas(userOp)
-      const verificationGasLimit = preOpGas
+      const preVerificationGas = pvgc.calcPreVerificationGas({
+        ...userOp,
+        signature: undefined, // ignore signature for gas estimation to allow calcPreVerificationGas to use dummy signature
+      })
 
-      return {
+      return Either.Right({
         validAfter,
         validUntil,
         preVerificationGas,
-        verificationGasLimit,
+        verificationGasLimit: preOpGas,
         callGasLimit,
-      }
+      })
     },
 
     sendUserOperation: async (
       userOp: UserOperation,
       entryPointInput: string,
-    ): Promise<string> => {
+    ): Promise<Either<RpcError, string>> => {
       Logger.debug('Running checks on userOp')
-      await validateParameters(userOp, entryPointInput, entryPoint.address)
+      const validRes = validateParameters(
+        userOp,
+        entryPointInput,
+        entryPoint.address,
+      )
+      if (validRes.isLeft()) {
+        unwrapLeftMap(validRes)
+      }
+
       const userOpReady = await resolveProperties(userOp)
       vs.validateInputParameters(userOp, entryPointInput, true, true)
       const validationResult = await vs.validateUserOp(userOp, true, undefined)
@@ -208,7 +235,7 @@ export const createEthAPI = (
         'UserOp included in mempool...',
       )
 
-      return userOpHash
+      return Either.Right(userOpHash as string)
     },
 
     getSupportedEntryPoints: async (): Promise<string[]> => {

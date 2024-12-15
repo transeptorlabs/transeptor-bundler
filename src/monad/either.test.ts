@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { Either } from './either-monad'
+import { Either } from './either'
 import { RpcError } from '../utils/rpc.utils'
 
 /**

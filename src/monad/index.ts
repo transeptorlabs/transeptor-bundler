@@ -1,1 +1,1 @@
-export * from './either-monad'
+export * from './either.js'

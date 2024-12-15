@@ -9,6 +9,7 @@ import type {
   RpcServer,
   HandlerRegistry,
   RpcHandler,
+  JsonRpcErrorResponse,
 } from './rpc.types.js'
 import { createRpcHandler } from './rpc-handler.js'
 
@@ -25,11 +26,50 @@ const createApp = (rpc: RpcHandler): express.Application => {
 
   app.post('/rpc', async (req: Request, res: Response) => {
     const request = req.body as JsonRpcRequest
+    const errorRes: JsonRpcErrorResponse = {
+      jsonrpc: '2.0',
+      id: request.id,
+      error: {
+        code: -32000,
+        message: 'Unknown error',
+        data: undefined,
+      },
+    }
     try {
-      const response = await rpc.doHandleRequest(request)
-      res.json(response)
-    } catch (error) {
-      res.status(500).json({ error: 'Internal Server Error' })
+      Logger.debug(
+        `---> Handling valid request for ${request.method} with requestId(${request.id})`,
+      )
+      const result = await rpc.doHandleRequest(request)
+      result.fold(
+        (error) => {
+          Logger.error(
+            { error: error.message },
+            `RpcError handling method requestId(${request.id})`,
+          )
+          res.json({
+            ...errorRes,
+            error: {
+              code: error.code,
+              message: error.message,
+              data: error.data,
+            },
+          })
+        },
+        (response) => res.json(response),
+      )
+    } catch (error: any) {
+      Logger.error(
+        { error: error.message },
+        `Unknown error handling method requestId(${request.id})`,
+      )
+      res.json({
+        ...errorRes,
+        error: {
+          code: error.code ? error.code : errorRes.error.code,
+          message: error.message ? error.message : errorRes.error.message,
+          data: error.data,
+        },
+      })
     }
   })
 

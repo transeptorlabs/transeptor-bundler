@@ -1,3 +1,6 @@
+import { RpcError } from '../utils/index.js'
+import { Either } from '../monad/index.js'
+
 export type JsonRpcRequest = {
   jsonrpc: '2.0'
   method: string
@@ -41,7 +44,9 @@ export type RpcServer = {
 }
 
 export type RpcHandler = {
-  doHandleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse>
+  doHandleRequest(
+    request: JsonRpcRequest,
+  ): Promise<Either<RpcError, JsonRpcResponse>>
 }
 
 // Handler function type
