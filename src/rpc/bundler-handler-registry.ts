@@ -44,7 +44,7 @@ export const createBundlerHandlerRegistry = (
     }
     return result
   },
-  debug_bundler_setBundlingMode: (params) => {
+  debug_bundler_setBundlingMode: async (params) => {
     debug.setBundlingMode(params[0])
     return 'ok'
   },
@@ -67,6 +67,6 @@ export const createBundlerHandlerRegistry = (
   },
   debug_bundler_setConfiguration: async (params) => {
     await debug.setGasConfig(params[0])
-    return {}
+    return 'ok'
   },
 })

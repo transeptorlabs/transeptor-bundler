@@ -1,5 +1,16 @@
 import { RpcError } from '../utils/index.js'
 import { Either } from '../monad/index.js'
+import {
+  EstimateUserOpGasResult,
+  SendBundleReturn,
+  UserOperation,
+  UserOperationByHashResponse,
+  UserOperationReceipt,
+} from '../types/index.js'
+import { StateOverride } from '../sim/index.js'
+import { ReputationEntry } from '../reputation/index.js'
+import { StakeInfo } from '../validation/index.js'
+import { PreVerificationGasConfig } from '../gas/index.js'
 
 export type JsonRpcRequest = {
   jsonrpc: '2.0'
@@ -49,10 +60,99 @@ export type RpcHandler = {
   ): Promise<Either<RpcError, JsonRpcResponse>>
 }
 
-// Handler function type
-export type HandlerFunction = (params: any[]) => Promise<any> | any
+// Define the mapping of method names to their params and return types
+type MethodMapping = {
+  web3_clientVersion: {
+    params: []
+    return: string
+  }
 
-// Registry for handlers
+  eth_chainId: {
+    params: []
+    return: number
+  }
+  eth_supportedEntryPoints: {
+    params: []
+    return: string[]
+  }
+  eth_sendUserOperation: {
+    params: [UserOperation, string]
+    return: Either<RpcError, string>
+  }
+  eth_estimateUserOperationGas: {
+    params: [Partial<UserOperation>, string, StateOverride?]
+    return: Either<RpcError, EstimateUserOpGasResult>
+  }
+  eth_getUserOperationReceipt: {
+    params: [string]
+    return: Either<RpcError, UserOperationReceipt | null>
+  }
+  eth_getUserOperationByHash: {
+    params: [string]
+    return: Either<RpcError, UserOperationByHashResponse | null>
+  }
+
+  debug_bundler_clearState: {
+    params: []
+    return: 'ok'
+  }
+  debug_bundler_dumpMempool: {
+    params: []
+    return: UserOperation[]
+  }
+  debug_bundler_clearMempool: {
+    params: []
+    return: 'ok'
+  }
+  debug_bundler_sendBundleNow: {
+    params: []
+    return: SendBundleReturn | 'ok'
+  }
+  debug_bundler_setBundlingMode: {
+    params: [string]
+    return: 'ok'
+  }
+  debug_bundler_setBundleInterval: {
+    params: []
+    return: 'ok'
+  }
+  debug_bundler_setReputation: {
+    params: [any]
+    return: 'ok'
+  }
+  debug_bundler_dumpReputation: {
+    params: []
+    return: ReputationEntry[]
+  }
+  debug_bundler_clearReputation: {
+    params: []
+    return: 'ok'
+  }
+  debug_bundler_addUserOps: {
+    params: [UserOperation[]]
+    return: 'ok'
+  }
+  debug_bundler_getStakeStatus: {
+    params: [string, string]
+    return: {
+      stakeInfo: StakeInfo
+      isStaked: boolean
+    }
+  }
+  debug_bundler_setConfiguration: {
+    params: [Partial<PreVerificationGasConfig>]
+    return: 'ok'
+  }
+}
+
+// Infer method names
+export type MethodNames = keyof MethodMapping
+
+// Generic handler function type
+export type HandlerFunction<M extends MethodNames> = (
+  params: MethodMapping[M]['params'],
+) => Promise<MethodMapping[M]['return']>
+
 export type HandlerRegistry = {
-  [method: string]: HandlerFunction
+  [M in MethodNames]: HandlerFunction<M>
 }

@@ -28,14 +28,13 @@ import { Either, unwrapLeftMap } from '../../monad/index.js'
 
 const HEX_REGEX = /^0x[a-fA-F\d]*$/i
 
-const validateParameters = (
-  userOp: UserOperation,
+const validateParameters = async (
+  userOp1: UserOperation,
   entryPointInput: string,
   entryPointAddress: string,
   requireSignature = true,
   requireGasParams = true,
-): Either<RpcError, boolean> => {
-  // entryPointInput != null,
+): Promise<Either<RpcError, boolean>> => {
   if (!entryPointInput) {
     return Either.Left(
       new RpcError('No entryPoint param', ValidationErrors.InvalidFields),
@@ -53,12 +52,13 @@ const validateParameters = (
     )
   }
   // minimal sanity check: userOp exists, and all members are hex
-  // userOp != null,
-  if (!userOp) {
+  if (!userOp1) {
     return Either.Left(
       new RpcError('No UserOperation param', ValidationErrors.InvalidFields),
     )
   }
+
+  const userOp = (await resolveProperties(userOp1)) as any
 
   const fields = ['sender', 'nonce', 'callData']
   if (requireSignature) {
@@ -73,8 +73,7 @@ const validateParameters = (
       'maxPriorityFeePerGas',
     )
   }
-  fields.forEach((key) => {
-    // userOp[key] != null
+  for (const key of fields) {
     if (!userOp[key]) {
       return Either.Left(
         new RpcError(
@@ -85,7 +84,6 @@ const validateParameters = (
     }
 
     const value: string = userOp[key].toString()
-    // value.match(HEX_REGEX) != null
     if (!value.match(HEX_REGEX)) {
       return Either.Left(
         new RpcError(
@@ -94,7 +92,7 @@ const validateParameters = (
         ),
       )
     }
-  })
+  }
 
   requireAddressAndFields(
     userOp,
@@ -120,10 +118,10 @@ export type EthAPI = {
   getSupportedEntryPoints(): Promise<string[]>
   getUserOperationReceipt(
     userOpHash: string,
-  ): Promise<UserOperationReceipt | null>
+  ): Promise<Either<RpcError, UserOperationReceipt | null>>
   getUserOperationByHash(
     userOpHash: string,
-  ): Promise<UserOperationByHashResponse | null>
+  ): Promise<Either<RpcError, UserOperationByHashResponse | null>>
 }
 
 export const createEthAPI = (
@@ -159,7 +157,7 @@ export const createEthAPI = (
         verificationGasLimit: 10e6,
         ...userOpInput,
       }
-      const validRes = validateParameters(
+      const validRes = await validateParameters(
         deepHexlify(userOp),
         entryPointInput,
         entryPoint.address,
@@ -201,7 +199,7 @@ export const createEthAPI = (
       entryPointInput: string,
     ): Promise<Either<RpcError, string>> => {
       Logger.debug('Running checks on userOp')
-      const validRes = validateParameters(
+      const validRes = await validateParameters(
         userOp,
         entryPointInput,
         entryPoint.address,
@@ -235,7 +233,7 @@ export const createEthAPI = (
         'UserOp included in mempool...',
       )
 
-      return Either.Right(userOpHash as string)
+      return Either.Right(userOpHash)
     },
 
     getSupportedEntryPoints: async (): Promise<string[]> => {
@@ -244,7 +242,7 @@ export const createEthAPI = (
 
     getUserOperationReceipt: async (
       userOpHash: string,
-    ): Promise<UserOperationReceipt | null> => {
+    ): Promise<Either<RpcError, UserOperationReceipt | null>> => {
       requireCond(
         userOpHash?.toString()?.match(HEX_REGEX) != null,
         'Missing/invalid userOpHash',
@@ -256,7 +254,9 @@ export const createEthAPI = (
       }
       const receipt = await event.getTransactionReceipt()
       const logs = eventsManager.filterLogs(event, receipt.logs)
-      return {
+      const confirmations = await receipt.confirmations()
+
+      return Either.Right({
         userOpHash,
         sender: event.args.sender,
         nonce: event.args.nonce,
@@ -276,18 +276,18 @@ export const createEthAPI = (
           transactionHash: receipt.hash,
           logs: receipt.logs,
           blockNumber: receipt.blockNumber,
-          confirmations: await receipt.confirmations(),
+          confirmations,
           cumulativeGasUsed: receipt.cumulativeGasUsed,
           effectiveGasPrice: receipt.gasPrice,
           type: receipt.type,
           status: receipt.status,
         },
-      }
+      })
     },
 
     getUserOperationByHash: async (
       userOpHash: string,
-    ): Promise<UserOperationByHashResponse | null> => {
+    ): Promise<Either<RpcError, UserOperationByHashResponse | null>> => {
       requireCond(
         userOpHash?.toString()?.match(HEX_REGEX) != null,
         'Missing/invalid userOpHash',
@@ -321,13 +321,13 @@ export const createEthAPI = (
         throw new Error('unable to find userOp in transaction')
       }
 
-      return deepHexlify({
+      return Either.Right({
         userOperation: unpackUserOp(op),
         entryPoint: entryPoint.address,
         transactionHash: tx.hash,
         blockHash: tx.blockHash ?? '',
         blockNumber: tx.blockNumber ?? 0,
-      })
+      } as UserOperationByHashResponse)
     },
   }
 }

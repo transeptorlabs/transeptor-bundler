@@ -1,13 +1,15 @@
-import type {
-  HandlerRegistry,
-  JsonRpcErrorResponse,
-  JsonRpcRequest,
-  JsonRpcResponse,
-  JsonRpcSuccessResponse,
-  RpcHandler,
+import {
+  MethodNames,
+  type HandlerFunction,
+  type HandlerRegistry,
+  type JsonRpcErrorResponse,
+  type JsonRpcRequest,
+  type JsonRpcResponse,
+  type JsonRpcSuccessResponse,
+  type RpcHandler,
 } from './rpc.types.js'
 import { deepHexlify, RpcError } from '../utils/index.js'
-import { Either } from '../monad/index.js'
+import { Either, isEither } from '../monad/index.js'
 
 /*
  * Construct JSON RPC success response
@@ -15,16 +17,16 @@ import { Either } from '../monad/index.js'
 const createSuccessResponse = (
   id: number | string,
   result: any,
-): JsonRpcSuccessResponse => {
+): Either<RpcError, JsonRpcSuccessResponse> => {
   try {
     const hexlifyResult = deepHexlify(result)
-    return {
+    return Either.Right({
       jsonrpc: '2.0',
       id,
       result: hexlifyResult,
-    }
+    })
   } catch (error) {
-    throw new RpcError('Error hexlifying result', -32603, error)
+    Either.Left(new RpcError('Error hexlifying result', -32603, error))
   }
 }
 
@@ -108,6 +110,20 @@ const jsonRpcRequestValidator = (
   return true
 }
 
+/**
+ * Dynamically infer the handler type for the given method
+ *
+ * @param registry - HandlerRegistry object
+ * @param method - Method name
+ * @returns The handler function for the given method
+ */
+const getHandler = <M extends MethodNames>(
+  registry: HandlerRegistry,
+  method: M,
+): HandlerFunction<M> => {
+  return registry[method]
+}
+
 export const createRpcHandler = (
   handlerRegistry: HandlerRegistry,
   supportedApiPrefixes: string[],
@@ -122,8 +138,7 @@ export const createRpcHandler = (
         return Either.Right(isValidRpc)
       }
 
-      const handler = handlerRegistry[request.method]
-      if (!handler) {
+      if (!handlerRegistry[request.method]) {
         return Either.Right(
           createErrorResponse(
             request.id,
@@ -135,9 +150,19 @@ export const createRpcHandler = (
 
       // TODO: Validate params before calling handler
 
-      // Await the handler function result to handle both sync and async handlers
-      const handlerResult = await Promise.resolve(handler(request.params))
-      return Either.Right(createSuccessResponse(request.id, handlerResult))
+      // Call the handler for the given method
+      const method = request.method as keyof HandlerRegistry
+      const params = request.params as Parameters<
+        HandlerFunction<typeof method>
+      >
+      const handlerResult = await getHandler(handlerRegistry, method)(params)
+
+      return isEither(handlerResult)
+        ? handlerResult.fold(
+            (error) => Either.Left(error),
+            (response) => createSuccessResponse(request.id, response),
+          )
+        : createSuccessResponse(request.id, handlerResult)
     },
   }
 }

@@ -64,7 +64,7 @@ export abstract class Either<L, R> {
    * @param value - The value to wrap in a `Left`.
    * @returns A `Left` instance.
    */
-  static Left<L>(value: L): Either<L, never> {
+  static Left<L, R>(value: L): Either<L, R> {
     return new Left(value)
   }
 
@@ -74,7 +74,7 @@ export abstract class Either<L, R> {
    * @param value - The value to wrap in a `Right`.
    * @returns A `Right` instance.
    */
-  static Right<R>(value: R): Either<never, R> {
+  static Right<L, R>(value: R): Either<L, R> {
     return new Right(value)
   }
 }
@@ -146,4 +146,14 @@ export const unwrapLeftMap = <L, R>(either: Either<L, R>) => {
       throw new Error('Expected a Left, but got a Right')
     },
   )
+}
+
+/**
+ * Determines if the provided value is an instance of `Either`.
+ *
+ * @param value - The value to check.
+ * @returns `true` if the value is an instance of `Either`, `false` otherwise.
+ */
+export const isEither = (value: unknown): value is Either<unknown, unknown> => {
+  return value instanceof Either
 }
