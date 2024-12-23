@@ -104,6 +104,24 @@ describe('Either monad', () => {
       })
     })
 
+    describe('foldAsync', () => {
+      it('should only run right function', async () => {
+        const { parseNumber, addTen } = helpers()
+
+        const res = parseNumber('20').map(addTen)
+
+        res.foldAsync(
+          async (_) => {
+            // should force the test to fail if this function is called
+            expect(true).toEqual(false)
+          },
+          async (success) => {
+            expect(success).toEqual(30)
+          },
+        )
+      })
+    })
+
     describe('getOrElse', () => {
       it('should return value inside Right ', async () => {
         const { worldToLogTranseptor } = helpers()
@@ -121,7 +139,9 @@ describe('Either monad', () => {
         const worldToLogTranseptorSpy = vi.spyOn(hp, 'worldToLogTranseptor')
         const { worldToLogTranseptor } = hp
 
-        const leftError = Either.Left(new RpcError('Sorry got an error', 0))
+        const leftError = Either.Left<RpcError, string>(
+          new RpcError('Sorry got an error', 0),
+        )
 
         const resLeft = leftError.map(worldToLogTranseptor)
         const mutatedVal = resLeft.getOrElse('')
@@ -178,15 +198,33 @@ describe('Either monad', () => {
       })
     })
 
+    describe('foldAsync', () => {
+      it('should only run left function', async () => {
+        const { parseNumber, addTen, divideByZero } = helpers()
+
+        const res = parseNumber('20').map(addTen).flatMap(divideByZero)
+
+        res.foldAsync(
+          async (error) => {
+            expect(error).toEqual(new Error('Cannot divide by zero'))
+          },
+          async (_) => {
+            // should force the test to fail if this function is called
+            expect(true).toEqual(false)
+          },
+        )
+      })
+    })
+
     describe('getOrElse', () => {
       it('should return provided default value if Left', async () => {
         const hp = helpers()
         const worldToLogTranseptorSpy = vi.spyOn(hp, 'worldToLogTranseptor')
 
         const { worldToLogTranseptor } = hp
-        const resLeft = Either.Left(new Error('Sorry got an error')).map(
-          worldToLogTranseptor,
-        )
+        const resLeft = Either.Left<Error, string>(
+          new Error('Sorry got an error'),
+        ).map(worldToLogTranseptor)
         const mutatedVal = resLeft.getOrElse('')
 
         expect(mutatedVal).toEqual('')

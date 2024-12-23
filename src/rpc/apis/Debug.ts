@@ -11,6 +11,60 @@ import {
   PreVerificationGasConfig,
 } from '../../gas/index.js'
 
+export type DebugAPIMethodMapping = {
+  debug_bundler_clearState: {
+    params: []
+    return: 'ok'
+  }
+  debug_bundler_dumpMempool: {
+    params: []
+    return: UserOperation[]
+  }
+  debug_bundler_clearMempool: {
+    params: []
+    return: 'ok'
+  }
+  debug_bundler_sendBundleNow: {
+    params: []
+    return: SendBundleReturn | 'ok'
+  }
+  debug_bundler_setBundlingMode: {
+    params: [string]
+    return: 'ok'
+  }
+  debug_bundler_setBundleInterval: {
+    params: []
+    return: 'ok'
+  }
+  debug_bundler_setReputation: {
+    params: [any]
+    return: 'ok'
+  }
+  debug_bundler_dumpReputation: {
+    params: []
+    return: ReputationEntry[]
+  }
+  debug_bundler_clearReputation: {
+    params: []
+    return: 'ok'
+  }
+  debug_bundler_addUserOps: {
+    params: [UserOperation[]]
+    return: 'ok'
+  }
+  debug_bundler_getStakeStatus: {
+    params: [string, string]
+    return: {
+      stakeInfo: StakeInfo
+      isStaked: boolean
+    }
+  }
+  debug_bundler_setConfiguration: {
+    params: [Partial<PreVerificationGasConfig>]
+    return: 'ok'
+  }
+}
+
 export type DebugAPI = {
   clearState(): Promise<void>
   dumpMempool(): Promise<UserOperation[]>
@@ -110,7 +164,7 @@ export const createDebugAPI = (
     setGasConfig: async (
       config: Partial<PreVerificationGasConfig>,
     ): Promise<void> => {
-      await pvgc.updateGasConfig(config)
+      pvgc.updateGasConfig(config)
     },
   }
 }

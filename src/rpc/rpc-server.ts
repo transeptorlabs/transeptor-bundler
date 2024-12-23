@@ -10,8 +10,11 @@ import type {
   HandlerRegistry,
   RpcHandler,
   JsonRpcErrorResponse,
+  JsonRpcResponse,
 } from './rpc.types.js'
 import { createRpcHandler } from './rpc-handler.js'
+import { Either } from '../monad/index.js'
+import { RpcError } from '../utils/index.js'
 
 const createApp = (rpc: RpcHandler): express.Application => {
   const app = express()
@@ -35,42 +38,35 @@ const createApp = (rpc: RpcHandler): express.Application => {
         data: undefined,
       },
     }
-    try {
-      Logger.debug(
-        `---> Handling valid request for ${request.method} with requestId(${request.id})`,
-      )
-      const result = await rpc.doHandleRequest(request)
-      result.fold(
-        (error) => {
-          Logger.error(
-            { error: error.message },
-            `RpcError handling method requestId(${request.id})`,
-          )
-          res.json({
-            ...errorRes,
-            error: {
-              code: error.code,
-              message: error.message,
-              data: error.data,
-            },
-          })
-        },
-        (response) => res.json(response),
-      )
-    } catch (error: any) {
+    Logger.debug(
+      `---> Handling valid request for ${request.method} with requestId(${request.id})`,
+    )
+    const result = await rpc.doHandleRequest(request).catch((error) => {
       Logger.error(
         { error: error.message },
         `Unknown error handling method requestId(${request.id})`,
       )
-      res.json({
-        ...errorRes,
-        error: {
-          code: error.code ? error.code : errorRes.error.code,
-          message: error.message ? error.message : errorRes.error.message,
-          data: error.data,
-        },
-      })
-    }
+      return Either.Left<RpcError, JsonRpcResponse>(
+        new RpcError(
+          error.message ? error.message : errorRes.error.message,
+          error.code ? error.code : errorRes.error.code,
+          error.data,
+        ),
+      )
+    })
+
+    result.fold(
+      (error: RpcError) =>
+        res.json({
+          ...errorRes,
+          error: {
+            code: error.code,
+            message: error.message,
+            data: error.data,
+          },
+        }),
+      (response: JsonRpcResponse) => res.json(response),
+    )
   })
 
   return app

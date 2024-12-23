@@ -26,6 +26,53 @@ import { MempoolManageSender } from '../../mempool/index.js'
 import { PreVerificationGasCalculator } from '../../gas/index.js'
 import { Either, unwrapLeftMap } from '../../monad/index.js'
 
+export type EthAPIMethodMapping = {
+  eth_chainId: {
+    params: []
+    return: number
+  }
+  eth_supportedEntryPoints: {
+    params: []
+    return: string[]
+  }
+  eth_sendUserOperation: {
+    params: [UserOperation, string]
+    return: Either<RpcError, string>
+  }
+  eth_estimateUserOperationGas: {
+    params: [Partial<UserOperation>, string, StateOverride?]
+    return: Either<RpcError, EstimateUserOpGasResult>
+  }
+  eth_getUserOperationReceipt: {
+    params: [string]
+    return: Either<RpcError, UserOperationReceipt | null>
+  }
+  eth_getUserOperationByHash: {
+    params: [string]
+    return: Either<RpcError, UserOperationByHashResponse | null>
+  }
+}
+
+export type EthAPI = {
+  getChainId(): Promise<number>
+  estimateUserOperationGas(
+    userOpInput: Partial<UserOperation>,
+    entryPointInput: string,
+    stateOverride?: StateOverride,
+  ): Promise<Either<RpcError, EstimateUserOpGasResult>>
+  sendUserOperation(
+    userOp: UserOperation,
+    entryPointInput: string,
+  ): Promise<Either<RpcError, string>>
+  getSupportedEntryPoints(): Promise<string[]>
+  getUserOperationReceipt(
+    userOpHash: string,
+  ): Promise<Either<RpcError, UserOperationReceipt | null>>
+  getUserOperationByHash(
+    userOpHash: string,
+  ): Promise<Either<RpcError, UserOperationByHashResponse | null>>
+}
+
 const HEX_REGEX = /^0x[a-fA-F\d]*$/i
 
 const validateParameters = async (
@@ -105,25 +152,6 @@ const validateParameters = async (
   return Either.Right(true)
 }
 
-export type EthAPI = {
-  estimateUserOperationGas(
-    userOpInput: Partial<UserOperation>,
-    entryPointInput: string,
-    stateOverride?: StateOverride,
-  ): Promise<Either<RpcError, EstimateUserOpGasResult>>
-  sendUserOperation(
-    userOp: UserOperation,
-    entryPointInput: string,
-  ): Promise<Either<RpcError, string>>
-  getSupportedEntryPoints(): Promise<string[]>
-  getUserOperationReceipt(
-    userOpHash: string,
-  ): Promise<Either<RpcError, UserOperationReceipt | null>>
-  getUserOperationByHash(
-    userOpHash: string,
-  ): Promise<Either<RpcError, UserOperationByHashResponse | null>>
-}
-
 export const createEthAPI = (
   ps: ProviderService,
   sim: Simulator,
@@ -137,6 +165,7 @@ export const createEthAPI = (
   },
 ): EthAPI => {
   return {
+    getChainId: async (): Promise<number> => ps.getChainId(),
     /*
       Estimate the gas values for a UserOperation. Given UserOperation optionally without gas limits and gas prices, return the needed gas limits. The signature field is ignored by the wallet, so that the operation will not require user’s approval. 
       Still, it might require putting a “semi-valid” signature (e.g. a signature in the right length)

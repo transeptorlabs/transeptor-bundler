@@ -48,6 +48,13 @@ export abstract class Either<L, R> {
     return this.isLeft() ? onLeft(this.value as L) : onRight(this.value as R)
   }
 
+  foldAsync<U>(
+    onLeft: (error: L) => Promise<U>,
+    onRight: (value: R) => Promise<U>,
+  ): Promise<U> {
+    return this.isLeft() ? onLeft(this.value as L) : onRight(this.value as R)
+  }
+
   /**
    * Factory method for creating a `Right` instance.
    *

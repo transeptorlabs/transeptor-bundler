@@ -140,7 +140,6 @@ const runBundler = async () => {
         pvgc,
         config.entryPoint.contract,
       ),
-      ps,
     ),
     config.httpApis,
     config.port,

@@ -35,7 +35,7 @@ export const deepHexlify = (obj: any): any => {
   }
 
   if (typeof obj === 'bigint' || typeof obj === 'number') {
-    return toBeHex(obj)
+    return toBeHex(obj).replace(/^0x0/, '0x')
   }
 
   if (Array.isArray(obj)) {
