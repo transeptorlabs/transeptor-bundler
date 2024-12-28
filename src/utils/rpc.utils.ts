@@ -22,6 +22,15 @@ export class RpcError extends Error {
   }
 }
 
+export class NetworkCallError extends Error {
+  constructor(
+    msg: string,
+    readonly payload: any,
+  ) {
+    super(msg)
+  }
+}
+
 /*
  * hexlify all members of object, recursively
  */

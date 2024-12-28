@@ -1,4 +1,4 @@
-import { ethers, resolveProperties } from 'ethers'
+import { ethers } from 'ethers'
 import {
   EstimateUserOpGasResult,
   PackedUserOperation,
@@ -7,13 +7,15 @@ import {
   UserOperationByHashResponse,
   UserOperationReceipt,
 } from '../../types/index.js'
-import { ValidationErrors } from '../../validation/index.js'
+import {
+  ExecutionResult,
+  ValidateUserOpResult,
+  ValidationErrors,
+} from '../../validation/index.js'
 import {
   deepHexlify,
-  requireCond,
   packUserOp,
   unpackUserOp,
-  requireAddressAndFields,
   RpcError,
 } from '../../utils/index.js'
 
@@ -24,24 +26,24 @@ import { ValidationService } from '../../validation/index.js'
 import { EventManagerWithListener } from '../../event/index.js'
 import { MempoolManageSender } from '../../mempool/index.js'
 import { PreVerificationGasCalculator } from '../../gas/index.js'
-import { Either, unwrapLeftMap } from '../../monad/index.js'
+import { Either } from '../../monad/index.js'
 
 export type EthAPIMethodMapping = {
   eth_chainId: {
     params: []
     return: number
   }
-  eth_supportedEntryPoints: {
-    params: []
-    return: string[]
+  eth_estimateUserOperationGas: {
+    params: [Partial<UserOperation>, string, StateOverride?]
+    return: Either<RpcError, EstimateUserOpGasResult>
   }
   eth_sendUserOperation: {
     params: [UserOperation, string]
     return: Either<RpcError, string>
   }
-  eth_estimateUserOperationGas: {
-    params: [Partial<UserOperation>, string, StateOverride?]
-    return: Either<RpcError, EstimateUserOpGasResult>
+  eth_supportedEntryPoints: {
+    params: []
+    return: string[]
   }
   eth_getUserOperationReceipt: {
     params: [string]
@@ -61,7 +63,7 @@ export type EthAPI = {
     stateOverride?: StateOverride,
   ): Promise<Either<RpcError, EstimateUserOpGasResult>>
   sendUserOperation(
-    userOp: UserOperation,
+    userOpInput: UserOperation,
     entryPointInput: string,
   ): Promise<Either<RpcError, string>>
   getSupportedEntryPoints(): Promise<string[]>
@@ -73,83 +75,57 @@ export type EthAPI = {
   ): Promise<Either<RpcError, UserOperationByHashResponse | null>>
 }
 
-const HEX_REGEX = /^0x[a-fA-F\d]*$/i
-
-const validateParameters = async (
-  userOp1: UserOperation,
-  entryPointInput: string,
-  entryPointAddress: string,
-  requireSignature = true,
-  requireGasParams = true,
-): Promise<Either<RpcError, boolean>> => {
-  if (!entryPointInput) {
-    return Either.Left(
-      new RpcError('No entryPoint param', ValidationErrors.InvalidFields),
-    )
-  }
-  if (
-    entryPointInput?.toString().toLowerCase() !==
-    entryPointAddress.toLowerCase()
-  ) {
-    return Either.Left(
-      new RpcError(
-        `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${entryPointAddress}`,
-        ValidationErrors.InvalidFields,
-      ),
-    )
-  }
-  // minimal sanity check: userOp exists, and all members are hex
-  if (!userOp1) {
-    return Either.Left(
-      new RpcError('No UserOperation param', ValidationErrors.InvalidFields),
-    )
-  }
-
-  const userOp = (await resolveProperties(userOp1)) as any
-
-  const fields = ['sender', 'nonce', 'callData']
-  if (requireSignature) {
-    fields.push('signature')
-  }
-  if (requireGasParams) {
-    fields.push(
-      'preVerificationGas',
-      'verificationGasLimit',
-      'callGasLimit',
-      'maxFeePerGas',
-      'maxPriorityFeePerGas',
-    )
-  }
-  for (const key of fields) {
-    if (!userOp[key]) {
-      return Either.Left(
-        new RpcError(
-          `Missing userOp field: ${key}`,
-          ValidationErrors.InvalidFields,
-        ),
-      )
-    }
-
-    const value: string = userOp[key].toString()
-    if (!value.match(HEX_REGEX)) {
-      return Either.Left(
-        new RpcError(
-          `Invalid hex value for property ${key} in UserOp`,
-          ValidationErrors.InvalidFields,
-        ),
-      )
-    }
-  }
-
-  requireAddressAndFields(
-    userOp,
-    'paymaster',
-    ['paymasterPostOpGasLimit', 'paymasterVerificationGasLimit'],
-    ['paymasterData'],
+const extractVerifactionGasLimit = (
+  estimate: EstimateUserOpGasResult,
+  executionResult: Either<RpcError, ExecutionResult>,
+): Either<RpcError, EstimateUserOpGasResult> => {
+  return executionResult.fold(
+    (error: RpcError) => Either.Left(error),
+    (res: ExecutionResult) => {
+      const { preOpGas, validAfter, validUntil } = res
+      return Either.Right<RpcError, EstimateUserOpGasResult>({
+        ...estimate,
+        validAfter,
+        validUntil,
+        verificationGasLimit: preOpGas,
+      })
+    },
   )
-  requireAddressAndFields(userOp, 'factory', ['factoryData'])
+}
 
-  return Either.Right(true)
+const extractCallGasLimit = (
+  estimate: EstimateUserOpGasResult,
+  callGasResult: Either<RpcError, number>,
+): Either<RpcError, EstimateUserOpGasResult> => {
+  return callGasResult.fold(
+    (error: RpcError) => Either.Left(error),
+    (callGasLimit: number) => {
+      return Either.Right<RpcError, EstimateUserOpGasResult>({
+        ...estimate,
+        callGasLimit,
+      })
+    },
+  )
+}
+
+const extractUseropVerifactionResult = (
+  relayUserOpParam: RelayUserOpParam,
+  validationResult: Either<RpcError, ValidateUserOpResult>,
+): Either<RpcError, RelayUserOpParam> => {
+  return validationResult.fold(
+    (error: RpcError) => Either.Left(error),
+    (res: ValidateUserOpResult) => {
+      return Either.Right<RpcError, RelayUserOpParam>({
+        ...relayUserOpParam,
+        prefund: res.returnInfo.prefund,
+        referencedContracts: res.referencedContracts,
+        senderInfo: res.senderInfo,
+        paymasterInfo: res.paymasterInfo,
+        factoryInfo: res.factoryInfo,
+        aggregatorInfo: res.aggregatorInfo,
+      })
+    },
+  )
 }
 
 export const createEthAPI = (
@@ -164,6 +140,8 @@ export const createEthAPI = (
     address: string
   },
 ): EthAPI => {
+  const HEX_REGEX = /^0x[a-fA-F\d]*$/i
+
   return {
     getChainId: async (): Promise<number> => ps.getChainId(),
     /*
@@ -177,92 +155,104 @@ export const createEthAPI = (
       entryPointInput: string,
       stateOverride?: StateOverride,
     ): Promise<Either<RpcError, EstimateUserOpGasResult>> => {
-      const userOp = {
-        // Override gas params to estimate gas defaults
-        maxFeePerGas: 0,
-        maxPriorityFeePerGas: 0,
-        preVerificationGas: 21000,
-        callGasLimit: 10e6,
-        verificationGasLimit: 10e6,
-        ...userOpInput,
-      }
-      const validRes = await validateParameters(
-        deepHexlify(userOp),
+      const opReady = await vs.validateInputParameters(
+        deepHexlify({
+          // Override gas params to estimate gas defaults
+          maxFeePerGas: 0,
+          maxPriorityFeePerGas: 0,
+          preVerificationGas: 21000,
+          callGasLimit: 10e6,
+          verificationGasLimit: 10e6,
+          ...userOpInput,
+        }),
         entryPointInput,
         entryPoint.address,
-      )
-      if (validRes.isLeft()) {
-        unwrapLeftMap(validRes)
-      }
-
-      // Simulate the operation to get the gas limits
-      const { preOpGas, validAfter, validUntil } = await sim.simulateHandleOp(
-        userOp as UserOperation,
-        stateOverride,
+        true,
+        true,
+        false,
       )
 
-      // TODO: Use simulateHandleOp with proxy contract to estimate callGasLimit too
-      const callGasLimit = await ps.estimateGas(
-        entryPoint.address,
-        userOp.sender,
-        userOp.callData,
+      return opReady.foldAsync(
+        async (error: RpcError) => Either.Left(error),
+        async (userOp: UserOperation) => {
+          // Estimate verification gas and call gas
+          const [executionResult, callGasLimit] = await Promise.all([
+            sim.simulateHandleOp(userOp as UserOperation, stateOverride),
+            ps.estimateGas(entryPoint.address, userOp.sender, userOp.callData),
+          ])
+
+          // Estimate the pre-verification gas
+          const preVerificationGas = pvgc.calcPreVerificationGas({
+            ...userOp,
+            signature: undefined, // ignore signature for gas estimation to allow calcPreVerificationGas to use dummy signature
+          })
+
+          return Either.Right<RpcError, EstimateUserOpGasResult>({
+            preVerificationGas: 0,
+            verificationGasLimit: 0,
+            callGasLimit: 0,
+          })
+            .map((estimate) => ({
+              ...estimate,
+              preVerificationGas,
+            }))
+            .flatMap((estimate) => extractCallGasLimit(estimate, callGasLimit))
+            .flatMap((estimate) =>
+              extractVerifactionGasLimit(estimate, executionResult),
+            )
+        },
       )
-
-      // Estimate the pre-verification gas
-      const preVerificationGas = pvgc.calcPreVerificationGas({
-        ...userOp,
-        signature: undefined, // ignore signature for gas estimation to allow calcPreVerificationGas to use dummy signature
-      })
-
-      return Either.Right({
-        validAfter,
-        validUntil,
-        preVerificationGas,
-        verificationGasLimit: preOpGas,
-        callGasLimit,
-      })
     },
 
     sendUserOperation: async (
-      userOp: UserOperation,
+      userOpInput: UserOperation,
       entryPointInput: string,
     ): Promise<Either<RpcError, string>> => {
       Logger.debug('Running checks on userOp')
-      const validRes = await validateParameters(
-        userOp,
+      const opReady = await vs.validateInputParameters(
+        userOpInput,
         entryPointInput,
         entryPoint.address,
-      )
-      if (validRes.isLeft()) {
-        unwrapLeftMap(validRes)
-      }
-
-      const userOpReady = await resolveProperties(userOp)
-      vs.validateInputParameters(userOp, entryPointInput, true, true)
-      const validationResult = await vs.validateUserOp(userOp, true, undefined)
-
-      const userOpHash = await entryPoint.contract.getUserOpHash(
-        packUserOp(userOpReady),
-      )
-      const relayedOp: RelayUserOpParam = {
-        userOp,
-        userOpHash,
-        prefund: validationResult.returnInfo.prefund,
-        referencedContracts: validationResult.referencedContracts,
-        senderInfo: validationResult.senderInfo,
-        paymasterInfo: validationResult.paymasterInfo,
-        factoryInfo: validationResult.factoryInfo,
-        aggregatorInfo: validationResult.aggregatorInfo,
-      }
-
-      await mempoolManageSender.addUserOp(relayedOp)
-
-      Logger.debug(
-        { sender: relayedOp.userOp.sender, userOpHash: userOpHash },
-        'UserOp included in mempool...',
+        true,
+        true,
+        true,
       )
 
-      return Either.Right(userOpHash)
+      return opReady.foldAsync(
+        async (error: RpcError) => Either.Left(error),
+        async (userOp: UserOperation) => {
+          const [validationResult, userOpHash] = await Promise.all([
+            vs.validateUserOp(userOp, true, undefined),
+            entryPoint.contract.getUserOpHash(packUserOp(userOp)),
+          ])
+
+          return Either.Right<RpcError, RelayUserOpParam>(undefined)
+            .map((op) => ({
+              ...op,
+              userOp,
+            }))
+            .map((op) => ({
+              ...op,
+              userOpHash,
+            }))
+            .flatMap((op) =>
+              extractUseropVerifactionResult(op, validationResult),
+            )
+            .foldAsync(
+              async (error: RpcError) => Either.Left<RpcError, string>(error),
+              async (relayUserOpParam: RelayUserOpParam) => {
+                await mempoolManageSender.addUserOp(relayUserOpParam)
+
+                Logger.debug(
+                  { sender: userOp.sender, userOpHash: userOpHash },
+                  'UserOp included in mempool...',
+                )
+
+                return Either.Right<RpcError, string>(userOpHash)
+              },
+            )
+        },
+      )
     },
 
     getSupportedEntryPoints: async (): Promise<string[]> => {
@@ -272,56 +262,68 @@ export const createEthAPI = (
     getUserOperationReceipt: async (
       userOpHash: string,
     ): Promise<Either<RpcError, UserOperationReceipt | null>> => {
-      requireCond(
-        userOpHash?.toString()?.match(HEX_REGEX) != null,
-        'Missing/invalid userOpHash',
-        ValidationErrors.InvalidFields,
-      )
+      if (!(userOpHash?.toString()?.match(HEX_REGEX) != null)) {
+        return Either.Left(
+          new RpcError(
+            'Missing/invalid userOpHash',
+            ValidationErrors.InvalidFields,
+          ),
+        )
+      }
+
       const event = await eventsManager.getUserOperationEvent(userOpHash)
       if (event == null) {
-        return null
+        return Either.Right(null)
       }
-      const receipt = await event.getTransactionReceipt()
-      const logs = eventsManager.filterLogs(event, receipt.logs)
-      const confirmations = await receipt.confirmations()
 
-      return Either.Right({
-        userOpHash,
-        sender: event.args.sender,
-        nonce: event.args.nonce,
-        actualGasCost: event.args.actualGasCost,
-        actualGasUsed: event.args.actualGasUsed,
-        success: event.args.success,
-        logs,
-        receipt: {
-          to: receipt.to,
-          from: receipt.from,
-          contractAddress: receipt.contractAddress,
-          transactionIndex: receipt.index,
-          root: receipt.root,
-          gasUsed: receipt.gasUsed,
-          logsBloom: receipt.logsBloom,
-          blockHash: receipt.blockHash,
-          transactionHash: receipt.hash,
-          logs: receipt.logs,
-          blockNumber: receipt.blockNumber,
-          confirmations,
-          cumulativeGasUsed: receipt.cumulativeGasUsed,
-          effectiveGasPrice: receipt.gasPrice,
-          type: receipt.type,
-          status: receipt.status,
+      const receipt = await event.getTransactionReceipt()
+      return eventsManager.filterLogs(event, receipt.logs).foldAsync(
+        async (error: Error) =>
+          Either.Left(new RpcError(error.message, -32000)),
+        async (logs) => {
+          const confirmations = await receipt.confirmations()
+          return Either.Right({
+            userOpHash,
+            sender: event.args.sender,
+            nonce: event.args.nonce,
+            actualGasCost: event.args.actualGasCost,
+            actualGasUsed: event.args.actualGasUsed,
+            success: event.args.success,
+            logs,
+            receipt: {
+              to: receipt.to,
+              from: receipt.from,
+              contractAddress: receipt.contractAddress,
+              transactionIndex: receipt.index,
+              root: receipt.root,
+              gasUsed: receipt.gasUsed,
+              logsBloom: receipt.logsBloom,
+              blockHash: receipt.blockHash,
+              transactionHash: receipt.hash,
+              logs: receipt.logs,
+              blockNumber: receipt.blockNumber,
+              confirmations,
+              cumulativeGasUsed: receipt.cumulativeGasUsed,
+              effectiveGasPrice: receipt.gasPrice,
+              type: receipt.type,
+              status: receipt.status,
+            },
+          })
         },
-      })
+      )
     },
 
     getUserOperationByHash: async (
       userOpHash: string,
     ): Promise<Either<RpcError, UserOperationByHashResponse | null>> => {
-      requireCond(
-        userOpHash?.toString()?.match(HEX_REGEX) != null,
-        'Missing/invalid userOpHash',
-        ValidationErrors.InvalidFields,
-      )
+      if (!(userOpHash?.toString()?.match(HEX_REGEX) != null)) {
+        return Either.Left(
+          new RpcError(
+            'Missing/invalid userOpHash',
+            ValidationErrors.InvalidFields,
+          ),
+        )
+      }
 
       // TODO: First check if the userOp is pending in the mempool
       // if so the UserOperation is pending in the bundler’s mempool:
@@ -332,13 +334,13 @@ export const createEthAPI = (
       }
       const tx = await event.getTransaction()
       if (tx.to !== entryPoint.address) {
-        throw new Error('unable to parse transaction')
+        return Either.Left(new RpcError('unable to parse transaction', -32000))
       }
 
       const parsed = entryPoint.contract.interface.parseTransaction(tx)
       const ops: PackedUserOperation[] = parsed?.args.ops
       if (ops == null) {
-        throw new Error('failed to parse transaction')
+        return Either.Left(new RpcError('failed to parse transaction', -32000))
       }
 
       const op = ops.find(
@@ -347,7 +349,9 @@ export const createEthAPI = (
           BigInt(op.nonce) === BigInt(event.args?.nonce),
       )
       if (op == null) {
-        throw new Error('unable to find userOp in transaction')
+        return Either.Left(
+          new RpcError('unable to find userOp in transaction', -32000),
+        )
       }
 
       return Either.Right({

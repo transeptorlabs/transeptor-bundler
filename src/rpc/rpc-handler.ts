@@ -108,10 +108,16 @@ const transformRequest = <M extends MethodNames>(
   const params = request.params as MethodMapping[M]['params']
   const handler = handlerRegistry[method]
   return !handler
-    ? Either.Left(
+    ? Either.Left<RpcError, ValidateJsonRpcRequest<M>>(
         new RpcError(`Method ${request.method} is not supported`, -32600),
       )
-    : Either.Right({ method, params, id: request.id, handler })
+    : Either.Right<RpcError, ValidateJsonRpcRequest<M>>({
+        method,
+        params,
+        id: request.id,
+        handlerFunc: handler.handlerFunc,
+        validationFunc: handler.validationFunc,
+      })
 }
 
 /**
@@ -123,7 +129,7 @@ const transformRequest = <M extends MethodNames>(
 const isParmsValid = <M extends MethodNames>(
   validReq: ValidateJsonRpcRequest<M>,
 ): Either<RpcError, ValidateJsonRpcRequest<M>> => {
-  return !validReq.handler.validationFunc(validReq.params)
+  return !validReq.validationFunc(validReq.params)
     ? Either.Left(
         new RpcError(`Invalid params for method ${validReq.method}`, -32602),
       )
@@ -152,8 +158,8 @@ export const createRpcHandler = (
         async (error: RpcError) =>
           Either.Left<RpcError, JsonRpcResponse>(error),
         async (validateReq) => {
-          const { params, id, handler } = validateReq
-          const handlerResult = await handler.handlerFunc(params)
+          const { params, id, handlerFunc } = validateReq
+          const handlerResult = await Promise.resolve(handlerFunc(params))
           return isEither(handlerResult)
             ? handlerResult.fold(
                 (error: RpcError) => Either.Left(error),

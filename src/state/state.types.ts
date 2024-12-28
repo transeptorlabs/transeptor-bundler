@@ -81,8 +81,6 @@ export type StateService = {
    * @param keys - A single key or an array of keys to retrieve from the state.
    * @returns A promise that resolves to the requested state value.
    *
-   * @throws Error if the key is invalid.
-   *
    * @example
    * // single value can be retrieved:
    * const { standardPool } = await mempoolStateService.getState(StateKey.StandardPool);
@@ -104,9 +102,8 @@ export type StateService = {
    * Single setter to allow for atomic updates of any part of the state.
    *
    * @param updateFn A function that receives the current state value and returns a new value.
-   * @returns A promise that resolves when the state has been updated.
+   * @returns A promise that resolves to true if the update was successful and false otherwise.
    *
-   * @throws Error if the updated value does not contain the same key as input.
    *
    * @example
    *
@@ -118,7 +115,7 @@ export type StateService = {
    * })
    *
    * // multiple values can be updated at once:
-   * await mempoolStateService.updateState(
+   * const sucess = await mempoolStateService.updateState(
    *  [StateKey.StandardPool, StateKey.BlackList],
    * (currentValue) => {
    * return {
@@ -129,5 +126,5 @@ export type StateService = {
   updateState: <K extends keyof State>(
     key: StateKey | StateKey[],
     updateFn: (currentValue: Pick<State, K>) => Partial<State>,
-  ) => Promise<void>
+  ) => Promise<boolean>
 }

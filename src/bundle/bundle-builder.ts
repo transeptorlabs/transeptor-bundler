@@ -9,6 +9,7 @@ import {
   ValidationService,
 } from '../validation/index.js'
 import { ReputationManager, ReputationStatus } from '../reputation/index.js'
+import { Either } from '../monad/index.js'
 
 export type BundleBuilder = {
   createBundle: (
@@ -121,35 +122,40 @@ export const createBundleBuilder = (
           continue
         }
 
-        // validate UserOp and remove from mempool if failed
-        let validationResult: ValidateUserOpResult
-        try {
-          // re-validate UserOp. no need to check stake, since it cannot be reduced between first and 2nd validation
-          validationResult = await validationService.validateUserOp(
-            entry.userOp,
-            false,
-            entry.referencedContracts,
-          )
-        } catch (e: any) {
-          Logger.error(
-            { error: e.message, entry: entry },
-            'failed 2nd validation, removing from mempool:',
+        //  re-validate UserOp and remove from mempool if failed. no need to check stake, since it cannot be reduced between first and 2nd validation
+        let validationResult: ValidateUserOpResult = null
+        const reValidateRes = await validationService
+          .validateUserOp(entry.userOp, false, entry.referencedContracts)
+          .catch((e: any) =>
+            Either.Left<RpcError, ValidateUserOpResult>(
+              new RpcError(
+                e.message ?? 'unknown error message',
+                e.code ?? ValidationErrors.InternalError,
+                e.data,
+              ),
+            ),
           )
 
-          markedToRemoveUserOpsHashes.push({
-            err:
-              e instanceof RpcError
-                ? {
-                    message: e.message,
-                    errorCode: e.code,
-                  }
-                : {
-                    message: e.message,
-                    errorCode: ValidationErrors.InternalError,
-                  },
-            userOpHash: entry.userOpHash,
-            paymaster,
-          })
+        reValidateRes.fold(
+          (e) => {
+            Logger.error(
+              { error: e.message, entry: entry },
+              'failed 2nd validation, removing from mempool:',
+            )
+            markedToRemoveUserOpsHashes.push({
+              err: {
+                message: e.message,
+                errorCode: e.code,
+              },
+              userOpHash: entry.userOpHash,
+              paymaster,
+            })
+          },
+          (res) => {
+            validationResult = res
+          },
+        )
+        if (validationResult === null) {
           continue
         }
 

@@ -4,6 +4,7 @@ import { Logger } from '../logger/index.js'
 import { ProviderService } from '../provider/index.js'
 import { ReputationManager } from '../reputation/index.js'
 import { MempoolManageUpdater } from '../mempool/index.js'
+import { Either } from '../monad/index.js'
 
 export type EventManagerWithListener = {
   /**
@@ -19,7 +20,10 @@ export type EventManagerWithListener = {
    * @param userOpEvent - the event of our UserOp (known to exist in the logs)
    * @param logs - full bundle logs. after each group of logs there is a single UserOperationEvent with unique hash.
    */
-  filterLogs(userOpEvent: ethers.EventLog, logs: readonly Log[]): Log[]
+  filterLogs(
+    userOpEvent: ethers.EventLog,
+    logs: readonly Log[],
+  ): Either<Error, Log[]>
 }
 
 export const createEventManagerWithListener = (
@@ -187,7 +191,7 @@ export const createEventManagerWithListener = (
         return null
       }
 
-      const ev = events[0]
+      const ev = events[0] as ethers.EventLog
       if ('args' in ev) {
         return ev
       }
@@ -195,7 +199,10 @@ export const createEventManagerWithListener = (
       return null
     },
 
-    filterLogs: (userOpEvent: ethers.EventLog, logs: readonly Log[]): Log[] => {
+    filterLogs: (
+      userOpEvent: ethers.EventLog,
+      logs: readonly Log[],
+    ): Either<Error, Log[]> => {
       let startIndex = -1
       let endIndex = -1
 
@@ -209,7 +216,7 @@ export const createEventManagerWithListener = (
       )
 
       if (!beforeExecutionEvent) {
-        throw new Error('fatal: no BeforeExecution event found')
+        return Either.Left(new Error('fatal: no BeforeExecution event found'))
       }
 
       logs.forEach((log, index) => {
@@ -231,10 +238,10 @@ export const createEventManagerWithListener = (
       })
 
       if (endIndex === -1) {
-        throw new Error('fatal: no UserOperationEvent in logs')
+        return Either.Left(new Error('fatal: no UserOperationEvent in logs'))
       }
 
-      return logs.slice(startIndex + 1, endIndex)
+      return Either.Right(logs.slice(startIndex + 1, endIndex))
     },
   }
 }

@@ -17,14 +17,14 @@ export type MethodNames = keyof MethodMapping
 // Generic handler function type
 export type HandlerFunction<M extends MethodNames> = (
   params: MethodMapping[M]['params'],
-) => Promise<MethodMapping[M]['return']>
+) => Promise<MethodMapping[M]['return']> | MethodMapping[M]['return']
 
 export type HandlerValidationFunction = (params: unknown[]) => boolean
 
 export type HandlerRegistry = {
   [M in MethodNames]: {
-    validationFunc: HandlerValidationFunction
     handlerFunc: HandlerFunction<M>
+    validationFunc: (params: unknown[]) => boolean
   }
 }
 
@@ -32,10 +32,8 @@ export type ValidateJsonRpcRequest<M extends MethodNames> = {
   id: number | string
   method: M
   params: MethodMapping[M]['params']
-  handler: {
-    validationFunc: HandlerValidationFunction
-    handlerFunc: HandlerFunction<M>
-  }
+  handlerFunc: HandlerFunction<M>
+  validationFunc: HandlerValidationFunction
 }
 
 export type JsonRpcRequest = {

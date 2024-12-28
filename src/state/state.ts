@@ -1,5 +1,6 @@
 import { Mutex } from 'async-mutex'
 import { State, StateKey, StateService } from './state.types.js'
+import { Logger } from '../logger/index.js'
 
 export const createState = (): StateService => {
   const mutex = new Mutex()
@@ -35,7 +36,7 @@ export const createState = (): StateService => {
     updateState: async <K extends keyof State>(
       keys: StateKey | StateKey[],
       updateFn: (currentValue: Pick<State, K>) => Partial<State>,
-    ): Promise<void> => {
+    ): Promise<boolean> => {
       const release = await mutex.acquire()
       try {
         const newState = { ...state }
@@ -46,8 +47,10 @@ export const createState = (): StateService => {
           keyType: 'single' | 'multiple',
         ) => {
           if (Object.keys(updatedValues).length === 0) {
-            throw new Error(`Updated value must not be empty(${keyType})`)
+            Logger.warn(`Updated value must not be empty(${keyType})`)
+            return false
           }
+          return true
         }
 
         const validateKeysMatch = (
@@ -59,19 +62,22 @@ export const createState = (): StateService => {
             (key) => !updatedKeys.includes(key),
           )
           if (missingKeys.length > 0) {
-            throw new Error(
+            Logger.warn(
               `Updated value must contain the same keys as input, missing ${missingKeys.join(', ')}(${keyType})`,
             )
+            return false
           }
 
           const extraKeys = updatedKeys.filter(
             (key) => !expectedKeys.includes(key),
           )
           if (extraKeys.length > 0) {
-            throw new Error(
+            Logger.warn(
               `Updated value must only contain the same keys as input: received ${extraKeys.join(', ')}(${keyType})`,
             )
+            return false
           }
+          return true
         }
 
         // Process state update
@@ -86,21 +92,30 @@ export const createState = (): StateService => {
 
           const updatedValues = updateFn(currentValues)
 
-          validateNonEmpty(updatedValues, 'multiple')
-          validateKeysMatch(Object.keys(updatedValues), keys, 'multiple')
+          if (
+            !validateNonEmpty(updatedValues, 'multiple') ||
+            !validateKeysMatch(Object.keys(updatedValues), keys, 'multiple')
+          ) {
+            return false
+          }
 
           Object.assign(newState, updatedValues)
         } else {
           const currentValue = { [keys]: state[keys] } as Pick<State, K>
           const updatedValue = updateFn(currentValue)
 
-          validateNonEmpty(updatedValue, 'single')
-          validateKeysMatch(Object.keys(updatedValue), [keys], 'single')
+          if (
+            !validateNonEmpty(updatedValue, 'single') ||
+            !validateKeysMatch(Object.keys(updatedValue), [keys], 'single')
+          ) {
+            return false
+          }
 
           Object.assign(newState, updatedValue)
         }
 
         state = newState
+        return true
       } finally {
         release()
       }

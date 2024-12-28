@@ -14,7 +14,7 @@ import {
 export type DebugAPIMethodMapping = {
   debug_bundler_clearState: {
     params: []
-    return: 'ok'
+    return: string
   }
   debug_bundler_dumpMempool: {
     params: []
@@ -22,35 +22,35 @@ export type DebugAPIMethodMapping = {
   }
   debug_bundler_clearMempool: {
     params: []
-    return: 'ok'
+    return: string
   }
   debug_bundler_sendBundleNow: {
     params: []
-    return: SendBundleReturn | 'ok'
+    return: SendBundleReturn | string
   }
   debug_bundler_setBundlingMode: {
     params: [string]
-    return: 'ok'
+    return: string
   }
   debug_bundler_setBundleInterval: {
     params: []
-    return: 'ok'
+    return: string
   }
   debug_bundler_setReputation: {
-    params: [any]
-    return: 'ok'
+    params: [ReputationEntry[], string]
+    return: string
   }
   debug_bundler_dumpReputation: {
-    params: []
+    params: [string]
     return: ReputationEntry[]
   }
   debug_bundler_clearReputation: {
     params: []
-    return: 'ok'
+    return: string
   }
   debug_bundler_addUserOps: {
     params: [UserOperation[]]
-    return: 'ok'
+    return: string
   }
   debug_bundler_getStakeStatus: {
     params: [string, string]
@@ -61,7 +61,7 @@ export type DebugAPIMethodMapping = {
   }
   debug_bundler_setConfiguration: {
     params: [Partial<PreVerificationGasConfig>]
-    return: 'ok'
+    return: string
   }
 }
 
@@ -71,9 +71,12 @@ export type DebugAPI = {
   clearMempool(): Promise<void>
   setBundlingMode(mode: string): boolean
   sendBundleNow(): Promise<SendBundleReturn>
-  setReputation(param: any): Promise<ReputationEntry[]>
+  setReputation(
+    reputations: ReputationEntry[],
+    epAddress: string,
+  ): Promise<ReputationEntry[]>
   addUserOps(userOps: UserOperation[]): Promise<void>
-  dumpReputation(): Promise<ReputationEntry[]>
+  dumpReputation(entryPoint: string): Promise<ReputationEntry[]>
   clearReputation(): Promise<void>
   getStakeStatus(
     address: string,
@@ -122,8 +125,11 @@ export const createDebugAPI = (
       return result
     },
 
-    setReputation: async (param: any): Promise<ReputationEntry[]> => {
-      return await reputationManager.setReputation(param)
+    setReputation: async (
+      reputations: ReputationEntry[],
+      _: string,
+    ): Promise<ReputationEntry[]> => {
+      return await reputationManager.setReputation(reputations)
     },
 
     addUserOps: async (userOps: UserOperation[]): Promise<void> => {
@@ -143,7 +149,7 @@ export const createDebugAPI = (
       }
     },
 
-    dumpReputation: async (): Promise<ReputationEntry[]> => {
+    dumpReputation: async (_: string): Promise<ReputationEntry[]> => {
       return await reputationManager.dump()
     },
 

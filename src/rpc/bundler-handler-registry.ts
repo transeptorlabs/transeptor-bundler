@@ -8,7 +8,7 @@ export const createBundlerHandlerRegistry = (
 ): HandlerRegistry => ({
   web3_clientVersion: {
     validationFunc: (params) => params.length === 0,
-    handlerFunc: async () => web3.clientVersion(),
+    handlerFunc: () => web3.clientVersion(),
   },
 
   // Eth namespace
@@ -90,15 +90,15 @@ export const createBundlerHandlerRegistry = (
     handlerFunc: async () => 'ok', // TODO:  Placeholder for implementation, need to implement
   },
   debug_bundler_setReputation: {
-    validationFunc: (params) => params.length === 1 && Array.isArray(params[0]),
+    validationFunc: (params) => params.length === 2 && Array.isArray(params[0]),
     handlerFunc: async (params) => {
-      await debug.setReputation(params[0])
+      await debug.setReputation(params[0], params[1])
       return 'ok'
     },
   },
   debug_bundler_dumpReputation: {
-    validationFunc: (params) => params.length === 0,
-    handlerFunc: async () => await debug.dumpReputation(),
+    validationFunc: (params) => params.length === 1,
+    handlerFunc: async (params) => await debug.dumpReputation(params[0]),
   },
   debug_bundler_clearReputation: {
     validationFunc: (params) => params.length === 0,

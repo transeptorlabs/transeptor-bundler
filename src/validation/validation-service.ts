@@ -1,13 +1,9 @@
-import { ContractFactory, ethers } from 'ethers'
+import { ContractFactory, ethers, resolveProperties } from 'ethers'
 
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from '../abis/index.js'
 import { Simulator } from '../sim/index.js'
 import { Logger } from '../logger/index.js'
-import {
-  StorageMap,
-  UserOperation,
-  BundlerCollectorReturn,
-} from '../types/index.js'
+import { StorageMap, UserOperation } from '../types/index.js'
 import {
   ReferencedCodeHashes,
   ValidateUserOpResult,
@@ -17,11 +13,12 @@ import {
 import {
   requireCond,
   requireAddressAndFields,
-  toJsonString,
+  RpcError,
 } from '../utils/index.js'
 
 import { ProviderService } from '../provider/index.js'
 import { PreVerificationGasCalculator } from '../gas/index.js'
+import { Either } from '../monad/index.js'
 
 export type ValidationService = {
   /**
@@ -38,34 +35,105 @@ export type ValidationService = {
     userOp: UserOperation,
     checkStakes: boolean,
     previousCodeHashes?: ReferencedCodeHashes,
-  ): Promise<ValidateUserOpResult>
+  ): Promise<Either<RpcError, ValidateUserOpResult>>
 
   /**
    * perform static checking on input parameters.
    *
    * @param userOp
    * @param entryPointInput
+   * @param entryPointAddress
    * @param requireSignature
    * @param requireGasParams
+   * @param preVerificationGasCheck
    */
   validateInputParameters(
     userOp: UserOperation,
     entryPointInput: string,
+    entryPointAddress: string,
     requireSignature: boolean,
     requireGasParams: boolean,
-  ): void
+    preVerificationGasCheck: boolean,
+  ): Promise<Either<RpcError, UserOperation>>
+}
+
+const checkValidationResult = (
+  res: ValidationResult,
+  userOp: UserOperation,
+): Either<RpcError, ValidationResult> => {
+  const VALID_UNTIL_FUTURE_SECONDS = 30 // how much time into the future a UserOperation must be valid in order to be accepted
+
+  if (res.returnInfo.sigFailed) {
+    return Either.Left(
+      new RpcError(
+        'Invalid UserOp signature',
+        ValidationErrors.InvalidSignature,
+      ),
+    )
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  if (!(res.returnInfo.validAfter <= now)) {
+    return Either.Left(
+      new RpcError(
+        `time-range in the future time ${res.returnInfo.validAfter}, now=${now}`,
+        ValidationErrors.NotInTimeRange,
+      ),
+    )
+  }
+
+  if (
+    !(res.returnInfo.validUntil === null || res.returnInfo.validUntil >= now)
+  ) {
+    return Either.Left(
+      new RpcError('already expired', ValidationErrors.NotInTimeRange),
+    )
+  }
+
+  if (
+    !(
+      res.returnInfo.validUntil == null ||
+      res.returnInfo.validUntil > now + VALID_UNTIL_FUTURE_SECONDS
+    )
+  ) {
+    Either.Left(
+      new RpcError('expires too soon', ValidationErrors.NotInTimeRange),
+    )
+  }
+
+  if (!(res.aggregatorInfo == null)) {
+    Either.Left(
+      new RpcError(
+        'Currently not supporting aggregator',
+        ValidationErrors.UnsupportedSignatureAggregator,
+      ),
+    )
+  }
+
+  const verificationCost =
+    BigInt(res.returnInfo.preOpGas) - BigInt(userOp.preVerificationGas)
+  const extraGas =
+    BigInt(userOp.verificationGasLimit) - BigInt(verificationCost)
+  if (!(extraGas >= 2000)) {
+    Either.Left(
+      new RpcError(
+        `verificationGas should have extra 2000 gas. has only ${extraGas}`,
+        ValidationErrors.SimulateValidation,
+      ),
+    )
+  }
+
+  return Either.Right(res)
 }
 
 export const createValidationService = (
   ps: ProviderService,
   sim: Simulator,
   pvgc: PreVerificationGasCalculator,
-  entryPointAddress: string,
   isUnsafeMode: boolean,
   nativeTracerEnabled: boolean,
 ): ValidationService => {
   const HEX_REGEX = /^0x[a-fA-F\d]*$/i
-  const VALID_UNTIL_FUTURE_SECONDS = 30 // how much time into the future a UserOperation must be valid in order to be accepted
   const getCodeHashesFactory = new ethers.ContractFactory(
     GET_CODE_HASH_ABI,
     GET_CODE_HASH_BYTECODE,
@@ -76,7 +144,7 @@ export const createValidationService = (
       userOp: UserOperation,
       checkStakes: boolean,
       previousCodeHashes?: ReferencedCodeHashes,
-    ): Promise<ValidateUserOpResult> => {
+    ): Promise<Either<RpcError, ValidateUserOpResult>> => {
       if (
         previousCodeHashes != null &&
         previousCodeHashes.addresses.length > 0
@@ -94,7 +162,7 @@ export const createValidationService = (
         )
       }
 
-      let res: ValidationResult
+      let res = Either.Right<RpcError, ValidationResult>(undefined)
       let codeHashes: ReferencedCodeHashes = {
         addresses: [],
         hash: '',
@@ -103,112 +171,105 @@ export const createValidationService = (
 
       // if we are in unsafe mode, we skip the full validation with custom tracer and only run the partial validation with no stake or opcode checks
       if (!isUnsafeMode) {
-        let tracerResult: BundlerCollectorReturn
-        ;[res, tracerResult] = await sim
-          .fullSimulateValidation(userOp, nativeTracerEnabled)
-          .catch((e) => {
-            throw e
-          })
-
-        let contractAddresses: string[]
-        ;[contractAddresses, storageMap] = sim.tracerResultParser(
+        const fullSimulateValidationResult = await sim.fullSimulateValidation(
           userOp,
-          tracerResult,
-          res,
+          nativeTracerEnabled,
         )
 
-        // if no previous contract hashes, then calculate hashes of contracts
-        if (previousCodeHashes == null) {
-          const { hash } = await ps.runContractScript(getCodeHashesFactory, [
-            contractAddresses,
-          ])
+        res = await fullSimulateValidationResult.foldAsync(
+          async (error) => {
+            return Either.Left<RpcError, ValidationResult>(error)
+          },
+          async (result) => {
+            const [validationResult, tracerResults] = result
 
-          codeHashes = {
-            addresses: contractAddresses,
-            hash: hash,
-          }
-        }
+            let contractAddresses: string[]
+            ;[contractAddresses, storageMap] = sim.tracerResultParser(
+              userOp,
+              tracerResults,
+              validationResult,
+            )
 
-        if ((res as any) === '0x') {
-          throw new Error('simulateValidation reverted with no revert string!')
-        }
+            // if no previous contract hashes, then calculate hashes of contracts
+            if (previousCodeHashes == null) {
+              const { hash } = await ps.runContractScript(
+                getCodeHashesFactory,
+                [contractAddresses],
+              )
+
+              codeHashes = {
+                addresses: contractAddresses,
+                hash: hash,
+              }
+            }
+
+            if ((result as any) === '0x') {
+              return Either.Left(
+                new RpcError(
+                  'simulateValidation reverted with no revert string!',
+                  ValidationErrors.SimulateValidation,
+                ),
+              )
+            }
+
+            return Either.Right(validationResult)
+          },
+        )
       } else {
         res = await sim.partialSimulateValidation(userOp)
       }
 
-      requireCond(
-        !res.returnInfo.sigFailed,
-        'Invalid UserOp signature or paymaster signature',
-        ValidationErrors.InvalidSignature,
-      )
+      return res
+        .flatMap((res) => checkValidationResult(res, userOp))
+        .fold(
+          (error) => Either.Left(error),
+          (res) => {
+            Logger.debug('UserOp passed validation')
 
-      const now = Math.floor(Date.now() / 1000)
-      requireCond(
-        res.returnInfo.validAfter <= now,
-        `time-range in the future time ${res.returnInfo.validAfter}, now=${now}`,
-        ValidationErrors.NotInTimeRange,
-      )
-
-      requireCond(
-        res.returnInfo.validUntil == null || res.returnInfo.validUntil >= now,
-        'already expired',
-        ValidationErrors.NotInTimeRange,
-      )
-
-      requireCond(
-        res.returnInfo.validUntil == null ||
-          res.returnInfo.validUntil > now + VALID_UNTIL_FUTURE_SECONDS,
-        'expires too soon',
-        ValidationErrors.NotInTimeRange,
-      )
-
-      requireCond(
-        res.aggregatorInfo == null,
-        'Currently not supporting aggregator',
-        ValidationErrors.UnsupportedSignatureAggregator,
-      )
-
-      const verificationCost =
-        BigInt(res.returnInfo.preOpGas) - BigInt(userOp.preVerificationGas)
-      const extraGas =
-        BigInt(userOp.verificationGasLimit) - BigInt(verificationCost)
-      requireCond(
-        extraGas >= 2000,
-        `verificationGas should have extra 2000 gas. has only ${extraGas}`,
-        ValidationErrors.SimulateValidation,
-      )
-
-      Logger.debug('UserOp passed validation')
-      return {
-        ...res,
-        referencedContracts: codeHashes,
-        storageMap,
-      }
+            return Either.Right({
+              ...res,
+              referencedContracts: codeHashes,
+              storageMap,
+            })
+          },
+        )
     },
 
-    validateInputParameters: (
-      userOp: UserOperation,
+    validateInputParameters: async (
+      userOp1: UserOperation,
       entryPointInput: string,
+      entryPointAddress: string,
       requireSignature = true,
       requireGasParams = true,
-    ): void => {
-      requireCond(
-        entryPointInput != null,
-        'No entryPoint param',
-        ValidationErrors.InvalidFields,
-      )
-      requireCond(
-        entryPointInput.toLowerCase() === entryPointAddress.toLowerCase(),
-        `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${entryPointAddress}`,
-        ValidationErrors.InvalidFields,
-      )
-
+      preVerificationGasCheck = true,
+    ): Promise<Either<RpcError, UserOperation>> => {
+      if (!entryPointInput) {
+        return Either.Left(
+          new RpcError('No entryPoint param', ValidationErrors.InvalidFields),
+        )
+      }
+      if (
+        entryPointInput?.toString().toLowerCase() !==
+        entryPointAddress.toLowerCase()
+      ) {
+        return Either.Left(
+          new RpcError(
+            `The EntryPoint at "${entryPointInput}" is not supported. This bundler uses ${entryPointAddress}`,
+            ValidationErrors.InvalidFields,
+          ),
+        )
+      }
       // minimal sanity check: userOp exists, and all members are hex
-      requireCond(
-        userOp != null,
-        'No UserOperation param',
-        ValidationErrors.InvalidFields,
-      )
+      if (!userOp1) {
+        return Either.Left(
+          new RpcError(
+            'No UserOperation param',
+            ValidationErrors.InvalidFields,
+          ),
+        )
+      }
+
+      const userOp = await resolveProperties(userOp1)
 
       const fields = ['sender', 'nonce', 'callData']
       if (requireSignature) {
@@ -223,19 +284,26 @@ export const createValidationService = (
           'maxPriorityFeePerGas',
         )
       }
-      fields.forEach((key) => {
-        const value: string = (userOp as any)[key]?.toString()
-        requireCond(
-          value != null,
-          'Missing userOp field: ' + key + ' ' + toJsonString(userOp),
-          ValidationErrors.InvalidFields,
-        )
-        requireCond(
-          value.match(HEX_REGEX) != null,
-          `Invalid hex value for property ${key}:${value} in UserOp`,
-          ValidationErrors.InvalidFields,
-        )
-      })
+      for (const key of fields) {
+        if (!userOp[key]) {
+          return Either.Left(
+            new RpcError(
+              `Missing userOp field: ${key}`,
+              ValidationErrors.InvalidFields,
+            ),
+          )
+        }
+
+        const value: string = userOp[key].toString()
+        if (!value.match(HEX_REGEX)) {
+          return Either.Left(
+            new RpcError(
+              `Invalid hex value for property ${key} in UserOp`,
+              ValidationErrors.InvalidFields,
+            ),
+          )
+        }
+      }
 
       requireAddressAndFields(
         userOp,
@@ -245,16 +313,20 @@ export const createValidationService = (
       )
       requireAddressAndFields(userOp, 'factory', ['factoryData'])
 
-      const preVerificationGas = pvgc.calcPreVerificationGas(userOp)
-      if (preVerificationGas != null) {
-        const { isPreVerificationGasValid, minRequiredPreVerificationGas } =
-          pvgc.validatePreVerificationGas(userOp)
-        requireCond(
-          isPreVerificationGasValid,
-          `preVerificationGas too low: expected at least ${minRequiredPreVerificationGas}, provided only ${Number(BigInt(userOp.preVerificationGas))})`,
-          ValidationErrors.InvalidFields,
-        )
+      if (preVerificationGasCheck) {
+        const preVerificationGas = pvgc.calcPreVerificationGas(userOp)
+        if (preVerificationGas != null) {
+          const { isPreVerificationGasValid, minRequiredPreVerificationGas } =
+            pvgc.validatePreVerificationGas(userOp)
+          requireCond(
+            isPreVerificationGasValid,
+            `preVerificationGas too low: expected at least ${minRequiredPreVerificationGas}, provided only ${Number(BigInt(userOp.preVerificationGas))})`,
+            ValidationErrors.InvalidFields,
+          )
+        }
       }
+
+      return Either.Right(userOp)
     },
   }
 }

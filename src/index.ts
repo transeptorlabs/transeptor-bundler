@@ -61,7 +61,6 @@ const runBundler = async () => {
     ps,
     sim,
     pvgc,
-    config.entryPoint.address,
     config.isUnsafeMode,
     config.nativeTracerEnabled,
   )
