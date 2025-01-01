@@ -21,7 +21,6 @@ import {
 
 import { ProviderService } from '../../provider/index.js'
 import { Simulator, StateOverride } from '../../sim/index.js'
-import { Logger } from '../../logger/index.js'
 import { ValidationService } from '../../validation/index.js'
 import { EventManagerWithListener } from '../../event/index.js'
 import { MempoolManageSender } from '../../mempool/index.js'
@@ -128,6 +127,20 @@ const extractUseropVerifactionResult = (
   )
 }
 
+const sendUserOpToMempool = async (
+  relayUserOpParam: RelayUserOpParam,
+  addUserOp: (
+    relayUserOpParam: RelayUserOpParam,
+  ) => Promise<Either<RpcError, string>>,
+): Promise<Either<RpcError, string>> => {
+  const res = await addUserOp(relayUserOpParam)
+
+  return res.fold(
+    (error: RpcError) => Either.Left<RpcError, string>(error),
+    (hash) => Either.Right<RpcError, string>(hash),
+  )
+}
+
 export const createEthAPI = (
   ps: ProviderService,
   sim: Simulator,
@@ -208,7 +221,6 @@ export const createEthAPI = (
       userOpInput: UserOperation,
       entryPointInput: string,
     ): Promise<Either<RpcError, string>> => {
-      Logger.debug('Running checks on userOp')
       const opReady = await vs.validateInputParameters(
         userOpInput,
         entryPointInput,
@@ -240,16 +252,11 @@ export const createEthAPI = (
             )
             .foldAsync(
               async (error: RpcError) => Either.Left<RpcError, string>(error),
-              async (relayUserOpParam: RelayUserOpParam) => {
-                await mempoolManageSender.addUserOp(relayUserOpParam)
-
-                Logger.debug(
-                  { sender: userOp.sender, userOpHash: userOpHash },
-                  'UserOp included in mempool...',
-                )
-
-                return Either.Right<RpcError, string>(userOpHash)
-              },
+              async (relayUserOpParam: RelayUserOpParam) =>
+                sendUserOpToMempool(
+                  relayUserOpParam,
+                  mempoolManageSender.addUserOp,
+                ),
             )
         },
       )

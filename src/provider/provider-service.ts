@@ -303,13 +303,6 @@ export const createProviderService = (
           },
         ])
         .catch((e) => {
-          Logger.warn(
-            {
-              error: e,
-            },
-            'error sending transaction to Flashbots relay',
-          )
-
           const body = e.body
           if (body != null) {
             const jsonbody = JSON.parse(body)

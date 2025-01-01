@@ -69,7 +69,7 @@ export type DebugAPI = {
   clearState(): Promise<void>
   dumpMempool(): Promise<UserOperation[]>
   clearMempool(): Promise<void>
-  setBundlingMode(mode: string): boolean
+  setBundlingMode(mode: 'auto' | 'manual'): boolean
   sendBundleNow(): Promise<SendBundleReturn>
   setReputation(
     reputations: ReputationEntry[],
@@ -107,10 +107,7 @@ export const createDebugAPI = (
       await mempoolManagerCore.clearState()
     },
 
-    setBundlingMode: (mode: string): boolean => {
-      if (mode !== 'auto' && mode !== 'manual') {
-        throw new Error('Invalid bundling mode')
-      }
+    setBundlingMode: (mode: 'auto' | 'manual'): boolean => {
       bundleManager.setBundlingMode(mode)
       return true
     },

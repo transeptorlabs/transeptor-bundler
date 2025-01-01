@@ -10,7 +10,7 @@ pdm run test --log-rpc -vvv --url http://localhost:4337/rpc  --entry-point 0x5Fb
 
 To test it, run: 
 ```shell script
-pdm run test -k test_paymaster_on_account_failure --log-rpc -vvv --url http://localhost:4337/rpc  --entry-point 0x5FbDB2315678afecb367f032d93F642f64180aa3 --ethereum-node http://localhost:8545 
+pdm run test -k <name_of_test> --log-rpc -vvv --url http://localhost:4337/rpc  --entry-point 0x5FbDB2315678afecb367f032d93F642f64180aa3 --ethereum-node http://localhost:8545 
 ```
 
 ## Run reputation rules tests

@@ -222,7 +222,10 @@ const runBundler = async () => {
         mode: config.isUnsafeMode ? 'UNSAFE' : 'SAFE',
         nativeTracerEnabled: config.nativeTracerEnabled,
         txMode: config.txMode,
+        bundleMode: config.isAutoBundle ? 'auto' : 'manual',
+        autoBundleInterval: `${config.autoBundleInterval} ms`,
         version: config.clientVersion,
+        bundleSize: config.bundleSize,
       },
       'Builder passed preflight checks',
     )

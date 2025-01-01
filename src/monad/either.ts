@@ -139,23 +139,6 @@ class Right<L, R> extends Either<L, R> {
 }
 
 /**
- * Unwraps the `Left` value from an `Either` and returns it.
- * If the `Either` is a `Right`, it throws an error.
- *
- * @param either The `Either` value that may be a `Left` or a `Right`.
- * @returns A new `Left` with the same error value if the `Either` is `Left`.
- * @throws An error if the `Either` is a `Right`.
- */
-export const unwrapLeftMap = <L, R>(either: Either<L, R>) => {
-  return either.fold(
-    (error) => Either.Left(error),
-    () => {
-      throw new Error('Expected a Left, but got a Right')
-    },
-  )
-}
-
-/**
  * Determines if the provided value is an instance of `Either`.
  *
  * @param value - The value to check.

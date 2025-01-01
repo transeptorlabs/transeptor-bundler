@@ -269,27 +269,24 @@ const runNativeTracer = async (
     stateOverrides,
   })
 
+  const runDebugTraceWithPreState = async (preState: {
+    [addr: string]: any
+  }): Promise<Either<RpcError, BundlerCollectorReturn>> => {
+    return ps.debug_traceCall<BundlerCollectorReturn>(
+      tx,
+      {
+        tracer: bundlerNativeTracerName,
+        stateOverrides: normalizePreState(preState),
+      },
+      true,
+    )
+  }
+
   return preStateRes.foldAsync(
     async (error) => {
       return Either.Left(error)
     },
-    async (preState) => {
-      // Then we use native tracer to run the full validation
-      const nativeTraceResult =
-        await ps.debug_traceCall<BundlerCollectorReturn>(
-          tx,
-          {
-            tracer: bundlerNativeTracerName,
-            stateOverrides: normalizePreState(preState),
-          },
-          true,
-        )
-
-      return nativeTraceResult.fold(
-        (error) => Either.Left(error),
-        (res) => Either.Right(res),
-      )
-    },
+    async (preState) => runDebugTraceWithPreState(preState),
   )
 }
 

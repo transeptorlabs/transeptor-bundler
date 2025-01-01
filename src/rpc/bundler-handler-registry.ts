@@ -79,9 +79,11 @@ export const createBundlerHandlerRegistry = (
   },
   debug_bundler_setBundlingMode: {
     validationFunc: (params) =>
-      params.length === 1 && typeof params[0] === 'string',
+      params.length === 1 &&
+      typeof params[0] === 'string' &&
+      ['auto', 'manual'].includes(params[0]),
     handlerFunc: async (params) => {
-      debug.setBundlingMode(params[0])
+      debug.setBundlingMode(params[0] as 'auto' | 'manual')
       return 'ok'
     },
   },

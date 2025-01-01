@@ -19,6 +19,7 @@ export type EventManagerWithListener = {
    *
    * @param userOpEvent - the event of our UserOp (known to exist in the logs)
    * @param logs - full bundle logs. after each group of logs there is a single UserOperationEvent with unique hash.
+   * @returns logs for the given userOpHash or an error if not found
    */
   filterLogs(
     userOpEvent: ethers.EventLog,
@@ -35,6 +36,7 @@ export const createEventManagerWithListener = (
   let lastBlock: number | null = null
   let eventAggregator: string | null = null
   let eventAggregatorTxHash: string | null = null
+  const LAST_1000_BLOCKS = 1000
 
   /**
    * Handle an event from the entrypoint contract.
@@ -47,7 +49,7 @@ export const createEventManagerWithListener = (
         await handleUserOperationEvent(ev)
         break
       case 'AccountDeployed':
-        handleAccountDeployedEvent(ev)
+        await handleAccountDeployedEvent(ev)
         break
       case 'SignatureAggregatorChanged':
         handleAggregatorChangedEvent(ev)
@@ -76,10 +78,10 @@ export const createEventManagerWithListener = (
    *
    * @param data - the address to check
    */
-  const includedAddress = (data: string | null): void => {
+  const includedAddress = async (data: string | null): Promise<void> => {
     if (data != null && data.length > 42) {
       const addr = data.slice(0, 42)
-      reputationManager.updateIncludedStatus(addr)
+      await reputationManager.updateIncludedStatus(addr)
     }
   }
 
@@ -94,24 +96,14 @@ export const createEventManagerWithListener = (
     const userOpHash = ev.args.userOpHash
     const success = ev.args.success
 
-    if (success) {
-      Logger.debug(
-        { userOpHash },
-        'UserOperationEvent success. Removing from mempool',
-      )
-      await mempoolManageUpdater.removeUserOp(userOpHash)
-    } else {
-      Logger.debug(
-        { userOpHash },
-        'UserOperationEvent failed. Updating status in mempool',
-      )
-      await mempoolManageUpdater.updateEntryStatus(userOpHash, 'failed')
-    }
+    success
+      ? await mempoolManageUpdater.removeUserOp(userOpHash)
+      : await mempoolManageUpdater.updateEntryStatus(userOpHash, 'failed')
 
     // TODO: Make this a batch operation
-    includedAddress(ev.args.sender)
-    includedAddress(ev.args.paymaster)
-    includedAddress(getEventAggregator(ev))
+    await includedAddress(ev.args.sender)
+    await includedAddress(ev.args.paymaster)
+    await includedAddress(getEventAggregator(ev))
   }
 
   /**
@@ -119,8 +111,10 @@ export const createEventManagerWithListener = (
    *
    * @param ev - the event
    */
-  const handleAccountDeployedEvent = (ev: ethers.EventLog): void => {
-    includedAddress(ev.args.factory)
+  const handleAccountDeployedEvent = async (
+    ev: ethers.EventLog,
+  ): Promise<void> => {
+    await includedAddress(ev.args.factory)
   }
 
   const handleAggregatorChangedEvent = (ev: ethers.EventLog): void => {
@@ -150,10 +144,12 @@ export const createEventManagerWithListener = (
   return {
     handlePastEvents: async (): Promise<void> => {
       if (!lastBlock) {
-        lastBlock = Math.max(1, (await providerService.getBlockNumber()) - 1000)
+        lastBlock = Math.max(
+          1,
+          (await providerService.getBlockNumber()) - LAST_1000_BLOCKS,
+        )
       }
 
-      // get all events since last run for each filter
       const filters = [
         entryPointContract.filters.UserOperationEvent(),
         entryPointContract.filters.AccountDeployed(),
