@@ -5,6 +5,18 @@ All notable changes to this project will be manually documented in this file by 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-xx-xx
+
+### Added
+- Add Either monad type for better error handling([#104](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
+  
+### Changed
+- Refactor modules to use Either monad:
+  - validation([#104](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
+  - sim([#104](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
+  - rpc([#104](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
+  - event([#104](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
+
 ## [v0.8.0-alpha.0] - 2024-12-02
 
 ### Added

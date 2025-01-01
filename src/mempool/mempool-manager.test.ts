@@ -5,14 +5,12 @@ import {
   mockEntryPointGetUserOpHash,
 } from '../../test/test-helpers.js'
 import { createState } from '../state/index.js'
-import {
-  createMempoolManagerCore,
-  MempoolManagerCore,
-} from './mempool-manager.js'
+import { createMempoolManagerCore } from './mempool-manager.js'
 import {
   mockReputationManager,
   mockDepositManager,
 } from '../../test/mocks/index.js'
+import { MempoolManagerCore } from './mempool.types.js'
 
 describe('MempoolManagerCore', () => {
   let mempoolManager: MempoolManagerCore

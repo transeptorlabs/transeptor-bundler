@@ -1,13 +1,15 @@
-import { Logger } from '../logger/index.js'
-import type {
-  HandlerRegistry,
-  JsonRpcErrorResponse,
-  JsonRpcRequest,
-  JsonRpcResponse,
-  JsonRpcSuccessResponse,
-  RpcHandler,
+import {
+  type MethodNames,
+  type HandlerRegistry,
+  type JsonRpcRequest,
+  type JsonRpcResponse,
+  type JsonRpcSuccessResponse,
+  type RpcHandler,
+  type MethodMapping,
+  ValidateJsonRpcRequest,
 } from './rpc.types.js'
 import { deepHexlify, RpcError } from '../utils/index.js'
+import { Either, isEither } from '../monad/index.js'
 
 /*
  * Construct JSON RPC success response
@@ -15,97 +17,123 @@ import { deepHexlify, RpcError } from '../utils/index.js'
 const createSuccessResponse = (
   id: number | string,
   result: any,
-): JsonRpcSuccessResponse => {
+): Either<RpcError, JsonRpcSuccessResponse> => {
   try {
     const hexlifyResult = deepHexlify(result)
-    return {
+    return Either.Right({
       jsonrpc: '2.0',
       id,
       result: hexlifyResult,
-    }
+    })
   } catch (error) {
-    throw new RpcError('Error hexlifying result', -32603, error)
+    Either.Left(new RpcError('Error hexlifying result', -32603, error))
   }
 }
 
-/*
- * Construct JSON RPC error response
- */
-const createErrorResponse = (
-  id: number | string,
-  code: number,
-  message: string,
-  data: any = undefined,
-): JsonRpcErrorResponse => {
-  const errorResponse: JsonRpcErrorResponse = {
-    jsonrpc: '2.0',
-    id,
-    error: {
-      code,
-      message,
-    },
-  }
-
-  if (data) {
-    errorResponse.error.data = data
-  }
-
-  return errorResponse
-}
-
-const jsonRpcRequestValidator = (
+const isValidRpc = (
   request: JsonRpcRequest,
-  supportedApisPrefixes: string[],
-): boolean | JsonRpcErrorResponse => {
-  if (!request.jsonrpc || request.jsonrpc !== '2.0') {
-    return createErrorResponse(
-      request.id,
-      -32600,
-      'Invalid Request, jsonrpc must be exactly "2.0"',
-    )
-  }
+): Either<RpcError, JsonRpcRequest> => {
+  return !request.jsonrpc || request.jsonrpc !== '2.0'
+    ? Either.Left(
+        new RpcError('Invalid Request, jsonrpc must be exactly "2.0"', -32600),
+      )
+    : Either.Right(request)
+}
 
-  if (!request.method || typeof request.method !== 'string') {
-    return createErrorResponse(
-      request.id,
-      -32600,
-      'Invalid Request, method must be a string',
-    )
-  }
+const isValidMethodString = (
+  request: JsonRpcRequest,
+): Either<RpcError, JsonRpcRequest> => {
+  return !request.method || typeof request.method !== 'string'
+    ? Either.Left(
+        new RpcError('Invalid Request, method must be a string', -32600),
+      )
+    : Either.Right(request)
+}
 
-  if (request.id === undefined) {
-    return createErrorResponse(
-      request.id,
-      -32600,
-      'Invalid Request, id is missing',
-    )
-  }
+const requestIdNotMissing = (
+  request: JsonRpcRequest,
+): Either<RpcError, JsonRpcRequest> => {
+  return request.id === undefined
+    ? Either.Left(new RpcError('Invalid Request, id is missing', -32600))
+    : Either.Right(request)
+}
 
+const idTypeStringOrNumber = (
+  request: JsonRpcRequest,
+): Either<RpcError, JsonRpcRequest> => {
   const idType = typeof request.id
-  if (idType !== 'number' && idType !== 'string') {
-    return createErrorResponse(
-      request.id,
-      -32600,
-      'Invalid Request, id must be a number or string',
-    )
-  }
+  return idType !== 'number' && idType !== 'string'
+    ? Either.Left(
+        new RpcError('Invalid Request, id must be a number or string', -32600),
+      )
+    : Either.Right(request)
+}
 
-  if (!request.params || !Array.isArray(request.params)) {
-    return createErrorResponse(
-      request.id,
-      -32600,
-      'Invalid Request, params must be an array',
-    )
-  }
+const paramsIsArray = (
+  request: JsonRpcRequest,
+): Either<RpcError, JsonRpcRequest> => {
+  return !request.params || !Array.isArray(request.params)
+    ? Either.Left(
+        new RpcError('Invalid Request, params must be an array', -32600),
+      )
+    : Either.Right(request)
+}
 
-  if (supportedApisPrefixes.indexOf(request.method.split('_')[0]) === -1) {
-    return createErrorResponse(
-      request.id,
-      -32601,
-      `Method ${request.method} is not supported`,
-    )
-  }
-  return true
+const apiEnabled = (
+  request: JsonRpcRequest,
+  supportedApiPrefixes: string[],
+): Either<RpcError, JsonRpcRequest> => {
+  return supportedApiPrefixes.indexOf(request.method.split('_')[0]) === -1
+    ? Either.Left(
+        new RpcError(
+          `Method ${request.method} is not supported. Make sure the API is enabled in the config`,
+          -32600,
+        ),
+      )
+    : Either.Right(request)
+}
+
+/**
+ * Transform the request object to validate request format
+ *
+ * @param request - JSON RPC request object
+ * @param handlerRegistry - HandlerRegistry object
+ * @returns The transformed request object with the handler function and validation function
+ */
+const transformRequest = <M extends MethodNames>(
+  request: JsonRpcRequest,
+  handlerRegistry: HandlerRegistry,
+): Either<RpcError, ValidateJsonRpcRequest<M>> => {
+  const method = request.method as M
+  const params = request.params as MethodMapping[M]['params']
+  const handler = handlerRegistry[method]
+  return !handler
+    ? Either.Left<RpcError, ValidateJsonRpcRequest<M>>(
+        new RpcError(`Method ${request.method} is not supported`, -32600),
+      )
+    : Either.Right<RpcError, ValidateJsonRpcRequest<M>>({
+        method,
+        params,
+        id: request.id,
+        handlerFunc: handler.handlerFunc,
+        validationFunc: handler.validationFunc,
+      })
+}
+
+/**
+ * Validate the parameters of the request object
+ *
+ * @param validReq - The transformed request object
+ * @returns The transformed request object if the parameters are valid
+ */
+const isParmsValid = <M extends MethodNames>(
+  validReq: ValidateJsonRpcRequest<M>,
+): Either<RpcError, ValidateJsonRpcRequest<M>> => {
+  return !validReq.validationFunc(validReq.params)
+    ? Either.Left(
+        new RpcError(`Invalid params for method ${validReq.method}`, -32602),
+      )
+    : Either.Right(validReq)
 }
 
 export const createRpcHandler = (
@@ -115,49 +143,31 @@ export const createRpcHandler = (
   return {
     doHandleRequest: async (
       request: JsonRpcRequest,
-    ): Promise<JsonRpcResponse> => {
-      try {
-        const isValidRpc: boolean | JsonRpcErrorResponse =
-          jsonRpcRequestValidator(request, supportedApiPrefixes)
-        if (typeof isValidRpc !== 'boolean') {
-          Logger.debug(
-            `-- Incoming request for ${request.method} with requestId(${request.id}) is not valid.`,
-          )
-          return isValidRpc
-        }
+    ): Promise<Either<RpcError, JsonRpcResponse>> => {
+      const rpcValidation = Either.Right<RpcError, JsonRpcRequest>(request)
+        .flatMap(isValidRpc)
+        .flatMap(isValidMethodString)
+        .flatMap(requestIdNotMissing)
+        .flatMap(idTypeStringOrNumber)
+        .flatMap(paramsIsArray)
+        .flatMap((req) => apiEnabled(req, supportedApiPrefixes))
+        .flatMap((req) => transformRequest(req, handlerRegistry))
+        .flatMap(isParmsValid)
 
-        Logger.debug(
-          `--> Handling valid request for ${request.method} with requestId(${request.id})`,
-        )
-        const handler = handlerRegistry[request.method]
-        if (!handler) {
-          throw new RpcError(
-            `Method ${request.method} is not supported`,
-            -32601,
-          )
-        }
-
-        // Await the handler function result to handle both sync and async handlers
-        const result = await Promise.resolve(handler(request.params))
-
-        Logger.debug(
-          `<-- Sending success response for requestId(${request.id})`,
-        )
-        return createSuccessResponse(request.id, result)
-      } catch (error: any) {
-        Logger.error(
-          { error: error.message },
-          `Error handling method requestId(${request.id})`,
-        )
-
-        Logger.debug(`<-- Sending error response for requestId(${request.id})`)
-        return createErrorResponse(
-          request.id,
-          error.code ? error.code : -32000,
-          error.message,
-          error.data ? error.data : undefined,
-        )
-      }
+      return rpcValidation.foldAsync(
+        async (error: RpcError) =>
+          Either.Left<RpcError, JsonRpcResponse>(error),
+        async (validateReq) => {
+          const { params, id, handlerFunc } = validateReq
+          const handlerResult = await Promise.resolve(handlerFunc(params))
+          return isEither(handlerResult)
+            ? handlerResult.fold(
+                (error: RpcError) => Either.Left(error),
+                (response: any) => createSuccessResponse(id, response),
+              )
+            : createSuccessResponse(id, handlerResult)
+        },
+      )
     },
   }
 }

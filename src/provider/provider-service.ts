@@ -16,7 +16,8 @@ import {
 import { Logger } from '../logger/index.js'
 import { TraceOptions, TraceResult } from '../sim/index.js'
 import { ValidationErrors } from '../validation/index.js'
-import { RpcError } from '../utils/index.js'
+import { NetworkCallError, RpcError } from '../utils/index.js'
+import { Either } from '../monad/index.js'
 
 export type ProviderService = {
   getNetwork(): Promise<Network>
@@ -25,14 +26,18 @@ export type ProviderService = {
   getChainId(): Promise<number>
   getBlockNumber(): Promise<number>
   getFeeData(): Promise<FeeData>
-  estimateGas(from: string, to: string, data: BytesLike): Promise<number>
-  send(method: string, params: any[]): Promise<any>
+  estimateGas(
+    from: string,
+    to: string,
+    data: BytesLike,
+  ): Promise<Either<RpcError, number>>
+  send<R>(method: string, params: any[]): Promise<Either<NetworkCallError, R>>
   call(contractAddress: string, data: string): Promise<any>
-  debug_traceCall(
+  debug_traceCall<R>(
     tx: TransactionRequest,
     options: TraceOptions,
     useNativeTracerProvider?: boolean,
-  ): Promise<TraceResult | any>
+  ): Promise<Either<RpcError, R>>
   debug_traceTransaction(
     hash: string,
     options: TraceOptions,
@@ -144,24 +149,35 @@ export const createProviderService = (
       from: string,
       to: string,
       data: BytesLike,
-    ): Promise<number> => {
-      const gasLimit = await networkProvider
-        .estimateGas({
+    ): Promise<Either<RpcError, number>> => {
+      try {
+        const gasLimit = await networkProvider.estimateGas({
           from,
           to,
           data: typeof data === 'object' ? hexlify(data) : data,
         })
-        .catch((err) => {
-          const message =
-            err.message.match(/reason="(.*?)"/)?.at(1) ?? 'execution reverted'
-          throw new RpcError(message, ValidationErrors.UserOperationReverted)
-        })
-
-      return Number(gasLimit)
+        return Either.Right(Number(gasLimit))
+      } catch (err: any) {
+        const message =
+          err.message.match(/reason="(.*?)"/)?.at(1) ?? 'execution reverted'
+        return Either.Left(
+          new RpcError(message, ValidationErrors.UserOperationReverted),
+        )
+      }
     },
 
-    send: async (method: string, params: any[]): Promise<any> => {
-      return await networkProvider.send(method, params)
+    send: async <R>(
+      method: string,
+      params: any[],
+    ): Promise<Either<NetworkCallError, R>> => {
+      try {
+        const res = await networkProvider.send(method, params)
+        return Either.Right(res)
+      } catch (err: any) {
+        return Either.Left(
+          new NetworkCallError(`call to method ${method} failed:`, err),
+        )
+      }
     },
 
     call: async (contractAddress: string, data: string): Promise<any> => {
@@ -171,40 +187,54 @@ export const createProviderService = (
       })
     },
 
-    debug_traceCall: async (
+    debug_traceCall: async <R>(
       tx: TransactionRequest,
       options: TraceOptions,
       useNativeTracerProvider = false,
-    ): Promise<TraceResult | any> => {
+    ): Promise<Either<RpcError, R>> => {
       const provider = useNativeTracerProvider
         ? nativeTracerProvider
         : networkProvider
       if (!provider) {
-        throw new Error('provider not found')
+        return Either.Left(
+          new RpcError('provider not found', ValidationErrors.InternalError),
+        )
       }
 
-      const tx1 = await resolveProperties(tx)
-      const ret = await provider
-        .send('debug_traceCall', [tx1, 'latest', options])
-        .catch((e) => {
-          Logger.error(
-            {
-              error: e,
-            },
-            'error in debug_traceCall to provider',
-          )
+      try {
+        const tx1 = await resolveProperties(tx)
+        const ret = await provider.send('debug_traceCall', [
+          tx1,
+          'latest',
+          options,
+        ])
 
-          const body = e.body
-          if (body != null) {
-            const jsonbody = JSON.parse(body)
-            throw new RpcError(
+        return Either.Right(ret)
+      } catch (err: any) {
+        Logger.error(
+          {
+            error: err,
+          },
+          'error in debug_traceCall to provider',
+        )
+
+        const body = err.body
+        if (body != null) {
+          const jsonbody = JSON.parse(body)
+          return Either.Left(
+            new RpcError(
               `debug_traceCall - ${jsonbody.error.message}`,
               ValidationErrors.InternalError,
-            )
-          }
-          throw e
-        })
-      return ret
+            ),
+          )
+        }
+        return Either.Left(
+          new RpcError(
+            `debug_traceCall - unknown error: ${err.message}`,
+            ValidationErrors.InternalError,
+          ),
+        )
+      }
     },
 
     debug_traceTransaction: async (
@@ -273,13 +303,6 @@ export const createProviderService = (
           },
         ])
         .catch((e) => {
-          Logger.warn(
-            {
-              error: e,
-            },
-            'error sending transaction to Flashbots relay',
-          )
-
           const body = e.body
           if (body != null) {
             const jsonbody = JSON.parse(body)

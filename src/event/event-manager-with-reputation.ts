@@ -4,6 +4,7 @@ import { Logger } from '../logger/index.js'
 import { ProviderService } from '../provider/index.js'
 import { ReputationManager } from '../reputation/index.js'
 import { MempoolManageUpdater } from '../mempool/index.js'
+import { Either } from '../monad/index.js'
 
 export type EventManagerWithListener = {
   /**
@@ -18,8 +19,12 @@ export type EventManagerWithListener = {
    *
    * @param userOpEvent - the event of our UserOp (known to exist in the logs)
    * @param logs - full bundle logs. after each group of logs there is a single UserOperationEvent with unique hash.
+   * @returns logs for the given userOpHash or an error if not found
    */
-  filterLogs(userOpEvent: ethers.EventLog, logs: readonly Log[]): Log[]
+  filterLogs(
+    userOpEvent: ethers.EventLog,
+    logs: readonly Log[],
+  ): Either<Error, Log[]>
 }
 
 export const createEventManagerWithListener = (
@@ -31,6 +36,7 @@ export const createEventManagerWithListener = (
   let lastBlock: number | null = null
   let eventAggregator: string | null = null
   let eventAggregatorTxHash: string | null = null
+  const LAST_1000_BLOCKS = 1000
 
   /**
    * Handle an event from the entrypoint contract.
@@ -43,7 +49,7 @@ export const createEventManagerWithListener = (
         await handleUserOperationEvent(ev)
         break
       case 'AccountDeployed':
-        handleAccountDeployedEvent(ev)
+        await handleAccountDeployedEvent(ev)
         break
       case 'SignatureAggregatorChanged':
         handleAggregatorChangedEvent(ev)
@@ -72,10 +78,10 @@ export const createEventManagerWithListener = (
    *
    * @param data - the address to check
    */
-  const includedAddress = (data: string | null): void => {
+  const includedAddress = async (data: string | null): Promise<void> => {
     if (data != null && data.length > 42) {
       const addr = data.slice(0, 42)
-      reputationManager.updateIncludedStatus(addr)
+      await reputationManager.updateIncludedStatus(addr)
     }
   }
 
@@ -90,24 +96,14 @@ export const createEventManagerWithListener = (
     const userOpHash = ev.args.userOpHash
     const success = ev.args.success
 
-    if (success) {
-      Logger.debug(
-        { userOpHash },
-        'UserOperationEvent success. Removing from mempool',
-      )
-      await mempoolManageUpdater.removeUserOp(userOpHash)
-    } else {
-      Logger.debug(
-        { userOpHash },
-        'UserOperationEvent failed. Updating status in mempool',
-      )
-      await mempoolManageUpdater.updateEntryStatus(userOpHash, 'failed')
-    }
+    success
+      ? await mempoolManageUpdater.removeUserOp(userOpHash)
+      : await mempoolManageUpdater.updateEntryStatus(userOpHash, 'failed')
 
     // TODO: Make this a batch operation
-    includedAddress(ev.args.sender)
-    includedAddress(ev.args.paymaster)
-    includedAddress(getEventAggregator(ev))
+    await includedAddress(ev.args.sender)
+    await includedAddress(ev.args.paymaster)
+    await includedAddress(getEventAggregator(ev))
   }
 
   /**
@@ -115,8 +111,10 @@ export const createEventManagerWithListener = (
    *
    * @param ev - the event
    */
-  const handleAccountDeployedEvent = (ev: ethers.EventLog): void => {
-    includedAddress(ev.args.factory)
+  const handleAccountDeployedEvent = async (
+    ev: ethers.EventLog,
+  ): Promise<void> => {
+    await includedAddress(ev.args.factory)
   }
 
   const handleAggregatorChangedEvent = (ev: ethers.EventLog): void => {
@@ -146,10 +144,12 @@ export const createEventManagerWithListener = (
   return {
     handlePastEvents: async (): Promise<void> => {
       if (!lastBlock) {
-        lastBlock = Math.max(1, (await providerService.getBlockNumber()) - 1000)
+        lastBlock = Math.max(
+          1,
+          (await providerService.getBlockNumber()) - LAST_1000_BLOCKS,
+        )
       }
 
-      // get all events since last run for each filter
       const filters = [
         entryPointContract.filters.UserOperationEvent(),
         entryPointContract.filters.AccountDeployed(),
@@ -187,7 +187,7 @@ export const createEventManagerWithListener = (
         return null
       }
 
-      const ev = events[0]
+      const ev = events[0] as ethers.EventLog
       if ('args' in ev) {
         return ev
       }
@@ -195,7 +195,10 @@ export const createEventManagerWithListener = (
       return null
     },
 
-    filterLogs: (userOpEvent: ethers.EventLog, logs: readonly Log[]): Log[] => {
+    filterLogs: (
+      userOpEvent: ethers.EventLog,
+      logs: readonly Log[],
+    ): Either<Error, Log[]> => {
       let startIndex = -1
       let endIndex = -1
 
@@ -209,7 +212,7 @@ export const createEventManagerWithListener = (
       )
 
       if (!beforeExecutionEvent) {
-        throw new Error('fatal: no BeforeExecution event found')
+        return Either.Left(new Error('fatal: no BeforeExecution event found'))
       }
 
       logs.forEach((log, index) => {
@@ -231,10 +234,10 @@ export const createEventManagerWithListener = (
       })
 
       if (endIndex === -1) {
-        throw new Error('fatal: no UserOperationEvent in logs')
+        return Either.Left(new Error('fatal: no UserOperationEvent in logs'))
       }
 
-      return logs.slice(startIndex + 1, endIndex)
+      return Either.Right(logs.slice(startIndex + 1, endIndex))
     },
   }
 }

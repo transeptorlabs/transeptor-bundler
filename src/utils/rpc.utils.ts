@@ -22,6 +22,15 @@ export class RpcError extends Error {
   }
 }
 
+export class NetworkCallError extends Error {
+  constructor(
+    msg: string,
+    readonly payload: any,
+  ) {
+    super(msg)
+  }
+}
+
 /*
  * hexlify all members of object, recursively
  */
@@ -35,7 +44,7 @@ export const deepHexlify = (obj: any): any => {
   }
 
   if (typeof obj === 'bigint' || typeof obj === 'number') {
-    return toBeHex(obj)
+    return toBeHex(obj).replace(/^0x0/, '0x')
   }
 
   if (Array.isArray(obj)) {

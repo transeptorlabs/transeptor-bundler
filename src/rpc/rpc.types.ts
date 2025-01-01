@@ -1,3 +1,41 @@
+import { RpcError } from '../utils/index.js'
+import { Either } from '../monad/index.js'
+import {
+  DebugAPIMethodMapping,
+  EthAPIMethodMapping,
+  Web3APIMethodMapping,
+} from './apis/index.js'
+
+// Define the mapping of method names to their params and return types
+export type MethodMapping = Web3APIMethodMapping &
+  EthAPIMethodMapping &
+  DebugAPIMethodMapping
+
+// Infer method names
+export type MethodNames = keyof MethodMapping
+
+// Generic handler function type
+export type HandlerFunction<M extends MethodNames> = (
+  params: MethodMapping[M]['params'],
+) => Promise<MethodMapping[M]['return']> | MethodMapping[M]['return']
+
+export type HandlerValidationFunction = (params: unknown[]) => boolean
+
+export type HandlerRegistry = {
+  [M in MethodNames]: {
+    handlerFunc: HandlerFunction<M>
+    validationFunc: (params: unknown[]) => boolean
+  }
+}
+
+export type ValidateJsonRpcRequest<M extends MethodNames> = {
+  id: number | string
+  method: M
+  params: MethodMapping[M]['params']
+  handlerFunc: HandlerFunction<M>
+  validationFunc: HandlerValidationFunction
+}
+
 export type JsonRpcRequest = {
   jsonrpc: '2.0'
   method: string
@@ -41,13 +79,7 @@ export type RpcServer = {
 }
 
 export type RpcHandler = {
-  doHandleRequest(request: JsonRpcRequest): Promise<JsonRpcResponse>
-}
-
-// Handler function type
-export type HandlerFunction = (params: any[]) => Promise<any> | any
-
-// Registry for handlers
-export type HandlerRegistry = {
-  [method: string]: HandlerFunction
+  doHandleRequest(
+    request: JsonRpcRequest,
+  ): Promise<Either<RpcError, JsonRpcResponse>>
 }

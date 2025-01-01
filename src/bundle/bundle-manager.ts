@@ -8,6 +8,7 @@ import { EventManagerWithListener } from '../event/index.js'
 import { MempoolEntry } from '../state/index.js'
 import { isAccountOrFactoryError } from '../utils/index.js'
 import { ReputationManagerUpdater } from '../reputation/index.js'
+import { Mutex } from 'async-mutex'
 
 export type BundleManager = {
   /**
@@ -34,6 +35,7 @@ export const createBundleManager = (
   isAutoBundle: boolean,
   autoBundleInterval: number,
 ): BundleManager => {
+  const mutex = new Mutex()
   let bundleMode: 'auto' | 'manual' = isAutoBundle ? 'auto' : 'manual'
   let interval: NodeJS.Timer | null = null
 
@@ -80,9 +82,9 @@ export const createBundleManager = (
         { total: notIncludedUserOpsHashes.length },
         'Sending userOps not included in built bundle back to mempool with status of pending',
       )
-      notIncludedUserOpsHashes.forEach(async (userOpHash) => {
+      for (const userOpHash of notIncludedUserOpsHashes) {
         await mempoolManagerBuilder.updateEntryStatus(userOpHash, 'pending')
-      })
+      }
     }
 
     if (markedToRemoveUserOpsHashes.length > 0) {
@@ -90,7 +92,8 @@ export const createBundleManager = (
         { total: markedToRemoveUserOpsHashes.length },
         'Marked to remove: removing UserOps from mempool',
       )
-      markedToRemoveUserOpsHashes.forEach(async (opDetails) => {
+
+      for (const opDetails of markedToRemoveUserOpsHashes) {
         /**
          * EREP-015: A `paymaster` should not have its opsSeen incremented on failure of factory or account
          * When running 2nd validation (before inclusion in a bundle), if a UserOperation fails because of factory or
@@ -115,7 +118,7 @@ export const createBundleManager = (
           }
         }
         await mempoolManagerBuilder.removeUserOp(opDetails.userOpHash)
-      })
+      }
     }
 
     const res = await bundleProcessor.sendBundle(bundle, storageMap)
@@ -167,7 +170,9 @@ export const createBundleManager = (
 
     interval = setInterval(async () => {
       try {
-        await doAttemptBundle()
+        await mutex.runExclusive(async () => {
+          await doAttemptBundle()
+        })
       } catch (error: any) {
         Logger.error({ error: error.message }, 'Error running auto bundle:')
       }
@@ -177,10 +182,6 @@ export const createBundleManager = (
   if (bundleMode === 'auto') {
     startAutoBundler()
   }
-
-  Logger.info(
-    `Bundler mode set to ${bundleMode} with interval ${autoBundleInterval} ms`,
-  )
 
   return {
     setBundlingMode: (mode: 'auto' | 'manual') => {

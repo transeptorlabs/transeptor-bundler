@@ -9,6 +9,7 @@ import {
   ValidationService,
 } from '../validation/index.js'
 import { ReputationManager, ReputationStatus } from '../reputation/index.js'
+import { Either } from '../monad/index.js'
 
 export type BundleBuilder = {
   createBundle: (
@@ -44,6 +45,12 @@ export const createBundleBuilder = (
 ): BundleBuilder => {
   const THROTTLED_ENTITY_BUNDLE_COUNT = 4
 
+  // Helper to update staked entity counts
+  const incrementCount = (counts: Record<string, number>, key: string) => ({
+    ...counts,
+    [key]: (counts[key] || 0) + 1,
+  })
+
   return {
     createBundle: async (
       entries: MempoolEntry[],
@@ -53,175 +60,185 @@ export const createBundleBuilder = (
         { total: entries.length },
         'Attempting to create bundle from entries',
       )
-      const bundle: UserOperation[] = []
-      const storageMap: StorageMap = {}
-      let totalGas = BigInt(0)
-      const paymasterDeposit: { [paymaster: string]: bigint } = {} // paymaster deposit should be enough for all UserOps in the bundle.
-      const stakedEntityCount: { [addr: string]: number } = {} // throttled paymasters and deployers are allowed only small UserOps per bundle.
-      const senders = new Set<string>() // each sender is allowed only once per bundle
-      const notIncludedUserOpsHashes: string[] = []
-      const markedToRemoveUserOpsHashes: RemoveUserOpDetails[] = []
 
-      mainLoop: for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i]
-        const paymaster = entry.userOp.paymaster
-        const factory = entry.userOp.factory
+      const isThrottled = (
+        status: ReputationStatus,
+        entity: string | null,
+        stakedEntityCount: { [addr: string]: number },
+      ) =>
+        status === ReputationStatus.THROTTLED &&
+        (stakedEntityCount[entity ?? ''] ?? 0) >= THROTTLED_ENTITY_BUNDLE_COUNT
 
-        // TODO: Make this a batch call
-        const paymasterStatus = await reputationManager.getStatus(paymaster)
-        const deployerStatus = await reputationManager.getStatus(factory)
+      const isBanned = (status: ReputationStatus) =>
+        status === ReputationStatus.BANNED
 
-        // Remove UserOps from mempool if paymaster or deployer is banned
-        if (
-          paymasterStatus === ReputationStatus.BANNED ||
-          deployerStatus === ReputationStatus.BANNED
-        ) {
-          markedToRemoveUserOpsHashes.push({
-            userOpHash: entry.userOpHash,
-            paymaster: entry.userOp.paymaster,
-          })
-          continue
-        }
+      const {
+        bundle,
+        storageMap,
+        notIncludedUserOpsHashes,
+        markedToRemoveUserOpsHashes,
+      } = await entries.reduce(
+        async (accPromise, entry) => {
+          const acc = await accPromise
+          const { userOp, userOpHash, referencedContracts } = entry
+          const { sender, paymaster, factory } = userOp
 
-        // [SREP-030]
-        if (
-          paymaster != null &&
-          (paymasterStatus === ReputationStatus.THROTTLED ||
-            (stakedEntityCount[paymaster] ?? 0) > THROTTLED_ENTITY_BUNDLE_COUNT)
-        ) {
-          Logger.debug(
-            { sender: entry.userOp.sender, nonce: entry.userOp.nonce },
-            'skipping throttled paymaster',
-          )
-          notIncludedUserOpsHashes.push(entry.userOpHash)
-          continue
-        }
+          const [paymasterStatus, factoryStatus] = await Promise.all([
+            reputationManager.getStatus(paymaster),
+            reputationManager.getStatus(factory),
+          ])
 
-        // [SREP-030]
-        if (
-          factory != null &&
-          (deployerStatus === ReputationStatus.THROTTLED ||
-            (stakedEntityCount[factory] ?? 0) > THROTTLED_ENTITY_BUNDLE_COUNT)
-        ) {
-          Logger.debug(
-            { sender: entry.userOp.sender, nonce: entry.userOp.nonce },
-            'skipping throttled factory',
-          )
-          notIncludedUserOpsHashes.push(entry.userOpHash)
-          continue
-        }
+          // Remove UserOps from mempool if paymaster or deployer is banned
+          if (isBanned(paymasterStatus) || isBanned(factoryStatus)) {
+            acc.markedToRemoveUserOpsHashes.push({
+              userOpHash: userOpHash,
+              paymaster: userOp.paymaster,
+            })
+            return acc
+          }
 
-        // allow only a single UserOp per sender per bundle
-        if (senders.has(entry.userOp.sender)) {
-          Logger.debug(
-            { sender: entry.userOp.sender, nonce: entry.userOp.nonce },
-            'skipping already included sender',
-          )
-          notIncludedUserOpsHashes.push(entry.userOpHash)
-          continue
-        }
-
-        // validate UserOp and remove from mempool if failed
-        let validationResult: ValidateUserOpResult
-        try {
-          // re-validate UserOp. no need to check stake, since it cannot be reduced between first and 2nd validation
-          validationResult = await validationService.validateUserOp(
-            entry.userOp,
-            false,
-            entry.referencedContracts,
-          )
-        } catch (e: any) {
-          Logger.error(
-            { error: e.message, entry: entry },
-            'failed 2nd validation, removing from mempool:',
-          )
-
-          markedToRemoveUserOpsHashes.push({
-            err:
-              e instanceof RpcError
-                ? {
-                    message: e.message,
-                    errorCode: e.code,
-                  }
-                : {
-                    message: e.message,
-                    errorCode: ValidationErrors.InternalError,
-                  },
-            userOpHash: entry.userOpHash,
-            paymaster,
-          })
-          continue
-        }
-
-        // [STO-041] Check if the UserOp accesses a storage of another known sender and ban the sender if so
-        for (const storageAddress of Object.keys(validationResult.storageMap)) {
+          // [SREP-030]
           if (
-            storageAddress.toLowerCase() !==
-              entry.userOp.sender.toLowerCase() &&
-            knownSenders.includes(storageAddress.toLowerCase())
+            (paymaster &&
+              isThrottled(paymasterStatus, paymaster, acc.stakedEntityCount)) ||
+            (factory &&
+              isThrottled(factoryStatus, factory, acc.stakedEntityCount))
           ) {
             Logger.debug(
-              `UserOperation from ${entry.userOp.sender} sender accessed a storage of another known sender ${storageAddress}`,
+              { sender: userOp.sender, nonce: userOp.nonce },
+              'skipping throttled paymaster or factory',
             )
-            notIncludedUserOpsHashes.push(entry.userOpHash)
-            continue mainLoop
+            acc.notIncludedUserOpsHashes.push(userOpHash)
+            return acc
           }
-        }
 
-        // TODO: we could "cram" more UserOps into a bundle.
-        const userOpGasCost =
-          BigInt(validationResult.returnInfo.preOpGas) +
-          BigInt(entry.userOp.callGasLimit)
-        const newTotalGas = totalGas + userOpGasCost
-        if (newTotalGas > BigInt(opts.maxBundleGas)) {
-          Logger.debug(
-            { stopIndex: i, entriesLength: entries.length },
-            'Bundle is full sending user ops back to mempool with status pending',
+          // allow only a single UserOp per sender per bundle
+          if (acc.senders.has(userOp.sender)) {
+            Logger.debug(
+              { sender: userOp.sender, nonce: userOp.nonce },
+              'skipping already included sender(duplicate sender)',
+            )
+            acc.notIncludedUserOpsHashes.push(userOpHash)
+            return acc
+          }
+
+          //  re-validate UserOp and remove from mempool if failed. no need to check stake, since it cannot be reduced between first and 2nd validation
+          const reValidateRes = await validationService
+            .validateUserOp(userOp, false, referencedContracts)
+            .catch((e: any) =>
+              Either.Left<RpcError, ValidateUserOpResult>(
+                new RpcError(
+                  e.message ?? 'unknown error message',
+                  e.code ?? ValidationErrors.InternalError,
+                  e.data,
+                ),
+              ),
+            )
+
+          const validationResult: ValidateUserOpResult | null =
+            reValidateRes.fold(
+              (e) => {
+                Logger.error(
+                  { error: e.message, entry: entry },
+                  'failed 2nd validation, removing from mempool:',
+                )
+                acc.markedToRemoveUserOpsHashes.push({
+                  err: {
+                    message: e.message,
+                    errorCode: e.code,
+                  },
+                  userOpHash: userOpHash,
+                  paymaster,
+                })
+                return null
+              },
+              (res) => res,
+            )
+          if (validationResult === null) {
+            return acc
+          }
+
+          // [STO-041] Check if the UserOp accesses a storage of another known sender and ban the sender if so
+          const accessesOtherSenders = Object.keys(
+            validationResult.storageMap,
+          ).some(
+            (addr) =>
+              addr.toLowerCase() !== sender.toLowerCase() &&
+              knownSenders.includes(addr.toLowerCase()),
           )
 
-          // bundle is full set the remaining UserOps back to pending
-          for (let j = i; j < entries.length; j++) {
-            notIncludedUserOpsHashes.push(entries[j].userOpHash)
+          if (accessesOtherSenders) {
+            Logger.debug(
+              `UserOperation from ${sender} sender accessed a storage of another known sender in the bundle.`,
+            )
+            acc.notIncludedUserOpsHashes.push(userOpHash)
+            return acc
           }
-          break
-        }
 
-        // get paymaster deposit and stakedEntityCount
-        if (paymaster != null) {
-          if (paymasterDeposit[paymaster] == null) {
-            paymasterDeposit[paymaster] =
-              await opts.entryPointContract.balanceOf(paymaster)
+          // TODO: we could "cram" more UserOps into a bundle.
+          // Calculate gas cost and ensure it fits
+          const userOpGasCost =
+            BigInt(validationResult.returnInfo.preOpGas) +
+            BigInt(userOp.callGasLimit)
+          const newTotalGas = acc.totalGas + userOpGasCost
+          if (newTotalGas > BigInt(opts.maxBundleGas)) {
+            acc.notIncludedUserOpsHashes.push(userOpHash)
+            return acc
           }
-          if (
-            paymasterDeposit[paymaster] >
-            BigInt(validationResult.returnInfo.prefund)
-          ) {
-            // not enough balance in paymaster to pay for all UserOp
-            // (but it passed validation, so it can sponsor them separately
-            continue
+
+          // get paymaster deposit and stakedEntityCount
+          // Update staked entity counts and deposits
+          if (paymaster) {
+            if (!acc.paymasterDeposit[paymaster]) {
+              acc.paymasterDeposit[paymaster] =
+                await opts.entryPointContract.balanceOf(paymaster)
+            }
+            if (
+              acc.paymasterDeposit[paymaster] <
+              BigInt(validationResult.returnInfo.prefund)
+            ) {
+              acc.notIncludedUserOpsHashes.push(userOpHash)
+              return acc
+            }
+            acc.paymasterDeposit[paymaster] -= BigInt(
+              validationResult.returnInfo.prefund,
+            )
+            acc.stakedEntityCount = incrementCount(
+              acc.stakedEntityCount,
+              paymaster,
+            )
           }
-          stakedEntityCount[paymaster] = (stakedEntityCount[paymaster] ?? 0) + 1
-          paymasterDeposit[paymaster] =
-            paymasterDeposit[paymaster] -
-            BigInt(validationResult.returnInfo.prefund)
-        }
 
-        // get factory stakedEntityCount
-        if (factory != null) {
-          stakedEntityCount[factory] = (stakedEntityCount[factory] ?? 0) + 1
-        }
+          if (factory) {
+            acc.stakedEntityCount = incrementCount(
+              acc.stakedEntityCount,
+              factory,
+            )
+          }
 
-        mergeStorageMap(storageMap, validationResult.storageMap)
+          // add UserOp to bundle
+          Logger.debug(
+            { sender: userOp.sender, nonce: userOp.nonce },
+            'adding to bundle',
+          )
+          mergeStorageMap(acc.storageMap, validationResult.storageMap)
+          acc.bundle.push(userOp)
+          acc.totalGas = newTotalGas
+          acc.senders.add(sender)
 
-        // add UserOp to bundle
-        Logger.debug(
-          { sender: entry.userOp.sender, nonce: entry.userOp.nonce, index: i },
-          'adding to bundle',
-        )
-        senders.add(entry.userOp.sender)
-        bundle.push(entry.userOp)
-        totalGas = newTotalGas
-      }
+          return acc
+        },
+        Promise.resolve({
+          bundle: [] as UserOperation[],
+          storageMap: {} as StorageMap,
+          notIncludedUserOpsHashes: [] as string[],
+          markedToRemoveUserOpsHashes: [] as RemoveUserOpDetails[],
+          totalGas: BigInt(0),
+          paymasterDeposit: {} as { [paymaster: string]: bigint }, // paymaster deposit should be enough for all UserOps in the bundle
+          senders: new Set<string>(), // each sender is allowed only once per bundle
+          stakedEntityCount: {} as { [addr: string]: number }, // throttled paymasters and deployers are allowed only small UserOps per bundle
+        }),
+      )
 
       return {
         bundle,

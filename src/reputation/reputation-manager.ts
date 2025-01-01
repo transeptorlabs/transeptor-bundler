@@ -73,12 +73,12 @@ export const createReputationManager = (
      *
      */
     interval = setInterval(
-      () => {
+      async () => {
         if (reputationEntries === undefined || reputationEntries === null) {
           return
         }
 
-        Object.keys(reputationEntries).forEach(async (addr) => {
+        for (const addr of Object.keys(reputationEntries)) {
           const entry = reputationEntries[addr]
 
           await state.updateState(
@@ -105,7 +105,7 @@ export const createReputationManager = (
               }
             },
           )
-        })
+        }
       },
       60 * 60 * 1000,
     ) // 60 minutes * 60 seconds * 1000 milliseconds

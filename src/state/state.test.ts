@@ -66,66 +66,56 @@ describe('createState', () => {
       })
     })
 
-    it('should throw an error if updated value is empty (single)', async () => {
+    it('should return false if updated value is empty (single)', async () => {
       const stateService = createState()
-      await expect(
-        stateService.updateState(
-          StateKey.BlackList,
-          () => ({}) as Partial<State>,
-        ),
-      ).rejects.toThrowError('Updated value must not be empty(single)')
-    })
-
-    it('should throw an error if updated value has incorrect keys (single)', async () => {
-      const stateService = createState()
-      await expect(
-        stateService.updateState(
-          StateKey.BlackList,
-          () => ({ whiteList: [] }) as Partial<State>,
-        ),
-      ).rejects.toThrowError(
-        'Updated value must contain the same keys as input, missing blackList(single)',
+      const res = await stateService.updateState(
+        StateKey.BlackList,
+        () => ({}) as Partial<State>,
       )
+      expect(res).toBe(false)
     })
 
-    it('should throw an error if updated value is empty (multiple)', async () => {
+    it('should return false if updated value has incorrect keys (single)', async () => {
       const stateService = createState()
-      await expect(
-        stateService.updateState(
-          [StateKey.BlackList, StateKey.WhiteList],
-          () => ({}) as Partial<State>,
-        ),
-      ).rejects.toThrowError('Updated value must not be empty(multiple)')
-    })
-
-    it('should throw an error if updated value is missing keys (multiple)', async () => {
-      const stateService = createState()
-      await expect(
-        stateService.updateState(
-          [StateKey.BlackList, StateKey.WhiteList],
-          () => ({
-            blackList: [],
-          }),
-        ),
-      ).rejects.toThrowError(
-        'Updated value must contain the same keys as input, missing whiteList(multiple)',
+      const res = await stateService.updateState(
+        StateKey.BlackList,
+        () => ({ whiteList: [] }) as Partial<State>,
       )
+      expect(res).toBe(false)
     })
 
-    it('should throw an error if updated value has extra keys (multiple)', async () => {
+    it('should return false if updated value is empty (multiple)', async () => {
       const stateService = createState()
-      await expect(
-        stateService.updateState(
-          [StateKey.BlackList, StateKey.WhiteList],
-          () => ({
-            blackList: [],
-            whiteList: [],
-            reputationEntries: {},
-          }),
-        ),
-      ).rejects.toThrowError(
-        'Updated value must only contain the same keys as input: received reputationEntries(multiple)',
+      const res = await stateService.updateState(
+        [StateKey.BlackList, StateKey.WhiteList],
+        () => ({}) as Partial<State>,
       )
+      expect(res).toBe(false)
+    })
+
+    it('should return false if updated value is missing keys (multiple)', async () => {
+      const stateService = createState()
+      const res = await stateService.updateState(
+        [StateKey.BlackList, StateKey.WhiteList],
+        () => ({
+          blackList: [],
+        }),
+      )
+
+      expect(res).toBe(false)
+    })
+
+    it('should return false if updated value has extra keys (multiple)', async () => {
+      const stateService = createState()
+      const res = await stateService.updateState(
+        [StateKey.BlackList, StateKey.WhiteList],
+        () => ({
+          blackList: [],
+          whiteList: [],
+          reputationEntries: {},
+        }),
+      )
+      expect(res).toBe(false)
     })
   })
 })

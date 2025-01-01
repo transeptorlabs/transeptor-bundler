@@ -4,7 +4,6 @@ import { fileURLToPath } from 'url'
 
 import {
   AbiCoder,
-  BigNumberish,
   BytesLike,
   ethers,
   Interface,
@@ -34,6 +33,7 @@ import {
   ValidationResult,
 } from '../validation/index.js'
 import {
+  NetworkCallError,
   RpcError,
   mergeValidationDataValues,
   packUserOp,
@@ -44,63 +44,13 @@ import {
   bundlerNativeTracerName,
   prestateTracerName,
 } from './gethTracer.types.js'
-
-type StakeInfo = {
-  stake: BigNumberish
-  unstakeDelaySec: BigNumberish
-}
-
-type AggregatorStakeInfo = {
-  aggregator: string
-  stakeInfo: StakeInfo
-}
-
-type SimulateValidationReturnStruct = {
-  returnInfo: {
-    preOpGas: BigNumberish
-    prefund: BigNumberish
-    accountValidationData: BigNumberish
-    paymasterValidationData: BigNumberish
-    paymasterContext: BytesLike
-  }
-
-  senderInfo: StakeInfo
-  factoryInfo: StakeInfo
-  paymasterInfo: StakeInfo
-  aggregatorInfo: AggregatorStakeInfo
-}
-
-type ExecutionResultStruct = {
-  preOpGas: BigNumberish
-  paid: BigNumberish
-  accountValidationData: BigNumberish
-  paymasterValidationData: BigNumberish
-  targetSuccess: boolean
-  targetResult: BytesLike
-}
-
-export type StateOverride = {
-  /**
-   * Fake balance to set for the account before executing the call.
-   */
-  balance?: BigNumberish
-  /**
-   * Fake nonce to set for the account before executing the call.
-   */
-  nonce?: BigNumberish
-  /**
-   * Fake EVM bytecode to inject into the account before executing the call.
-   */
-  code?: string
-  /**
-   * Fake key-value mapping to override all slots in the account storage before executing the call.
-   */
-  state?: object
-  /**
-   * Fake key-value mapping to override individual slots in the account storage before executing the call.
-   */
-  stateDiff?: object
-}
+import { Either } from '../monad/index.js'
+import {
+  ExecutionResultStruct,
+  FullValidationResult,
+  SimulateValidationReturnStruct,
+  StateOverride,
+} from './sim-types.js'
 
 const parseValidationResult = (
   userOp: UserOperation,
@@ -165,29 +115,6 @@ const parseExecutionResult = (res: ExecutionResultStruct): ExecutionResult => {
   }
 }
 
-const getBundlerCollectorTracerString = () => {
-  const __filename = fileURLToPath(import.meta.url)
-  const __dirname = dirname(__filename)
-
-  const jsFilePath = join(__dirname, './tracer.js')
-  let tracer: string
-  try {
-    tracer = readFileSync(jsFilePath).toString()
-  } catch (error: any) {
-    Logger.error({ path: jsFilePath }, 'Tracer file path not found')
-    throw new Error('Tracer not found')
-  }
-
-  if (tracer == null) {
-    Logger.error({ path: jsFilePath }, 'Tracer not found')
-    throw new Error('Tracer not found')
-  }
-  const regexp =
-    /function \w+\s*\(\s*\)\s*{\s*return\s*(\{[\s\S]+\});?\s*\}\s*$/
-
-  return tracer.match(regexp)?.[1]
-}
-
 const decodeErrorReason = (
   error: string | Error,
 ):
@@ -225,7 +152,7 @@ const decodeErrorReason = (
 }
 
 const decodeRevertReason = (
-  data: string | Error,
+  data: string | NetworkCallError,
   nullIfNoMatch = true,
 ): string | null => {
   const decodeRevertReasonContracts = new Interface([
@@ -249,7 +176,7 @@ const decodeRevertReason = (
   }
 
   if (typeof data !== 'string') {
-    const err = data as any
+    const err = data.payload
     data = (err.data ?? err.error?.data) as string
     if (typeof data !== 'string') throw err
   }
@@ -282,7 +209,6 @@ const decodeRevertReason = (
     })
     return `${err.name}(${args.join(',')})`
   } catch (e) {
-    // throw new Error('unsupported errorSig ' + data)
     if (!nullIfNoMatch) {
       return data
     }
@@ -290,16 +216,151 @@ const decodeRevertReason = (
   }
 }
 
+const getBundlerCollectorTracerString = () => {
+  const __filename = fileURLToPath(import.meta.url)
+  const __dirname = dirname(__filename)
+
+  const jsFilePath = join(__dirname, './tracer.js')
+  let tracer: string
+  try {
+    tracer = readFileSync(jsFilePath).toString()
+  } catch (error: any) {
+    Logger.error({ path: jsFilePath }, 'Tracer file path not found')
+    throw new Error('Tracer not found')
+  }
+
+  if (tracer == null) {
+    Logger.error({ path: jsFilePath }, 'Tracer not found')
+    throw new Error('Tracer not found')
+  }
+  const regexp =
+    /function \w+\s*\(\s*\)\s*{\s*return\s*(\{[\s\S]+\});?\s*\}\s*$/
+
+  return tracer.match(regexp)?.[1]
+}
+
+const normalizePreState = (preState: {
+  [addr: string]: any
+}): { [addr: string]: any } => {
+  // convert nonce's to hex, and rename storage to state
+  const preStateCopy = { ...preState }
+  for (const key in preStateCopy) {
+    if (preStateCopy[key]?.nonce != null) {
+      preStateCopy[key].nonce =
+        '0x' + (preStateCopy[key].nonce.toString(16) as string)
+    }
+    if (preStateCopy[key]?.storage != null) {
+      // rpc expects "state" instead...
+      preStateCopy[key].state = preStateCopy[key].storage
+      delete preStateCopy[key].storage
+    }
+  }
+
+  return preStateCopy
+}
+
+const runNativeTracer = async (
+  ps: ProviderService,
+  tx: TransactionRequest,
+  stateOverrides: object,
+): Promise<Either<RpcError, BundlerCollectorReturn>> => {
+  const preStateRes = await ps.debug_traceCall<{ [addr: string]: any }>(tx, {
+    tracer: prestateTracerName,
+    stateOverrides,
+  })
+
+  const runDebugTraceWithPreState = async (preState: {
+    [addr: string]: any
+  }): Promise<Either<RpcError, BundlerCollectorReturn>> => {
+    return ps.debug_traceCall<BundlerCollectorReturn>(
+      tx,
+      {
+        tracer: bundlerNativeTracerName,
+        stateOverrides: normalizePreState(preState),
+      },
+      true,
+    )
+  }
+
+  return preStateRes.foldAsync(
+    async (error) => {
+      return Either.Left(error)
+    },
+    async (preState) => runDebugTraceWithPreState(preState),
+  )
+}
+
+const runStandardTracer = async (
+  ps: ProviderService,
+  tx: TransactionRequest,
+  tracer: string,
+  stateOverrides: object,
+): Promise<Either<RpcError, BundlerCollectorReturn>> => {
+  return ps.debug_traceCall<BundlerCollectorReturn>(tx, {
+    tracer,
+    stateOverrides,
+  })
+}
+
+const parseTracerResultCalls = (
+  tracerResult: BundlerCollectorReturn,
+): Either<RpcError, [BundlerCollectorReturn, string]> => {
+  const lastCallResult = tracerResult.calls.slice(-1)[0]
+  const exitInfoData = (lastCallResult as ExitInfo).data
+  if (lastCallResult.type === 'REVERT') {
+    return Either.Left(
+      new RpcError(
+        decodeRevertReason(exitInfoData, false) as string,
+        ValidationErrors.SimulateValidation,
+      ),
+    )
+  }
+  return Either.Right([tracerResult, exitInfoData])
+}
+
+const parseValidationResultSafe = (
+  userOp: UserOperation,
+  exitInfoData: string,
+  tracer: BundlerCollectorReturn,
+  simDetails: {
+    simFunctionName: string
+    epSimsInterface: Interface
+  },
+): Either<RpcError, FullValidationResult> => {
+  try {
+    const { simFunctionName, epSimsInterface } = simDetails
+    const [decodedSimulations] = epSimsInterface.decodeFunctionResult(
+      simFunctionName,
+      exitInfoData,
+    )
+    const validationResult = parseValidationResult(userOp, decodedSimulations)
+
+    return Either.Right([validationResult, tracer])
+  } catch (e: any) {
+    // if already parsed, return as is
+    if (e.code != null) {
+      return Either.Left(new RpcError(e.message, e.code, e.data))
+    }
+    // not a known error of EntryPoint (probably, only Error(string), since FailedOp is handled above)
+    const err = decodeErrorReason(e)
+    return Either.Left(
+      new RpcError(err != null ? err.reason : exitInfoData, -32000),
+    )
+  }
+}
+
 export type Simulator = {
-  partialSimulateValidation(userOp: UserOperation): Promise<ValidationResult>
+  partialSimulateValidation(
+    userOp: UserOperation,
+  ): Promise<Either<RpcError, ValidationResult>>
   fullSimulateValidation(
     userOp: UserOperation,
     nativeTracerEnabled: boolean,
-  ): Promise<[ValidationResult, BundlerCollectorReturn]>
+  ): Promise<Either<RpcError, FullValidationResult>>
   simulateHandleOp(
     userOp: UserOperation,
     stateOverride?: StateOverride,
-  ): Promise<ExecutionResult>
+  ): Promise<Either<RpcError, ExecutionResult>>
   tracerResultParser(
     userOp: UserOperation,
     tracerResults: BundlerCollectorReturn,
@@ -318,195 +379,144 @@ export const createSimulator = (
 ): Simulator => {
   const epSimsInterface = new Interface(I_ENTRY_POINT_SIMULATIONS)
   const simFunctionName = 'simulateValidation'
+  const stateOverrides = {
+    [epAddress]: {
+      code: EntryPointSimulationsDeployedBytecode,
+    },
+  }
 
   return {
     partialSimulateValidation: async (
       userOp: UserOperation,
-    ): Promise<ValidationResult> => {
+    ): Promise<Either<RpcError, ValidationResult>> => {
       Logger.debug(
         'Running partial validation no stake or opcode checks on userOp',
       )
-      const stateOverride = {
-        [epAddress]: {
-          code: EntryPointSimulationsDeployedBytecode,
+
+      const ethCallResult = await ps.send<BytesLike>('eth_call', [
+        {
+          to: epAddress,
+          data: epSimsInterface.encodeFunctionData(simFunctionName, [
+            packUserOp(userOp),
+          ]),
         },
-      }
+        'latest',
+        stateOverrides,
+      ])
 
-      try {
-        const simulationResult = await ps.send('eth_call', [
-          {
-            to: epAddress,
-            data: epSimsInterface.encodeFunctionData(simFunctionName, [
-              packUserOp(userOp),
-            ]),
-          },
-          'latest',
-          stateOverride,
-        ])
-
-        const [res] = epSimsInterface.decodeFunctionResult(
-          simFunctionName,
-          simulationResult,
-        )
-
-        return parseValidationResult(userOp, res)
-      } catch (error: any) {
-        let errorData
-        if (error.body) {
-          const bodyParse = JSON.parse(error.body)
-          if (
-            bodyParse.error.data &&
-            bodyParse.error.message === 'execution reverted'
-          ) {
-            errorData = bodyParse.error.data
+      return ethCallResult.fold(
+        (error: NetworkCallError) => {
+          let errorData
+          const { body, data } = error.payload
+          if (body) {
+            const bodyParse = JSON.parse(body)
+            if (
+              bodyParse.error.data &&
+              bodyParse.error.message === 'execution reverted'
+            ) {
+              errorData = bodyParse.error.data
+            }
+          } else if (data) {
+            errorData = data
           }
-        } else if (error.data) {
-          errorData = error.data
-        }
 
-        const decodedError = decodeRevertReason(errorData)
-        if (decodedError != null) {
-          throw new RpcError(decodedError, ValidationErrors.SimulateValidation)
-        }
-        throw error
-      }
+          const decodedError = decodeRevertReason(errorData)
+          if (decodedError != null) {
+            return Either.Left(
+              new RpcError(decodedError, ValidationErrors.SimulateValidation),
+            )
+          }
+          return Either.Left(
+            new RpcError(
+              'Could not decode revert reason, unsupported errorSignature',
+              ValidationErrors.SimulateValidation,
+              errorData,
+            ),
+          )
+        },
+        (simulationResult: BytesLike) => {
+          const [res] = epSimsInterface.decodeFunctionResult(
+            simFunctionName,
+            simulationResult,
+          )
+          return Either.Right(parseValidationResult(userOp, res))
+        },
+      )
     },
 
     fullSimulateValidation: async (
       userOp: UserOperation,
       nativeTracerEnabled: boolean,
-    ): Promise<[ValidationResult, BundlerCollectorReturn]> => {
+    ): Promise<Either<RpcError, FullValidationResult>> => {
       Logger.debug(
         { nativeTracerEnabled },
         'Running full validation with storage/opcode checks on userOp',
       )
-      const bundlerCollectorTracerString = getBundlerCollectorTracerString()
-      const encodedData = epSimsInterface.encodeFunctionData(simFunctionName, [
-        packUserOp(userOp),
-      ])
-
-      let tracerResult: BundlerCollectorReturn
       const tx: TransactionRequest = {
         from: ethers.ZeroAddress,
         to: epAddress,
-        data: encodedData,
+        data: epSimsInterface.encodeFunctionData(simFunctionName, [
+          packUserOp(userOp),
+        ]),
         gasLimit: (
           BigInt(userOp.preVerificationGas) +
           BigInt(userOp.verificationGasLimit)
         ).toString(),
       }
 
-      const stateOverrides = {
-        [epAddress]: {
-          code: EntryPointSimulationsDeployedBytecode,
-        },
-      }
-      if (nativeTracerEnabled) {
-        // First we need preStateTracer from the network provider(main):
-        const preState: { [addr: string]: any } = await ps.debug_traceCall(tx, {
-          tracer: prestateTracerName,
-          stateOverrides,
-        })
+      const tracerResult = nativeTracerEnabled
+        ? await runNativeTracer(ps, tx, stateOverrides)
+        : await runStandardTracer(
+            ps,
+            tx,
+            getBundlerCollectorTracerString(),
+            stateOverrides,
+          )
 
-        // convert nonce's to hex, and rename storage to state
-        for (const key in preState) {
-          if (preState[key]?.nonce != null) {
-            preState[key].nonce =
-              '0x' + (preState[key].nonce.toString(16) as string)
-          }
-          if (preState[key]?.storage != null) {
-            // rpc expects "state" instead...
-            preState[key].state = preState[key].storage
-            delete preState[key].storage
-          }
-        }
-
-        // Then we use native tracer to run the full validation
-        tracerResult = await ps.debug_traceCall(
-          tx,
-          {
-            tracer: bundlerNativeTracerName,
-            stateOverrides: preState,
-          },
-          true,
+      return tracerResult
+        .flatMap(parseTracerResultCalls)
+        .flatMap(([tracer, exitInfoData]) =>
+          parseValidationResultSafe(userOp, exitInfoData, tracer, {
+            simFunctionName,
+            epSimsInterface,
+          }),
         )
-      } else {
-        // Use standard javascript tracer
-        tracerResult = await ps.debug_traceCall(tx, {
-          tracer: bundlerCollectorTracerString,
-          stateOverrides,
-        })
-      }
-
-      // Parse results
-      const lastCallResult = tracerResult.calls.slice(-1)[0]
-      const exitInfoData = (lastCallResult as ExitInfo).data
-      if (lastCallResult.type === 'REVERT') {
-        throw new RpcError(
-          decodeRevertReason(exitInfoData, false) as string,
-          ValidationErrors.SimulateValidation,
-        )
-      }
-
-      try {
-        const [decodedSimulations] = epSimsInterface.decodeFunctionResult(
-          simFunctionName,
-          exitInfoData,
-        )
-        const validationResult = parseValidationResult(
-          userOp,
-          decodedSimulations,
-        )
-
-        return [validationResult, tracerResult]
-      } catch (e: any) {
-        // if already parsed, throw as is
-        if (e.code != null) {
-          throw e
-        }
-        // not a known error of EntryPoint (probably, only Error(string), since FailedOp is handled above)
-        const err = decodeErrorReason(e)
-        throw new RpcError(err != null ? err.reason : exitInfoData, -32000)
-      }
     },
 
     simulateHandleOp: async (
       userOp: UserOperation,
       stateOverride?: StateOverride,
-    ): Promise<ExecutionResult> => {
+    ): Promise<Either<RpcError, ExecutionResult>> => {
       Logger.debug('Running simulateHandleOp on userOp')
+      const ethCallResult = await ps.send<BytesLike>('eth_call', [
+        {
+          to: epAddress,
+          data: epSimsInterface.encodeFunctionData('simulateHandleOp', [
+            packUserOp(userOp),
+            ethers.ZeroAddress,
+            '0x',
+          ]),
+        },
+        'latest',
+        stateOverride ? stateOverride : stateOverrides,
+      ])
 
-      const simulateHandleOpResult = await ps
-        .send('eth_call', [
-          {
-            to: epAddress,
-            data: epSimsInterface.encodeFunctionData('simulateHandleOp', [
-              packUserOp(userOp),
-              ethers.ZeroAddress,
-              '0x',
-            ]),
-          },
-          'latest',
-          stateOverride
-            ? stateOverride
-            : {
-                [epAddress]: {
-                  code: EntryPointSimulationsDeployedBytecode,
-                },
-              },
-        ])
-        .catch((e: any) => {
-          throw new RpcError(
-            decodeRevertReason(e) as string,
-            ValidationErrors.SimulateValidation,
+      return ethCallResult.fold(
+        (error: NetworkCallError) =>
+          Either.Left(
+            new RpcError(
+              decodeRevertReason(error) as string,
+              ValidationErrors.SimulateValidation,
+            ),
+          ),
+        (simulateHandleOpResult: BytesLike) => {
+          const [res] = epSimsInterface.decodeFunctionResult(
+            'simulateHandleOp',
+            simulateHandleOpResult,
           )
-        })
-
-      const [res] = epSimsInterface.decodeFunctionResult(
-        'simulateHandleOp',
-        simulateHandleOpResult,
+          return Either.Right(parseExecutionResult(res))
+        },
       )
-      return parseExecutionResult(res)
     },
 
     tracerResultParser: (
@@ -527,8 +537,8 @@ export const createSimulator = (
         'Checking if network provider supports debug_traceCall to run full validation with standard javascript tracer',
       )
       const bundlerCollectorTracer = getBundlerCollectorTracerString()
-      const tracerResult: BundlerCollectorReturn = await ps
-        .debug_traceCall(
+      return (
+        await ps.debug_traceCall<BundlerCollectorReturn>(
           {
             from: ethers.ZeroAddress,
             to: ethers.ZeroAddress,
@@ -538,16 +548,19 @@ export const createSimulator = (
             tracer: bundlerCollectorTracer,
           },
         )
-        .catch((e) => e)
-
-      return tracerResult.logs != null
+      ).fold(
+        (_) => {
+          return false
+        },
+        (tracerResult) => tracerResult.logs != null,
+      )
     },
 
     supportsNativeTracer: async (
       nativeTracer,
       useNativeTracerProvider = false,
     ): Promise<boolean> => {
-      try {
+      return (
         await ps.debug_traceCall(
           {},
           {
@@ -555,11 +568,10 @@ export const createSimulator = (
           },
           useNativeTracerProvider,
         )
-
-        return true
-      } catch (e) {
-        return false
-      }
+      ).fold(
+        (_) => false,
+        (_) => true,
+      )
     },
   }
 }

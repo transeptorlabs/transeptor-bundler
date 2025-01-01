@@ -61,7 +61,6 @@ const runBundler = async () => {
     ps,
     sim,
     pvgc,
-    config.entryPoint.address,
     config.isUnsafeMode,
     config.nativeTracerEnabled,
   )
@@ -140,7 +139,6 @@ const runBundler = async () => {
         pvgc,
         config.entryPoint.contract,
       ),
-      ps,
     ),
     config.httpApis,
     config.port,
@@ -224,7 +222,10 @@ const runBundler = async () => {
         mode: config.isUnsafeMode ? 'UNSAFE' : 'SAFE',
         nativeTracerEnabled: config.nativeTracerEnabled,
         txMode: config.txMode,
+        bundleMode: config.isAutoBundle ? 'auto' : 'manual',
+        autoBundleInterval: `${config.autoBundleInterval} ms`,
         version: config.clientVersion,
+        bundleSize: config.bundleSize,
       },
       'Builder passed preflight checks',
     )

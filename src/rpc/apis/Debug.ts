@@ -11,15 +11,72 @@ import {
   PreVerificationGasConfig,
 } from '../../gas/index.js'
 
+export type DebugAPIMethodMapping = {
+  debug_bundler_clearState: {
+    params: []
+    return: string
+  }
+  debug_bundler_dumpMempool: {
+    params: []
+    return: UserOperation[]
+  }
+  debug_bundler_clearMempool: {
+    params: []
+    return: string
+  }
+  debug_bundler_sendBundleNow: {
+    params: []
+    return: SendBundleReturn | string
+  }
+  debug_bundler_setBundlingMode: {
+    params: [string]
+    return: string
+  }
+  debug_bundler_setBundleInterval: {
+    params: []
+    return: string
+  }
+  debug_bundler_setReputation: {
+    params: [ReputationEntry[], string]
+    return: string
+  }
+  debug_bundler_dumpReputation: {
+    params: [string]
+    return: ReputationEntry[]
+  }
+  debug_bundler_clearReputation: {
+    params: []
+    return: string
+  }
+  debug_bundler_addUserOps: {
+    params: [UserOperation[]]
+    return: string
+  }
+  debug_bundler_getStakeStatus: {
+    params: [string, string]
+    return: {
+      stakeInfo: StakeInfo
+      isStaked: boolean
+    }
+  }
+  debug_bundler_setConfiguration: {
+    params: [Partial<PreVerificationGasConfig>]
+    return: string
+  }
+}
+
 export type DebugAPI = {
   clearState(): Promise<void>
   dumpMempool(): Promise<UserOperation[]>
   clearMempool(): Promise<void>
-  setBundlingMode(mode: string): boolean
+  setBundlingMode(mode: 'auto' | 'manual'): boolean
   sendBundleNow(): Promise<SendBundleReturn>
-  setReputation(param: any): Promise<ReputationEntry[]>
+  setReputation(
+    reputations: ReputationEntry[],
+    epAddress: string,
+  ): Promise<ReputationEntry[]>
   addUserOps(userOps: UserOperation[]): Promise<void>
-  dumpReputation(): Promise<ReputationEntry[]>
+  dumpReputation(entryPoint: string): Promise<ReputationEntry[]>
   clearReputation(): Promise<void>
   getStakeStatus(
     address: string,
@@ -50,10 +107,7 @@ export const createDebugAPI = (
       await mempoolManagerCore.clearState()
     },
 
-    setBundlingMode: (mode: string): boolean => {
-      if (mode !== 'auto' && mode !== 'manual') {
-        throw new Error('Invalid bundling mode')
-      }
+    setBundlingMode: (mode: 'auto' | 'manual'): boolean => {
       bundleManager.setBundlingMode(mode)
       return true
     },
@@ -68,8 +122,11 @@ export const createDebugAPI = (
       return result
     },
 
-    setReputation: async (param: any): Promise<ReputationEntry[]> => {
-      return await reputationManager.setReputation(param)
+    setReputation: async (
+      reputations: ReputationEntry[],
+      _: string,
+    ): Promise<ReputationEntry[]> => {
+      return await reputationManager.setReputation(reputations)
     },
 
     addUserOps: async (userOps: UserOperation[]): Promise<void> => {
@@ -89,7 +146,7 @@ export const createDebugAPI = (
       }
     },
 
-    dumpReputation: async (): Promise<ReputationEntry[]> => {
+    dumpReputation: async (_: string): Promise<ReputationEntry[]> => {
       return await reputationManager.dump()
     },
 
@@ -110,7 +167,7 @@ export const createDebugAPI = (
     setGasConfig: async (
       config: Partial<PreVerificationGasConfig>,
     ): Promise<void> => {
-      await pvgc.updateGasConfig(config)
+      pvgc.updateGasConfig(config)
     },
   }
 }
