@@ -217,7 +217,7 @@ export const createBundleProcessor = (
         const { opIndex, reason } = parsedError.args
         const userOp = userOps[opIndex]
         const reasonStr: string = reason.toString()
-        const addressToban: string | undefined = await findEntityToBan(
+        const addressToBan: string | undefined = await findEntityToBan(
           reasonStr,
           userOp,
         )
@@ -232,7 +232,7 @@ export const createBundleProcessor = (
           signerIndex,
           crashedHandleOps: {
             failedOp: userOp,
-            addressToban,
+            addressToBan,
           },
         }
       }

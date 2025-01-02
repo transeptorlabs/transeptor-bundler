@@ -126,7 +126,7 @@ const transformRequest = <M extends MethodNames>(
  * @param validReq - The transformed request object
  * @returns The transformed request object if the parameters are valid
  */
-const isParmsValid = <M extends MethodNames>(
+const isParamsValid = <M extends MethodNames>(
   validReq: ValidateJsonRpcRequest<M>,
 ): Either<RpcError, ValidateJsonRpcRequest<M>> => {
   return !validReq.validationFunc(validReq.params)
@@ -152,7 +152,7 @@ export const createRpcHandler = (
         .flatMap(paramsIsArray)
         .flatMap((req) => apiEnabled(req, supportedApiPrefixes))
         .flatMap((req) => transformRequest(req, handlerRegistry))
-        .flatMap(isParmsValid)
+        .flatMap(isParamsValid)
 
       return rpcValidation.foldAsync(
         async (error: RpcError) =>

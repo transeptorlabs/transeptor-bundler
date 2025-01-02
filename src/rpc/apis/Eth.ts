@@ -74,7 +74,7 @@ export type EthAPI = {
   ): Promise<Either<RpcError, UserOperationByHashResponse | null>>
 }
 
-const extractVerifactionGasLimit = (
+const extractVerificationGasLimit = (
   estimate: EstimateUserOpGasResult,
   executionResult: Either<RpcError, ExecutionResult>,
 ): Either<RpcError, EstimateUserOpGasResult> => {
@@ -107,7 +107,7 @@ const extractCallGasLimit = (
   )
 }
 
-const extractUseropVerifactionResult = (
+const extractUseropVerificationResult = (
   relayUserOpParam: RelayUserOpParam,
   validationResult: Either<RpcError, ValidateUserOpResult>,
 ): Either<RpcError, RelayUserOpParam> => {
@@ -211,7 +211,7 @@ export const createEthAPI = (
             }))
             .flatMap((estimate) => extractCallGasLimit(estimate, callGasLimit))
             .flatMap((estimate) =>
-              extractVerifactionGasLimit(estimate, executionResult),
+              extractVerificationGasLimit(estimate, executionResult),
             )
         },
       )
@@ -248,7 +248,7 @@ export const createEthAPI = (
               userOpHash,
             }))
             .flatMap((op) =>
-              extractUseropVerifactionResult(op, validationResult),
+              extractUseropVerificationResult(op, validationResult),
             )
             .foldAsync(
               async (error: RpcError) => Either.Left<RpcError, string>(error),

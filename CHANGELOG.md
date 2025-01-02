@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - sim([#104](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
   - rpc([#104](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
   - event([#104](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
+- bump nanoid from 3.3.7 to 3.3.8 ([#103](https://github.com/transeptorlabs/transeptor-bundler/pull/103))
+- bump express from 4.18.3 to 4.21.2 ([#106](https://github.com/transeptorlabs/transeptor-bundler/pull/106))
 
 ## [v0.8.0-alpha.0] - 2024-12-02
 
