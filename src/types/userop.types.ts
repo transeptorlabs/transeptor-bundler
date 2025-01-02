@@ -10,7 +10,7 @@ export type UserOperation = {
   callData: BytesLike // The data to pass to the sender during the main execution call
   callGasLimit: BigNumberish // The amount of gas to allocate the main execution call
   verificationGasLimit: BigNumberish // The amount of gas to allocate for the verification step
-  preVerificationGas: BigNumberish // Extra gas to pay the bunder
+  preVerificationGas: BigNumberish // Extra gas to pay the bundler
   maxFeePerGas: BigNumberish // Maximum fee per gas (similar to EIP-1559 max_fee_per_gas) - https://eips.ethereum.org/EIPS/eip-1559
   maxPriorityFeePerGas: BigNumberish // Maximum priority fee per gas (similar to EIP-1559 max_priority_fee_per_gas)
   paymaster?: string // Address of paymaster contract, (or empty, if account pays for itself)

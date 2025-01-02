@@ -125,11 +125,11 @@ export const createBundleManager = (
 
     // Update reputation status to ban and drop userOp from mempool for entity that caused handleOps to revert
     if (res.crashedHandleOps) {
-      const { addressToban, failedOp } = res.crashedHandleOps
-      if (addressToban) {
-        Logger.info(`Banning address: ${addressToban} due to failed handleOps`)
-        await mempoolManagerBuilder.removeUserOpsForBannedAddr(addressToban)
-        await reputationManagerUpdater.crashedHandleOps(addressToban)
+      const { addressToBan, failedOp } = res.crashedHandleOps
+      if (addressToBan) {
+        Logger.info(`Banning address: ${addressToBan} due to failed handleOps`)
+        await mempoolManagerBuilder.removeUserOpsForBannedAddr(addressToBan)
+        await reputationManagerUpdater.crashedHandleOps(addressToBan)
       }
 
       await mempoolManagerBuilder.removeUserOp(failedOp)

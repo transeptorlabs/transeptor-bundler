@@ -22,7 +22,7 @@ export type SendBundleReturnWithSigner = {
   userOpHashes: string[]
   signerIndex: number
   crashedHandleOps?: {
-    addressToban: string | undefined
+    addressToBan: string | undefined
     failedOp: UserOperation
   }
 }

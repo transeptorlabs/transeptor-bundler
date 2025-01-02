@@ -115,7 +115,7 @@ export type StateService = {
    * })
    *
    * // multiple values can be updated at once:
-   * const sucess = await mempoolStateService.updateState(
+   * const success = await mempoolStateService.updateState(
    *  [StateKey.StandardPool, StateKey.BlackList],
    * (currentValue) => {
    * return {

@@ -55,7 +55,7 @@ export interface LogContext {
   to: string // Address, target of the transaction
   input: Buffer // Buffer, input transaction data
   gas: number // Number, gas budget of the transaction
-  gasUsed: number //  Number, amount of gas used in executing the transaction (excludes txdata costs)
+  gasUsed: number //  Number, amount of gas used in executing the transaction (excludes txData costs)
   gasPrice: number // Number, gas price configured in the transaction being executed
   intrinsicGas: number // Number, intrinsic gas for the transaction being executed
   value: bigint // big.Int, amount to be transferred in wei
