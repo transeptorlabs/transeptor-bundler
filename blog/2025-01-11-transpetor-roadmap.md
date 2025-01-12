@@ -22,7 +22,7 @@ At Transeptor Lab, we are dedicated to building open software for the community.
 
 ## Features & Priorities
 
-> We encourage community members to suggest new features that are not listed by joining the roadmap discussion [Transeptor issue board.](https://github.com/transeptorlabs/transeptor-bundler/discussions)
+> We encourage community members to suggest new features that are not listed by joining the roadmap discussion [Transeptor issue board.](https://github.com/transeptorlabs/transeptor-bundler/discussions/111)
 
 ### Research/Cross-chain interoperability
 Using [Chainlink CCIP](https://chain.link/cross-chain), we will explore offering custom RPC methods that allow dapps to invoke cross-chain tx from 4337 compatible smart accounts.
@@ -49,7 +49,7 @@ We may not be able to mitigate MEV entirely on the public mempool. Still, we wil
 We will actively work to ensure 100% compatibility with the bundler spec by promptly releasing fixes for any failing bundler spec test. Maintaining 100% compatibility is essential to prevent fragmentation when participating in the public p2p mempool.
 
 ## Community Involvement
-If you would like to contribute, check out [our contribution guide](https://github.com/transeptorlabs/transeptor-bundler/blob/main/CONTRIBUTING.md) and join the [2025 roadmap discussion](https://github.com/transeptorlabs/transeptor-bundler/discussions) to share thoughts on the project's direction.
+If you would like to contribute, check out [our contribution guide](https://github.com/transeptorlabs/transeptor-bundler/blob/main/CONTRIBUTING.md) and join the [2025 roadmap discussion](https://github.com/transeptorlabs/transeptor-bundler/discussions/111) to share thoughts on the project's direction.
 
 To keep up with the status of feature releases, use [X](https://x.com/transeptorlabs); we will actively post updates on our progress.
 
