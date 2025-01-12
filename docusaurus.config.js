@@ -88,8 +88,13 @@ const config = {
         items: [
           {
             to:'docs',
-            position: 'right',
+            position: 'left',
             label: 'Docs',
+          },
+          {
+            to:'blog',
+            position: 'left',
+            label: 'Blog',
           },
           {
             label: 'Join our Community',
