@@ -1,14 +1,17 @@
 import { ethers } from 'ethers'
 import { Logger } from '../logger/index.js'
-import { MempoolEntry } from '../state/index.js'
-import { StorageMap, UserOperation } from '../types/index.js'
-import { mergeStorageMap, RpcError } from '../utils/index.js'
 import {
+  StorageMap,
+  UserOperation,
+  ReputationManager,
+  ReputationStatus,
+  MempoolEntry,
   ValidateUserOpResult,
   ValidationErrors,
-  ValidationService,
-} from '../validation/index.js'
-import { ReputationManager, ReputationStatus } from '../reputation/index.js'
+  RpcError,
+} from '../types/index.js'
+import { mergeStorageMap } from '../utils/index.js'
+import { ValidationService } from '../validation/index.js'
 import { Either } from '../monad/index.js'
 
 export type BundleBuilder = {

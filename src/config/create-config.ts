@@ -4,9 +4,8 @@ import { ethers, HDNodeWallet, JsonRpcProvider, Mnemonic, Wallet } from 'ethers'
 import { createProvider } from '../provider/index.js'
 import { IENTRY_POINT_ABI, IStakeManager } from '../abis/index.js'
 import { DEFAULT_ENTRY_POINT } from '../constants/index.js'
-import { BundlerSignerWallets } from '../signer/index.js'
 import { isValidAddress } from '../utils/index.js'
-import { InfluxdbConnection } from '../metrics/index.js'
+import { InfluxdbConnection, BundlerSignerWallets } from '../types/index.js'
 
 dotenv.config()
 

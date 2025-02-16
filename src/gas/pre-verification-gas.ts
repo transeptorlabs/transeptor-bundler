@@ -1,7 +1,7 @@
 import { ethers, hexlify } from 'ethers'
 import { UserOperation } from '../types/index.js'
 
-import { packUserOp, encodeUserOp } from '../utils/bundle.utils.js'
+import { packUserOp, encodeUserOp } from '../utils/index.js'
 
 export type PreVerificationGasCalculator = {
   /**

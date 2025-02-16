@@ -1,5 +1,5 @@
 import { Mutex } from 'async-mutex'
-import { State, StateKey, StateService } from './state.types.js'
+import { State, StateKey, StateService } from '../types/index.js'
 import { Logger } from '../logger/index.js'
 
 export const createState = (): StateService => {

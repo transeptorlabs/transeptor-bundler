@@ -1,5 +1,9 @@
-import type { HandlerRegistry } from './index.js'
-import { DebugAPI, EthAPI, Web3API } from './apis/index.js'
+import type {
+  EthAPI,
+  DebugAPI,
+  Web3API,
+  HandlerRegistry,
+} from '../types/index.js'
 
 export const createBundlerHandlerRegistry = (
   eth: EthAPI,

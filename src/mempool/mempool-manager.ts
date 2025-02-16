@@ -1,9 +1,16 @@
 import { Logger } from '../logger/index.js'
-import { ReputationManager } from '../reputation/index.js'
-import { RelayUserOpParam, UserOperation } from '../types/index.js'
-import { RpcError } from '../utils/index.js'
-import { EntryStatus, MempoolEntry } from '../state/index.js'
-import { StateKey, StateService } from '../state/index.js'
+import {
+  RelayUserOpParam,
+  UserOperation,
+  ReputationManager,
+  RpcError,
+} from '../types/index.js'
+import {
+  StateKey,
+  StateService,
+  EntryStatus,
+  MempoolEntry,
+} from '../types/index.js'
 import { DepositManager } from '../deposit/index.js'
 import { Either } from '../monad/index.js'
 import {
@@ -11,7 +18,7 @@ import {
   MempoolManagerCore,
   MempoolManageSender,
   MempoolManageUpdater,
-} from './mempool.types.js'
+} from '../types/index.js'
 import {
   doUpdateMempoolState,
   findBySenderNonce,

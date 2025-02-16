@@ -2,8 +2,7 @@ import { ethers, EventFragment, Log } from 'ethers'
 
 import { Logger } from '../logger/index.js'
 import { ProviderService } from '../provider/index.js'
-import { ReputationManager } from '../reputation/index.js'
-import { MempoolManageUpdater } from '../mempool/index.js'
+import { MempoolManageUpdater, ReputationManager } from '../types/index.js'
 import { Either } from '../monad/index.js'
 
 export type EventManagerWithListener = {

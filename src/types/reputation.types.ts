@@ -1,4 +1,4 @@
-import { StakeInfo } from '../validation/index.js'
+import { StakeInfo } from './validation.types.js'
 
 /**
  * Throttled entities are allowed minimal number of entries per bundle. Banned entities are allowed none.

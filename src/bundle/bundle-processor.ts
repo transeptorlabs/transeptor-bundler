@@ -10,10 +10,10 @@ import {
   SendBundleReturnWithSigner,
   StorageMap,
   UserOperation,
+  ReputationManagerReader,
+  BundlerSignerWallets,
 } from '../types/index.js'
 import { packUserOps } from '../utils/index.js'
-import { ReputationManagerReader } from '../reputation/index.js'
-import { BundlerSignerWallets } from '../signer/index.js'
 
 export type BundleProcessor = {
   /**

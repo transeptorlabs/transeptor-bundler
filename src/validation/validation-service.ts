@@ -1,20 +1,15 @@
 import { ContractFactory, ethers, resolveProperties } from 'ethers'
 
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from '../abis/index.js'
-import { Simulator } from '../sim/index.js'
-import { Logger } from '../logger/index.js'
-import { StorageMap, UserOperation } from '../types/index.js'
+import { UserOperation, FullValidationResult } from '../types/index.js'
 import {
   ReferencedCodeHashes,
   ValidateUserOpResult,
   ValidationErrors,
-  ValidationResult,
-} from './validation.types.js'
-import {
-  requireCond,
-  requireAddressAndFields,
   RpcError,
-} from '../utils/index.js'
+  Simulator,
+} from '../types/index.js'
+import { requireCond, requireAddressAndFields } from '../utils/index.js'
 
 import { ProviderService } from '../provider/index.js'
 import { PreVerificationGasCalculator } from '../gas/index.js'
@@ -58,9 +53,9 @@ export type ValidationService = {
 }
 
 const checkValidationResult = (
-  res: ValidationResult,
+  res: ValidateUserOpResult,
   userOp: UserOperation,
-): Either<RpcError, ValidationResult> => {
+): Either<RpcError, ValidateUserOpResult> => {
   const VALID_UNTIL_FUTURE_SECONDS = 30 // how much time into the future a UserOperation must be valid in order to be accepted
 
   if (res.returnInfo.sigFailed) {
@@ -162,12 +157,7 @@ export const createValidationService = (
         )
       }
 
-      let res = Either.Right<RpcError, ValidationResult>(undefined)
-      let codeHashes: ReferencedCodeHashes = {
-        addresses: [],
-        hash: '',
-      }
-      let storageMap: StorageMap = {}
+      let res = Either.Right<RpcError, ValidateUserOpResult>(undefined)
 
       // if we are in unsafe mode, we skip the full validation with custom tracer and only run the partial validation with no stake or opcode checks
       if (!isUnsafeMode) {
@@ -176,63 +166,80 @@ export const createValidationService = (
           nativeTracerEnabled,
         )
 
-        res = await fullSimulateValidationResult.foldAsync(
-          async (error) => {
-            return Either.Left<RpcError, ValidationResult>(error)
-          },
-          async (result) => {
-            const [validationResult, tracerResults] = result
+        const fvResultSafeParse = async (
+          result: FullValidationResult,
+          previousCodeHashes?: ReferencedCodeHashes,
+        ) => {
+          const [validationResult, tracerResults] = result
+          const res = sim.tracerResultParser(
+            userOp,
+            tracerResults,
+            validationResult,
+          )
 
-            let contractAddresses: string[]
-            ;[contractAddresses, storageMap] = sim.tracerResultParser(
-              userOp,
-              tracerResults,
-              validationResult,
-            )
-
-            // if no previous contract hashes, then calculate hashes of contracts
-            if (previousCodeHashes == null) {
-              const { hash } = await ps.runContractScript(
-                getCodeHashesFactory,
-                [contractAddresses],
-              )
-
-              codeHashes = {
-                addresses: contractAddresses,
-                hash: hash,
+          return res.foldAsync(
+            async (err) => Either.Left<RpcError, ValidateUserOpResult>(err),
+            async (tracerRes) => {
+              const [contractAddresses, storageMap] = tracerRes
+              let codeHashes: ReferencedCodeHashes = {
+                addresses: [],
+                hash: '',
               }
-            }
 
-            if ((result as any) === '0x') {
-              return Either.Left(
-                new RpcError(
-                  'simulateValidation reverted with no revert string!',
-                  ValidationErrors.SimulateValidation,
-                ),
-              )
-            }
+              // if no previous contract hashes, then calculate hashes of contracts
+              if (previousCodeHashes == null) {
+                const { hash } = await ps.runContractScript(
+                  getCodeHashesFactory,
+                  [contractAddresses],
+                )
 
-            return Either.Right(validationResult)
-          },
+                codeHashes = {
+                  addresses: contractAddresses,
+                  hash: hash,
+                }
+              }
+
+              if ((result as any) === '0x') {
+                return Either.Left(
+                  new RpcError(
+                    'simulateValidation reverted with no revert string!',
+                    ValidationErrors.SimulateValidation,
+                  ),
+                )
+              }
+
+              return Either.Right({
+                ...validationResult,
+                storageMap,
+                referencedContracts: codeHashes,
+              })
+            },
+          )
+        }
+
+        res = await fullSimulateValidationResult.foldAsync(
+          async (error) => Either.Left<RpcError, ValidateUserOpResult>(error),
+          async (result) => fvResultSafeParse(result, previousCodeHashes),
         )
       } else {
-        res = await sim.partialSimulateValidation(userOp)
+        const partialSimulateValidationResult =
+          await sim.partialSimulateValidation(userOp)
+
+        res = partialSimulateValidationResult.fold(
+          (error) => Either.Left<RpcError, ValidateUserOpResult>(error),
+          (validationResult) =>
+            Either.Right({
+              ...validationResult,
+              referencedContracts: {
+                addresses: [],
+                hash: '',
+              },
+              storageMap: {},
+            }),
+        )
       }
 
-      return res
-        .flatMap((res) => checkValidationResult(res, userOp))
-        .fold(
-          (error) => Either.Left(error),
-          (res) => {
-            Logger.debug('UserOp passed validation')
-
-            return Either.Right({
-              ...res,
-              referencedContracts: codeHashes,
-              storageMap,
-            })
-          },
-        )
+      return res.flatMap((res) => checkValidationResult(res, userOp))
     },
 
     validateInputParameters: async (

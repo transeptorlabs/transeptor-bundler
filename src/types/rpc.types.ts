@@ -1,10 +1,10 @@
-import { RpcError } from '../utils/index.js'
 import { Either } from '../monad/index.js'
 import {
   DebugAPIMethodMapping,
   EthAPIMethodMapping,
   Web3APIMethodMapping,
-} from './apis/index.js'
+} from './api.types.js'
+import { RpcError } from './error.types.js'
 
 // Define the mapping of method names to their params and return types
 export type MethodMapping = Web3APIMethodMapping &

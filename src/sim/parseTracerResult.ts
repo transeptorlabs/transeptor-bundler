@@ -11,14 +11,15 @@ import {
   UserOperation,
   BundlerCollectorReturn,
   TopLevelCallInfo,
-} from '../types/index.js'
-import {
+  AccessInfo,
   ValidationErrors,
   ValidationResult,
   StakeInfo,
-} from '../validation/index.js'
+  RpcError,
+} from '../types/index.js'
 import { requireCond, toBytes32, toJsonString } from '../utils/index.js'
 import { Logger } from '../logger/index.js'
+import { Either } from '../monad/index.js'
 
 interface CallEntry {
   to: string
@@ -236,6 +237,42 @@ const isStaked = (entStake?: StakeInfo): boolean => {
 }
 
 /**
+ * helper method: if condition is true, then entity must be staked.
+ *
+ * @param cond
+ * @param entStakes
+ * @param failureMessage
+ * @param entityTitle
+ * @param access
+ */
+const requireCondAndStake = (
+  cond: boolean,
+  entStakes: StakeInfo | undefined,
+  failureMessage: string,
+  entityTitle: string,
+  access: {
+    [address: string]: AccessInfo
+  },
+): void => {
+  if (!cond) {
+    return
+  }
+  if (entStakes == null) {
+    throw new Error(
+      `internal: ${entityTitle} not in userOp, but has storage accesses in ${toJsonString(access)}`,
+    )
+  }
+  requireCond(
+    isStaked(entStakes),
+    failureMessage,
+    ValidationErrors.OpcodeValidation,
+    { [entityTitle]: entStakes?.addr },
+  )
+
+  // TODO: Check the minimum stake value passed in config rather than defaulting to 1
+}
+
+/**
  * parse collected simulation traces and revert if they break our rules
  *
  * @param userOp the userOperation that was used in this simulation
@@ -249,7 +286,7 @@ export const tracerResultParser = (
   tracerResults: BundlerCollectorReturn,
   validationResult: ValidationResult,
   epAddress: string,
-): [string[], StorageMap] => {
+): Either<RpcError, [string[], StorageMap]> => {
   Logger.debug('Running tracerResultParser on full validation results')
   const entryPointAddress = epAddress.toLowerCase()
 
@@ -511,39 +548,11 @@ export const tracerResultParser = (
             addr,
             entityTitle,
           )} slot ${requireStakeSlot}`,
+          entityTitle,
+          access,
         )
       },
     )
-
-    // helper method: if condition is true, then entity must be staked.
-    /**
-     *
-     * @param cond
-     * @param entStake
-     * @param failureMessage
-     */
-    function requireCondAndStake(
-      cond: boolean,
-      entStake: StakeInfo | undefined,
-      failureMessage: string,
-    ): void {
-      if (!cond) {
-        return
-      }
-      if (entStake == null) {
-        throw new Error(
-          `internal: ${entityTitle} not in userOp, but has storage accesses in ${toJsonString(access)}`,
-        )
-      }
-      requireCond(
-        isStaked(entStake),
-        failureMessage,
-        ValidationErrors.OpcodeValidation,
-        { [entityTitle]: entStakes?.addr },
-      )
-
-      // TODO: Check the minimum stake value passed in config rather than defaulting to 1
-    }
 
     // the only contract we allow to access before its deployment is the "sender" itself, which gets created.
     let illegalZeroCodeAccess: any
@@ -586,5 +595,5 @@ export const tracerResultParser = (
     tracerResults.callsFromEntryPoint,
   )
 
-  return [addresses, storageMap]
+  return Either.Right([addresses, storageMap])
 }

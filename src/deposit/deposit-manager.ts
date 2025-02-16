@@ -1,8 +1,11 @@
 import { ethers } from 'ethers'
-import { UserOperation } from '../types/index.js'
-import { StateService, StateKey } from '../state/index.js'
+import {
+  UserOperation,
+  StateService,
+  StateKey,
+  ValidationErrors,
+} from '../types/index.js'
 import { getUserOpMaxCost, requireCond } from '../utils/index.js'
-import { ValidationErrors } from '../validation/index.js'
 
 /**
  * The DepositManager is responsible for managing the deposits of paymasters. It ensures that each paymaster has enough deposit to cover the gas costs of the pending UserOperations in the mempool.

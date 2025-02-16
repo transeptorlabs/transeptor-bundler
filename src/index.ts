@@ -16,11 +16,11 @@ import { Libp2pNode } from './p2p/index.js'
 
 import { createProviderService } from './provider/index.js'
 import { createValidationService } from './validation/index.js'
+import { createSimulator } from './sim/index.js'
 import {
   bundlerNativeTracerName,
-  createSimulator,
   prestateTracerName,
-} from './sim/index.js'
+} from './constants/index.js'
 import {
   createReputationManager,
   createReputationManagerUpdater,
@@ -207,11 +207,21 @@ const runBundler = async () => {
           )
         }
       } else {
-        if (!(await sim.supportsDebugTraceCall())) {
-          throw new Error(
-            'Full validation requires (debug_traceCall) method on the network provider for standard javascript tracer. For UNSAFE mode: use --unsafe',
-          )
-        }
+        const supportsDebugTraceCallRes = await sim.supportsDebugTraceCall()
+        supportsDebugTraceCallRes.fold(
+          (err) => {
+            throw new Error(
+              `Internal error when checking for traceCall support: ${err.message}`,
+            )
+          },
+          (isSupportsDebugTraceCall) => {
+            if (!isSupportsDebugTraceCall) {
+              throw new Error(
+                'Full validation requires (debug_traceCall) method on the network provider for standard javascript tracer. For UNSAFE mode: use --unsafe',
+              )
+            }
+          },
+        )
       }
     }
 

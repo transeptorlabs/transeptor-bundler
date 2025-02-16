@@ -25,32 +25,26 @@ import {
   ExitInfo,
   StorageMap,
   UserOperation,
-} from '../types/index.js'
-import {
   ExecutionResult,
-  StakeInfo as StakeInfoWithAddr,
+  StakeInfoWithAddr,
   ValidationErrors,
   ValidationResult,
-} from '../validation/index.js'
-import {
   NetworkCallError,
   RpcError,
-  mergeValidationDataValues,
-  packUserOp,
-} from '../utils/index.js'
+  ExecutionResultStruct,
+  FullValidationResult,
+  SimulateValidationReturnStruct,
+  Simulator,
+  StateOverride,
+} from '../types/index.js'
+import { mergeValidationDataValues, packUserOp } from '../utils/index.js'
 import { ProviderService } from '../provider/index.js'
 import { tracerResultParser } from './parseTracerResult.js'
 import {
   bundlerNativeTracerName,
   prestateTracerName,
-} from './gethTracer.types.js'
+} from '../constants/index.js'
 import { Either } from '../monad/index.js'
-import {
-  ExecutionResultStruct,
-  FullValidationResult,
-  SimulateValidationReturnStruct,
-  StateOverride,
-} from './sim-types.js'
 
 const parseValidationResult = (
   userOp: UserOperation,
@@ -216,7 +210,7 @@ const decodeRevertReason = (
   }
 }
 
-const getBundlerCollectorTracerString = () => {
+const getBundlerCollectorTracerString = (): Either<RpcError, string> => {
   const __filename = fileURLToPath(import.meta.url)
   const __dirname = dirname(__filename)
 
@@ -225,18 +219,16 @@ const getBundlerCollectorTracerString = () => {
   try {
     tracer = readFileSync(jsFilePath).toString()
   } catch (error: any) {
-    Logger.error({ path: jsFilePath }, 'Tracer file path not found')
-    throw new Error('Tracer not found')
+    return Either.Left(new RpcError('Tracer file path not found', -32000))
   }
 
   if (tracer == null) {
-    Logger.error({ path: jsFilePath }, 'Tracer not found')
-    throw new Error('Tracer not found')
+    return Either.Left(new RpcError('Tracer not found', -32000))
   }
   const regexp =
     /function \w+\s*\(\s*\)\s*{\s*return\s*(\{[\s\S]+\});?\s*\}\s*$/
 
-  return tracer.match(regexp)?.[1]
+  return Either.Right(tracer.match(regexp)?.[1])
 }
 
 const normalizePreState = (preState: {
@@ -349,30 +341,6 @@ const parseValidationResultSafe = (
   }
 }
 
-export type Simulator = {
-  partialSimulateValidation(
-    userOp: UserOperation,
-  ): Promise<Either<RpcError, ValidationResult>>
-  fullSimulateValidation(
-    userOp: UserOperation,
-    nativeTracerEnabled: boolean,
-  ): Promise<Either<RpcError, FullValidationResult>>
-  simulateHandleOp(
-    userOp: UserOperation,
-    stateOverride?: StateOverride,
-  ): Promise<Either<RpcError, ExecutionResult>>
-  tracerResultParser(
-    userOp: UserOperation,
-    tracerResults: BundlerCollectorReturn,
-    validationResult: ValidationResult,
-  ): [string[], StorageMap]
-  supportsDebugTraceCall(): Promise<boolean>
-  supportsNativeTracer(
-    nativeTracer: string,
-    useNativeTracerProvider?: boolean,
-  ): Promise<boolean>
-}
-
 export const createSimulator = (
   ps: ProviderService,
   epAddress: string,
@@ -466,11 +434,11 @@ export const createSimulator = (
 
       const tracerResult = nativeTracerEnabled
         ? await runNativeTracer(ps, tx, stateOverrides)
-        : await runStandardTracer(
-            ps,
-            tx,
-            getBundlerCollectorTracerString(),
-            stateOverrides,
+        : await getBundlerCollectorTracerString().foldAsync(
+            async (tracerFileErr) =>
+              Either.Left<RpcError, BundlerCollectorReturn>(tracerFileErr),
+            async (tracerStr) =>
+              runStandardTracer(ps, tx, tracerStr, stateOverrides),
           )
 
       return tracerResult
@@ -523,7 +491,7 @@ export const createSimulator = (
       userOp: UserOperation,
       tracerResults: BundlerCollectorReturn,
       validationResult: ValidationResult,
-    ): [string[], StorageMap] => {
+    ): Either<RpcError, [string[], StorageMap]> => {
       return tracerResultParser(
         userOp,
         tracerResults,
@@ -532,27 +500,32 @@ export const createSimulator = (
       )
     },
 
-    supportsDebugTraceCall: async (): Promise<boolean> => {
+    supportsDebugTraceCall: async (): Promise<Either<RpcError, boolean>> => {
       Logger.debug(
         'Checking if network provider supports debug_traceCall to run full validation with standard javascript tracer',
       )
-      const bundlerCollectorTracer = getBundlerCollectorTracerString()
-      return (
-        await ps.debug_traceCall<BundlerCollectorReturn>(
+      const checkTracerSupport = async (tracerStr: string) => {
+        const traceCallRes = await ps.debug_traceCall<BundlerCollectorReturn>(
           {
             from: ethers.ZeroAddress,
             to: ethers.ZeroAddress,
             data: '0x',
           },
           {
-            tracer: bundlerCollectorTracer,
+            tracer: tracerStr,
           },
         )
-      ).fold(
-        (_) => {
-          return false
-        },
-        (tracerResult) => tracerResult.logs != null,
+
+        return traceCallRes.fold(
+          (traceCallErr) => Either.Left<RpcError, boolean>(traceCallErr),
+          (tracerResult) =>
+            Either.Right<RpcError, boolean>(tracerResult.logs != null),
+        )
+      }
+
+      return getBundlerCollectorTracerString().foldAsync(
+        async (tracerFileErr) => Either.Left(tracerFileErr),
+        async (tracerStr) => checkTracerSupport(tracerStr),
       )
     },
 

@@ -8,10 +8,11 @@ import {
   ReputationStatus,
   ReputationManagerUpdater,
   ReputationManagerReader,
-} from './reputation.types.js'
-import { StakeInfo, ValidationErrors } from '../validation/index.js'
+  StakeInfo,
+  ValidationErrors,
+} from '../types/index.js'
 import { requireCond, tostr } from '../utils/index.js'
-import { StateService, ReputationEntries, StateKey } from '../state/index.js'
+import { StateService, ReputationEntries, StateKey } from '../types/index.js'
 
 export const createReputationManagerUpdater = (
   reputationManager: ReputationManager,

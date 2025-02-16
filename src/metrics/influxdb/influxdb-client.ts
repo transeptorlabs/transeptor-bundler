@@ -1,7 +1,7 @@
 'use strict'
 import os from 'os'
 import { InfluxDB, Point } from '@influxdata/influxdb-client'
-import { MeasurementName } from '../metrics.types.js'
+import { MeasurementName } from '../../types/metrics.types.js'
 
 export type InfluxdbClient = {
   writePoint: (
