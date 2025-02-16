@@ -16,8 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - validation
 - Move all types under `../src/types`
 - Configure test coverage report in `vitest.config.ts`
-- Move all test to `./test` to separate test files from implementation. Moving forward all test case will be defined here.
-- A `@vitest/coverage-istanbul:v3.0.5` to `devDependencies` to track produce test coverage report.
+- Move all test to `./test` to separate test files from implementation. Moving forward, all test cases will be defined here.
+- A `@vitest/coverage-istanbul:v3.0.5` to `devDependencies` to produce a test coverage report.
 - Bump `devDependencies`:
   - `vite` from 5.3.1 to 5.4.12
   - `vitest` from 1.6.0 to 3.0.5
