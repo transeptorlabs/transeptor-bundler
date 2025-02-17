@@ -1,3 +1,5 @@
+import { BigNumberish } from 'ethers'
+
 /**
  * return type of our BundlerCollectorTracer.
  * collect access and opcodes, split into "levels" based on NUMBER opcode
@@ -66,4 +68,14 @@ export interface AccessInfo {
 export interface LogInfo {
   topics: string[]
   data: string
+}
+
+export interface CallEntry {
+  to: string
+  from: string
+  type: string // call opcode
+  method: string // parsed method, or signash if unparsed
+  revert?: any // parsed output from REVERT
+  return?: any // parsed method output.
+  value?: BigNumberish
 }

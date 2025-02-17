@@ -178,3 +178,8 @@ Licensed under the [GPL-3.0 License](https://github.com/transeptorlabs/transepto
 We are grateful to the open-source community and the countless developers who have shared their knowledge and resources, enabling us to build upon their work:
 
 - [Infinitism](https://github.com/eth-infinitism/bundler) - for inspiring our project and serving as a reference for implementation techniques.
+
+## Relevant Documents
+- [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337)
+- [ERC-7562](https://eips.ethereum.org/EIPS/eip-7562)
+- [EIP-1153](https://eips.ethereum.org/EIPS/eip-1153)
