@@ -1,21 +1,22 @@
 import { BigNumberish } from 'ethers'
 
 import { Logger } from '../logger/index.js'
-import { ReputationManager } from '../reputation/index.js'
-import { UserOperation } from '../types/index.js'
-import { StakeInfo, ValidationErrors } from '../validation/index.js'
-import { RpcError } from '../utils/index.js'
 import {
+  UserOperation,
+  ReputationManager,
+  StakeInfo,
+  ValidationErrors,
+  RpcError,
+} from '../types/index.js'
+import { Either } from '../monad/index.js'
+import type {
+  MempoolEntryMetadata,
+  MempoolEntryWithMetadata,
   EntryCount,
   MempoolEntry,
   StandardPool,
   State,
-} from '../state/index.js'
-import { Either } from '../monad/index.js'
-import {
-  MempoolEntryMetadata,
-  MempoolEntryWithMetadata,
-} from './mempool.types.js'
+} from '../types/index.js'
 
 /**
  * Checks the reputation status of the given stakeInfo.

@@ -1,6 +1,16 @@
 import { BigNumberish, BytesLike } from 'ethers'
 
-import { StorageMap } from '../types/bundle.types.js'
+export type SlotMap = {
+  [slot: string]: string
+}
+
+/**
+ * map of storage
+ * for each address, either a root hash, or a map of slot:value
+ */
+export type StorageMap = {
+  [address: string]: string | SlotMap
+}
 
 /**
  * result from successful simulateValidation
@@ -61,6 +71,12 @@ export enum ValidationErrors {
 }
 
 export type StakeInfo = {
+  addr: string
+  stake: BigNumberish
+  unstakeDelaySec: BigNumberish
+}
+
+export type StakeInfoWithAddr = {
   addr: string
   stake: BigNumberish
   unstakeDelaySec: BigNumberish

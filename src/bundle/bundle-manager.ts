@@ -1,13 +1,15 @@
-import { MempoolManagerBuilder } from '../mempool/index.js'
+import { MempoolManagerBuilder } from '../types/index.js'
 import { Logger } from '../logger/index.js'
-import { SendBundleReturn } from '../types/index.js'
+import {
+  SendBundleReturn,
+  ReputationManagerUpdater,
+  MempoolEntry,
+} from '../types/index.js'
 
 import { BundleBuilder } from './bundle-builder.js'
 import { BundleProcessor } from './bundle-processor.js'
 import { EventManagerWithListener } from '../event/index.js'
-import { MempoolEntry } from '../state/index.js'
 import { isAccountOrFactoryError } from '../utils/index.js'
-import { ReputationManagerUpdater } from '../reputation/index.js'
 import { Mutex } from 'async-mutex'
 
 export type BundleManager = {

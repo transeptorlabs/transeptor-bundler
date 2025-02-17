@@ -1,8 +1,9 @@
 import { BigNumberish } from 'ethers'
 
-import { ReferencedCodeHashes } from '../validation/index.js'
-import { UserOperation } from '../types/index.js'
-import { ReputationEntry } from '../reputation/index.js'
+import { UserOperation } from './userop.types.js'
+import { ReputationEntry } from './reputation.types.js'
+import { ReferencedCodeHashes } from './validation.types.js'
+import { BundleTxs } from './bundle.types.js'
 
 export type EntryStatus = 'bundling' | 'pending' | 'bundled' | 'failed'
 
@@ -30,27 +31,12 @@ export type StandardPool = Record<string, MempoolEntry>
  */
 export type EntryCount = Record<string, number>
 
-export type BundleTxStatus = 'pending' | 'confirmed' | 'failed'
-
-export type PendingTxDetails = {
-  txHash: string
-  signerIndex: number
-  status: BundleTxStatus
-}
-
 /**
  * Reputation entry per address
  *
  *  The key is the address of an entity(account/paymaster/deployer/aggregator)
  */
 export type ReputationEntries = Record<string, ReputationEntry>
-
-/*
- * Hold the pending transactions for each bundle
- *
- * The key is the transaction hash
- */
-export type BundleTxs = Record<string, PendingTxDetails>
 
 export type State = {
   standardPool: StandardPool
@@ -99,9 +85,10 @@ export type StateService = {
   ) => Promise<Pick<State, K>>
 
   /**
-   * Single setter to allow for atomic updates of any part of the state.
+   * Allows atomic updates of any part of the state. A functional version to express general state transitions.
    *
-   * @param updateFn A function that receives the current state value and returns a new value.
+   * @param keys - Specifies which parts of the state need to be updated
+   * @param updateFn - A state transition function used by caller to make atomic updates to current state to produce the new state
    * @returns A promise that resolves to true if the update was successful and false otherwise.
    *
    *

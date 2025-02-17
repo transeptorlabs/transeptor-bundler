@@ -1,89 +1,20 @@
 import { packUserOp } from '../../utils/index.js'
-import { SendBundleReturn, UserOperation } from '../../types/index.js'
-import { StakeInfo } from '../../validation/index.js'
 import { ethers } from 'ethers'
-import { ReputationEntry, ReputationManager } from '../../reputation/index.js'
 import { BundleManager } from '../../bundle/index.js'
-import { MempoolManagerCore } from '../../mempool/index.js'
+import {
+  MempoolManagerCore,
+  ReputationEntry,
+  ReputationManager,
+  StakeInfo,
+  SendBundleReturn,
+  UserOperation,
+  DebugAPI,
+} from '../../types/index.js'
 import { EventManagerWithListener } from '../../event/index.js'
 import {
   PreVerificationGasCalculator,
   PreVerificationGasConfig,
 } from '../../gas/index.js'
-
-export type DebugAPIMethodMapping = {
-  debug_bundler_clearState: {
-    params: []
-    return: string
-  }
-  debug_bundler_dumpMempool: {
-    params: []
-    return: UserOperation[]
-  }
-  debug_bundler_clearMempool: {
-    params: []
-    return: string
-  }
-  debug_bundler_sendBundleNow: {
-    params: []
-    return: SendBundleReturn | string
-  }
-  debug_bundler_setBundlingMode: {
-    params: [string]
-    return: string
-  }
-  debug_bundler_setBundleInterval: {
-    params: []
-    return: string
-  }
-  debug_bundler_setReputation: {
-    params: [ReputationEntry[], string]
-    return: string
-  }
-  debug_bundler_dumpReputation: {
-    params: [string]
-    return: ReputationEntry[]
-  }
-  debug_bundler_clearReputation: {
-    params: []
-    return: string
-  }
-  debug_bundler_addUserOps: {
-    params: [UserOperation[]]
-    return: string
-  }
-  debug_bundler_getStakeStatus: {
-    params: [string, string]
-    return: {
-      stakeInfo: StakeInfo
-      isStaked: boolean
-    }
-  }
-  debug_bundler_setConfiguration: {
-    params: [Partial<PreVerificationGasConfig>]
-    return: string
-  }
-}
-
-export type DebugAPI = {
-  clearState(): Promise<void>
-  dumpMempool(): Promise<UserOperation[]>
-  clearMempool(): Promise<void>
-  setBundlingMode(mode: 'auto' | 'manual'): boolean
-  sendBundleNow(): Promise<SendBundleReturn>
-  setReputation(
-    reputations: ReputationEntry[],
-    epAddress: string,
-  ): Promise<ReputationEntry[]>
-  addUserOps(userOps: UserOperation[]): Promise<void>
-  dumpReputation(entryPoint: string): Promise<ReputationEntry[]>
-  clearReputation(): Promise<void>
-  getStakeStatus(
-    address: string,
-    entryPointAddress: string,
-  ): Promise<{ stakeInfo: StakeInfo; isStaked: boolean }>
-  setGasConfig(config: Partial<PreVerificationGasConfig>): Promise<void>
-}
 
 export const createDebugAPI = (
   bundleManager: BundleManager,

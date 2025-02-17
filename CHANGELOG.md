@@ -5,6 +5,24 @@ All notable changes to this project will be manually documented in this file by 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unrelease] - xxx-xx-xx
+
+### Added
+- A docs for Release process and Vision([#109](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
+
+### Changed
+- Refactor modules to improve error handling with Either monad:
+  - sim
+  - validation
+- Move all types under `../src/types`
+- Configure test coverage report in `vitest.config.ts`
+- Move all test to `./test` to separate test files from implementation. Moving forward, all test cases will be defined here.
+- A `@vitest/coverage-istanbul:v3.0.5` to `devDependencies` to produce a test coverage report.
+- Bump `devDependencies`:
+  - `vite` from 5.3.1 to 5.4.12
+  - `vitest` from 1.6.0 to 3.0.5
+- Fix a few circular dependencies
+
 ## [v0.9.0-alpha.0] - 2025-01-02
 
 ### Added

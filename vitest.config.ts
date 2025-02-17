@@ -4,9 +4,22 @@ import { defineConfig } from 'vitest/config'
 // https://github.com/NomicFoundation/hardhat/issues/3385
 export default defineConfig({
   test: {
-    include: ['src/**/*.test.ts'],
+    include: ['test/**/*.test.ts'],
     exclude: [],
     setupFiles: './vitest.setup.ts',
     environment: 'node',
+    coverage: {
+      provider: 'istanbul',
+      reporter: ['text', 'lcov'],
+      include: ['src/**/*.ts'],
+      exclude: [
+        'src/types/**',
+        'src/abis/**',
+        'tests/**',
+        'vitest.setup.ts',
+        'src/**/index.ts',
+      ],
+      all: true,
+    },
   },
 })

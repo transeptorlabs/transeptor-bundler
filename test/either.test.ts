@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { Either } from './either'
-import { RpcError } from '../utils/rpc.utils'
+import { Either } from '../src/monad/either'
+import { RpcError } from '../src/types/index.js'
 
 /**
  * Set of helper functions to test the Either monad

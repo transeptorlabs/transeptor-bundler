@@ -6,73 +6,22 @@ import {
   UserOperation,
   UserOperationByHashResponse,
   UserOperationReceipt,
-} from '../../types/index.js'
-import {
+  MempoolManageSender,
   ExecutionResult,
   ValidateUserOpResult,
   ValidationErrors,
-} from '../../validation/index.js'
-import {
-  deepHexlify,
-  packUserOp,
-  unpackUserOp,
+  StateOverride,
   RpcError,
-} from '../../utils/index.js'
+  EthAPI,
+  Simulator,
+} from '../../types/index.js'
+import { deepHexlify, packUserOp, unpackUserOp } from '../../utils/index.js'
 
 import { ProviderService } from '../../provider/index.js'
-import { Simulator, StateOverride } from '../../sim/index.js'
 import { ValidationService } from '../../validation/index.js'
 import { EventManagerWithListener } from '../../event/index.js'
-import { MempoolManageSender } from '../../mempool/index.js'
 import { PreVerificationGasCalculator } from '../../gas/index.js'
 import { Either } from '../../monad/index.js'
-
-export type EthAPIMethodMapping = {
-  eth_chainId: {
-    params: []
-    return: number
-  }
-  eth_estimateUserOperationGas: {
-    params: [Partial<UserOperation>, string, StateOverride?]
-    return: Either<RpcError, EstimateUserOpGasResult>
-  }
-  eth_sendUserOperation: {
-    params: [UserOperation, string]
-    return: Either<RpcError, string>
-  }
-  eth_supportedEntryPoints: {
-    params: []
-    return: string[]
-  }
-  eth_getUserOperationReceipt: {
-    params: [string]
-    return: Either<RpcError, UserOperationReceipt | null>
-  }
-  eth_getUserOperationByHash: {
-    params: [string]
-    return: Either<RpcError, UserOperationByHashResponse | null>
-  }
-}
-
-export type EthAPI = {
-  getChainId(): Promise<number>
-  estimateUserOperationGas(
-    userOpInput: Partial<UserOperation>,
-    entryPointInput: string,
-    stateOverride?: StateOverride,
-  ): Promise<Either<RpcError, EstimateUserOpGasResult>>
-  sendUserOperation(
-    userOpInput: UserOperation,
-    entryPointInput: string,
-  ): Promise<Either<RpcError, string>>
-  getSupportedEntryPoints(): Promise<string[]>
-  getUserOperationReceipt(
-    userOpHash: string,
-  ): Promise<Either<RpcError, UserOperationReceipt | null>>
-  getUserOperationByHash(
-    userOpHash: string,
-  ): Promise<Either<RpcError, UserOperationByHashResponse | null>>
-}
 
 const extractVerificationGasLimit = (
   estimate: EstimateUserOpGasResult,

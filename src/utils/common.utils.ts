@@ -37,6 +37,12 @@ export const toBytes32 = (b: BytesLike): string => {
   return ethers.zeroPadValue(hexlify(b).toLowerCase(), 32)
 }
 
+/**
+ * Convert an object to a JSON string.
+ *
+ * @param obj - The object to convert.
+ * @returns The JSON string representation of the object.
+ */
 export const toJsonString = (obj: any): string => {
   return JSON.stringify(
     obj,
@@ -47,3 +53,14 @@ export const toJsonString = (obj: any): string => {
     2,
   )
 }
+
+type Compose = <A, B, C>(f: (x: B) => C, g: (x: A) => B) => (x: A) => C
+
+/**
+ * Composes two functions into one function: (f,g) => x => f(g(x))
+ *
+ * @param f - The first function.
+ * @param g - The second function.
+ * @returns - The composed function.
+ */
+export const compose: Compose = (f, g) => (x) => f(g(x))

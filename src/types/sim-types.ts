@@ -1,11 +1,14 @@
 import { BigNumberish, BytesLike } from 'ethers'
-import { BundlerCollectorReturn } from '../types/index.js'
-import { ValidationResult } from '../validation/index.js'
-
-export type StakeInfo = {
-  stake: BigNumberish
-  unstakeDelaySec: BigNumberish
-}
+import { BundlerCollectorReturn } from './bundler-collector-tracer.types.js'
+import {
+  ExecutionResult,
+  StakeInfo,
+  StorageMap,
+  ValidationResult,
+} from './validation.types.js'
+import { Either } from 'src/monad/either.js'
+import { RpcError } from './error.types.js'
+import { UserOperation } from './userop.types.js'
 
 export type AggregatorStakeInfo = {
   aggregator: string
@@ -60,3 +63,27 @@ export type StateOverride = {
 }
 
 export type FullValidationResult = [ValidationResult, BundlerCollectorReturn]
+
+export type Simulator = {
+  partialSimulateValidation(
+    userOp: UserOperation,
+  ): Promise<Either<RpcError, ValidationResult>>
+  fullSimulateValidation(
+    userOp: UserOperation,
+    nativeTracerEnabled: boolean,
+  ): Promise<Either<RpcError, FullValidationResult>>
+  simulateHandleOp(
+    userOp: UserOperation,
+    stateOverride?: StateOverride,
+  ): Promise<Either<RpcError, ExecutionResult>>
+  tracerResultParser(
+    userOp: UserOperation,
+    tracerResults: BundlerCollectorReturn,
+    validationResult: ValidationResult,
+  ): Either<RpcError, [string[], StorageMap]>
+  supportsDebugTraceCall(): Promise<Either<RpcError, boolean>>
+  supportsNativeTracer(
+    nativeTracer: string,
+    useNativeTracerProvider?: boolean,
+  ): Promise<boolean>
+}

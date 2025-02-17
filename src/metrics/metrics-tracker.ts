@@ -1,6 +1,6 @@
 import osUtils from 'os-utils'
 import { Logger } from '../logger/index.js'
-import { InfluxdbConnection, MeasurementName } from './metrics.types.js'
+import { InfluxdbConnection, MeasurementName } from '../types/index.js'
 import { createInfluxdbClient } from './influxdb/index.js'
 
 export type MetricsTracker = {

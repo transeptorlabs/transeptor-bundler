@@ -14,9 +14,13 @@ import {
 } from 'ethers'
 
 import { Logger } from '../logger/index.js'
-import { TraceOptions, TraceResult } from '../sim/index.js'
-import { ValidationErrors } from '../validation/index.js'
-import { NetworkCallError, RpcError } from '../utils/index.js'
+import {
+  TraceOptions,
+  TraceResult,
+  ValidationErrors,
+  NetworkCallError,
+  RpcError,
+} from '../types/index.js'
 import { Either } from '../monad/index.js'
 
 export type ProviderService = {

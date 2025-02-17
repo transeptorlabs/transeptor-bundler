@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { createState } from './state.js'
-import { State, StateKey } from './state.types.js'
+import { createState } from '../src/state/state.js'
+import { State, StateKey } from '../src/types/index.js'
 
 describe('createState', () => {
   it('should initialize state correctly', async () => {

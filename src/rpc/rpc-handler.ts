@@ -6,9 +6,10 @@ import {
   type JsonRpcSuccessResponse,
   type RpcHandler,
   type MethodMapping,
-  ValidateJsonRpcRequest,
-} from './rpc.types.js'
-import { deepHexlify, RpcError } from '../utils/index.js'
+  type ValidateJsonRpcRequest,
+  RpcError,
+} from '../types/index.js'
+import { deepHexlify } from '../utils/index.js'
 import { Either, isEither } from '../monad/index.js'
 
 /*

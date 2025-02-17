@@ -25,16 +25,12 @@
     "noFallthroughCasesInSwitch": false,
     "outDir": "dist",
     "baseUrl": "./",
-    "paths": {
-      "*": ["node_modules/*"]
-    },
   },
   "include": [
     "./src/**/*.ts",
   ],
   "exclude": [
     "e2e/**",
-    "src/**/*.test.ts",
     "test/**",
     "./contracts/*",
     "node_modules"
