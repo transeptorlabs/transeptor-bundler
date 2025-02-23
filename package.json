@@ -1,5 +1,5 @@
 {
-  "name": "root",
+  "name": "transeptor-bundler",
   "private": true,
   "version": "0.9.0-alpha.0",
   "description": "A light weight blazing fast, modular ERC-4337 TypeScript bundler built with the power of declarative functional programming.",
@@ -18,19 +18,19 @@
     "url": "https://github.com/transeptorlabs/transeptor-bundler/issues"
   },
   "type": "module",
-  "exports": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
+  "exports": "./dist/index.mjs",
   "scripts": {
     "clean": "rm -rf dist",
     "ls-cmd": "node --import ./register-hook.js ./src/index.ts --help",
-    "build": "npx tsc -p ./tsconfig.json && cp ./src/sim/tracer.js dist/sim",
+    "build": "yarn build:esbuild ",
+    "build:esbuild": "node build.mjs",
     "build:contracts": "cd contracts && forge build",
     "dev": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
     "dev:native-tracer": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base --tracerRpcUrl http://localhost:8888 | pino-pretty",
     "dev:unsafe": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
     "dev:metrics": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --metrics --txMode base | pino-pretty",
     "start": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "start:prod": "yarn build && node dist/index.js --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "start:prod": "yarn build && node dist/index.mjs --httpApi web3,eth,debug --txMode base | pino-pretty",
     "test": "vitest run --config ./vitest.config.ts --coverage",
     "test:dev": "vitest --config ./vitest.config.ts",
     "lint": "eslint . --ext ts",
@@ -40,10 +40,10 @@
     "///cK": "________________________DOCKER CONTAINERS______________________________",
     "local-eth": "./eth-node",
     "build:image": "docker build -t bundler-typescript:v-local .",
-    "start:image": "docker-compose up -d bundler-typescript-local",
-    "stop:image": "docker-compose down",
-    "influxdb": "docker-compose up influxdb",
-    "grafana": "docker-compose up grafana"
+    "start:image": "docker compose up -d bundler-typescript-local",
+    "stop:image": "docker compose down",
+    "influxdb": "docker compose up influxdb",
+    "grafana": "docker compose up grafana"
   },
   "dependencies": {
     "@chainsafe/libp2p-noise": "^12.0.2",
@@ -70,6 +70,7 @@
     "@typescript-eslint/eslint-plugin": "5.59.2",
     "@typescript-eslint/parser": "5.59.2",
     "@vitest/coverage-istanbul": "3.0.5",
+    "esbuild": "^0.25.0",
     "eslint": "^8.39.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-jsdoc": "^50.2.2",

@@ -2,16 +2,16 @@
   "compilerOptions": {
     "strict": true,
     "target": "ESNext",
-    "module": "ESNext",
+    "module": "NodeNext",
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "sourceMap": true,
     "allowJs": false,
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
 
     "alwaysStrict": true,
 
-    "declaration": true,
+    "declaration": false,
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,

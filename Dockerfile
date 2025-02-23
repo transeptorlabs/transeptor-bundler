@@ -35,4 +35,4 @@ COPY --from=build_deps /app .
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
-ENTRYPOINT ["node", "./dist/index.js"]
+ENTRYPOINT ["node", "./dist/index.mjs"]
