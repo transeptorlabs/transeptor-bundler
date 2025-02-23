@@ -420,15 +420,15 @@ const enforceContractCreationRule = (
  * Enforce rules for out-of-gas revert.
  *  - [OP-020]
  *
- * @param currentNumLevel - The current level of the call stack.
+ * @param entityCall - The current level of the call stack.
  * @param entityTitle - The title of the entity.
  */
 const enforceOutOfGasRevertRule = (
-  currentNumLevel: TopLevelCallInfo,
+  entityCall: TopLevelCallInfo,
   entityTitle: string,
 ) => {
   requireCond(
-    !(currentNumLevel.oog ?? false),
+    !(entityCall.oog ?? false),
     `${entityTitle} internally reverts on oog`,
     ValidationErrors.OpcodeValidation,
   )
@@ -441,24 +441,21 @@ const enforceOutOfGasRevertRule = (
  *  - [OP-042]
  *
  * @param sender - The sender address.
- * @param currentNumLevel - The current level of the call stack.
+ * @param entityCall - The current level of the call stack.
  * @param entryPointAddress - The entry point address.
  * @param entityTitle - The title of the entity.
  */
 const enforceIllegalAddressAccessRule = (
   sender: string,
-  currentNumLevel: TopLevelCallInfo,
+  entityCall: TopLevelCallInfo,
   entryPointAddress: string,
   entityTitle: string,
 ) => {
   let illegalZeroCodeAccess: any
-  for (const addr of Object.keys(currentNumLevel.contractSize)) {
+  for (const addr of Object.keys(entityCall.contractSize)) {
     // [OP-042]
-    if (
-      addr !== sender &&
-      currentNumLevel.contractSize[addr].contractSize <= 2
-    ) {
-      illegalZeroCodeAccess = currentNumLevel.contractSize[addr]
+    if (addr !== sender && entityCall.contractSize[addr].contractSize <= 2) {
+      illegalZeroCodeAccess = entityCall.contractSize[addr]
       illegalZeroCodeAccess.address = addr
       break
     }
@@ -472,9 +469,9 @@ const enforceIllegalAddressAccessRule = (
   )
 
   let illegalEntryPointCodeAccess
-  for (const addr of Object.keys(currentNumLevel.extCodeAccessInfo)) {
+  for (const addr of Object.keys(entityCall.extCodeAccessInfo)) {
     if (addr === entryPointAddress) {
-      illegalEntryPointCodeAccess = currentNumLevel.extCodeAccessInfo[addr]
+      illegalEntryPointCodeAccess = entityCall.extCodeAccessInfo[addr]
       break
     }
   }
@@ -663,6 +660,25 @@ const enforceStorageRules = (
   )
 }
 
+const enforceIllegalEntryPointCodeAccess = (
+  entityCall: TopLevelCallInfo,
+  entryPointAddress: string,
+  entityTitle: string,
+) => {
+  let illegalEntryPointCodeAccess
+  for (const addr of Object.keys(entityCall.extCodeAccessInfo)) {
+    if (addr.toLowerCase() === entryPointAddress.toLowerCase()) {
+      illegalEntryPointCodeAccess = entityCall.extCodeAccessInfo[addr]
+      break
+    }
+  }
+  requireCond(
+    illegalEntryPointCodeAccess == null,
+    `${entityTitle} accesses EntryPoint contract address ${entryPointAddress} with opcode ${illegalEntryPointCodeAccess}`,
+    ValidationErrors.OpcodeValidation,
+  )
+}
+
 /**
  * parse collected simulation traces and revert if they break our rules
  *
@@ -709,51 +725,64 @@ export const tracerResultParser = (
     tracerResults.keccak,
   )
 
-  // Enforce rules for entities with stake info
+  // Process entity calls
   for (const [entityTitle, entStakes] of Object.entries(stakeInfoEntities)) {
     const entityAddr = (entStakes?.addr ?? '').toLowerCase()
-    const currentNumLevel = tracerResults.callsFromEntryPoint.find(
-      (info) =>
-        info.topLevelMethodSig === callsFromEntryPointMethodSigs[entityTitle],
+    const entityCallsFromEntryPoint = tracerResults.callsFromEntryPoint.filter(
+      (call) =>
+        call.topLevelTargetAddress != null &&
+        call.topLevelMethodSig === callsFromEntryPointMethodSigs[entityTitle],
     )
 
-    if (currentNumLevel == null) {
-      if (entityTitle === 'account') {
-        return Either.Left(
-          new RpcError(
-            `missing trace into validateUserOp for ${userOp.sender}`,
-            ValidationErrors.InternalError,
-          ),
-        )
+    for (const entityCall of entityCallsFromEntryPoint) {
+      if (entityCall == null) {
+        if (entityTitle === 'account') {
+          return Either.Left(
+            new RpcError(
+              `missing trace into validateUserOp for ${userOp.sender}`,
+              ValidationErrors.InternalError,
+            ),
+          )
+        }
+        continue // Skip to the next iteration
       }
-      continue // Skip to the next iteration
+
+      // Opcode enforcement
+      const { opcodes, access } = entityCall
+      enforceOutOfGasRevertRule(entityCall, entityTitle)
+      enforceBannedOpcodeRules(opcodes, entityTitle, entStakes)
+      enforceContractCreationRule(opcodes, entityTitle)
+
+      // Testing read/write access on contract "addr"
+      enforceStorageRules(
+        sender,
+        access,
+        userOp,
+        entryPointAddress,
+        entityTitle,
+        entStakes,
+        entityAddr,
+        entitySlots,
+        stakeInfoEntities,
+      )
+
+      enforceIllegalAddressAccessRule(
+        sender,
+        entityCall,
+        entryPointAddress,
+        entityTitle,
+      )
+
+      enforceIllegalEntryPointCodeAccess(
+        entityCall,
+        entryPointAddress,
+        entityTitle,
+      )
+
+      if (entityCall.calls != null) {
+        // TODO: Recursively handling all subcalls to check validation rules
+      }
     }
-
-    // Opcode enforcement
-    const { opcodes, access } = currentNumLevel
-    enforceOutOfGasRevertRule(currentNumLevel, entityTitle)
-    enforceBannedOpcodeRules(opcodes, entityTitle, entStakes)
-    enforceContractCreationRule(opcodes, entityTitle)
-
-    enforceIllegalAddressAccessRule(
-      sender,
-      currentNumLevel,
-      entryPointAddress,
-      entityTitle,
-    )
-
-    // Testing read/write access on contract "addr"
-    enforceStorageRules(
-      sender,
-      access,
-      userOp,
-      entryPointAddress,
-      entityTitle,
-      entStakes,
-      entityAddr,
-      entitySlots,
-      stakeInfoEntities,
-    )
   }
 
   // get the list of contract addresses and storage map for the user operation

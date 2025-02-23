@@ -5,23 +5,24 @@ All notable changes to this project will be manually documented in this file by 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unrelease] - xxx-xx-xx
+## [Unreleased] - xxx-xx-xx
 
 ### Added
 - A docs for Release process and Vision([#109](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
+- Use [esbuild](https://esbuild.github.io/) to create build for transeptor([#110](https://github.com/transeptorlabs/transeptor-bundler/pull/110))
 
 ### Changed
-- Refactor modules to improve error handling with Either monad:
+- Refactor modules to improve error handling with Either monad([#115](https://github.com/transeptorlabs/transeptor-bundler/pull/115)):
   - sim
   - validation
-- Move all types under `../src/types`
-- Configure test coverage report in `vitest.config.ts`
-- Move all test to `./test` to separate test files from implementation. Moving forward, all test cases will be defined here.
-- A `@vitest/coverage-istanbul:v3.0.5` to `devDependencies` to produce a test coverage report.
-- Bump `devDependencies`:
+- Move all types under `../src/types`([#115](https://github.com/transeptorlabs/transeptor-bundler/pull/115))
+- Configure test coverage report in `vitest.config.ts`([#115](https://github.com/transeptorlabs/transeptor-bundler/pull/115))
+- Move all test to `./test` to separate test files from implementation. Moving forward, all test cases will be defined here.([#115](https://github.com/transeptorlabs/transeptor-bundler/pull/115))
+- A `@vitest/coverage-istanbul:v3.0.5` to `devDependencies` to produce a test coverage report.([#115](https://github.com/transeptorlabs/transeptor-bundler/pull/115))
+- Bump `devDependencies`([#115](https://github.com/transeptorlabs/transeptor-bundler/pull/115)):
   - `vite` from 5.3.1 to 5.4.12
   - `vitest` from 1.6.0 to 3.0.5
-- Fix a few circular dependencies
+- Fix a few circular dependencies([#115](https://github.com/transeptorlabs/transeptor-bundler/pull/115))
 
 ## [v0.9.0-alpha.0] - 2025-01-02
 

@@ -1,5 +1,5 @@
 import dotenv from 'dotenv'
-import pino, { LoggerOptions } from 'pino'
+import { pino, LoggerOptions } from 'pino'
 dotenv.config()
 
 const createLogger = () => {
