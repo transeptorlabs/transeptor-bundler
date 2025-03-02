@@ -7,6 +7,7 @@ docker-compose.yml
 
 # build
 dist
+type-docs
 
 # contracts
 contracts

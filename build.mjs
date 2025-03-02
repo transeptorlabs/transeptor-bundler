@@ -21,7 +21,7 @@ async function buildProject() {
     sourcemap: true,
     platform: 'node',
     target: 'node20',
-    minify: false,
+    minify: true,
     logLevel: 'info',
     external: externalDeps,
     outfile: 'dist/index.mjs',

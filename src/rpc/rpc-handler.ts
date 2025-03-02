@@ -6,7 +6,7 @@ import {
   type JsonRpcSuccessResponse,
   type RpcHandler,
   type MethodMapping,
-  type ValidateJsonRpcRequest,
+  type ValidatedJsonRpcRequest,
   RpcError,
 } from '../types/index.js'
 import { deepHexlify } from '../utils/index.js'
@@ -104,15 +104,15 @@ const apiEnabled = (
 const transformRequest = <M extends MethodNames>(
   request: JsonRpcRequest,
   handlerRegistry: HandlerRegistry,
-): Either<RpcError, ValidateJsonRpcRequest<M>> => {
+): Either<RpcError, ValidatedJsonRpcRequest<M>> => {
   const method = request.method as M
   const params = request.params as MethodMapping[M]['params']
   const handler = handlerRegistry[method]
   return !handler
-    ? Either.Left<RpcError, ValidateJsonRpcRequest<M>>(
+    ? Either.Left<RpcError, ValidatedJsonRpcRequest<M>>(
         new RpcError(`Method ${request.method} is not supported`, -32600),
       )
-    : Either.Right<RpcError, ValidateJsonRpcRequest<M>>({
+    : Either.Right<RpcError, ValidatedJsonRpcRequest<M>>({
         method,
         params,
         id: request.id,
@@ -128,8 +128,8 @@ const transformRequest = <M extends MethodNames>(
  * @returns The transformed request object if the parameters are valid
  */
 const isParamsValid = <M extends MethodNames>(
-  validReq: ValidateJsonRpcRequest<M>,
-): Either<RpcError, ValidateJsonRpcRequest<M>> => {
+  validReq: ValidatedJsonRpcRequest<M>,
+): Either<RpcError, ValidatedJsonRpcRequest<M>> => {
   return !validReq.validationFunc(validReq.params)
     ? Either.Left(
         new RpcError(`Invalid params for method ${validReq.method}`, -32602),
