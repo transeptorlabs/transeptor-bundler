@@ -1,41 +1,3 @@
-import { Either } from '../monad/index.js'
-import {
-  DebugAPIMethodMapping,
-  EthAPIMethodMapping,
-  Web3APIMethodMapping,
-} from './api.types.js'
-import { RpcError } from './error.types.js'
-
-// Define the mapping of method names to their params and return types
-export type MethodMapping = Web3APIMethodMapping &
-  EthAPIMethodMapping &
-  DebugAPIMethodMapping
-
-// Infer method names
-export type MethodNames = keyof MethodMapping
-
-// Generic handler function type
-export type HandlerFunction<M extends MethodNames> = (
-  params: MethodMapping[M]['params'],
-) => Promise<MethodMapping[M]['return']> | MethodMapping[M]['return']
-
-export type HandlerValidationFunction = (params: unknown[]) => boolean
-
-export type HandlerRegistry = {
-  [M in MethodNames]: {
-    handlerFunc: HandlerFunction<M>
-    validationFunc: (params: unknown[]) => boolean
-  }
-}
-
-export type ValidateJsonRpcRequest<M extends MethodNames> = {
-  id: number | string
-  method: M
-  params: MethodMapping[M]['params']
-  handlerFunc: HandlerFunction<M>
-  validationFunc: HandlerValidationFunction
-}
-
 export type JsonRpcRequest = {
   jsonrpc: '2.0'
   method: string
@@ -61,6 +23,17 @@ export type JsonRpcErrorResponse = {
 
 export type JsonRpcResponse = JsonRpcSuccessResponse | JsonRpcErrorResponse
 
+/**
+ * RPC server interface for starting and stopping the server.
+ * This interface is used to define the methods that the server should implement.
+ * The server is responsible for handling incoming JSON-RPC requests and
+ * sending JSON-RPC responses.
+ *
+ * - The server should also be able to start and stop itself.
+ * - The start method should take a preflight check function as an argument,
+ * which is called before the server starts. This function can be used to
+ * perform any necessary checks before the server starts defined by the caller.
+ */
 export type RpcServer = {
   /**
    * Starts the server and performs a preflight check if provided.
@@ -76,10 +49,4 @@ export type RpcServer = {
    * @returns A promise that resolves when the server has stopped.
    */
   stop: () => Promise<void>
-}
-
-export type RpcHandler = {
-  doHandleRequest(
-    request: JsonRpcRequest,
-  ): Promise<Either<RpcError, JsonRpcResponse>>
 }

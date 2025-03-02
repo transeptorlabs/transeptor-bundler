@@ -25,10 +25,11 @@
     "build": "yarn build:esbuild ",
     "build:esbuild": "node build.mjs",
     "build:contracts": "cd contracts && forge build",
-    "dev": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "dev:native-tracer": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base --tracerRpcUrl http://localhost:8888 | pino-pretty",
-    "dev:unsafe": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
-    "dev:metrics": "nodemon --exec node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --metrics --txMode base | pino-pretty",
+    "build:typedocs": "typedoc",
+    "dev": "tsx watch ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "dev:native-tracer": "tsx watch ./src/index.ts --httpApi web3,eth,debug --txMode base --tracerRpcUrl http://localhost:8888 | pino-pretty",
+    "dev:unsafe": "tsx watch ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
+    "dev:metrics": "tsx watch ./src/index.ts --httpApi web3,eth,debug --metrics --txMode base | pino-pretty",
     "start": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
     "start:prod": "yarn build && node dist/index.mjs --httpApi web3,eth,debug --txMode base | pino-pretty",
     "test": "vitest run --config ./vitest.config.ts --coverage",
@@ -78,7 +79,8 @@
     "nodemon": "^3.1.0",
     "pino-pretty": "^10.0.0",
     "prettier": "^3.3.3",
-    "ts-node": "10.9.1",
+    "tsx": "^4.19.3",
+    "typedoc": "^0.26.11",
     "typescript": "5.0.4",
     "vite": "^5.4.12",
     "vitest": "^3.0.5"
@@ -86,12 +88,5 @@
   "packageManager": "yarn@3.2.1",
   "engines": {
     "node": ">=20.11.1"
-  },
-  "nodemonConfig": {
-    "watch": [
-      "src"
-    ],
-    "ext": "ts,json",
-    "ignore": []
   }
 }

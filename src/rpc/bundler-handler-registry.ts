@@ -12,7 +12,7 @@ export const createBundlerHandlerRegistry = (
 ): HandlerRegistry => ({
   web3_clientVersion: {
     validationFunc: (params) => params.length === 0,
-    handlerFunc: () => web3.clientVersion(),
+    handlerFunc: async () => web3.clientVersion(),
   },
 
   // Eth namespace
@@ -75,9 +75,12 @@ export const createBundlerHandlerRegistry = (
     validationFunc: (params) => params.length === 0,
     handlerFunc: async () => {
       const result = await debug.sendBundleNow()
-      if (result.transactionHash === '' && result.userOpHashes.length === 0) {
-        return 'ok'
+      if (typeof result !== 'string') {
+        if (result.transactionHash === '' && result.userOpHashes.length === 0) {
+          return 'ok'
+        }
       }
+
       return result
     },
   },
