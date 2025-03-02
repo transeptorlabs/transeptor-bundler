@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - A docs for Release process and Vision([#109](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
-- Use [esbuild](https://esbuild.github.io/) to create build for transeptor([#110](https://github.com/transeptorlabs/transeptor-bundler/pull/110))
+- Use [esbuild](https://esbuild.github.io/) to create build for transeptor([#117](https://github.com/transeptorlabs/transeptor-bundler/pull/110))
 - Add typedocs([#118](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
 
 ### Changed
