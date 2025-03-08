@@ -81,9 +81,7 @@ export type EthAPI = {
     userOpInput: EthAPIMethodMapping['eth_sendUserOperation']['params'][0],
     entryPointInput: EthAPIMethodMapping['eth_sendUserOperation']['params'][1],
   ): EthAPIMethodMapping['eth_sendUserOperation']['return']
-  getSupportedEntryPoints(): Promise<
-    EthAPIMethodMapping['eth_supportedEntryPoints']['return']
-  >
+  getSupportedEntryPoints(): EthAPIMethodMapping['eth_supportedEntryPoints']['return']
   getUserOperationReceipt(
     userOpHash: EthAPIMethodMapping['eth_getUserOperationReceipt']['params'][0],
   ): EthAPIMethodMapping['eth_getUserOperationReceipt']['return']

@@ -25,22 +25,24 @@ export const createDebugAPI = (
   entryPointContract: ethers.Contract,
 ): DebugAPI => {
   return {
-    clearState: async (): Promise<void> => {
+    clearState: async (): Promise<string> => {
       await mempoolManagerCore.clearState()
       await reputationManager.clearState()
+      return 'ok'
     },
 
     dumpMempool: async () => {
       return await mempoolManagerCore.dump()
     },
 
-    clearMempool: async (): Promise<void> => {
+    clearMempool: async (): Promise<string> => {
       await mempoolManagerCore.clearState()
+      return 'ok'
     },
 
-    setBundlingMode: (mode: 'auto' | 'manual'): boolean => {
+    setBundlingMode: (mode: 'auto' | 'manual'): Promise<string> => {
       bundleManager.setBundlingMode(mode)
-      return true
+      return Promise.resolve('ok')
     },
 
     sendBundleNow: async (): Promise<SendBundleReturn> => {
@@ -56,11 +58,12 @@ export const createDebugAPI = (
     setReputation: async (
       reputations: ReputationEntry[],
       _: string,
-    ): Promise<ReputationEntry[]> => {
-      return await reputationManager.setReputation(reputations)
+    ): Promise<string> => {
+      await reputationManager.setReputation(reputations)
+      return 'ok'
     },
 
-    addUserOps: async (userOps: UserOperation[]): Promise<void> => {
+    addUserOps: async (userOps: UserOperation[]): Promise<string> => {
       // TODO: Accept UserOperations into the mempool.
       // Assume the given UserOperations all pass validation (without actually validating them), and accept them directly into th mempool
       for (const userOp of userOps) {
@@ -75,14 +78,17 @@ export const createDebugAPI = (
           senderInfo: null,
         })
       }
+
+      return 'ok'
     },
 
     dumpReputation: async (_: string): Promise<ReputationEntry[]> => {
       return await reputationManager.dump()
     },
 
-    clearReputation: async (): Promise<void> => {
+    clearReputation: async (): Promise<string> => {
       await reputationManager.clearState()
+      return 'ok'
     },
 
     getStakeStatus: async (
@@ -97,8 +103,9 @@ export const createDebugAPI = (
 
     setGasConfig: async (
       config: Partial<PreVerificationGasConfig>,
-    ): Promise<void> => {
+    ): Promise<string> => {
       pvgc.updateGasConfig(config)
+      return 'ok'
     },
   }
 }

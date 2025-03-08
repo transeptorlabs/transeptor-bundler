@@ -5,17 +5,73 @@ import helmet from 'helmet'
 
 import { Logger } from '../logger/index.js'
 import type {
-  JsonRpcRequest,
   RpcServer,
   HandlerRegistry,
   RpcHandler,
-  JsonRpcErrorResponse,
   JsonRpcResponse,
   RpcError,
 } from '../types/index.js'
 import { createRpcHandler } from './rpc-handler.js'
+import {
+  headerChecks,
+  parseValidRequest,
+  validateRequest,
+} from './rpc-middleware.js'
+import { Either } from '../monad/index.js'
 
-const createApp = (rpc: RpcHandler): express.Application => {
+const safeParseHandlerResult = (
+  res: Response,
+  requestId: string | number,
+  result: Either<RpcError, JsonRpcResponse>,
+) => {
+  result.fold(
+    (error: RpcError) => {
+      Logger.error(
+        { error: error.message },
+        `Error handling method requestId(${requestId})`,
+      )
+      res.json({
+        jsonrpc: '2.0',
+        id: requestId,
+        error: {
+          code: error.code,
+          message: error.message,
+          data: error.data,
+        },
+      })
+    },
+    (response: JsonRpcResponse) => res.json(response),
+  )
+}
+
+const safeParseUnknownError = (
+  res: Response,
+  requestId: string | number,
+  unknownError: any,
+) => {
+  Logger.error(
+    { error: unknownError.message },
+    `Unknown error handling method requestId(${requestId})`,
+  )
+  res.json({
+    jsonrpc: '2.0',
+    id: requestId,
+    error: {
+      code: typeof unknownError?.code === 'number' ? unknownError.code : -32000,
+      message:
+        typeof unknownError?.message === 'string'
+          ? unknownError.message
+          : 'Unknown error',
+      data: unknownError.data,
+    },
+  })
+}
+
+const createApp = (
+  rpc: RpcHandler,
+  handlerRegistry: HandlerRegistry,
+  supportedApiPrefixes: string[],
+): express.Application => {
   const app = express()
 
   app.use(
@@ -25,48 +81,17 @@ const createApp = (rpc: RpcHandler): express.Application => {
   )
   app.use(cors())
   app.use(express.json())
+  app.use(headerChecks)
+  app.use(validateRequest(supportedApiPrefixes))
+  app.use(parseValidRequest(handlerRegistry))
 
   app.post('/rpc', async (req: Request, res: Response) => {
-    const request = req.body as JsonRpcRequest
-    const errorRes: JsonRpcErrorResponse = {
-      jsonrpc: '2.0',
-      id: request.id,
-      error: {
-        code: -32000,
-        message: 'Unknown error',
-        data: undefined,
-      },
-    }
-    Logger.debug(
-      `---> Handling valid request for ${request.method} with requestId(${request.id})`,
-    )
+    const request = req.parsedRpcRequest
     try {
       const result = await rpc.doHandleRequest(request)
-      result.fold(
-        (error: RpcError) =>
-          res.json({
-            ...errorRes,
-            error: {
-              code: error.code,
-              message: error.message,
-              data: error.data,
-            },
-          }),
-        (response: JsonRpcResponse) => res.json(response),
-      )
-    } catch (error: any) {
-      Logger.error(
-        { error: error.message },
-        `Unknown error handling method requestId(${request.id})`,
-      )
-      res.json({
-        ...errorRes,
-        error: {
-          code: error.code ? error.code : errorRes.error.code,
-          message: error.message ? error.message : errorRes.error.message,
-          data: error.data,
-        },
-      })
+      safeParseHandlerResult(res, request.id, result)
+    } catch (unknownError: any) {
+      safeParseUnknownError(res, request.id, unknownError)
     }
   })
 
@@ -78,8 +103,8 @@ export const createRpcServerWithHandlers = (
   supportedApiPrefixes: string[],
   port: number,
 ): RpcServer => {
-  const rpc = createRpcHandler(handlerRegistry, supportedApiPrefixes)
-  const app = createApp(rpc)
+  const rpc = createRpcHandler()
+  const app = createApp(rpc, handlerRegistry, supportedApiPrefixes)
   const httpServer: Server = createServer(app)
 
   return {
