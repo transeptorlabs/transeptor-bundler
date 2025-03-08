@@ -1,5 +1,6 @@
 import {
   HandlerRegistry,
+  JsonRpcErrorResponse,
   JsonRpcRequest,
   MethodMapping,
   MethodNames,
@@ -77,14 +78,13 @@ const isParamsValid = (
  * @param req - The request object
  * @param res - The response object
  * @param next - The next middleware function
- * @returns void
  */
 export const headerChecks = (req: Request, res: Response, next: () => void) => {
   if (req.headers['content-type'] !== 'application/json') {
     Logger.error(
       `Invalid content type: ${req.headers['content-type']}, expected application/json`,
     )
-    return res.status(415).json({
+    res.json({
       jsonrpc: '2.0',
       id: null,
       error: {
@@ -93,9 +93,9 @@ export const headerChecks = (req: Request, res: Response, next: () => void) => {
         data: 'Invalid content type',
       },
     })
+  } else {
+    next()
   }
-
-  next()
 }
 
 /**
@@ -116,12 +116,12 @@ export const validateRequest = (supportedApiPrefixes: string[]) => {
       .flatMap(paramsIsArray)
       .flatMap((req) => apiEnabled(req, supportedApiPrefixes))
 
-    rpcValidation.fold(
+    const errorRes = rpcValidation.fold(
       (error: RpcError) => {
         Logger.error(
           `Failed to validate request: ${error.message}, code: ${error.code}`,
         )
-        res.status(400).json({
+        return {
           jsonrpc: '2.0',
           id: req.body.id,
           error: {
@@ -129,11 +129,19 @@ export const validateRequest = (supportedApiPrefixes: string[]) => {
             message: error.message,
             data: error.data,
           },
-        })
+        } as JsonRpcErrorResponse
       },
-      (validReq) => (req.validRpcRequest = validReq),
+      (validReq) => {
+        req.validRpcRequest = validReq
+        return null
+      },
     )
-    next()
+
+    if (errorRes) {
+      res.json(errorRes)
+    } else {
+      next()
+    }
   }
 }
 
@@ -145,20 +153,32 @@ export const validateRequest = (supportedApiPrefixes: string[]) => {
  */
 export const parseValidRequest = (handlerRegistry: HandlerRegistry) => {
   return (req: Request, res: Response, next: () => void) => {
-    const rpcParsed = Either.Right<RpcError, JsonRpcRequest>(
-      req.validRpcRequest,
-    )
+    const validReq = req.validRpcRequest
+    if (!validReq) {
+      res.status(400).json({
+        jsonrpc: '2.0',
+        id: req.body.id,
+        error: {
+          code: -32600,
+          message: 'Invalid Request',
+          data: 'Invalid request',
+        },
+      })
+      return
+    }
+
+    const rpcParsed = Either.Right<RpcError, JsonRpcRequest>(validReq)
       .flatMap((req) =>
         transformRequest(req.method as MethodNames, req, handlerRegistry),
       )
       .flatMap(isParamsValid)
 
-    rpcParsed.fold(
+    const errorRes = rpcParsed.fold(
       (error: RpcError) => {
         Logger.error(
           `Failed to parse request: ${error.message} for requestId(${req.body.id})`,
         )
-        res.status(400).json({
+        return {
           jsonrpc: '2.0',
           id: req.body.id,
           error: {
@@ -166,10 +186,18 @@ export const parseValidRequest = (handlerRegistry: HandlerRegistry) => {
             message: error.message,
             data: error.data,
           },
-        })
+        } as JsonRpcErrorResponse
       },
-      (parsedReq) => (req.parsedRpcRequest = parsedReq),
+      (parsedReq) => {
+        req.parsedRpcRequest = parsedReq
+        return null
+      },
     )
-    next()
+
+    if (errorRes) {
+      res.json(errorRes)
+    } else {
+      next()
+    }
   }
 }
