@@ -2,7 +2,7 @@ import { Either } from '../monad/index.js'
 
 import { RpcError } from './error.types.js'
 import { MethodMapping, MethodNames } from './api.types.js'
-import { JsonRpcRequest, JsonRpcResponse } from './rpc.types.js'
+import { JsonRpcResponse } from './rpc.types.js'
 
 /**
  * The ValidatedJsonRpcRequest type defines the structure of a validated JSON-RPC
@@ -58,7 +58,7 @@ export type HandlerRegistry = {
  * to either an RpcError or a JsonRpcResponse.
  */
 export type RpcHandler = {
-  doHandleRequest(
-    request: JsonRpcRequest,
+  doHandleRequest<M extends MethodNames>(
+    request: ValidatedJsonRpcRequest<M>,
   ): Promise<Either<RpcError, JsonRpcResponse>>
 }

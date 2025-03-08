@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `vitest` from 1.6.0 to 3.0.5
 - Fix a few circular dependencies([#115](https://github.com/transeptorlabs/transeptor-bundler/pull/115))
 - Drop `ts-node` and `nodemon` to use [tsx](https://tsx.is/) for local ts dev scripts([#118](https://github.com/transeptorlabs/transeptor-bundler/pull/118))
+- Refactor `rpc` module to improve modularity([#119](https://github.com/transeptorlabs/transeptor-bundler/pull/119))
 
 ## [v0.9.0-alpha.0] - 2025-01-02
 
