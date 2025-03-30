@@ -74,7 +74,8 @@ Building Transeptor from source requires NodeJS and Yarn. Once you have installe
 nvm use
 yarn install
 yarn build
-./transeptor --help
+chmod +x ./bin/transeptor
+node ./bin/transeptor --help
 ```
 
 ### Docker
