@@ -7,18 +7,19 @@ jobs:
   build-lint-test:
     name: Build, Lint, and Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [22.x]
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - name: Enable Corepack and set Yarn version
+        run: |
+          corepack enable
+          corepack prepare yarn@4.7.0 --activate
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: "yarn"
-          corepack: true
-      - run: yarn
+          node-version: '22.x'
+          cache: 'yarn'
+      - name: Install dependencies
+        run: yarn install --immutable
       - name: Build
         run: yarn build
       - name: Lint
