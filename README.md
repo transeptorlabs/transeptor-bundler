@@ -92,7 +92,7 @@ docker run -d --name transeptor -p 4337:4337 --env-file <.path_to_your-env_file>
 
 #### Building Docker image
 
-Building the Docker image from the source code requires that the Docker be installed on your machine. Once you have installed Docker, follow these steps to build the Docker image from soruce.
+Building the Docker image from the source code requires that the Docker be installed on your machine. Once you have installed Docker, follow these steps to build the Docker image from source.
 
 ```bash
 yarn build:image
