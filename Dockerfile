@@ -4,15 +4,23 @@ WORKDIR /app
 
 COPY . .
 
-RUN corepack enable && corepack prepare yarn@3.2.1 --activate
-RUN yarn install --frozen-lockfile && yarn build
+ENV NODE_ENV=production
+RUN corepack enable && corepack prepare yarn@4.7.0 --activate
+RUN yarn install --frozen-lockfile --immutable && yarn build
+
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY . .
+
+RUN corepack enable && corepack prepare yarn@4.7.0 --activate
+RUN yarn workspaces focus --production --all
 
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=deps /app/node_modules ./node_modules
 
 EXPOSE 4337
 
