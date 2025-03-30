@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/node-20.11.1-green" alt="Node Version">
+  <img src="https://img.shields.io/badge/node-22.14.0-green" alt="Node Version">
   <img src="https://badgen.net/badge/-/TypeScript?icon=typescript&label&labelColor=blue&color=555555" alt="TypeScript">
     <img src="https://github.com/transeptorlabs/transeptor-bundler/actions/workflows/main.yml/badge.svg?branch=main">
   <a href="https://app.codecov.io/gh/transeptorlabs/transeptor-bundler">
@@ -92,7 +92,7 @@ docker run -d --name transeptor -p 4337:4337 --env-file <.path_to_your-env_file>
 
 #### Building Docker image
 
-Building the Docker image from the source code requires that the Docker be installed on your machine. Once you have installed Docker, follow these steps to build the Docker image from soruce.
+Building the Docker image from the source code requires that the Docker be installed on your machine. Once you have installed Docker, follow these steps to build the Docker image from source.
 
 ```bash
 yarn build:image

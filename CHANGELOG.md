@@ -5,6 +5,11 @@ All notable changes to this project will be manually documented in this file by 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - XXX-XX-XX
+
+### Changed
+- Update to use node version to 22.14.0 LTS, drop [esbuild](https://esbuild.github.io/) dependency and [pkgroll](https://github.com/privatenumber/pkgroll) as the the recommended bundler for projects using tsx.([#126](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
+
 ## [v0.10.0-alpha.0] - 2025-03-29
 
 ### Added
