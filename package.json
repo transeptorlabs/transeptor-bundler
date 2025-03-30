@@ -18,18 +18,20 @@
     "url": "https://github.com/transeptorlabs/transeptor-bundler/issues"
   },
   "type": "module",
-  "exports": "./dist/index.mjs",
+  "bin": {
+    "transeptor": "./dist/cli.mjs"
+  },
   "scripts": {
     "clean": "rm -rf dist",
-    "ls-cmd": "node --import ./register-hook.js ./src/index.ts --help",
+    "ls-cmd": "node --import ./register-hook.js ./src/cli.ts --help",
     "build": "rm -rf dist && pkgroll --target=node22.14.0 --minify && cp src/sim/tracer.js dist/tracer.js",
     "build:contracts": "cd contracts && forge build",
     "build:typedocs": "typedoc",
-    "dev": "tsx watch ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "dev:native-tracer": "tsx watch ./src/index.ts --httpApi web3,eth,debug --txMode base --tracerRpcUrl http://localhost:8888 | pino-pretty",
-    "dev:unsafe": "tsx watch ./src/index.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
-    "dev:metrics": "tsx watch ./src/index.ts --httpApi web3,eth,debug --metrics --txMode base | pino-pretty",
-    "start": "node --import ./register-hook.js ./src/index.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "dev": "tsx watch ./src/cli.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "dev:native-tracer": "tsx watch ./src/cli.ts --httpApi web3,eth,debug --txMode base --tracerRpcUrl http://localhost:8888 | pino-pretty",
+    "dev:unsafe": "tsx watch ./src/cli.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
+    "dev:metrics": "tsx watch ./src/cli.ts --httpApi web3,eth,debug --metrics --txMode base | pino-pretty",
+    "start": "node --import ./register-hook.js ./src/cli.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
     "start:prod": "yarn build && node dist/index.mjs --httpApi web3,eth,debug --txMode base | pino-pretty",
     "test": "vitest run --config ./vitest.config.ts --coverage",
     "test:dev": "vitest --config ./vitest.config.ts",

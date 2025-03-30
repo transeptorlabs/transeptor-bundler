@@ -1,9 +1,0 @@
-#!/bin/bash
-
-# Private keys are default hardhat accounts.
-export TRANSEPTOR_MNEMONIC='test test test test test test test test test test test junk'
-export TRANSEPTOR_BENEFICIARY='0xd21934eD8eAf27a67f0A70042Af50A1D6d195E81'
-export TRANSEPTOR_ENTRYPOINT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
-
-# Simple script to run Transeptor after building from source
-node ./dist/index.js "$@"

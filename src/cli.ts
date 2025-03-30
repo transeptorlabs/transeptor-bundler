@@ -1,3 +1,5 @@
+#!/user/bin/env node
+
 import { Logger } from './logger/index.js'
 import {
   createBundleBuilder,
@@ -36,12 +38,20 @@ import { createState } from './state/index.js'
 import { createDepositManager } from './deposit/index.js'
 import { createMetricsTracker } from './metrics/index.js'
 import { createPreVerificationGasCalculator } from './gas/index.js'
+import { RpcServer } from './types/index.js'
 
 const p2pNode: Libp2pNode | undefined = undefined
+let bundlerServer: RpcServer | undefined = undefined
 
 const stopLibp2p = async () => {
   if (p2pNode) {
     await p2pNode.stop()
+  }
+}
+
+const stopBundlerServer = async () => {
+  if (bundlerServer) {
+    await bundlerServer.stop()
   }
 }
 
@@ -119,7 +129,7 @@ const runBundler = async () => {
   }
 
   // start rpc server
-  const bundlerServer = createRpcServerWithHandlers(
+  bundlerServer = createRpcServerWithHandlers(
     createBundlerHandlerRegistry(
       createEthAPI(
         ps,
@@ -254,9 +264,15 @@ runBundler().catch(async (error) => {
 })
 
 process.on('SIGTERM', async () => {
+  Logger.debug('Gracefully shutting down...')
+  await stopBundlerServer()
   await stopLibp2p()
+  process.exit(0)
 })
 
 process.on('SIGTERM', async () => {
+  Logger.debug('Gracefully shutting down...')
+  await stopBundlerServer()
   await stopLibp2p()
+  process.exit(0)
 })

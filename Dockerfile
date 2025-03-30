@@ -20,4 +20,4 @@ EXPOSE 4337
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
-ENTRYPOINT ["node", "./dist/index.mjs"]
+ENTRYPOINT ["node", "./dist/cli.mjs"]
