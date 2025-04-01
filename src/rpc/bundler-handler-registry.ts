@@ -88,7 +88,7 @@ export const createBundlerHandlerRegistry = (
   },
   debug_bundler_setBundleInterval: {
     validationFunc: (params) => params.length === 0,
-    handlerFunc: async () => 'ok', // TODO:  Placeholder for implementation, need to implement
+    handlerFunc: async () => debug.setBundleInterval(),
   },
   debug_bundler_setReputation: {
     validationFunc: (params) => params.length === 2 && Array.isArray(params[0]),

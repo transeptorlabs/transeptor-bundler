@@ -1,17 +1,11 @@
-import { vi } from 'vitest'
-import { StakeInfo } from '../../src/validatation/index.js'
+import { vi, MockedObject } from 'vitest'
 import {
   ReputationManager,
   ReputationStatus,
-} from '../../src/reputation/index.js'
+  StakeInfo,
+} from '../../src/types/index.js'
 
-/**
- * @example Usage:
- *
- * const mockReputationManager: ReputationManager = mockReputationManager
- * mockReputationManager.getStatus.mockResolvedValueOnce(expectedStatus)
- */
-export const mockReputationManager: ReputationManager = {
+export const mockReputationManager: MockedObject<ReputationManager> = {
   startHourlyCron: vi.fn().mockResolvedValue(Promise.resolve()),
   stopHourlyCron: vi.fn(),
   clearState: vi.fn().mockResolvedValue(Promise.resolve()),

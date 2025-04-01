@@ -109,10 +109,18 @@ export const createRpcServerWithHandlers = (
 
   return {
     start: async (preflightCheck: () => Promise<void>): Promise<void> => {
-      await preflightCheck()
-      httpServer.listen(port, () => {
-        Logger.info(`Node listening on http://localhost:${port}/rpc`)
-      })
+      try {
+        await preflightCheck()
+        httpServer.listen(port, () => {
+          Logger.info(`Node listening on http://localhost:${port}/rpc`)
+        })
+      } catch (error: any) {
+        Logger.error(
+          { error: error?.message || 'Unknown error' },
+          'Preflight check failed',
+        )
+        throw error
+      }
     },
 
     stop: async (): Promise<void> => {
@@ -120,6 +128,7 @@ export const createRpcServerWithHandlers = (
       return new Promise((resolve, reject) => {
         httpServer.close((err) => {
           if (err) {
+            Logger.error({ error: err.message }, 'Failed to close server')
             reject(err)
           } else {
             resolve()
