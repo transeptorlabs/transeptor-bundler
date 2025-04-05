@@ -87,8 +87,9 @@ export const createBundlerHandlerRegistry = (
       debug.setBundlingMode(params[0] as 'auto' | 'manual'),
   },
   debug_bundler_setBundleInterval: {
-    validationFunc: (params) => params.length === 0,
-    handlerFunc: async () => debug.setBundleInterval(),
+    validationFunc: (params) =>
+      params.length === 1 && typeof params[0] === 'number',
+    handlerFunc: async (params) => debug.setBundleInterval(params[0]),
   },
   debug_bundler_setReputation: {
     validationFunc: (params) => params.length === 2 && Array.isArray(params[0]),

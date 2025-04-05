@@ -1,10 +1,11 @@
 import { describe, it, vi, expect, beforeEach } from 'vitest'
 import { createRpcServerWithHandlers } from '../../src/rpc/rpc-server.js'
 import { Logger } from '../../src/logger/index.js'
-import type { HandlerRegistry } from '../../src/types/index.js'
+import { RpcError, type HandlerRegistry } from '../../src/types/index.js'
 import express, { Express, Request, Response, NextFunction } from 'express'
 import { createServer } from 'http'
 import { MockHandlerRegistry } from '../mocks/rpc-mocks.js'
+import { Either } from '../../src/monad/index.js'
 
 // Mock dependencies
 let rpcHandler: (req: any, res: any) => Promise<void>
@@ -73,6 +74,7 @@ describe('RPC Server', () => {
   const mockHandlerRegistry: HandlerRegistry = MockHandlerRegistry
   let mockPreflightCheck: () => Promise<void>
   let mockExpress: typeof express
+  const mockSupportedApiPrefixes = ['eth', 'web3', 'debug']
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -85,7 +87,7 @@ describe('RPC Server', () => {
     it('should start server successfully', async () => {
       const server = createRpcServerWithHandlers(
         mockHandlerRegistry,
-        ['eth', 'web3', 'debug'],
+        mockSupportedApiPrefixes,
         3000,
       )
 
@@ -103,7 +105,7 @@ describe('RPC Server', () => {
 
       const server = createRpcServerWithHandlers(
         mockHandlerRegistry,
-        ['eth', 'web3', 'debug'],
+        mockSupportedApiPrefixes,
         3000,
       )
 
@@ -119,7 +121,7 @@ describe('RPC Server', () => {
     it('should stop server successfully', async () => {
       const server = createRpcServerWithHandlers(
         mockHandlerRegistry,
-        ['eth', 'web3', 'debug'],
+        mockSupportedApiPrefixes,
         3000,
       )
 
@@ -136,7 +138,7 @@ describe('RPC Server', () => {
 
       const server = createRpcServerWithHandlers(
         mockHandlerRegistry,
-        ['eth', 'web3', 'debug'],
+        mockSupportedApiPrefixes,
         3000,
       )
 
@@ -152,7 +154,7 @@ describe('RPC Server', () => {
     it('should register RPC endpoint with correct middleware', async () => {
       const server = createRpcServerWithHandlers(
         mockHandlerRegistry,
-        ['eth', 'web3', 'debug'],
+        mockSupportedApiPrefixes,
         3000,
       )
 
@@ -166,7 +168,7 @@ describe('RPC Server', () => {
     it('should handle RPC request with correct response', async () => {
       const server = createRpcServerWithHandlers(
         mockHandlerRegistry,
-        ['eth', 'web3', 'debug'],
+        mockSupportedApiPrefixes,
         3000,
       )
 
@@ -194,10 +196,57 @@ describe('RPC Server', () => {
       })
     })
 
+    it('should handle RPC request with known error response', async () => {
+      const server = createRpcServerWithHandlers(
+        mockHandlerRegistry,
+        mockSupportedApiPrefixes,
+        3000,
+      )
+
+      await server.start(mockPreflightCheck)
+
+      const mockReq = {
+        parsedRpcRequest: {
+          id: 1,
+          method: 'eth_getUserOperationReceipt',
+          params: [''],
+          handlerFunc:
+            mockHandlerRegistry.eth_getUserOperationReceipt.handlerFunc,
+        },
+      }
+
+      const mockRes = {
+        json: vi.fn(),
+      }
+
+      vi.spyOn(
+        mockHandlerRegistry.eth_getUserOperationReceipt,
+        'handlerFunc',
+      ).mockResolvedValue(
+        Either.Left(new RpcError('Missing/invalid userOpHash', -32602)),
+      )
+
+      await rpcHandler(mockReq, mockRes)
+
+      expect(mockRes.json).toHaveBeenCalledWith({
+        jsonrpc: '2.0',
+        id: 1,
+        error: {
+          code: -32602,
+          message: 'Missing/invalid userOpHash',
+          data: undefined,
+        },
+      })
+      expect(Logger.error).toHaveBeenCalledWith(
+        { error: 'Missing/invalid userOpHash' },
+        `Error handling method requestId(${mockReq.parsedRpcRequest.id})`,
+      )
+    })
+
     it('should handle RPC request with unknown error', async () => {
       const server = createRpcServerWithHandlers(
         mockHandlerRegistry,
-        ['eth', 'web3', 'debug'],
+        mockSupportedApiPrefixes,
         3000,
       )
 
@@ -233,6 +282,10 @@ describe('RPC Server', () => {
           data: undefined,
         },
       })
+      expect(Logger.error).toHaveBeenCalledWith(
+        { error: 'Unknown error' },
+        `Unknown error handling method requestId(${mockReq.parsedRpcRequest.id})`,
+      )
     })
   })
 })

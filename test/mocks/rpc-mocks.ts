@@ -5,60 +5,34 @@ import {
   DebugAPI,
   StakeInfo,
 } from '../../src/types/index.js'
-import { Either } from '../../src/monad/either.js'
 import { MockedObject, vi } from 'vitest'
 
 export const mockEth: MockedObject<EthAPI> = {
-  getChainId: vi.fn().mockResolvedValue(1),
-  getSupportedEntryPoints: vi
-    .fn()
-    .mockResolvedValue(['0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789']),
-  sendUserOperation: vi.fn().mockResolvedValue(Either.Right('0x456')),
-  estimateUserOperationGas: vi.fn().mockResolvedValue(
-    Either.Right({
-      callGasLimit: '0x1',
-      preVerificationGas: '0x2',
-      verificationGasLimit: '0x3',
-    }),
-  ),
-  getUserOperationReceipt: vi
-    .fn()
-    .mockResolvedValue(Either.Right({ success: true, receipt: {} })),
-  getUserOperationByHash: vi.fn().mockResolvedValue(
-    Either.Right({
-      userOperation: {},
-      entryPoint: '0x123',
-    }),
-  ),
+  getChainId: vi.fn(),
+  getSupportedEntryPoints: vi.fn(),
+  sendUserOperation: vi.fn(),
+  estimateUserOperationGas: vi.fn(),
+  getUserOperationReceipt: vi.fn(),
+  getUserOperationByHash: vi.fn(),
 }
 
 export const mockWeb3: MockedObject<Web3API> = {
-  clientVersion: vi.fn().mockResolvedValue('transeptor-bundler/1.0.0'),
+  clientVersion: vi.fn(),
 }
 
 export const mockDebug: MockedObject<DebugAPI> = {
-  clearState: vi.fn().mockResolvedValue('ok'),
-  dumpMempool: vi.fn().mockResolvedValue([]),
-  clearMempool: vi.fn().mockResolvedValue('ok'),
-  sendBundleNow: vi.fn().mockResolvedValue({
-    transactionHash: '0x123',
-    userOpHashes: [],
-  }),
-  setBundlingMode: vi.fn().mockResolvedValue('ok'),
-  setBundleInterval: vi.fn().mockResolvedValue('ok'),
-  setReputation: vi.fn().mockResolvedValue('ok'),
-  dumpReputation: vi.fn().mockResolvedValue([]),
-  clearReputation: vi.fn().mockResolvedValue('ok'),
-  addUserOps: vi.fn().mockResolvedValue('ok'),
-  getStakeStatus: vi.fn().mockResolvedValue({
-    stakeInfo: {
-      addr: '0x123',
-      stake: BigInt(1000),
-      unstakeDelaySec: 1000,
-    } as StakeInfo,
-    isStaked: true,
-  }),
-  setGasConfig: vi.fn().mockResolvedValue('ok'),
+  clearState: vi.fn(),
+  dumpMempool: vi.fn(),
+  clearMempool: vi.fn(),
+  sendBundleNow: vi.fn(),
+  setBundlingMode: vi.fn(),
+  setBundleInterval: vi.fn(),
+  setReputation: vi.fn(),
+  dumpReputation: vi.fn(),
+  clearReputation: vi.fn(),
+  addUserOps: vi.fn(),
+  getStakeStatus: vi.fn(),
+  setGasConfig: vi.fn(),
 }
 
 export const MockHandlerRegistry: MockedObject<HandlerRegistry> = {
@@ -116,19 +90,19 @@ export const MockHandlerRegistry: MockedObject<HandlerRegistry> = {
     validationFunc: vi
       .fn()
       .mockImplementation((params: any[]) => params.length === 0),
-    handlerFunc: vi.fn().mockResolvedValue('ok'),
+    handlerFunc: vi.fn(),
   },
   debug_bundler_dumpMempool: {
     validationFunc: vi
       .fn()
       .mockImplementation((params: any[]) => params.length === 1),
-    handlerFunc: vi.fn().mockResolvedValue([]),
+    handlerFunc: vi.fn(),
   },
   debug_bundler_clearMempool: {
     validationFunc: vi
       .fn()
       .mockImplementation((params: any[]) => params.length === 0),
-    handlerFunc: vi.fn().mockResolvedValue('ok'),
+    handlerFunc: vi.fn(),
   },
   debug_bundler_sendBundleNow: {
     validationFunc: vi
@@ -142,37 +116,37 @@ export const MockHandlerRegistry: MockedObject<HandlerRegistry> = {
     validationFunc: vi
       .fn()
       .mockImplementation((params: any[]) => params.length === 1),
-    handlerFunc: vi.fn().mockResolvedValue('ok'),
+    handlerFunc: vi.fn(),
   },
   debug_bundler_setBundleInterval: {
     validationFunc: vi
       .fn()
       .mockImplementation((params: any[]) => params.length === 0),
-    handlerFunc: vi.fn().mockResolvedValue('ok'),
+    handlerFunc: vi.fn(),
   },
   debug_bundler_setReputation: {
     validationFunc: vi
       .fn()
       .mockImplementation((params: any[]) => params.length === 2),
-    handlerFunc: vi.fn().mockResolvedValue('ok'),
+    handlerFunc: vi.fn(),
   },
   debug_bundler_dumpReputation: {
     validationFunc: vi
       .fn()
       .mockImplementation((params: any[]) => params.length === 1),
-    handlerFunc: vi.fn().mockResolvedValue([]),
+    handlerFunc: vi.fn(),
   },
   debug_bundler_clearReputation: {
     validationFunc: vi
       .fn()
       .mockImplementation((params: any[]) => params.length === 0),
-    handlerFunc: vi.fn().mockResolvedValue('ok'),
+    handlerFunc: vi.fn(),
   },
   debug_bundler_addUserOps: {
     validationFunc: vi
       .fn()
       .mockImplementation((params: any[]) => params.length === 1),
-    handlerFunc: vi.fn().mockResolvedValue('ok'),
+    handlerFunc: vi.fn(),
   },
   debug_bundler_getStakeStatus: {
     validationFunc: vi
@@ -191,6 +165,6 @@ export const MockHandlerRegistry: MockedObject<HandlerRegistry> = {
     validationFunc: vi
       .fn()
       .mockImplementation((params: any[]) => params.length === 1),
-    handlerFunc: vi.fn().mockResolvedValue('ok'),
+    handlerFunc: vi.fn(),
   },
 }

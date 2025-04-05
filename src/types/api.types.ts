@@ -118,7 +118,7 @@ export type DebugAPIMethodMapping = {
     return: Promise<string>
   }
   debug_bundler_setBundleInterval: {
-    params: []
+    params: [number]
     return: Promise<string>
   }
   debug_bundler_setReputation: {
@@ -162,7 +162,9 @@ export type DebugAPI = {
     mode: DebugAPIMethodMapping['debug_bundler_setBundlingMode']['params'][0],
   ): DebugAPIMethodMapping['debug_bundler_setBundlingMode']['return']
   sendBundleNow(): DebugAPIMethodMapping['debug_bundler_sendBundleNow']['return']
-  setBundleInterval(): DebugAPIMethodMapping['debug_bundler_setBundleInterval']['return']
+  setBundleInterval(
+    interval: DebugAPIMethodMapping['debug_bundler_setBundleInterval']['params'][0],
+  ): DebugAPIMethodMapping['debug_bundler_setBundleInterval']['return']
   setReputation(
     reputations: DebugAPIMethodMapping['debug_bundler_setReputation']['params'][0],
     epAddress: DebugAPIMethodMapping['debug_bundler_setReputation']['params'][1],
