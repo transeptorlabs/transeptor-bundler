@@ -27,7 +27,7 @@ export type Web3APIMethodMapping = {
 
 /**
  * The Web3API interface defines the structure of the web3 namespace API. It is used to
- * implment the web3 namespace API methods.
+ * implement the web3 namespace API methods.
  */
 export type Web3API = {
   clientVersion(): Web3APIMethodMapping['web3_clientVersion']['return']
@@ -68,7 +68,7 @@ export type EthAPIMethodMapping = {
 
 /**
  * The EthAPI interface defines the structure of the eth namespace API. It is used to
- * implment the eth namespace API methods.
+ * implement the eth namespace API methods.
  */
 export type EthAPI = {
   getChainId(): EthAPIMethodMapping['eth_chainId']['return']
@@ -118,7 +118,7 @@ export type DebugAPIMethodMapping = {
     return: Promise<string>
   }
   debug_bundler_setBundleInterval: {
-    params: []
+    params: [number]
     return: Promise<string>
   }
   debug_bundler_setReputation: {
@@ -152,7 +152,7 @@ export type DebugAPIMethodMapping = {
 
 /**
  * The DebugAPI interface defines the structure of the debug namespace API. It is used to
- * implment the debug namespace API methods.
+ * implement the debug namespace API methods.
  */
 export type DebugAPI = {
   clearState(): DebugAPIMethodMapping['debug_bundler_clearState']['return']
@@ -162,6 +162,9 @@ export type DebugAPI = {
     mode: DebugAPIMethodMapping['debug_bundler_setBundlingMode']['params'][0],
   ): DebugAPIMethodMapping['debug_bundler_setBundlingMode']['return']
   sendBundleNow(): DebugAPIMethodMapping['debug_bundler_sendBundleNow']['return']
+  setBundleInterval(
+    interval: DebugAPIMethodMapping['debug_bundler_setBundleInterval']['params'][0],
+  ): DebugAPIMethodMapping['debug_bundler_setBundleInterval']['return']
   setReputation(
     reputations: DebugAPIMethodMapping['debug_bundler_setReputation']['params'][0],
     epAddress: DebugAPIMethodMapping['debug_bundler_setReputation']['params'][1],
@@ -190,6 +193,6 @@ export type MethodMapping = Web3APIMethodMapping &
   DebugAPIMethodMapping
 
 /**
- * The method names of the supported APIs with parmeters and return types.
+ * The method names of the supported APIs with parameters and return types.
  */
 export type MethodNames = keyof MethodMapping

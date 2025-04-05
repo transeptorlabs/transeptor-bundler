@@ -1,4 +1,3 @@
-import { Command, OptionValues } from 'commander'
 import dotenv from 'dotenv'
 import { ethers, HDNodeWallet, JsonRpcProvider, Mnemonic, Wallet } from 'ethers'
 import { createProvider } from '../provider/index.js'
@@ -6,6 +5,7 @@ import { IENTRY_POINT_ABI, IStakeManager } from '../abis/index.js'
 import { DEFAULT_ENTRY_POINT } from '../constants/index.js'
 import { isValidAddress } from '../utils/index.js'
 import { InfluxdbConnection, BundlerSignerWallets } from '../types/index.js'
+import { getCmdOptionValues } from './command.js'
 
 dotenv.config()
 
@@ -53,6 +53,7 @@ export type Config = {
   influxdbConnection: InfluxdbConnection
 }
 
+// Helper function to get bundler signer wallets
 const getBundlerSignerWallets = (
   numberOfSigners: number,
   provider: ethers.JsonRpcProvider,
@@ -77,96 +78,77 @@ const getBundlerSignerWallets = (
   }, initialValue)
 }
 
+// Helper function to set up contracts
+const setupContracts = (
+  supportedEntryPointAddress: string,
+  provider: JsonRpcProvider,
+) => {
+  if (!isValidAddress(supportedEntryPointAddress)) {
+    throw new Error('Entry point not a valid address')
+  }
+
+  const entryPointContract = new ethers.Contract(
+    supportedEntryPointAddress,
+    IENTRY_POINT_ABI,
+    provider,
+  )
+
+  const stakeManagerContract = new ethers.Contract(
+    supportedEntryPointAddress,
+    IStakeManager,
+    provider,
+  )
+
+  return { entryPointContract, stakeManagerContract }
+}
+
+// Helper function to set up P2P configuration
+const setupP2PConfig = (isP2PMode: boolean) => {
+  const peerMultiaddrs = isP2PMode
+    ? process.env.PEER_MULTIADDRS
+      ? process.env.PEER_MULTIADDRS.split(',')
+      : []
+    : []
+  return { peerMultiaddrs }
+}
+
+// Helper function to set up metrics configuration
+const setupMetricsConfig = (isMetricsEnabled: boolean, programOpts: any) => {
+  if (isMetricsEnabled && !process.env.TRANSEPTOR_INFLUX_TOKEN) {
+    throw new Error('TRANSEPTOR_INFLUX_TOKEN env var not set')
+  }
+  const influxdbConnection: InfluxdbConnection = isMetricsEnabled
+    ? {
+        url: programOpts.influxdbUrl as string,
+        token: process.env.TRANSEPTOR_INFLUX_TOKEN as string,
+        org: programOpts.influxdbOrg as string,
+        bucket: programOpts.influxdbBucket as string,
+      }
+    : { url: '', org: '', bucket: '', token: '' }
+  return { influxdbConnection }
+}
+
+// Helper function to validate HTTP APIs
+const validateHttpApis = (
+  httpApis: string[],
+  SUPPORTED_NAMESPACES: string[],
+) => {
+  httpApis.forEach((api) => {
+    if (SUPPORTED_NAMESPACES.indexOf(api) === -1) {
+      throw new Error('Invalid http api')
+    }
+  })
+}
+
 export const createBuilderConfig = async (
   args: readonly string[],
 ): Promise<Config> => {
-  const program = new Command()
   const SUPPORTED_NAMESPACES = ['web3', 'eth', 'debug']
-
-  program
-    .version(`${nodeVersion}`)
-    .option(
-      '--unsafe',
-      'UNSAFE mode: Enable no storage or opcode checks during userOp simulation. SAFE mode(default).',
-    )
-    .option(
-      '--tracerRpcUrl <string>',
-      'Enables native tracer for full validation during userOp simulation with prestateTracer native tracer on the network provider. requires unsafe=false.',
-    )
-    .option(
-      '--network <string>',
-      'Ethereum network provider.',
-      `${DEFAULT_NETWORK}`,
-    )
-    .option(
-      '--httpApi <string>',
-      'ERC4337 rpc method namespaces to enable.',
-      'web3,eth',
-    )
-    .option('--port <number>', 'Bundler node listening port.', '4337')
-    .option(
-      '--numberOfSigners <number>',
-      'Number of signers HD paths to use from mnemonic',
-      '1',
-    )
-    .option(
-      '--minBalance <string>',
-      'Minimum ETH balance needed for signer address.',
-      '1',
-    )
-    .option(
-      '--minStake <string>',
-      'Minimum stake an entity has to have to pass the reputation system.',
-      '1',
-    ) // The stake value is not enforced on-chain, but specifically by each node while simulating a transaction
-    .option(
-      '--minUnstakeDelay <number>',
-      'Time paymaster has to wait to unlock the stake(seconds).',
-      '0',
-    ) // One day - 84600
-    .option(
-      '--bundleSize <number>',
-      'Maximum number of pending mempool entities to start auto bundler.',
-      '10',
-    )
-    .option(
-      '--maxBundleGas <number>',
-      'Max gas the bundler will use in transactions.',
-      '5000000',
-    )
-    .option('--auto', 'Automatic bundling.', false)
-    .option(
-      '--autoBundleInterval <number>',
-      'Auto bundler interval in (ms).',
-      '12000',
-    )
-    .option(
-      '--txMode <string>',
-      `Bundler transaction mode (base, searcher).
-        (base mode): Sends bundles using eth_sendRawTransaction RPC(does not protect against front running).
-        (searcher mode): Sends bundles  using Flashbots Auction to protect the transaction against front running (only available on Mainnet)`,
-      'base',
-    )
-    .option('--metrics', 'Bundler node metrics tracking enabled.', false)
-    .option(
-      '--influxdbUrl <string>',
-      'Url influxdb is running on (requires --metrics to be enabled).',
-      'http://localhost:8086',
-    )
-    .option(
-      '--influxdbOrg <string>',
-      'Influxdb org (requires --metrics to be enabled).',
-      'transeptor-labs',
-    )
-    .option(
-      '--influxdbBucket <string>',
-      'Influxdb bucket (requires --metrics to be enabled).',
-      'transeptor_metrics',
-    )
-    .option('--p2p', 'p2p mode enabled', false)
-    .option('--findPeers', 'Search for peers when p2p is enabled.', false)
-
-  const programOpts: OptionValues = program.parse(args).opts()
+  const programOpts = getCmdOptionValues({
+    args,
+    nodeVersion,
+    defaultNetwork: DEFAULT_NETWORK,
+  })
 
   const provider = createProvider(programOpts.network as string)
 
@@ -178,20 +160,9 @@ export const createBuilderConfig = async (
   const supportedEntryPointAddress =
     process.env.TRANSEPTOR_ENTRYPOINT_ADDRESS || DEFAULT_ENTRY_POINT
 
-  if (!isValidAddress(supportedEntryPointAddress)) {
-    throw new Error('Entry point not a valid address')
-  }
-
   // Set up contracts
-  const entryPointContract = new ethers.Contract(
+  const { entryPointContract, stakeManagerContract } = setupContracts(
     supportedEntryPointAddress,
-    IENTRY_POINT_ABI,
-    provider,
-  )
-
-  const stakeManagerContract = new ethers.Contract(
-    supportedEntryPointAddress,
-    IStakeManager,
     provider,
   )
 
@@ -210,11 +181,7 @@ export const createBuilderConfig = async (
 
   // set p2p config
   const isP2PMode = programOpts.p2p as boolean
-  const peerMultiaddrs = isP2PMode
-    ? process.env.PEER_MULTIADDRS
-      ? process.env.PEER_MULTIADDRS.split(',')
-      : []
-    : []
+  const { peerMultiaddrs } = setupP2PConfig(isP2PMode)
 
   // set reputation config
   const whitelist = process.env.WHITELIST
@@ -231,24 +198,13 @@ export const createBuilderConfig = async (
 
   // set metric config
   const isMetricsEnabled = programOpts.metrics as boolean
-  if (isMetricsEnabled && !process.env.TRANSEPTOR_INFLUX_TOKEN) {
-    throw new Error('TRANSEPTOR_INFLUX_TOKEN env var not set')
-  }
-  const influxdbConnection: InfluxdbConnection = isMetricsEnabled
-    ? {
-        url: programOpts.influxdbUrl as string,
-        token: process.env.TRANSEPTOR_INFLUX_TOKEN as string,
-        org: programOpts.influxdbOrg as string,
-        bucket: programOpts.influxdbBucket as string,
-      }
-    : { url: '', org: '', bucket: '', token: '' }
+  const { influxdbConnection } = setupMetricsConfig(
+    isMetricsEnabled,
+    programOpts,
+  )
 
   const httpApis = (programOpts.httpApi as string).split(',')
-  httpApis.forEach((api) => {
-    if (SUPPORTED_NAMESPACES.indexOf(api) === -1) {
-      throw new Error('Invalid http api')
-    }
-  })
+  validateHttpApis(httpApis, SUPPORTED_NAMESPACES)
 
   return {
     provider,

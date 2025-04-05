@@ -1,6 +1,6 @@
-import { vi } from 'vitest'
+import { vi, MockedObject } from 'vitest'
 import { DepositManager } from '../../src/deposit/index.js'
 
-export const mockDepositManager: DepositManager = {
-  checkPaymasterDeposit: vi.fn().mockResolvedValue(Promise.resolve()),
+export const mockDepositManager: MockedObject<DepositManager> = {
+  checkPaymasterDeposit: vi.fn(),
 }

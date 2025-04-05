@@ -107,8 +107,8 @@ export const createEthAPI = (
   return {
     getChainId: async (): Promise<number> => ps.getChainId(),
     /*
-      Estimate the gas values for a UserOperation. Given UserOperation optionally without gas limits and gas prices, return the needed gas limits. The signature field is ignored by the wallet, so that the operation will not require user’s approval. 
-      Still, it might require putting a “semi-valid” signature (e.g. a signature in the right length)
+      Estimate the gas values for a UserOperation. Given UserOperation optionally without gas limits and gas prices, return the needed gas limits. The signature field is ignored by the wallet, so that the operation will not require user's approval. 
+      Still, it might require putting a "semi-valid" signature (e.g. a signature in the right length)
         * gas limits (and prices) parameters are optional, but are used if specified. maxFeePerGas and maxPriorityFeePerGas default to zero, so no payment is required by neither account nor paymaster.
         * Optionally accepts the State Override Set to allow users to modify the state during the gas estimation. This field as well as its behavior is equivalent to the ones defined for eth_call RPC method.
     */
@@ -282,11 +282,11 @@ export const createEthAPI = (
       }
 
       // TODO: First check if the userOp is pending in the mempool
-      // if so the UserOperation is pending in the bundler’s mempool:
+      // if so the UserOperation is pending in the bundler's mempool:
       // MAY return null, or: a full UserOperation, with the addition of the entryPoint field and a null value for blockNumber, blockHash and transactionHash.
       const event = await eventsManager.getUserOperationEvent(userOpHash)
       if (event == null) {
-        return null
+        return Either.Right(null)
       }
       const tx = await event.getTransaction()
       if (tx.to !== entryPoint.address) {
@@ -296,7 +296,7 @@ export const createEthAPI = (
       const parsed = entryPoint.contract.interface.parseTransaction(tx)
       const ops: PackedUserOperation[] = parsed?.args.ops
       if (ops == null) {
-        return Either.Left(new RpcError('failed to parse transaction', -32000))
+        return Either.Left(new RpcError('unable to parse transaction', -32000))
       }
 
       const op = ops.find(

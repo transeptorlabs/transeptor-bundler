@@ -25,6 +25,11 @@ export const createDebugAPI = (
   entryPointContract: ethers.Contract,
 ): DebugAPI => {
   return {
+    setBundleInterval: async (): Promise<string> => {
+      // TODO: Implement this on the bundle manager
+      return Promise.resolve('ok')
+    },
+
     clearState: async (): Promise<string> => {
       await mempoolManagerCore.clearState()
       await reputationManager.clearState()
