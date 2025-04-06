@@ -56,7 +56,6 @@ export const createMempoolManagerBuilder = (
     updateEntryStatus: mempoolManagerCore.updateEntryStatus,
     removeUserOp: mempoolManagerCore.removeUserOp,
     removeUserOpsForBannedAddr: mempoolManagerCore.removeUserOpsForBannedAddr,
-    addBundleTxnConfirmation: mempoolManagerCore.addBundleTxnConfirmation,
   }
 }
 
@@ -328,28 +327,6 @@ export const createMempoolManagerCore = (
       return Object.values(standardPool).map(
         (mempoolEntry) => mempoolEntry.userOp,
       )
-    },
-
-    addBundleTxnConfirmation: async (
-      transactionHash: string,
-      signerIndex: number,
-    ): Promise<void> => {
-      if (transactionHash === '') {
-        return
-      }
-
-      await state.updateState(StateKey.BundleTxs, ({ bundleTxs }) => {
-        return {
-          bundleTxs: {
-            ...bundleTxs,
-            [transactionHash]: {
-              txHash: transactionHash,
-              signerIndex: signerIndex,
-              status: 'pending',
-            },
-          },
-        }
-      })
     },
   }
 }

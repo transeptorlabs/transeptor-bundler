@@ -99,17 +99,6 @@ export type MempoolManagerCore = {
   dump(): Promise<UserOperation[]>
 
   /**
-   * Add the txnHash to the confirmation queue
-   *
-   * @param transactionHash - The transaction hash to add to the confirmation queue.
-   * @param signerIndex - The index of the signer that signed the transaction.
-   */
-  addBundleTxnConfirmation(
-    transactionHash: string,
-    signerIndex: number,
-  ): Promise<void>
-
-  /**
    * [GREP-010] - A `BANNED` address is not allowed into the mempool.
    *
    * @param addr - The address to remove from the mempool.
@@ -133,7 +122,6 @@ export type MempoolManagerBuilder = Pick<
   | 'updateEntryStatus'
   | 'removeUserOp'
   | 'removeUserOpsForBannedAddr'
-  | 'addBundleTxnConfirmation'
 >
 
 export type MempoolEntryMetadata = {

@@ -1,15 +1,8 @@
-import { MempoolManagerBuilder } from '../types/index.js'
+import { BundleBuilder, StateKey, StateService } from '../types/index.js'
 import { Logger } from '../logger/index.js'
-import {
-  SendBundleReturn,
-  ReputationManagerUpdater,
-  MempoolEntry,
-} from '../types/index.js'
+import { SendBundleReturn, BundleProcessor } from '../types/index.js'
 
-import { BundleBuilder } from './bundle-builder.js'
-import { BundleProcessor } from './bundle-processor.js'
 import { EventManagerWithListener } from '../event/index.js'
-import { isAccountOrFactoryError } from '../utils/index.js'
 import { Mutex } from 'async-mutex'
 
 export type BundleManager = {
@@ -28,132 +21,74 @@ export type BundleManager = {
   doAttemptBundle: (force?: boolean) => Promise<SendBundleReturn>
 }
 
+export type BundleManagerConfig = {
+  bundleProcessor: BundleProcessor
+  bundleBuilder: BundleBuilder
+  eventsManager: EventManagerWithListener
+  state: StateService
+  isAutoBundle: boolean
+  autoBundleInterval: number
+}
+
 export const createBundleManager = (
-  bundleProcessor: BundleProcessor,
-  bundleBuilder: BundleBuilder,
-  eventsManager: EventManagerWithListener,
-  mempoolManagerBuilder: MempoolManagerBuilder,
-  reputationManagerUpdater: ReputationManagerUpdater,
-  isAutoBundle: boolean,
-  autoBundleInterval: number,
+  config: BundleManagerConfig,
 ): BundleManager => {
+  const {
+    bundleProcessor,
+    bundleBuilder,
+    eventsManager,
+    state,
+    isAutoBundle,
+    autoBundleInterval,
+  } = config
+
   const mutex = new Mutex()
   let bundleMode: 'auto' | 'manual' = isAutoBundle ? 'auto' : 'manual'
   let interval: NodeJS.Timer | null = null
 
-  const getEntries = async (force?: boolean): Promise<MempoolEntry[]> => {
-    if ((await mempoolManagerBuilder.size()) === 0) {
-      return []
-    }
-
-    // if force is true, send the all pending UserOps in the mempool as a bundle
-    const entries: MempoolEntry[] = force
-      ? await mempoolManagerBuilder.getAllPending()
-      : await mempoolManagerBuilder.getNextPending()
-
-    return entries
-  }
-
   const doAttemptBundle = async (
     force?: boolean,
   ): Promise<SendBundleReturn> => {
-    const entries = await getEntries(force)
-    if (entries.length === 0) {
-      Logger.debug('No entries to bundle')
+    // Flush the mempool to remove successful userOps update failed userOps status
+    await eventsManager.handlePastEvents()
+    const { bundle, storageMap } = await bundleBuilder.createBundle(force)
+    Logger.debug({ length: bundle.length }, 'bundle created(ready to send)')
+    if (bundle.length === 0) {
+      Logger.info('No bundle to send, skipping')
       return {
         transactionHash: '',
         userOpHashes: [],
       }
     }
 
-    // Flush the mempool to remove successful userOps update failed userOps status
-    await eventsManager.handlePastEvents()
+    const { isSendBundleSuccess, transactionHash, userOpHashes, signerIndex } =
+      await bundleProcessor.sendBundle(bundle, storageMap)
 
-    const knownSenders = await mempoolManagerBuilder.getKnownSenders()
-
-    const {
-      bundle,
-      storageMap,
-      notIncludedUserOpsHashes,
-      markedToRemoveUserOpsHashes,
-    } = await bundleBuilder.createBundle(entries, knownSenders)
-    Logger.debug({ length: bundle.length }, 'bundle created(ready to send)')
-
-    if (notIncludedUserOpsHashes.length > 0) {
-      Logger.debug(
-        { total: notIncludedUserOpsHashes.length },
-        'Sending userOps not included in built bundle back to mempool with status of pending',
-      )
-      for (const userOpHash of notIncludedUserOpsHashes) {
-        await mempoolManagerBuilder.updateEntryStatus(userOpHash, 'pending')
-      }
-    }
-
-    if (markedToRemoveUserOpsHashes.length > 0) {
-      Logger.debug(
-        { total: markedToRemoveUserOpsHashes.length },
-        'Marked to remove: removing UserOps from mempool',
-      )
-
-      for (const opDetails of markedToRemoveUserOpsHashes) {
-        /**
-         * EREP-015: A `paymaster` should not have its opsSeen incremented on failure of factory or account
-         * When running 2nd validation (before inclusion in a bundle), if a UserOperation fails because of factory or
-         * account error (either a FailOp revert or validation rule), then the paymaster's opsSeen valid is decremented by 1.
-         */
-        if (opDetails.err) {
-          if (
-            opDetails.paymaster != null &&
-            isAccountOrFactoryError(
-              opDetails.err.errorCode,
-              opDetails.err.message,
-            )
-          ) {
-            Logger.debug(
-              opDetails,
-              'Do not blame paymaster, for account/factory failure',
-            )
-            await reputationManagerUpdater.updateSeenStatus(
-              opDetails.paymaster,
-              'decrement',
-            )
-          }
-        }
-        await mempoolManagerBuilder.removeUserOp(opDetails.userOpHash)
-      }
-    }
-
-    const res = await bundleProcessor.sendBundle(bundle, storageMap)
-
-    // Update reputation status to ban and drop userOp from mempool for entity that caused handleOps to revert
-    if (res.crashedHandleOps) {
-      const { addressToBan, failedOp } = res.crashedHandleOps
-      if (addressToBan) {
-        Logger.info(`Banning address: ${addressToBan} due to failed handleOps`)
-        await mempoolManagerBuilder.removeUserOpsForBannedAddr(addressToBan)
-        await reputationManagerUpdater.crashedHandleOps(addressToBan)
-      }
-
-      await mempoolManagerBuilder.removeUserOp(failedOp)
-    }
-
-    if (res.transactionHash) {
+    if (isSendBundleSuccess) {
       Logger.info(
         {
-          transactionHash: res.transactionHash,
-          userOpHashes: res.userOpHashes,
+          transactionHash: transactionHash,
+          userOpHashes: userOpHashes,
         },
         'Bundle sent successfully',
       )
-      await mempoolManagerBuilder.addBundleTxnConfirmation(
-        res.transactionHash,
-        res.signerIndex,
-      )
+      await state.updateState(StateKey.BundleTxs, ({ bundleTxs }) => {
+        return {
+          bundleTxs: {
+            ...bundleTxs,
+            [transactionHash]: {
+              txHash: transactionHash,
+              signerIndex: signerIndex,
+              status: 'pending',
+            },
+          },
+        }
+      })
     }
 
     return {
-      transactionHash: res.transactionHash,
-      userOpHashes: res.userOpHashes,
+      transactionHash: transactionHash,
+      userOpHashes: userOpHashes,
     }
   }
 
