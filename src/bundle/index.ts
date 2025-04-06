@@ -1,3 +1,3 @@
 export * from './bundle-manager.js'
-export * from './bundle-builder.js'
-export * from './bundle-processor.js'
+export * from './builder/index.js'
+export * from './processor/index.js'

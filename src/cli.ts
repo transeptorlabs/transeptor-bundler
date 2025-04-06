@@ -59,16 +59,19 @@ const runBundler = async () => {
   const args = process.argv
   const config = await createBuilderConfig(args)
   const state = createState()
-  const ps = createProviderService(config.provider, config.nativeTracerProvider)
+  const providerService = createProviderService(
+    config.provider,
+    config.nativeTracerProvider,
+  )
 
-  const { name, chainId } = await ps.getNetwork()
+  const { name, chainId } = await providerService.getNetwork()
   const chainIdNum = Number(chainId)
 
   // Create services
   const pvgc = createPreVerificationGasCalculator(chainIdNum)
-  const sim = createSimulator(ps, config.entryPoint.address)
-  const vs = createValidationService(
-    ps,
+  const sim = createSimulator(providerService, config.entryPoint.address)
+  const validationService = createValidationService(
+    providerService,
     sim,
     pvgc,
     config.isUnsafeMode,
@@ -95,33 +98,40 @@ const runBundler = async () => {
   )
 
   const eventManager = createEventManagerWithListener(
-    ps,
+    providerService,
     reputationManager,
     createMempoolManageUpdater(mempoolManagerCore),
     config.entryPoint.contract,
   )
 
-  const bundleManager = createBundleManager(
-    createBundleProcessor(
-      ps,
+  const bundleManager = createBundleManager({
+    bundleProcessor: createBundleProcessor({
+      providerService,
       reputationManager,
-      config.entryPoint,
-      config.txMode,
-      config.beneficiaryAddr,
-      config.minSignerBalance,
-      config.bundlerSignerWallets,
-    ),
-    createBundleBuilder(vs, reputationManager, {
-      maxBundleGas: config.maxBundleGas,
+      mempoolManagerBuilder: createMempoolManagerBuilder(mempoolManagerCore),
+      reputationManagerUpdater:
+        createReputationManagerUpdater(reputationManager),
+      entryPoint: config.entryPoint,
       txMode: config.txMode,
-      entryPointContract: config.entryPoint.contract,
+      beneficiary: config.beneficiaryAddr,
+      minSignerBalance: config.minSignerBalance,
+      signers: config.bundlerSignerWallets,
     }),
-    eventManager,
-    createMempoolManagerBuilder(mempoolManagerCore),
-    createReputationManagerUpdater(reputationManager),
-    config.isAutoBundle,
-    config.autoBundleInterval,
-  )
+    bundleBuilder: createBundleBuilder({
+      validationService,
+      reputationManager,
+      mempoolManagerBuilder: createMempoolManagerBuilder(mempoolManagerCore),
+      opts: {
+        maxBundleGas: config.maxBundleGas,
+        txMode: config.txMode,
+        entryPointContract: config.entryPoint.contract,
+      },
+    }),
+    eventsManager: eventManager,
+    state,
+    isAutoBundle: config.isAutoBundle,
+    autoBundleInterval: config.autoBundleInterval,
+  })
 
   // start p2p node
   if (config.isP2PMode) {
@@ -132,9 +142,9 @@ const runBundler = async () => {
   bundlerServer = createRpcServerWithHandlers(
     createBundlerHandlerRegistry(
       createEthAPI(
-        ps,
+        providerService,
         sim,
-        vs,
+        validationService,
         eventManager,
         createMempoolManageSender(mempoolManagerCore),
         pvgc,
@@ -154,7 +164,7 @@ const runBundler = async () => {
     config.port,
   )
   await bundlerServer.start(async () => {
-    const supportedNetworks = ps.getSupportedNetworks()
+    const supportedNetworks = providerService.getSupportedNetworks()
     if (!supportedNetworks.includes(chainIdNum)) {
       throw new Error(
         `Network not supported. Supported networks: ${supportedNetworks.join(
@@ -164,7 +174,7 @@ const runBundler = async () => {
     }
 
     // Make sure the entry point contract is deployed to the network
-    const isDeployed = await ps.checkContractDeployment(
+    const isDeployed = await providerService.checkContractDeployment(
       config.entryPoint.address,
     )
     if (!isDeployed) {
@@ -176,7 +186,7 @@ const runBundler = async () => {
     // Check if the signer accounts have enough balance
     const signerDetails = await Promise.all(
       Object.values(config.bundlerSignerWallets).map(async (signer) => {
-        const bal = await ps.getBalance(signer.address)
+        const bal = await providerService.getBalance(signer.address)
         if (!(bal >= config.minSignerBalance)) {
           throw new Error(
             `Bundler signer account(${signer.address}) is not funded: Min balance required: ${config.minSignerBalance}`,
