@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - XXX-XX-XX
 
+## [v0.11.0-alpha.0] - 2025-05-02
+
 ### Changed
 - Update to use node version to 22.14.0 LTS, drop [esbuild](https://esbuild.github.io/) dependency and [pkgroll](https://github.com/privatenumber/pkgroll) as the the recommended bundler for projects using tsx.([#126](https://github.com/transeptorlabs/transeptor-bundler/pull/126))
 - Move cli binary and gracefully shutting down rpc server.([#127](https://github.com/transeptorlabs/transeptor-bundler/pull/127))
