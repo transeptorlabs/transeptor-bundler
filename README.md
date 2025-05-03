@@ -19,10 +19,13 @@
   <img src="https://img.shields.io/docker/pulls/transeptorlabs/bundler" alt="Docker pulls">
 </p>
 
-> :warning: **Please note that while the software is fully functional, it is important to know that it may contain bugs and incomplete features and undergo frequent updates.**
+> :warning: **The `main` branch of Transeptor is under active development and is compatible with [Entrypoint releases/v0.8](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.8).**
+>
+> **Support for previous EntryPoint releases is available below.**
+>
+> - Compatible with [Entrypoint releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7): [Transeptor v0.11.0-alpha.0](https://github.com/transeptorlabs/transeptor-bundler/tree/v0.11.0-alpha.0)
+> - Compatible with [Entrypoint releases/v0.6](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.6): [Transeptor v0.5.3-alpha.0](https://github.com/transeptorlabs/transeptor-bundler/tree/v0.5.3-alpha.0)
 
-- Supports ERC-4337 Entrypoint contract [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7)
-  
 ## Quick Start
 
 To quickly start using Transeptor, follow the instructions in our [Quick Start guide](https://transeptor.transeptorlabs.io/docs/get-started#quick-start).
@@ -30,33 +33,48 @@ To quickly start using Transeptor, follow the instructions in our [Quick Start g
 ## Development
 
 **Prerequisites**
+
 - [NodeJS](https://nodejs.org/) (>=v22.14.0)
 - [Yarn](https://classic.yarnpkg.com/lang/en/) (v4.7.0)
-- [Docker](https://docs.docker.com/compose/install/) (>=27.5.1)
+- [Docker](https://docs.docker.com/compose/install/) (>=v27.5.1)
+- [Git](https://git-scm.com/) (>=v2.39.5)
 
 Follow these instructions to get the project up and running on your local machine for development purposes:
-1. `git submodule update --init`
-2. Use the correct node version `nvm use`
-3. Add `PRIVATE_KEY` to the `contracts/.env` file to deploy the entrypoint contract locally.
-4. Install dependencies `yarn install`
-5. Start local `geth node` and `geth-tracer-node`: `yarn local-eth`
-    - Deploys the entrypoint contract to the local network.
-   - Please wait for environment vars to be printed in the console and copy it to your `.env` files.
-6. In a new terminal window, start the bundler node in dev mode with a live watch for changes in the `./src` path with auto restarts. There are three different dev modes:
+
+1. Run the following commands in order to prepare dev environment.
+
+```bash
+# Ensure the submodule is checked out properly by running
+git submodule update --init --recursive
+
+# Use the correct node version
+nvm use
+
+# Install dependencies
+yarn install
+
+# Starts local `geth node` and `geth-tracer-node` Docker images and deploys entrypoint contract to the local network.
+yarn local-eth
+```
+
+2. Please wait for environment vars to be printed in the terminal and copy it to your `.env` files.
+3. In a new terminal window, start the bundler node in dev mode with a live watch for changes in the `./src` path with auto restarts. There are three different dev modes:
    - `yarn dev` - To start the bundler node in safe mode with full storage and opcode checks.
    - `yarn dev:unsafe` - To start the bundler node in unsafe mode with no storage or opcode checks.
    - `yarn dev:native-tracer` - To start the bundler node in safe mode with full storage and opcode checks enabled by the native tracer.
 
-- The bundler node will start on `http://localhost:4337/rpc`. 
+- The bundler node will start on `http://localhost:4337/rpc`.
 
 ### Test
 
 Run the test suite.
+
 ```bash
 yarn test
 ```
 
 Run an e2e script to send a userOp through the bundler.
+
 ```bash
 yarn send-op
 ```
@@ -98,6 +116,7 @@ We appreciate the open-source community and those who have shared their knowledg
 - [Infinitism](https://github.com/eth-infinitism/bundler) - for inspiring our project and serving as a reference for implementation techniques.
 
 ## Relevant Documents
+
 - [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337)
 - [ERC-7562](https://eips.ethereum.org/EIPS/eip-7562)
 - [EIP-1153](https://eips.ethereum.org/EIPS/eip-1153)

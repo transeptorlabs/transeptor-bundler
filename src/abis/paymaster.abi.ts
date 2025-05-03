@@ -1,111 +1,71 @@
 export const IPAYMASTER_ABI = [
   {
+    type: 'function',
+    name: 'postOp',
     inputs: [
       {
-        internalType: 'enum IPaymaster.PostOpMode',
         name: 'mode',
         type: 'uint8',
+        internalType: 'enum IPaymaster.PostOpMode',
       },
+      { name: 'context', type: 'bytes', internalType: 'bytes' },
       {
-        internalType: 'bytes',
-        name: 'context',
-        type: 'bytes',
-      },
-      {
-        internalType: 'uint256',
         name: 'actualGasCost',
         type: 'uint256',
+        internalType: 'uint256',
       },
       {
-        internalType: 'uint256',
         name: 'actualUserOpFeePerGas',
         type: 'uint256',
+        internalType: 'uint256',
       },
     ],
-    name: 'postOp',
     outputs: [],
     stateMutability: 'nonpayable',
-    type: 'function',
   },
   {
+    type: 'function',
+    name: 'validatePaymasterUserOp',
     inputs: [
       {
-        components: [
-          {
-            internalType: 'address',
-            name: 'sender',
-            type: 'address',
-          },
-          {
-            internalType: 'uint256',
-            name: 'nonce',
-            type: 'uint256',
-          },
-          {
-            internalType: 'bytes',
-            name: 'initCode',
-            type: 'bytes',
-          },
-          {
-            internalType: 'bytes',
-            name: 'callData',
-            type: 'bytes',
-          },
-          {
-            internalType: 'bytes32',
-            name: 'accountGasLimits',
-            type: 'bytes32',
-          },
-          {
-            internalType: 'uint256',
-            name: 'preVerificationGas',
-            type: 'uint256',
-          },
-          {
-            internalType: 'bytes32',
-            name: 'gasFees',
-            type: 'bytes32',
-          },
-          {
-            internalType: 'bytes',
-            name: 'paymasterAndData',
-            type: 'bytes',
-          },
-          {
-            internalType: 'bytes',
-            name: 'signature',
-            type: 'bytes',
-          },
-        ],
-        internalType: 'struct PackedUserOperation',
         name: 'userOp',
         type: 'tuple',
+        internalType: 'struct PackedUserOperation',
+        components: [
+          { name: 'sender', type: 'address', internalType: 'address' },
+          { name: 'nonce', type: 'uint256', internalType: 'uint256' },
+          { name: 'initCode', type: 'bytes', internalType: 'bytes' },
+          { name: 'callData', type: 'bytes', internalType: 'bytes' },
+          {
+            name: 'accountGasLimits',
+            type: 'bytes32',
+            internalType: 'bytes32',
+          },
+          {
+            name: 'preVerificationGas',
+            type: 'uint256',
+            internalType: 'uint256',
+          },
+          { name: 'gasFees', type: 'bytes32', internalType: 'bytes32' },
+          {
+            name: 'paymasterAndData',
+            type: 'bytes',
+            internalType: 'bytes',
+          },
+          { name: 'signature', type: 'bytes', internalType: 'bytes' },
+        ],
       },
-      {
-        internalType: 'bytes32',
-        name: 'userOpHash',
-        type: 'bytes32',
-      },
-      {
-        internalType: 'uint256',
-        name: 'maxCost',
-        type: 'uint256',
-      },
+      { name: 'userOpHash', type: 'bytes32', internalType: 'bytes32' },
+      { name: 'maxCost', type: 'uint256', internalType: 'uint256' },
     ],
-    name: 'validatePaymasterUserOp',
     outputs: [
+      { name: 'context', type: 'bytes', internalType: 'bytes' },
       {
-        internalType: 'bytes',
-        name: 'context',
-        type: 'bytes',
-      },
-      {
-        internalType: 'uint256',
         name: 'validationData',
         type: 'uint256',
+        internalType: 'uint256',
       },
     ],
     stateMutability: 'nonpayable',
-    type: 'function',
   },
 ]
