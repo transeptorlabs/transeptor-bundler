@@ -3,7 +3,11 @@ auto_detect_solc = false
 src = "src"
 out = "out"
 libs = ["submodules"]
-solc = "0.8.23"
+solc = "0.8.28"
+remappings_location = "txt"
+evm_version = "cancun"
+optimizer_runs = 1000
+optimizer = true
 
 [fmt]
   bracket_spacing = true

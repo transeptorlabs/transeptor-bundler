@@ -367,6 +367,8 @@ const enforceBannedOpcodeRules = (
     'RANDOM',
     'PREVRANDAO',
     'INVALID',
+    'BLOBBASEFEE',
+    'BLOBHASH',
   ])
 
   // opcodes allowed in staked entities [OP-080]

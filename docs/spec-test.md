@@ -3,7 +3,7 @@ Assuming you already have an `Ethereum node` running, `EntryPoint` deployed and 
 
 Run full ERC-4337 bundler Compatibility Test Suite:
 ```shell script
-pdm run test --log-rpc -vvv --url http://localhost:4337/rpc  --entry-point 0x5FbDB2315678afecb367f032d93F642f64180aa3 --ethereum-node http://localhost:8545 
+pdm run test --log-rpc -vvv --url http://localhost:4337/rpc  --entry-point <entryPointAddress> --ethereum-node http://localhost:8545 
 ```
 
 ### Test individual spec test

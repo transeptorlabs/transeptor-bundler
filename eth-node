@@ -3,15 +3,17 @@
 GETH_PORT=8545
 GETH_NATIVE_TRACER_PORT=8888
 NETWORK_ID=1337
-TRANSEPTOR_ENTRYPOINT_ADDRESS_V7=""
+TRANSEPTOR_ENTRYPOINT_ADDRESS_V8=""
 TRANSEPTOR_BENEFICIARY="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
 DEV_MNEMONIC="test test test test test test test test test test test junk"
+DEV_ACCOUNT_3_PRIVATE_KEY="0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6" # private key from the junk SRP to deploy the contract
 
 start_geth() {
-  # first 3 accounts default hardhat accounts
-  DEFAULT_ADDRESS_1="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" # bundler signer
-  DEFAULT_ADDRESS_2="0x70997970C51812dc3A010C7d01b50e0d17dc79C8" # local e2e runner
-  DEFAULT_ADDRESS_3="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" # bundler beneficiary
+  # first 4 accounts default hardhat accounts
+  DEFAULT_ADDRESS_0="0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" # bundler signer
+  DEFAULT_ADDRESS_1="0x70997970C51812dc3A010C7d01b50e0d17dc79C8" # local e2e runner
+  DEFAULT_ADDRESS_2="0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC" # bundler beneficiary
+  DEFAULT_ADDRESS_3="0x90F79bf6EB2c4f870365E785982E1f101E93b906" # contract deployed
 
   if docker ps -a | grep -q geth-transeptor; then
     echo -e "Removing existing geth container\n"
@@ -39,10 +41,10 @@ start_geth() {
   sleep 4
 
   echo -e "Account balances(Defaults):"
-  for ACCOUNT in $DEFAULT_ADDRESS_1 $DEFAULT_ADDRESS_2 $DEFAULT_ADDRESS_3; do
+  for ACCOUNT in $DEFAULT_ADDRESS_0 $DEFAULT_ADDRESS_1 $DEFAULT_ADDRESS_2 $DEFAULT_ADDRESS_3; do
     isSigner=" (Default account)"
-    if [ "$ACCOUNT" == "$DEFAULT_ADDRESS_1" ]; then
-      isSigner=" (Bundler signer account)"
+    if [ "$ACCOUNT" == "$DEFAULT_ADDRESS_0" ]; then
+      isSigner=" (Default account: Bundler signer account)"
     fi
 
     docker exec $geth_container_id geth \
@@ -56,14 +58,14 @@ start_geth() {
 
   echo -e "ERC 4337 contracts:"
   cd ./contracts
-  forge build
-  OUTPUT=$(forge script ./scripts/DeployBundlerDev.s.sol --rpc-url http://localhost:$GETH_PORT --broadcast) 
-  TRANSEPTOR_ENTRYPOINT_ADDRESS_V7=$(echo "$OUTPUT" | grep -o "EntryPoint: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
+  forge build --evm-version cancun
+  OUTPUT=$(forge script ./scripts/DeployBundlerDev.s.sol --rpc-url http://localhost:$GETH_PORT --broadcast --private-key $DEV_ACCOUNT_3_PRIVATE_KEY) 
+  TRANSEPTOR_ENTRYPOINT_ADDRESS_V8=$(echo "$OUTPUT" | grep -o "EntryPoint: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
   TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$(echo "$OUTPUT" | grep -o "SimpleAccountFactory: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
   TRANSEPTOR_E2E_GLOBAL_COUNTER=$(echo "$OUTPUT" | grep -o "GlobalCounter: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
   echo -e "$(tput setaf 4)▼▼▼ $(tput setaf 7)Please add to local .env$(tput setaf 4) ▼▼▼$(tput sgr0)\n
   TRANSEPTOR_MNEMONIC=$DEV_MNEMONIC
-  TRANSEPTOR_ENTRYPOINT_ADDRESS=$TRANSEPTOR_ENTRYPOINT_ADDRESS_V7
+  TRANSEPTOR_ENTRYPOINT_ADDRESS=$TRANSEPTOR_ENTRYPOINT_ADDRESS_V8
   TRANSEPTOR_BENEFICIARY=$TRANSEPTOR_BENEFICIARY\n
   TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY
   TRANSEPTOR_E2E_GLOBAL_COUNTER=$TRANSEPTOR_E2E_GLOBAL_COUNTER
@@ -76,13 +78,13 @@ start_geth() {
 }
 
 start_geth_native_tracer() {
-  if docker ps -a | grep -q geth-native-tracer; then
-    echo -e "Removing existing geth-native-tracer container\n"
-    docker rm -f geth-native-tracer
+  if docker ps -a | grep -q geth-native-tracer-transeptor; then
+    echo -e "Removing existing geth-native-tracer-transeptor container\n"
+    docker rm -f geth-native-tracer-transeptor
   fi
 
-  echo -e "Starting local geth-native-tracer node at http://localhost:$GETH_NATIVE_TRACER_PORT on network $NETWORK_ID\n"
-  geth_native_tracer_container_id=$(docker run -d --name geth-native-tracer -p $GETH_NATIVE_TRACER_PORT:$GETH_NATIVE_TRACER_PORT accountabstraction/geth-native-tracer \
+  echo -e "Starting local geth-native-tracer-transeptor node at http://localhost:$GETH_NATIVE_TRACER_PORT on network $NETWORK_ID\n"
+  geth_native_tracer_container_id=$(docker run -d --name geth-native-tracer-transeptor -p $GETH_NATIVE_TRACER_PORT:$GETH_NATIVE_TRACER_PORT accountabstraction/geth-native-tracer \
     --verbosity 1 \
     --http.vhosts '*,localhost,host.docker.internal' \
     --http \
@@ -101,10 +103,13 @@ start_geth_native_tracer() {
 }
 
 stop_all() {
+  echo -e "\nStopping and removing geth and geth-native-tracer containers..."
   docker stop $geth_container_id > /dev/null
+  sleep 3
   docker rm $geth_container_id > /dev/null
 
   docker stop $geth_native_tracer_container_id > /dev/null
+  sleep 3
   docker rm $geth_native_tracer_container_id > /dev/null
 
   exit 0
