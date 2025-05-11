@@ -111,14 +111,19 @@ export const checkReputation = async (
  * @param aggregator - The aggregator address to update the seen status for.
  * @param userOp - The UserOperation to update the seen status for.
  * @param reputationManager - The ReputationManager to use for updating the seen status.
+ * @param senderInfo - The sender state info.
+ * @param action - The action to perform (increment or decrement).
  */
 export const updateSeenStatus = async (
   aggregator: string | undefined,
   userOp: UserOperation,
   reputationManager: ReputationManager,
+  senderInfo: StakeInfo,
+  action: 'increment' | 'decrement',
 ): Promise<void> => {
   try {
-    await reputationManager.updateSeenStatus(userOp.sender, 'increment')
+    await reputationManager.checkStake('account', senderInfo)
+    await reputationManager.updateSeenStatus(userOp.sender, action)
   } catch (e: any) {
     if (!(e instanceof RpcError)) throw e
   }

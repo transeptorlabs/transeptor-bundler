@@ -14,11 +14,11 @@ import {
 } from '../../types/index.js'
 import { packUserOps } from '../../utils/index.js'
 import {
-  findEntityToBan,
   getUserOpHashes,
   parseError,
   selectBeneficiary,
 } from './processor-helpers.js'
+import { findEntityToBlame } from '../bundle.helper.js'
 
 export type BundleProcessorConfig = {
   providerService: ProviderService
@@ -156,7 +156,7 @@ export const createBundleProcessor = (
         const { opIndex, reason } = parsedError.args
         const userOp = userOps[opIndex]
         const reasonStr: string = reason.toString()
-        const addressToBan: string | undefined = await findEntityToBan(
+        const addressToBan: string | undefined = await findEntityToBlame(
           reasonStr,
           userOp,
           reputationManager,

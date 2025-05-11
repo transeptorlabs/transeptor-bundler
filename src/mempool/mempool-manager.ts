@@ -132,10 +132,22 @@ export const createMempoolManagerCore = (
               ),
           )
 
+          if (metadata.oldEntry) {
+            await updateSeenStatus(
+              metadata.oldEntry.aggregator,
+              metadata.oldEntry.userOp,
+              reputationManager,
+              senderInfo,
+              'decrement',
+            )
+          }
+
           await updateSeenStatus(
             aggregatorInfo?.addr,
             userOp,
             reputationManager,
+            senderInfo,
+            'increment',
           )
           Logger.debug(
             {

@@ -1,3 +1,4 @@
+/* eslint-disable complexity */
 import { ethers } from 'ethers'
 import { Logger } from '../../logger/index.js'
 import {
@@ -5,20 +6,21 @@ import {
   UserOperation,
   ReputationManager,
   MempoolEntry,
-  ValidationErrors,
   MempoolManagerBuilder,
   BundleBuilder,
   BundleBuilderResult,
   BundleReadyToSend,
   RemoveUserOpDetails,
 } from '../../types/index.js'
-import { isAccountOrFactoryError, mergeStorageMap } from '../../utils/index.js'
+import { mergeStorageMap } from '../../utils/index.js'
 import { ValidationService } from '../../validation/index.js'
 import {
   validateUserOperation,
   shouldIncludeInBundle,
   updateEntityStakeCountAndDeposit,
+  parseFailedOpRevert,
 } from './builder-helpers.js'
+import { findEntityToBlame } from '../bundle.helper.js'
 
 export type BundleBuilderConfig = {
   validationService: ValidationService
@@ -28,6 +30,7 @@ export type BundleBuilderConfig = {
     maxBundleGas: number
     txMode: string
     entryPointContract: ethers.Contract
+    entryPointAddress: string
   }
 }
 
@@ -73,29 +76,49 @@ export const createBundleBuilder = (
       )
 
       for (const opDetails of markedToRemoveUserOpsHashes) {
-        /**
-         * EREP-015: A `paymaster` should not have its opsSeen incremented on failure of factory or account
-         * When running 2nd validation (before inclusion in a bundle), if a UserOperation fails because of factory or
-         * account error (either a FailOp revert or validation rule), then the paymaster's opsSeen valid is decremented by 1.
-         */
-        if (opDetails.err) {
-          if (
-            opDetails.paymaster != null &&
-            isAccountOrFactoryError(
-              opDetails.err.errorCode,
-              opDetails.err.message,
-            )
-          ) {
-            Logger.debug(
-              opDetails,
-              'Do not blame paymaster, for account/factory failure',
-            )
+        if (opDetails.reason === 'failed-2nd-validation' && opDetails.err) {
+          const failedValError = opDetails.err
+          Logger.debug({ error: failedValError }, 'failed 2nd validation')
+          const { opIndex, reasonStr } = parseFailedOpRevert(
+            failedValError,
+            config.opts.entryPointContract,
+          )
+          if (opIndex == null || reasonStr == null) {
+            if (failedValError.error?.code === -32601) {
+              // fatal errors we know we can't recover
+              return
+            }
+            Logger.warn('Failed validation, but non-FailedOp error')
+            await mempoolManagerBuilder.removeUserOp(opDetails.userOpHash)
+            return
+          }
+
+          const addr = await findEntityToBlame(
+            reasonStr,
+            opDetails.userOp,
+            reputationManager,
+            config.opts.entryPointAddress,
+          )
+          if (addr !== null) {
+            // TODO: Make this a batch operation to the reputationManager
+            // undo all "updateSeen" of all entities, and only blame "addr":
             await reputationManager.updateSeenStatus(
-              opDetails.paymaster,
+              opDetails.userOp.sender,
               'decrement',
             )
+            await reputationManager.updateSeenStatus(
+              opDetails.userOp.paymaster,
+              'decrement',
+            )
+            await reputationManager.updateSeenStatus(
+              opDetails.userOp.factory,
+              'decrement',
+            )
+            await reputationManager.updateSeenStatus(addr, 'increment')
           }
         }
+
+        // failed validation or entity banned. don't try anymore this userOp
         await mempoolManagerBuilder.removeUserOp(opDetails.userOpHash)
       }
     }
@@ -105,7 +128,6 @@ export const createBundleBuilder = (
     createBundle: async (force?: boolean): Promise<BundleReadyToSend> => {
       Logger.info('Attempting to create bundle')
       const entries = await getEntries(force)
-      const knownSenders = await mempoolManagerBuilder.getKnownSenders()
       if (entries.length === 0) {
         return {
           bundle: [],
@@ -113,6 +135,7 @@ export const createBundleBuilder = (
         }
       }
 
+      const knownSenders = await mempoolManagerBuilder.getKnownSenders()
       const bundleBuilderResult: BundleBuilderResult = {
         bundle: [] as UserOperation[],
         storageMap: {} as StorageMap,
@@ -120,8 +143,8 @@ export const createBundleBuilder = (
         markedToRemoveUserOpsHashes: [] as RemoveUserOpDetails[],
         totalGas: BigInt(0),
         paymasterDeposit: {} as { [paymaster: string]: bigint }, // paymaster deposit should be enough for all UserOps in the bundle
-        senders: new Set<string>(), // each sender is allowed only once per bundle
         stakedEntityCount: {} as { [addr: string]: number }, // throttled paymasters and deployers are allowed only small UserOps per bundle
+        senders: new Set<string>(), // each sender is allowed only once per bundle
       }
       const buildBundle = async () =>
         await entries.reduce(async (accPromise, entry) => {
@@ -145,7 +168,7 @@ export const createBundleBuilder = (
           ])
 
           // re-validate UserOp and remove from mempool if failed. no need to check stake, since it cannot be reduced between first and 2nd validation
-          const { validationResult, passedValidation, reValidateErrorMessage } =
+          const { validationResult, passedValidation, reValidateError } =
             await validateUserOperation(
               userOp,
               referencedContracts,
@@ -154,16 +177,14 @@ export const createBundleBuilder = (
 
           if (validationResult === null || !passedValidation) {
             Logger.error(
-              { error: reValidateErrorMessage, userOp },
-              'failed 2nd validation, removing from mempool:',
+              { error: reValidateError, userOp },
+              'failed 2nd validation, marking removal from mempool:',
             )
             acc.markedToRemoveUserOpsHashes.push({
+              userOp,
               userOpHash: userOpHash,
-              paymaster,
-              err: {
-                message: reValidateErrorMessage,
-                errorCode: ValidationErrors.InternalError,
-              },
+              reason: 'failed-2nd-validation',
+              err: reValidateError,
             })
             return acc
           }
@@ -188,7 +209,8 @@ export const createBundleBuilder = (
             reason === 'banned'
               ? acc.markedToRemoveUserOpsHashes.push({
                   userOpHash: userOpHash,
-                  paymaster: userOp.paymaster,
+                  userOp,
+                  reason,
                 })
               : acc.notIncludedUserOpsHashes.push(userOpHash)
 

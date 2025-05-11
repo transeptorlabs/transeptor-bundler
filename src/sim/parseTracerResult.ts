@@ -1,3 +1,4 @@
+/* eslint-disable complexity */
 import { ethers, Interface, keccak256 } from 'ethers'
 
 import {
@@ -171,56 +172,11 @@ const parseEntitySlots = (
   return entitySlots
 }
 
-// Helper function to find call info for the entry point
-const findCallInfoEntryPoint = (
-  callStack: CallEntry[],
-  entryPointAddress: string,
-): CallEntry | undefined => {
-  return callStack.find(
-    (call) =>
-      call.to === entryPointAddress &&
-      call.from !== entryPointAddress &&
-      call.method !== '0x' &&
-      call.method !== 'depositTo',
-  )
-}
-
-// Helper function to find an illegal non-zero value call
-const findIllegalNonZeroValueCall = (
-  callStack: CallEntry[],
-  entryPointAddress: string,
-): CallEntry | undefined => {
-  return callStack.find(
-    (call) =>
-      call.to !== entryPointAddress && !(BigInt(call.value ?? 0) === BigInt(0)),
-  )
-}
-
 // Helper function to extract addresses from the call stack
 const extractAddresses = (
   callsFromEntryPoint: TopLevelCallInfo[],
 ): string[] => {
   return callsFromEntryPoint.flatMap((level) => Object.keys(level.contractSize))
-}
-
-/**
- * Helper function to extract storage map from the call stack.
- *
- * @param callsFromEntryPoint - the call stack to extract storage map from.
- * @returns the storage map.
- */
-const extractStorageMap = (
-  callsFromEntryPoint: TopLevelCallInfo[],
-): StorageMap => {
-  const storageMap: StorageMap = {}
-
-  callsFromEntryPoint.forEach((level) => {
-    Object.keys(level.access).forEach((addr) => {
-      storageMap[addr] = storageMap[addr] ?? level.access[addr].reads
-    })
-  })
-
-  return storageMap
 }
 
 /**
@@ -361,7 +317,6 @@ const enforceBannedOpcodeRules = (
     'NUMBER',
     'ORIGIN',
     'GAS',
-    'CREATE',
     'COINBASE',
     'SELFDESTRUCT',
     'RANDOM',
@@ -393,25 +348,59 @@ const enforceBannedOpcodeRules = (
 
 /**
  * Enforce rules for contract creation.
- *  - [OP-031]
+ *  - [OP-031] - `CREATE2` is allowed exactly once in the deployment phase and must deploy code for the "sender" address.
+ * Access to an address without a deployed code is forbidden:
+ *  - [OP-032]
  *
  * @param opcodes - The opcodes to check.
+ * @param entityCall - The current level of the call stack.
  * @param entityTitle - The title of the entity.
+ * @param entStakes - The stake info for the entity.
+ * @param userOp - The user operation.
+ * @param stakeInfoEntities - the stake info for the entity.
+ * @param stakeInfoEntities.factory - the stake info for the factory.
+ * @param stakeInfoEntities.account - the stake info for the account.
+ * @param stakeInfoEntities.paymaster - the stake info for the paymaster.
+ * @param depth - The current depth in the call stack.
  */
 const enforceContractCreationRule = (
   opcodes: { [opcode: string]: number },
+  entityCall: TopLevelCallInfo,
   entityTitle: string,
+  entStakes: StakeInfo | undefined,
+  userOp: UserOperation,
+  stakeInfoEntities: {
+    factory: StakeInfo
+    account: StakeInfo
+    paymaster: StakeInfo
+  },
+  depth: number,
 ) => {
+  if (!opcodes.CREATE && !opcodes.CREATE2) {
+    return
+  }
   // [OP-031] - Check CREATE2 opcode for factories
-  if (entityTitle === 'factory') {
-    requireCond(
-      (opcodes.CREATE2 ?? 0) <= 1,
-      `${entityTitle} with too many CREATE2`,
-      ValidationErrors.OpcodeValidation,
+  requireCond(
+    (opcodes.CREATE2 ?? 0) <= 1,
+    `${entityTitle} with too many CREATE2`,
+    ValidationErrors.OpcodeValidation,
+  )
+  if (opcodes.CREATE) {
+    // TODO: handle case for CREATE opcode
+    Logger.debug(
+      { depth },
+      `CREATE opcode detected, but not yet implemented. Entity: ${entityTitle}`,
     )
-  } else {
+  }
+
+  // [OP-032] If there is a `factory` (even unstaked), the `sender` contract is allowed to use `CREATE` opcode
+  if (opcodes.CREATE2) {
+    const isFactoryStaked =
+      stakeInfoEntities.factory && isStaked(stakeInfoEntities.factory)
+
     requireCond(
-      opcodes.CREATE2 == null,
+      (entityTitle === 'account' && isFactoryStaked) ||
+        entityTitle === 'factory',
       `${entityTitle} uses banned opcode: CREATE2`,
       ValidationErrors.OpcodeValidation,
     )
@@ -488,6 +477,7 @@ const enforceIllegalAddressAccessRule = (
  * Enforce rules for illegal entry point access.
  *  - [OP-052]
  *  - [OP-053]
+ *  - [OP-054]
  *
  * @param callStack - The call stack.
  * @param entryPointAddress - The entry point address.
@@ -496,10 +486,16 @@ const enforceIllegalEntryPointAccessRule = (
   callStack: CallEntry[],
   entryPointAddress: string,
 ) => {
-  const callInfoEntryPoint = findCallInfoEntryPoint(
-    callStack,
-    entryPointAddress,
+  // [OP-052], [OP-053]
+  const callInfoEntryPoint = callStack.find(
+    (call) =>
+      call.to?.toLowerCase() === entryPointAddress.toLowerCase() &&
+      call.from?.toLowerCase() !== entryPointAddress.toLowerCase() &&
+      call.method !== '0x' &&
+      call.method !== 'depositTo',
   )
+
+  // [OP-054]
   requireCond(
     callInfoEntryPoint == null,
     `illegal call into EntryPoint during validation ${callInfoEntryPoint?.method}`,
@@ -518,9 +514,10 @@ const enforceIllegalCallRule = (
   callStack: CallEntry[],
   entryPointAddress: string,
 ) => {
-  const illegalNonZeroValueCall = findIllegalNonZeroValueCall(
-    callStack,
-    entryPointAddress,
+  const illegalNonZeroValueCall = callStack.find(
+    (call) =>
+      call.to?.toLowerCase() !== entryPointAddress.toLowerCase() &&
+      !(BigInt(call.value ?? 0) === BigInt(0)),
   )
   requireCond(
     illegalNonZeroValueCall == null,
@@ -599,12 +596,15 @@ const enforceStorageRules = (
         slot associated with sender is allowed (e.g. token.balanceOf(sender)
         but during initial UserOp (where there is an initCode), it is allowed only for staked entity
       */
-        if (associatedWith(slot, sender, entitySlots)) {
+        if (associatedWith(slot, sender.toLowerCase(), entitySlots)) {
           if (userOp.factory != null && userOp.factory !== ethers.ZeroAddress) {
             // special case: account.validateUserOp is allowed to use assoc storage if factory is staked.
             // [STO-022], [STO-021]
             if (
-              !(entityAddr === sender && isStaked(stakeInfoEntities.factory))
+              !(
+                entityAddr.toLowerCase() === sender.toLowerCase() &&
+                isStaked(stakeInfoEntities.factory)
+              )
             ) {
               requireStakeSlot = slot
             }
@@ -662,23 +662,84 @@ const enforceStorageRules = (
   )
 }
 
-const enforceIllegalEntryPointCodeAccess = (
+/**
+ * Process an entity call and enforce various validation rules.
+ *
+ * This function checks for various rules such as banned opcodes, contract creation,
+ * storage access, illegal address access, and illegal entry point code access.
+ *
+ * @param entityCall - The current level of the call stack.
+ * @param entityTitle - The title of the entity.
+ * @param sender - The sender address.
+ * @param userOp - The user operation.
+ * @param epAddress - The entry point address that hosted the "simulatedValidation" traced call.
+ * @param entityAddr - The address of the entity.
+ * @param entitySlots - The slots associated with the entity.
+ * @param entStakes - The stake info for the entity.
+ * @param stakeInfoEntities - The stake info for the entities.
+ * @param stakeInfoEntities.factory - The stake info for the factory.
+ * @param stakeInfoEntities.account - The stake info for the account.
+ * @param stakeInfoEntities.paymaster - The stake info for the paymaster.
+ * @param depth  - The current depth in the call stack (for recursion).
+ */
+const processEntityCall = (
   entityCall: TopLevelCallInfo,
-  entryPointAddress: string,
   entityTitle: string,
+  sender: string,
+  userOp: UserOperation,
+  epAddress: string,
+  entityAddr: string,
+  entitySlots: { [addr: string]: Set<string> },
+  entStakes: StakeInfo | undefined,
+  stakeInfoEntities: {
+    factory: StakeInfo
+    account: StakeInfo
+    paymaster: StakeInfo
+  },
+  depth = 0,
 ) => {
-  let illegalEntryPointCodeAccess
-  for (const addr of Object.keys(entityCall.extCodeAccessInfo)) {
-    if (addr.toLowerCase() === entryPointAddress.toLowerCase()) {
-      illegalEntryPointCodeAccess = entityCall.extCodeAccessInfo[addr]
-      break
-    }
-  }
-  requireCond(
-    illegalEntryPointCodeAccess == null,
-    `${entityTitle} accesses EntryPoint contract address ${entryPointAddress} with opcode ${illegalEntryPointCodeAccess}`,
-    ValidationErrors.OpcodeValidation,
+  const { opcodes, access } = entityCall
+  enforceOutOfGasRevertRule(entityCall, entityTitle)
+  enforceBannedOpcodeRules(opcodes, entityTitle, entStakes)
+  enforceContractCreationRule(
+    opcodes,
+    entityCall,
+    entityTitle,
+    entStakes,
+    userOp,
+    stakeInfoEntities,
+    depth,
   )
+  enforceStorageRules(
+    sender,
+    access,
+    userOp,
+    epAddress,
+    entityTitle,
+    entStakes,
+    entityAddr,
+    entitySlots,
+    stakeInfoEntities,
+  )
+  enforceIllegalAddressAccessRule(sender, entityCall, epAddress, entityTitle)
+
+  if (entityCall.calls != null) {
+    // Recursively handling all subcalls to check validation rules
+    entityCall.calls.forEach((call: any) => {
+      processEntityCall(
+        call,
+        entityTitle,
+        sender,
+        userOp,
+        epAddress,
+        entityAddr,
+        entitySlots,
+        entStakes,
+        stakeInfoEntities,
+        depth + 1,
+      )
+    })
+  }
 }
 
 /**
@@ -749,49 +810,28 @@ export const tracerResultParser = (
         continue // Skip to the next iteration
       }
 
-      // Opcode enforcement
-      const { opcodes, access } = entityCall
-      enforceOutOfGasRevertRule(entityCall, entityTitle)
-      enforceBannedOpcodeRules(opcodes, entityTitle, entStakes)
-      enforceContractCreationRule(opcodes, entityTitle)
-
-      // Testing read/write access on contract "addr"
-      enforceStorageRules(
+      processEntityCall(
+        entityCall,
+        entityTitle,
         sender,
-        access,
         userOp,
         entryPointAddress,
-        entityTitle,
-        entStakes,
         entityAddr,
         entitySlots,
+        entStakes,
         stakeInfoEntities,
       )
-
-      enforceIllegalAddressAccessRule(
-        sender,
-        entityCall,
-        entryPointAddress,
-        entityTitle,
-      )
-
-      enforceIllegalEntryPointCodeAccess(
-        entityCall,
-        entryPointAddress,
-        entityTitle,
-      )
-
-      if (entityCall.calls != null) {
-        // TODO: Recursively handling all subcalls to check validation rules
-      }
     }
   }
 
   // get the list of contract addresses and storage map for the user operation
   const addresses = extractAddresses(tracerResults.callsFromEntryPoint)
-  const storageMap: StorageMap = extractStorageMap(
-    tracerResults.callsFromEntryPoint,
-  )
+  const storageMap: StorageMap = {}
+  tracerResults.callsFromEntryPoint.forEach((level) => {
+    Object.keys(level.access).forEach((addr) => {
+      storageMap[addr] = storageMap[addr] ?? level.access[addr].reads
+    })
+  })
 
   return Either.Right([addresses, storageMap])
 }

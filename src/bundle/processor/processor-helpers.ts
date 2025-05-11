@@ -5,7 +5,7 @@ import {
 } from 'src/abis/helper.abi.js'
 import { Logger } from 'src/logger/base-logger.js'
 import { ProviderService } from 'src/provider/index.js'
-import { ReputationManagerReader, UserOperation } from 'src/types/index.js'
+import { UserOperation } from 'src/types/index.js'
 import { packUserOps } from 'src/utils/bundle.utils.js'
 
 /**
@@ -79,52 +79,6 @@ export const getUserOpHashes = async (
     )
     return []
   }
-}
-
-/**
- * Find the entity to ban.
- *
- * @param reasonStr - The reason string.
- * @param userOp - The user operation.
- * @param reputationManager - The reputation manager.
- * @param entryPointAddress - The entry point address.
- * @returns The entity to ban.
- */
-export const findEntityToBan = async (
-  reasonStr: string,
-  userOp: UserOperation,
-  reputationManager: ReputationManagerReader,
-  entryPointAddress: string,
-): Promise<string | undefined> => {
-  const isAccountStaked = async (): Promise<boolean> => {
-    const senderStakeInfo = await reputationManager.getStakeStatus(
-      userOp.sender,
-      entryPointAddress,
-    )
-    return senderStakeInfo?.isStaked
-  }
-  const isFactoryStaked = async (): Promise<boolean> => {
-    const factoryStakeInfo =
-      userOp.factory == null
-        ? null
-        : await reputationManager.getStakeStatus(
-            userOp.factory,
-            entryPointAddress,
-          )
-    return factoryStakeInfo?.isStaked ?? false
-  }
-
-  if (reasonStr.startsWith('AA3')) {
-    // [EREP-030]  A Staked Account is accountable for failures in other entities (`paymaster`, `aggregator`) even if they are staked.
-    return (await isAccountStaked()) ? userOp.sender : userOp.paymaster
-  } else if (reasonStr.startsWith('AA2')) {
-    // [EREP-020] A staked factory is "accountable" for account breaking the rules.
-    return (await isFactoryStaked()) ? userOp.factory : userOp.sender
-  } else if (reasonStr.startsWith('AA1')) {
-    // (can't have staked account during its creation)
-    return userOp.factory
-  }
-  return undefined
 }
 
 /**

@@ -122,20 +122,3 @@ export const mergeValidationDataValues = (
     parseValidationData(paymasterValidationData),
   )
 }
-
-/**
- * Check if the error is related to account or factory.
- *
- * @param code - The error code.
- * @param errorMessage - The error message.
- * @returns Whether the error is related to account or factory.
- */
-export const isAccountOrFactoryError = (
-  code: ValidationErrors,
-  errorMessage: string,
-): boolean => {
-  return (
-    code === ValidationErrors.SimulateValidation &&
-    errorMessage.match(/FailedOpWithRevert\(\d+,"AA[21]/) != null
-  )
-}

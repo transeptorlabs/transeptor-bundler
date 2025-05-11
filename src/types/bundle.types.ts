@@ -1,6 +1,6 @@
 import { UserOperation } from './userop.types.js'
 import { Wallet } from 'ethers'
-import { StorageMap, ValidationErrors } from './validation.types.js'
+import { StorageMap } from './validation.types.js'
 
 export type SendBundleReturn = {
   transactionHash: string
@@ -89,12 +89,10 @@ export type BundleBuilder = {
  * Details of a user operation that was not included in the bundle
  */
 export type RemoveUserOpDetails = {
-  paymaster: string | undefined
   userOpHash: string
-  err?: {
-    message: string
-    errorCode: ValidationErrors
-  }
+  userOp: UserOperation
+  reason: 'failed-2nd-validation' | 'banned'
+  err?: any
 }
 
 /**

@@ -125,6 +125,7 @@ const runBundler = async () => {
         maxBundleGas: config.maxBundleGas,
         txMode: config.txMode,
         entryPointContract: config.entryPoint.contract,
+        entryPointAddress: config.entryPoint.address,
       },
     }),
     eventsManager: eventManager,
@@ -211,7 +212,7 @@ const runBundler = async () => {
       if (config.nativeTracerEnabled) {
         const [supportsPrestateTracer, supportsBundlerCollectorTracer] =
           await Promise.all([
-            sim.supportsNativeTracer(prestateTracerName),
+            sim.supportsNativeTracer(prestateTracerName), // validate standard tracer supports "prestateTracer" on provider
             sim.supportsNativeTracer(bundlerNativeTracerName, true),
           ])
 
@@ -227,6 +228,7 @@ const runBundler = async () => {
           )
         }
       } else {
+        // validate standard javascript tracer supported
         const supportsDebugTraceCallRes = await sim.supportsDebugTraceCall()
         supportsDebugTraceCallRes.fold(
           (err) => {

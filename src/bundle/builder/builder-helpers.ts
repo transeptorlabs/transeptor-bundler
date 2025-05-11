@@ -1,3 +1,4 @@
+import { ErrorDescription, ethers } from 'ethers'
 import { Either } from '../../monad/either.js'
 import {
   ReferencedCodeHashes,
@@ -39,7 +40,7 @@ export const validateUserOperation = async (
 ): Promise<{
   passedValidation: boolean
   validationResult: ValidateUserOpResult | null
-  reValidateErrorMessage: string | undefined
+  reValidateError: any | undefined
 }> => {
   const reValidateRes = await validationService
     .validateUserOp(userOp, false, referencedContracts)
@@ -58,12 +59,12 @@ export const validateUserOperation = async (
     (e) => ({
       passedValidation: false,
       validationResult: null,
-      reValidateErrorMessage: e.message,
+      reValidateError: e,
     }),
     (res) => ({
       passedValidation: true,
       validationResult: res,
-      reValidateErrorMessage: undefined,
+      reValidateError: undefined,
     }),
   )
   return res
@@ -146,14 +147,18 @@ export const shouldIncludeInBundle = (opt: {
     return { include: false, reason: 'banned' }
   }
 
-  // [SREP-030] - Check throttling
+  // [GREP-020] - renamed from [SREP-030] - Check throttling
   if (
     isEntityThrottled(
       paymaster,
       paymasterStatus,
       stakedEntityCount,
       throttledEntityBundleCount,
-    ) ||
+    )
+  ) {
+    return { include: false, reason: 'throttled' }
+  }
+  if (
     isEntityThrottled(
       factory,
       factoryStatus,
@@ -292,5 +297,46 @@ export const updateEntityStakeCountAndDeposit = async (opts: {
   return {
     stakedEntityCount: newStakedEntityCount,
     paymasterDeposit: newPaymasterDeposit,
+  }
+}
+
+/**
+ * parse revert from FailedOp(index,str) or FailedOpWithRevert(uint256 opIndex, string reason, bytes inner.
+ *
+ * @param e - The error to parse
+ * @param entryPointContract - The entryPoint contract
+ * @returns undefined values on failure.
+ */
+export const parseFailedOpRevert = (
+  e: any,
+  entryPointContract: ethers.Contract,
+): { opIndex?: number; reasonStr?: string } => {
+  if (e.message != null) {
+    const match = e.message.match(/FailedOp\w*\((\d+),"(.*?)"/)
+    if (match != null) {
+      return {
+        opIndex: parseInt(match[1]),
+        reasonStr: match[2],
+      }
+    }
+  }
+  let parsedError: ErrorDescription
+  try {
+    let data = e.data?.data ?? e.data
+    // geth error body, packed in ethers exception object
+    const body = e?.error?.error?.body
+    if (body != null) {
+      const jsonBody = JSON.parse(body)
+      data = jsonBody.error.data?.data ?? jsonBody.error.data
+    }
+
+    parsedError = entryPointContract.interface.parseError(data)
+  } catch (e1) {
+    return { opIndex: undefined, reasonStr: undefined }
+  }
+  const { opIndex, reason } = parsedError.args
+  return {
+    opIndex,
+    reasonStr: reason.toString(),
   }
 }
