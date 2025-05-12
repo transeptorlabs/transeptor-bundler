@@ -85,11 +85,11 @@ describe('RPC Server', () => {
 
   describe('start', () => {
     it('should start server successfully', async () => {
-      const server = createRpcServerWithHandlers(
-        mockHandlerRegistry,
-        mockSupportedApiPrefixes,
-        3000,
-      )
+      const server = createRpcServerWithHandlers({
+        handlerRegistry: mockHandlerRegistry,
+        supportedApiPrefixes: mockSupportedApiPrefixes,
+        port: 3000,
+      })
 
       await server.start(mockPreflightCheck)
 
@@ -103,11 +103,11 @@ describe('RPC Server', () => {
       const error = new Error('Preflight check failed')
       vi.mocked(mockPreflightCheck).mockRejectedValue(error)
 
-      const server = createRpcServerWithHandlers(
-        mockHandlerRegistry,
-        mockSupportedApiPrefixes,
-        3000,
-      )
+      const server = createRpcServerWithHandlers({
+        handlerRegistry: mockHandlerRegistry,
+        supportedApiPrefixes: mockSupportedApiPrefixes,
+        port: 3000,
+      })
 
       await expect(server.start(mockPreflightCheck)).rejects.toThrow(error)
       expect(Logger.error).toHaveBeenCalledWith(
@@ -119,11 +119,11 @@ describe('RPC Server', () => {
 
   describe('stop', () => {
     it('should stop server successfully', async () => {
-      const server = createRpcServerWithHandlers(
-        mockHandlerRegistry,
-        mockSupportedApiPrefixes,
-        3000,
-      )
+      const server = createRpcServerWithHandlers({
+        handlerRegistry: mockHandlerRegistry,
+        supportedApiPrefixes: mockSupportedApiPrefixes,
+        port: 3000,
+      })
 
       await server.stop()
       expect(Logger.info).toHaveBeenCalledWith('Stopping server')
@@ -136,11 +136,11 @@ describe('RPC Server', () => {
         close: vi.fn((cb) => cb(error)),
       } as any)
 
-      const server = createRpcServerWithHandlers(
-        mockHandlerRegistry,
-        mockSupportedApiPrefixes,
-        3000,
-      )
+      const server = createRpcServerWithHandlers({
+        handlerRegistry: mockHandlerRegistry,
+        supportedApiPrefixes: mockSupportedApiPrefixes,
+        port: 3000,
+      })
 
       await expect(server.stop()).rejects.toThrow(error)
       expect(Logger.error).toHaveBeenCalledWith(
@@ -152,11 +152,11 @@ describe('RPC Server', () => {
 
   describe('RPC endpoint handling', () => {
     it('should register RPC endpoint with correct middleware', async () => {
-      const server = createRpcServerWithHandlers(
-        mockHandlerRegistry,
-        mockSupportedApiPrefixes,
-        3000,
-      )
+      const server = createRpcServerWithHandlers({
+        handlerRegistry: mockHandlerRegistry,
+        supportedApiPrefixes: mockSupportedApiPrefixes,
+        port: 3000,
+      })
 
       await server.start(mockPreflightCheck)
 
@@ -166,11 +166,11 @@ describe('RPC Server', () => {
     })
 
     it('should handle RPC request with correct response', async () => {
-      const server = createRpcServerWithHandlers(
-        mockHandlerRegistry,
-        mockSupportedApiPrefixes,
-        3000,
-      )
+      const server = createRpcServerWithHandlers({
+        handlerRegistry: mockHandlerRegistry,
+        supportedApiPrefixes: mockSupportedApiPrefixes,
+        port: 3000,
+      })
 
       await server.start(mockPreflightCheck)
 
@@ -197,11 +197,11 @@ describe('RPC Server', () => {
     })
 
     it('should handle RPC request with known error response', async () => {
-      const server = createRpcServerWithHandlers(
-        mockHandlerRegistry,
-        mockSupportedApiPrefixes,
-        3000,
-      )
+      const server = createRpcServerWithHandlers({
+        handlerRegistry: mockHandlerRegistry,
+        supportedApiPrefixes: mockSupportedApiPrefixes,
+        port: 3000,
+      })
 
       await server.start(mockPreflightCheck)
 
@@ -244,11 +244,11 @@ describe('RPC Server', () => {
     })
 
     it('should handle RPC request with unknown error', async () => {
-      const server = createRpcServerWithHandlers(
-        mockHandlerRegistry,
-        mockSupportedApiPrefixes,
-        3000,
-      )
+      const server = createRpcServerWithHandlers({
+        handlerRegistry: mockHandlerRegistry,
+        supportedApiPrefixes: mockSupportedApiPrefixes,
+        port: 3000,
+      })
 
       await server.start(mockPreflightCheck)
 

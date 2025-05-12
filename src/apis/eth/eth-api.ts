@@ -7,8 +7,6 @@ import {
   UserOperationByHashResponse,
   UserOperationReceipt,
   MempoolManageSender,
-  ExecutionResult,
-  ValidateUserOpResult,
   ValidationErrors,
   StateOverride,
   RpcError,
@@ -22,87 +20,30 @@ import { ValidationService } from '../../validation/index.js'
 import { EventManagerWithListener } from '../../event/index.js'
 import { PreVerificationGasCalculator } from '../../gas/index.js'
 import { Either } from '../../monad/index.js'
+import {
+  extractCallGasLimit,
+  extractUseropVerificationResult,
+  extractVerificationGasLimit,
+  sendUserOpToMempool,
+} from './eth-api.helpers.js'
 
-const extractVerificationGasLimit = (
-  estimate: EstimateUserOpGasResult,
-  executionResult: Either<RpcError, ExecutionResult>,
-): Either<RpcError, EstimateUserOpGasResult> => {
-  return executionResult.fold(
-    (error: RpcError) => Either.Left(error),
-    (res: ExecutionResult) => {
-      const { preOpGas, validAfter, validUntil } = res
-      return Either.Right<RpcError, EstimateUserOpGasResult>({
-        ...estimate,
-        validAfter,
-        validUntil,
-        verificationGasLimit: preOpGas,
-      })
-    },
-  )
-}
-
-const extractCallGasLimit = (
-  estimate: EstimateUserOpGasResult,
-  callGasResult: Either<RpcError, number>,
-): Either<RpcError, EstimateUserOpGasResult> => {
-  return callGasResult.fold(
-    (error: RpcError) => Either.Left(error),
-    (callGasLimit: number) => {
-      return Either.Right<RpcError, EstimateUserOpGasResult>({
-        ...estimate,
-        callGasLimit,
-      })
-    },
-  )
-}
-
-const extractUseropVerificationResult = (
-  relayUserOpParam: RelayUserOpParam,
-  validationResult: Either<RpcError, ValidateUserOpResult>,
-): Either<RpcError, RelayUserOpParam> => {
-  return validationResult.fold(
-    (error: RpcError) => Either.Left(error),
-    (res: ValidateUserOpResult) => {
-      return Either.Right<RpcError, RelayUserOpParam>({
-        ...relayUserOpParam,
-        prefund: res.returnInfo.prefund,
-        referencedContracts: res.referencedContracts,
-        senderInfo: res.senderInfo,
-        paymasterInfo: res.paymasterInfo,
-        factoryInfo: res.factoryInfo,
-        aggregatorInfo: res.aggregatorInfo,
-      })
-    },
-  )
-}
-
-const sendUserOpToMempool = async (
-  relayUserOpParam: RelayUserOpParam,
-  addUserOp: (
-    relayUserOpParam: RelayUserOpParam,
-  ) => Promise<Either<RpcError, string>>,
-): Promise<Either<RpcError, string>> => {
-  const res = await addUserOp(relayUserOpParam)
-
-  return res.fold(
-    (error: RpcError) => Either.Left<RpcError, string>(error),
-    (hash) => Either.Right<RpcError, string>(hash),
-  )
-}
-
-export const createEthAPI = (
-  ps: ProviderService,
-  sim: Simulator,
-  vs: ValidationService,
-  eventsManager: EventManagerWithListener,
-  mempoolManageSender: MempoolManageSender,
-  pvgc: PreVerificationGasCalculator,
+export type EthAPIConfig = {
+  ps: ProviderService
+  sim: Simulator
+  vs: ValidationService
+  eventsManager: EventManagerWithListener
+  mempoolManageSender: MempoolManageSender
+  pvgc: PreVerificationGasCalculator
   entryPoint: {
     contract: ethers.Contract
     address: string
-  },
-): EthAPI => {
+  }
+}
+
+export const createEthAPI = (config: EthAPIConfig): EthAPI => {
   const HEX_REGEX = /^0x[a-fA-F\d]*$/i
+  const { ps, sim, vs, eventsManager, mempoolManageSender, pvgc, entryPoint } =
+    config
 
   return {
     getChainId: async (): Promise<number> => ps.getChainId(),

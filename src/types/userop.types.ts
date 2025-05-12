@@ -1,5 +1,6 @@
 import type { BigNumberish, BytesLike, ethers } from 'ethers'
 import { ReferencedCodeHashes, StakeInfo } from './validation.types.js'
+import { EIP7702Authorization } from './eip-7702.types.js'
 
 // New transaction types for account-abstracted transactions
 export type UserOperation = {
@@ -18,6 +19,7 @@ export type UserOperation = {
   paymasterPostOpGasLimit?: BigNumberish // The amount of gas to allocate for the paymaster post-operation code
   paymasterData?: BytesLike // Data for paymaster (only if paymaster exists)
   signature: BytesLike // Data passed into the account to verify authorization
+  eip7702Auth?: EIP7702Authorization
 }
 
 // When passed to on-chain contacts (the EntryPoint contract, and then to account and paymaster), a packed version of the above structure is used:

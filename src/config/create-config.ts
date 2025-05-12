@@ -51,6 +51,8 @@ export type Config = {
 
   isMetricsEnabled: boolean
   influxdbConnection: InfluxdbConnection
+
+  eip7702Support: boolean
 }
 
 // Helper function to get bundler signer wallets
@@ -243,5 +245,6 @@ export const createBuilderConfig = async (
     isP2PMode,
     findPeers: programOpts.findPeers as boolean,
     peerMultiaddrs,
+    eip7702Support: programOpts.eip7702Support as boolean,
   }
 }

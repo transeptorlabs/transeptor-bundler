@@ -6,14 +6,12 @@ import {
   createBundleManager,
   createBundleProcessor,
 } from './bundle/index.js'
-import { createRpcServerWithHandlers } from './rpc/index.js'
-import { createBuilderConfig } from './config/index.js'
 import {
-  createEthAPI,
-  createWeb3API,
-  createDebugAPI,
   createBundlerHandlerRegistry,
+  createRpcServerWithHandlers,
 } from './rpc/index.js'
+import { createBuilderConfig } from './config/index.js'
+import { createEthAPI, createWeb3API, createDebugAPI } from './apis/index.js'
 import { Libp2pNode } from './p2p/index.js'
 
 import { createProviderService } from './provider/index.js'
@@ -94,7 +92,7 @@ const runBundler = async () => {
     config.bundleSize,
   )
 
-  const eventManager = createEventManagerWithListener(
+  const eventsManager = createEventManagerWithListener(
     providerService,
     reputationManager,
     createMempoolManageUpdater(mempoolManagerCore),
@@ -123,7 +121,7 @@ const runBundler = async () => {
         entryPointAddress: config.entryPoint.address,
       },
     }),
-    eventsManager: eventManager,
+    eventsManager,
     state,
     isAutoBundle: config.isAutoBundle,
     autoBundleInterval: config.autoBundleInterval,
@@ -135,30 +133,31 @@ const runBundler = async () => {
   }
 
   // start rpc server
-  bundlerServer = createRpcServerWithHandlers(
-    createBundlerHandlerRegistry(
-      createEthAPI(
-        providerService,
-        sim,
-        validationService,
-        eventManager,
-        createMempoolManageSender(mempoolManagerCore),
-        pvgc,
-        config.entryPoint,
-      ),
-      createWeb3API(config.clientVersion),
-      createDebugAPI(
-        bundleManager,
-        reputationManager,
-        mempoolManagerCore,
-        eventManager,
-        pvgc,
-        config.entryPoint.contract,
-      ),
+  const handlerRegistry = createBundlerHandlerRegistry({
+    eth: createEthAPI({
+      ps: providerService,
+      sim: sim,
+      vs: validationService,
+      eventsManager,
+      mempoolManageSender: createMempoolManageSender(mempoolManagerCore),
+      pvgc,
+      entryPoint: config.entryPoint,
+    }),
+    web3: createWeb3API(config.clientVersion),
+    debug: createDebugAPI(
+      bundleManager,
+      reputationManager,
+      mempoolManagerCore,
+      eventsManager,
+      pvgc,
+      config.entryPoint.contract,
     ),
-    config.httpApis,
-    config.port,
-  )
+  })
+  bundlerServer = createRpcServerWithHandlers({
+    handlerRegistry,
+    supportedApiPrefixes: config.httpApis,
+    port: config.port,
+  })
   await bundlerServer.start(async () => {
     const supportedNetworks = providerService.getSupportedNetworks()
     if (!supportedNetworks.includes(chainIdNum)) {
