@@ -1,6 +1,17 @@
 import { ReputationManagerReader, UserOperation } from '../types/index.js'
 
 /**
+ * Check if an error is fatal. Fatal errors we know we can't recover
+ *
+ * @param e - The error.
+ */
+export const checkFatal = (e: any): void => {
+  if (e.error?.code === -32601) {
+    throw e
+  }
+}
+
+/**
  * Find the entity to blame.
  *
  * @param reasonStr - The reason string.

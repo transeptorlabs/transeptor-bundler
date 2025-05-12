@@ -23,10 +23,7 @@ import {
   bundlerNativeTracerName,
   prestateTracerName,
 } from './constants/index.js'
-import {
-  createReputationManager,
-  createReputationManagerUpdater,
-} from './reputation/index.js'
+import { createReputationManager } from './reputation/index.js'
 import {
   createMempoolManagerBuilder,
   createMempoolManagerCore,
@@ -109,8 +106,6 @@ const runBundler = async () => {
       providerService,
       reputationManager,
       mempoolManagerBuilder: createMempoolManagerBuilder(mempoolManagerCore),
-      reputationManagerUpdater:
-        createReputationManagerUpdater(reputationManager),
       entryPoint: config.entryPoint,
       txMode: config.txMode,
       beneficiary: config.beneficiaryAddr,

@@ -20,7 +20,7 @@ import {
   updateEntityStakeCountAndDeposit,
   parseFailedOpRevert,
 } from './builder-helpers.js'
-import { findEntityToBlame } from '../bundle.helper.js'
+import { findEntityToBlame, checkFatal } from '../bundle.helper.js'
 
 export type BundleBuilderConfig = {
   validationService: ValidationService
@@ -84,10 +84,7 @@ export const createBundleBuilder = (
             config.opts.entryPointContract,
           )
           if (opIndex == null || reasonStr == null) {
-            if (failedValError.error?.code === -32601) {
-              // fatal errors we know we can't recover
-              return
-            }
+            checkFatal(failedValError)
             Logger.warn('Failed validation, but non-FailedOp error')
             await mempoolManagerBuilder.removeUserOp(opDetails.userOpHash)
             return

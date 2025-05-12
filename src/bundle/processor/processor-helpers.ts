@@ -1,4 +1,4 @@
-import { ContractFactory, ErrorDescription, ethers, Wallet } from 'ethers'
+import { ContractFactory, ethers, Wallet } from 'ethers'
 import {
   GET_USEROP_HASHES_ABI,
   GET_USEROP_HASHES_BYTECODE,
@@ -37,17 +37,6 @@ export const selectBeneficiary = async (
 }
 
 /**
- * Check if an error is fatal. Fatal errors we know we can't recover
- *
- * @param e - The error.
- */
-export const checkFatal = (e: any): void => {
-  if (e.error?.code === -32601) {
-    throw e
-  }
-}
-
-/**
  * Get the user operation hashes.
  *
  * @param userOps - The user operations.
@@ -78,35 +67,5 @@ export const getUserOpHashes = async (
       'Failed to get userOpHashes, but bundle was sent successfully',
     )
     return []
-  }
-}
-
-/**
- * Parse an error.
- *
- * @param e - The error.
- * @param entryPoint - The entry point.
- * @returns The error description.
- */
-export const parseError = (
-  e: any,
-  entryPoint: ethers.Contract,
-): ErrorDescription | undefined => {
-  try {
-    let data = e.data?.data ?? e.data
-    const body = e?.error?.error?.body
-    if (body != null) {
-      const jsonbody = JSON.parse(body)
-      data = jsonbody.error.data?.data ?? jsonbody.error.data
-    }
-
-    return entryPoint.interface.parseError(data)
-  } catch (e1) {
-    checkFatal(e)
-    Logger.warn(
-      { e, e1 },
-      'Failed handleOps(could not parse error), but non-FailedOp error',
-    )
-    return undefined
   }
 }

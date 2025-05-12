@@ -67,7 +67,8 @@ export type BundleProcessor = {
  */
 export type CrashedHandleOps = {
   addressToBan: string | undefined
-  failedOp: UserOperation
+  reasonStr: string
+  failedUserOp: UserOperation
 }
 
 // Bundle builder
