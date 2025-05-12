@@ -20,7 +20,7 @@ import {
   updateEntityStakeCountAndDeposit,
   parseFailedOpRevert,
 } from './builder-helpers.js'
-import { findEntityToBlame, checkFatal } from '../bundle.helper.js'
+import { findEntityToBlame, checkFatal } from '../bundle-helper.js'
 
 export type BundleBuilderConfig = {
   validationService: ValidationService

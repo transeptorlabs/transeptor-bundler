@@ -13,7 +13,7 @@ import {
 } from '../../types/index.js'
 import { packUserOps } from '../../utils/index.js'
 import { getUserOpHashes, selectBeneficiary } from './processor-helpers.js'
-import { findEntityToBlame, checkFatal } from '../bundle.helper.js'
+import { findEntityToBlame, checkFatal } from '../bundle-helper.js'
 import { parseFailedOpRevert } from '../builder/builder-helpers.js'
 
 export type BundleProcessorConfig = {

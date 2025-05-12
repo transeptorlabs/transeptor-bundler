@@ -123,15 +123,14 @@ export const updateSeenStatus = async (
 ): Promise<void> => {
   try {
     await reputationManager.checkStake('account', senderInfo)
-    await reputationManager.updateSeenStatus(userOp.sender, action)
+    await reputationManager.updateSeenStatus(userOp.sender, 'increment')
   } catch (e: any) {
     if (!(e instanceof RpcError)) throw e
   }
 
-  const addrs = [userOp.paymaster, userOp.factory, aggregator].filter(
-    (addr) => addr != undefined,
-  ) as string[]
-  await reputationManager.updateSeenStatusBatch(addrs)
+  await reputationManager.updateSeenStatus(aggregator, action)
+  await reputationManager.updateSeenStatus(userOp.paymaster, action)
+  await reputationManager.updateSeenStatus(userOp.factory, action)
 }
 
 /**
