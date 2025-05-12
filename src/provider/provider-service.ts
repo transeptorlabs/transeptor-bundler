@@ -39,7 +39,7 @@ export type ProviderService = {
   call(contractAddress: string, data: string): Promise<any>
   debug_traceCall<R>(
     tx: TransactionRequest,
-    options: TraceOptions,
+    traceOptions: TraceOptions,
     useNativeTracerProvider?: boolean,
   ): Promise<Either<RpcError, R>>
   debug_traceTransaction(
@@ -193,7 +193,7 @@ export const createProviderService = (
 
     debug_traceCall: async <R>(
       tx: TransactionRequest,
-      options: TraceOptions,
+      traceOptions: TraceOptions,
       useNativeTracerProvider = false,
     ): Promise<Either<RpcError, R>> => {
       const provider = useNativeTracerProvider
@@ -210,7 +210,7 @@ export const createProviderService = (
         const ret = await provider.send('debug_traceCall', [
           tx1,
           'latest',
-          options,
+          traceOptions,
         ])
 
         return Either.Right(ret)

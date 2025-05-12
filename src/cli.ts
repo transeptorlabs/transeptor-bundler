@@ -23,10 +23,7 @@ import {
   bundlerNativeTracerName,
   prestateTracerName,
 } from './constants/index.js'
-import {
-  createReputationManager,
-  createReputationManagerUpdater,
-} from './reputation/index.js'
+import { createReputationManager } from './reputation/index.js'
 import {
   createMempoolManagerBuilder,
   createMempoolManagerCore,
@@ -109,8 +106,6 @@ const runBundler = async () => {
       providerService,
       reputationManager,
       mempoolManagerBuilder: createMempoolManagerBuilder(mempoolManagerCore),
-      reputationManagerUpdater:
-        createReputationManagerUpdater(reputationManager),
       entryPoint: config.entryPoint,
       txMode: config.txMode,
       beneficiary: config.beneficiaryAddr,
@@ -125,6 +120,7 @@ const runBundler = async () => {
         maxBundleGas: config.maxBundleGas,
         txMode: config.txMode,
         entryPointContract: config.entryPoint.contract,
+        entryPointAddress: config.entryPoint.address,
       },
     }),
     eventsManager: eventManager,
@@ -211,7 +207,7 @@ const runBundler = async () => {
       if (config.nativeTracerEnabled) {
         const [supportsPrestateTracer, supportsBundlerCollectorTracer] =
           await Promise.all([
-            sim.supportsNativeTracer(prestateTracerName),
+            sim.supportsNativeTracer(prestateTracerName), // validate standard tracer supports "prestateTracer" on provider
             sim.supportsNativeTracer(bundlerNativeTracerName, true),
           ])
 
@@ -227,6 +223,7 @@ const runBundler = async () => {
           )
         }
       } else {
+        // validate standard javascript tracer supported
         const supportsDebugTraceCallRes = await sim.supportsDebugTraceCall()
         supportsDebugTraceCallRes.fold(
           (err) => {

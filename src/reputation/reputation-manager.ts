@@ -167,6 +167,22 @@ export const createReputationManager = (
     return res
   }
 
+  const getOrCreate = (
+    addr: string,
+    reputationEntries: ReputationEntries,
+  ): ReputationEntry => {
+    addr = addr.toLowerCase()
+    let entry = reputationEntries[addr]
+    if (entry == null) {
+      entry = {
+        address: addr,
+        opsSeen: 0,
+        opsIncluded: 0,
+      }
+    }
+    return entry
+  }
+
   return {
     getStatus,
 
@@ -219,15 +235,14 @@ export const createReputationManager = (
       await state.updateState(
         StateKey.ReputationEntries,
         ({ reputationEntries }) => {
-          const entry = reputationEntries[addr]
-          const opsSeenValue = action === 'increment' ? 1 : -1
+          const entry = getOrCreate(addr, reputationEntries)
+          const val = action === 'increment' ? 1 : -1
           return {
             reputationEntries: {
               ...reputationEntries,
               [addr]: {
-                address: addr,
-                opsSeen: entry ? entry.opsSeen + opsSeenValue : 0,
-                opsIncluded: entry ? entry.opsIncluded : 0,
+                ...entry,
+                opsSeen: Math.max(0, entry.opsSeen + val),
               },
             },
           }
@@ -245,11 +260,10 @@ export const createReputationManager = (
         ({ reputationEntries }) => {
           const newEntries = addrs.reduce((acc, addr) => {
             addr = addr.toLowerCase()
-            const entry = reputationEntries[addr]
+            const entry = getOrCreate(addr, reputationEntries)
             acc[addr] = {
-              address: addr,
-              opsSeen: entry ? entry.opsSeen + 1 : 0,
-              opsIncluded: entry ? entry.opsIncluded : 0,
+              ...entry,
+              opsSeen: Math.max(0, entry.opsSeen + 1),
             }
             return acc
           }, {} as ReputationEntries)
@@ -269,14 +283,13 @@ export const createReputationManager = (
       await state.updateState(
         StateKey.ReputationEntries,
         ({ reputationEntries }) => {
-          const entry = reputationEntries[addr]
+          const entry = getOrCreate(addr, reputationEntries)
           return {
             reputationEntries: {
               ...reputationEntries,
               [addr]: {
-                address: addr,
-                opsSeen: entry ? entry.opsSeen : 0,
-                opsIncluded: entry ? entry.opsIncluded + 1 : 0,
+                ...entry,
+                opsIncluded: entry.opsIncluded + 1,
               },
             },
           }
@@ -319,6 +332,7 @@ export const createReputationManager = (
           const entry = reputationEntries[addr]
           const bannedEntry = {
             address: addr,
+            // GREP-040 (was SREP-050) ban entity that failed bundle creation.
             opsSeen: entry ? entry.opsSeen + 10000 : 10000,
             opsIncluded: 0,
           }

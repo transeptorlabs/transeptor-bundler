@@ -1,30 +1,25 @@
-import { ErrorDescription, ethers } from 'ethers'
+import { ethers } from 'ethers'
 import { Logger } from '../../logger/index.js'
 import { ProviderService } from '../../provider/index.js'
 import {
   SendBundleReturnWithSigner,
   StorageMap,
   UserOperation,
-  ReputationManagerReader,
   BundlerSignerWallets,
   MempoolManagerBuilder,
-  ReputationManagerUpdater,
   BundleProcessor,
   CrashedHandleOps,
+  ReputationManager,
 } from '../../types/index.js'
 import { packUserOps } from '../../utils/index.js'
-import {
-  findEntityToBan,
-  getUserOpHashes,
-  parseError,
-  selectBeneficiary,
-} from './processor-helpers.js'
+import { getUserOpHashes, selectBeneficiary } from './processor-helpers.js'
+import { findEntityToBlame, checkFatal } from '../bundle-helper.js'
+import { parseFailedOpRevert } from '../builder/builder-helpers.js'
 
 export type BundleProcessorConfig = {
   providerService: ProviderService
-  reputationManager: ReputationManagerReader
+  reputationManager: ReputationManager
   mempoolManagerBuilder: MempoolManagerBuilder
-  reputationManagerUpdater: ReputationManagerUpdater
   entryPoint: {
     contract: ethers.Contract
     address: string
@@ -42,25 +37,43 @@ export const createBundleProcessor = (
     providerService,
     reputationManager,
     mempoolManagerBuilder,
-    reputationManagerUpdater,
     entryPoint,
     txMode,
     beneficiary,
     minSignerBalance,
     signers,
   } = config
+
   const afterHook = async (crashedHandleOps: CrashedHandleOps | undefined) => {
     Logger.debug('After hook running for bundle processor')
-    // Update reputation status to ban and drop userOp from mempool for entity that caused handleOps to revert
     if (crashedHandleOps) {
-      const { addressToBan, failedOp } = crashedHandleOps
+      const { failedUserOp, reasonStr, addressToBan } = crashedHandleOps
+      Logger.warn(
+        `Bundle failed': Failed handleOps sender=${failedUserOp.sender} reason=${reasonStr}`,
+      )
       if (addressToBan) {
         Logger.info(`Banning address: ${addressToBan} due to failed handleOps`)
+        await reputationManager.updateSeenStatus(
+          failedUserOp.sender,
+          'decrement',
+        )
+        await reputationManager.updateSeenStatus(
+          failedUserOp.paymaster,
+          'decrement',
+        )
+        await reputationManager.updateSeenStatus(
+          failedUserOp.factory,
+          'decrement',
+        )
         await mempoolManagerBuilder.removeUserOpsForBannedAddr(addressToBan)
-        await reputationManagerUpdater.crashedHandleOps(addressToBan)
+        await reputationManager.crashedHandleOps(addressToBan)
+      } else {
+        Logger.error(
+          `Failed handleOps, but no entity to blame. reason=${reasonStr}`,
+        )
       }
 
-      await mempoolManagerBuilder.removeUserOp(failedOp)
+      await mempoolManagerBuilder.removeUserOp(failedUserOp)
     }
   }
 
@@ -139,36 +152,29 @@ export const createBundleProcessor = (
         } as SendBundleReturnWithSigner
       } catch (e: any) {
         Logger.debug('Failed handleOps, attempting to parse error...')
-        const parsedError: ErrorDescription | undefined = parseError(
+        const { opIndex, reasonStr } = parseFailedOpRevert(
           e,
-          entryPoint.contract,
+          config.entryPoint.contract,
         )
-        if (!parsedError) {
-          return {
-            transactionHash: '',
-            userOpHashes: [],
-            signerIndex,
-            isSendBundleSuccess: false,
-          }
+        if (opIndex == null || reasonStr == null) {
+          checkFatal(e)
+          Logger.warn('Failed handleOps, but non-FailedOp error', e)
+          return
         }
 
         // Find entity address that caused handleOps to fail
-        const { opIndex, reason } = parsedError.args
-        const userOp = userOps[opIndex]
-        const reasonStr: string = reason.toString()
-        const addressToBan: string | undefined = await findEntityToBan(
+        const failedUserOp = userOps[opIndex]
+        const addressToBan: string | undefined = await findEntityToBlame(
           reasonStr,
-          userOp,
+          failedUserOp,
           reputationManager,
           entryPoint.address,
         )
 
-        Logger.warn(
-          `Bundle failed': Failed handleOps sender=${userOp.sender} reason=${reasonStr}`,
-        )
         crashedHandleOps = {
-          failedOp: userOp,
+          failedUserOp,
           addressToBan,
+          reasonStr,
         }
 
         return {
