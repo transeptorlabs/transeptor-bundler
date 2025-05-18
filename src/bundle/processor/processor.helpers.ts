@@ -4,9 +4,9 @@ import {
   GET_USEROP_HASHES_BYTECODE,
 } from 'src/abis/helper.abi.js'
 import { Logger } from 'src/logger/base-logger.js'
-import { ProviderService } from 'src/provider/index.js'
-import { UserOperation } from 'src/types/index.js'
-import { packUserOps } from 'src/utils/bundle.utils.js'
+import { ProviderService } from '../../provider/index.js'
+import { UserOperation } from '../../types/index.js'
+import { packUserOps } from '../../utils/index.js'
 
 /**
  * Determine who should receive the proceedings of the request.

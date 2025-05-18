@@ -13,7 +13,12 @@ import {
   EthAPI,
   Simulator,
 } from '../../types/index.js'
-import { deepHexlify, packUserOp, unpackUserOp } from '../../utils/index.js'
+import {
+  deepHexlify,
+  getAuthorizationList,
+  packUserOp,
+  unpackUserOp,
+} from '../../utils/index.js'
 
 import { ProviderService } from '../../provider/index.js'
 import { ValidationService } from '../../validation/index.js'
@@ -38,12 +43,21 @@ export type EthAPIConfig = {
     contract: ethers.Contract
     address: string
   }
+  eip7702Support
 }
 
 export const createEthAPI = (config: EthAPIConfig): EthAPI => {
   const HEX_REGEX = /^0x[a-fA-F\d]*$/i
-  const { ps, sim, vs, eventsManager, mempoolManageSender, pvgc, entryPoint } =
-    config
+  const {
+    ps,
+    sim,
+    vs,
+    eventsManager,
+    mempoolManageSender,
+    pvgc,
+    entryPoint,
+    eip7702Support,
+  } = config
 
   return {
     getChainId: async (): Promise<number> => ps.getChainId(),
@@ -59,17 +73,20 @@ export const createEthAPI = (config: EthAPIConfig): EthAPI => {
       stateOverride?: StateOverride,
     ): Promise<Either<RpcError, EstimateUserOpGasResult>> => {
       const opReady = await vs.validateInputParameters(
-        deepHexlify({
-          // Override gas params to estimate gas defaults
-          maxFeePerGas: 0,
-          maxPriorityFeePerGas: 0,
-          preVerificationGas: 21000,
-          callGasLimit: 10e6,
-          verificationGasLimit: 10e6,
-          ...userOpInput,
-        }),
-        entryPointInput,
-        entryPoint.address,
+        {
+          userOpInput: deepHexlify({
+            // Override gas params to estimate gas defaults
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            preVerificationGas: 21000,
+            callGasLimit: 10e6,
+            verificationGasLimit: 10e6,
+            ...userOpInput,
+          }),
+          entryPointInput,
+          entryPointAddress: entryPoint.address,
+          eip7702Support,
+        },
         true,
         true,
         false,
@@ -78,17 +95,18 @@ export const createEthAPI = (config: EthAPIConfig): EthAPI => {
       return opReady.foldAsync(
         async (error: RpcError) => Either.Left(error),
         async (userOp: UserOperation) => {
+          const authorizationList = getAuthorizationList(userOp)
+
           // Estimate verification gas and call gas
           const [executionResult, callGasLimit] = await Promise.all([
             sim.simulateHandleOp(userOp as UserOperation, stateOverride),
-            ps.estimateGas(entryPoint.address, userOp.sender, userOp.callData),
+            ps.estimateGas(
+              entryPoint.address,
+              userOp.sender,
+              userOp.callData,
+              authorizationList,
+            ),
           ])
-
-          // Estimate the pre-verification gas
-          const preVerificationGas = pvgc.calcPreVerificationGas({
-            ...userOp,
-            signature: undefined, // ignore signature for gas estimation to allow calcPreVerificationGas to use dummy signature
-          })
 
           return Either.Right<RpcError, EstimateUserOpGasResult>({
             preVerificationGas: 0,
@@ -97,7 +115,10 @@ export const createEthAPI = (config: EthAPIConfig): EthAPI => {
           })
             .map((estimate) => ({
               ...estimate,
-              preVerificationGas,
+              preVerificationGas: pvgc.calcPreVerificationGas({
+                ...userOp,
+                signature: undefined, // ignore signature for gas estimation to allow calcPreVerificationGas to use dummy signature
+              }),
             }))
             .flatMap((estimate) => extractCallGasLimit(estimate, callGasLimit))
             .flatMap((estimate) =>
@@ -112,9 +133,12 @@ export const createEthAPI = (config: EthAPIConfig): EthAPI => {
       entryPointInput: string,
     ): Promise<Either<RpcError, string>> => {
       const opReady = await vs.validateInputParameters(
-        userOpInput,
-        entryPointInput,
-        entryPoint.address,
+        {
+          userOpInput,
+          entryPointInput,
+          entryPointAddress: entryPoint.address,
+          eip7702Support,
+        },
         true,
         true,
         true,

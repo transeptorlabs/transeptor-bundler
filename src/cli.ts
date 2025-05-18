@@ -142,6 +142,7 @@ const runBundler = async () => {
       mempoolManageSender: createMempoolManageSender(mempoolManagerCore),
       pvgc,
       entryPoint: config.entryPoint,
+      eip7702Support: config.eip7702Support,
     }),
     web3: createWeb3API(config.clientVersion),
     debug: createDebugAPI(

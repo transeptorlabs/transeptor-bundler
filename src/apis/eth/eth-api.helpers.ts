@@ -6,6 +6,7 @@ import {
   RpcError,
 } from '../../types/index.js'
 import { Either } from '../../monad/index.js'
+import { MAINNET_CONFIG } from '../../gas/index.js'
 
 export const extractVerificationGasLimit = (
   estimate: EstimateUserOpGasResult,
@@ -32,9 +33,12 @@ export const extractCallGasLimit = (
   return callGasResult.fold(
     (error: RpcError) => Either.Left(error),
     (callGasLimit: number) => {
+      // Results from 'estimateGas' assume making a standalone transaction and paying 21'000 gas extra for it
+      const adjustedCallGas =
+        callGasLimit - MAINNET_CONFIG.transactionGasStipend
       return Either.Right<RpcError, EstimateUserOpGasResult>({
         ...estimate,
-        callGasLimit,
+        callGasLimit: adjustedCallGas,
       })
     },
   )

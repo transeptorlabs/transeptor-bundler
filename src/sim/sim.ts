@@ -107,9 +107,10 @@ export const createSimulator = (
     fullSimulateValidation: async (
       userOp: UserOperation,
       nativeTracerEnabled: boolean,
+      stateOverride: { [address: string]: { code: string } },
     ): Promise<Either<RpcError, FullValidationResult>> => {
       Logger.debug(
-        { nativeTracerEnabled },
+        { nativeTracerEnabled, stateOverride },
         'Running full validation with storage/opcode checks on userOp',
       )
       const tx: TransactionRequest = {
@@ -124,13 +125,18 @@ export const createSimulator = (
         ).toString(),
       }
 
+      const combinedStateOverride = {
+        ...defaultStateOverrides,
+        ...stateOverride,
+      }
+
       const tracerResult = nativeTracerEnabled
-        ? await runNativeTracer(ps, tx, defaultStateOverrides)
+        ? await runNativeTracer(ps, tx, combinedStateOverride)
         : await getBundlerCollectorTracerString().foldAsync(
             async (tracerFileErr) =>
               Either.Left<RpcError, BundlerCollectorReturn>(tracerFileErr),
             async (tracerStr) =>
-              runStandardTracer(ps, tx, tracerStr, defaultStateOverrides),
+              runStandardTracer(ps, tx, tracerStr, combinedStateOverride),
           )
 
       return tracerResult
@@ -158,7 +164,10 @@ export const createSimulator = (
           ]),
         },
         'latest',
-        stateOverride ? stateOverride : defaultStateOverrides,
+        {
+          ...stateOverride,
+          ...defaultStateOverrides,
+        },
       ])
 
       return ethCallResult.fold(

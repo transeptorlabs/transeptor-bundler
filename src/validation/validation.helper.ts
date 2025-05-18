@@ -1,6 +1,10 @@
 import { ContractFactory } from 'ethers'
 
-import { UserOperation, FullValidationResult } from '../types/index.js'
+import {
+  UserOperation,
+  FullValidationResult,
+  EIP7702Authorization,
+} from '../types/index.js'
 import {
   ReferencedCodeHashes,
   ValidateUserOpResult,
@@ -11,6 +15,11 @@ import {
 
 import { ProviderService } from '../provider/index.js'
 import { Either } from '../monad/index.js'
+import {
+  EIP_7702_MARKER_CODE,
+  getEip7702AuthorizationSigner,
+} from '../utils/index.js'
+import { Logger } from '../logger/index.js'
 
 export const checkValidationResult = (
   res: ValidateUserOpResult,
@@ -129,4 +138,38 @@ export const fullValResultSafeParse = async (
       })
     },
   )
+}
+
+export const getAuthorizationsStateOverride = async (
+  authorizations: EIP7702Authorization[] = [],
+  ps: ProviderService,
+): Promise<{ [address: string]: { code: string } }> => {
+  const stateOverride: { [address: string]: { code: string } } = {}
+  for (const authorization of authorizations) {
+    const authSigner = getEip7702AuthorizationSigner(authorization)
+    const nonce = await ps.getTransactionCount(authSigner)
+    const authNonce: any = authorization.nonce
+    if (nonce !== Number(BigInt(authNonce.replace(/0x$/, '0x0')))) {
+      continue
+    }
+    const currentDelegateeCode = await ps.getCode(authSigner)
+    const newDelegateeCode =
+      EIP_7702_MARKER_CODE + authorization.address.slice(2)
+    const noCurrentDelegation = currentDelegateeCode.length <= 2
+    // TODO: do not send such authorizations to 'handleOps' as it is a waste of gas
+    const changeDelegation = newDelegateeCode !== currentDelegateeCode
+    if (noCurrentDelegation || changeDelegation) {
+      Logger.debug(
+        {
+          address: authSigner,
+          code: newDelegateeCode,
+        },
+        'Adding 7702 state override:',
+      )
+      stateOverride[authSigner] = {
+        code: newDelegateeCode,
+      }
+    }
+  }
+  return stateOverride
 }

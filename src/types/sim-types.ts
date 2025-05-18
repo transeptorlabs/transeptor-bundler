@@ -71,6 +71,7 @@ export type Simulator = {
   fullSimulateValidation(
     userOp: UserOperation,
     nativeTracerEnabled: boolean,
+    stateOverride: { [address: string]: { code: string } },
   ): Promise<Either<RpcError, FullValidationResult>>
   simulateHandleOp(
     userOp: UserOperation,

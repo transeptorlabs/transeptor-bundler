@@ -120,3 +120,4 @@ We appreciate the open-source community and those who have shared their knowledg
 - [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337)
 - [ERC-7562](https://eips.ethereum.org/EIPS/eip-7562)
 - [EIP-1153](https://eips.ethereum.org/EIPS/eip-1153)
+- [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702)

@@ -62,7 +62,7 @@ export type PreVerificationGasConfig = {
   readonly estimationPaymasterDataSize: number
 }
 
-const MAINNET_CONFIG: PreVerificationGasConfig = {
+export const MAINNET_CONFIG: PreVerificationGasConfig = {
   transactionGasStipend: 21000,
   fixedGasOverhead: 38000,
   perUserOpGasOverhead: 11000,

@@ -127,3 +127,4 @@ The Request Flow Architecture diagram illustrates the path of an incoming RPC re
 
 - [ERC-4337 Specification](https://eips.ethereum.org/EIPS/eip-4337)
 - [ERC-7562 Specification](https://eips.ethereum.org/EIPS/eip-7562)
+- [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702)
