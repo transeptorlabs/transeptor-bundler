@@ -9,6 +9,7 @@ import {
 import { Either } from 'src/monad/either.js'
 import { RpcError } from './error.types.js'
 import { UserOperation } from './userop.types.js'
+import { ERC7562Call, ERC7562ValidationResults } from './erc-7562.types.js'
 
 export type AggregatorStakeInfo = {
   aggregator: string
@@ -62,7 +63,7 @@ export type StateOverride = {
   stateDiff?: object
 }
 
-export type FullValidationResult = [ValidationResult, BundlerCollectorReturn]
+export type FullValidationResult = [ValidationResult, ERC7562Call]
 
 export type Simulator = {
   partialSimulateValidation(
@@ -70,8 +71,6 @@ export type Simulator = {
   ): Promise<Either<RpcError, ValidationResult>>
   fullSimulateValidation(
     userOp: UserOperation,
-    nativeTracerEnabled: boolean,
-    stateOverride: { [address: string]: { code: string } },
   ): Promise<Either<RpcError, FullValidationResult>>
   simulateHandleOp(
     userOp: UserOperation,
@@ -83,8 +82,13 @@ export type Simulator = {
     validationResult: ValidationResult,
   ): Either<RpcError, [string[], StorageMap]>
   supportsDebugTraceCall(): Promise<Either<RpcError, boolean>>
-  supportsNativeTracer(
-    nativeTracer: string,
-    useNativeTracerProvider?: boolean,
-  ): Promise<boolean>
+  supportsDebugTraceCallWithNativeTracer(nativeTracer: string): Promise<boolean>
+}
+
+export type Erc7562Parser = {
+  parseTracerResult(
+    userOp: UserOperation,
+    erc7562Call: ERC7562Call,
+    validationResult: ValidationResult,
+  ): Either<RpcError, ERC7562ValidationResults>
 }

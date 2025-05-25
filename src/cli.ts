@@ -16,11 +16,8 @@ import { Libp2pNode } from './p2p/index.js'
 
 import { createProviderService } from './provider/index.js'
 import { createValidationService } from './validation/index.js'
-import { createSimulator } from './sim/index.js'
-import {
-  bundlerNativeTracerName,
-  prestateTracerName,
-} from './constants/index.js'
+import { createErc7562Parser, createSimulator } from './sim/index.js'
+import { GethNativeTracerName } from './constants/index.js'
 import { createReputationManager } from './reputation/index.js'
 import {
   createMempoolManagerBuilder,
@@ -54,24 +51,27 @@ const runBundler = async () => {
   const args = process.argv
   const config = await createBuilderConfig(args)
   const state = createState()
-  const providerService = createProviderService(
-    config.provider,
-    config.nativeTracerProvider,
-  )
+  const providerService = createProviderService(config.provider)
 
   const { name, chainId } = await providerService.getNetwork()
   const chainIdNum = Number(chainId)
 
   // Create services
-  const pvgc = createPreVerificationGasCalculator(chainIdNum)
-  const sim = createSimulator(providerService, config.entryPoint.address)
-  const validationService = createValidationService(
+  const preVerificationGasCalculator =
+    createPreVerificationGasCalculator(chainIdNum)
+  const sim = createSimulator({
+    providerService,
+    entryPoint: config.entryPoint.contract,
+    epAddress: config.entryPoint.address,
+    preVerificationGasCalculator,
+  })
+  const validationService = createValidationService({
     providerService,
     sim,
-    pvgc,
-    config.isUnsafeMode,
-    config.nativeTracerEnabled,
-  )
+    preVerificationGasCalculator,
+    isUnsafeMode: config.isUnsafeMode,
+    erc7562Parser: createErc7562Parser(),
+  })
 
   // Create manager instances
   const reputationManager = createReputationManager(
@@ -140,7 +140,7 @@ const runBundler = async () => {
       vs: validationService,
       eventsManager,
       mempoolManageSender: createMempoolManageSender(mempoolManagerCore),
-      pvgc,
+      preVerificationGasCalculator,
       entryPoint: config.entryPoint,
       eip7702Support: config.eip7702Support,
     }),
@@ -150,7 +150,7 @@ const runBundler = async () => {
       reputationManager,
       mempoolManagerCore,
       eventsManager,
-      pvgc,
+      preVerificationGasCalculator,
       config.entryPoint.contract,
     ),
   })
@@ -170,9 +170,10 @@ const runBundler = async () => {
     }
 
     // Make sure the entry point contract is deployed to the network
-    const isDeployed = await providerService.checkContractDeployment(
-      config.entryPoint.address,
-    )
+    const [isDeployed, providerClientVersion] = await Promise.all([
+      providerService.checkContractDeployment(config.entryPoint.address),
+      providerService.clientVersion(),
+    ])
     if (!isDeployed) {
       throw new Error(
         'Entry point contract is not deployed to the network. Please use a pre-deployed contract or deploy the contract first if you are using a local network.',
@@ -196,48 +197,14 @@ const runBundler = async () => {
       }),
     )
 
-    // Validate provider supports required methods
-    if (config.isUnsafeMode) {
-      if (config.nativeTracerEnabled) {
+    // Ensure provider supports required debug_traceCall methods with erc7562Tracer to run full validation
+    if (!config.isUnsafeMode) {
+      const supportsErc7562Tracer =
+        await sim.supportsDebugTraceCallWithNativeTracer(GethNativeTracerName)
+
+      if (!supportsErc7562Tracer) {
         throw new Error(
-          'Can not run in unsafe mode with native tracer. Please use a remote tracer',
-        )
-      }
-    } else {
-      if (config.nativeTracerEnabled) {
-        const [supportsPrestateTracer, supportsBundlerCollectorTracer] =
-          await Promise.all([
-            sim.supportsNativeTracer(prestateTracerName), // validate standard tracer supports "prestateTracer" on provider
-            sim.supportsNativeTracer(bundlerNativeTracerName, true),
-          ])
-
-        if (!supportsPrestateTracer) {
-          throw new Error(
-            'Full validation requires the network provider to support prestateTracer. For UNSAFE mode: use --unsafe',
-          )
-        }
-
-        if (!supportsBundlerCollectorTracer) {
-          throw new Error(
-            'Full validation requires native tracer provider to support bundlerCollectorTracer. For UNSAFE mode: use --unsafe',
-          )
-        }
-      } else {
-        // validate standard javascript tracer supported
-        const supportsDebugTraceCallRes = await sim.supportsDebugTraceCall()
-        supportsDebugTraceCallRes.fold(
-          (err) => {
-            throw new Error(
-              `Internal error when checking for traceCall support: ${err.message}`,
-            )
-          },
-          (isSupportsDebugTraceCall) => {
-            if (!isSupportsDebugTraceCall) {
-              throw new Error(
-                'Full validation requires (debug_traceCall) method on the network provider for standard javascript tracer. For UNSAFE mode: use --unsafe',
-              )
-            }
-          },
+          'Full validation requires provider to support erc7562Tracer. For UNSAFE mode: use --unsafe',
         )
       }
     }
@@ -245,14 +212,18 @@ const runBundler = async () => {
     Logger.info(
       {
         signerDetails,
-        network: { chainId, name },
-        mode: config.isUnsafeMode ? 'UNSAFE' : 'SAFE',
-        nativeTracerEnabled: config.nativeTracerEnabled,
-        txMode: config.txMode,
-        bundleMode: config.isAutoBundle ? 'auto' : 'manual',
-        autoBundleInterval: `${config.autoBundleInterval} ms`,
-        version: config.clientVersion,
-        bundleSize: config.bundleSize,
+        bundleConfig: {
+          mode: config.isUnsafeMode ? 'UNSAFE' : 'SAFE',
+          txMode: config.txMode,
+          bundleMode: config.isAutoBundle ? 'auto' : 'manual',
+          autoBundleInterval: `${config.autoBundleInterval} ms`,
+          bundleSize: config.bundleSize,
+        },
+        clientInfo: {
+          providerClientVersion,
+          transeptorVersion: config.clientVersion,
+          network: { chainId, name },
+        },
       },
       'Builder passed preflight checks',
     )

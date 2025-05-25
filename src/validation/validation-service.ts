@@ -2,7 +2,7 @@
 import { ContractFactory, ethers, resolveProperties } from 'ethers'
 
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from '../abis/index.js'
-import { UserOperation } from '../types/index.js'
+import { Erc7562Parser, UserOperation } from '../types/index.js'
 import {
   ReferencedCodeHashes,
   ValidateUserOpResult,
@@ -23,7 +23,6 @@ import { Either } from '../monad/index.js'
 import {
   checkValidationResult,
   fullValResultSafeParse,
-  getAuthorizationsStateOverride,
 } from './validation.helper.js'
 
 export type ValidationService = {
@@ -59,6 +58,14 @@ export type ValidationService = {
   ): Promise<Either<RpcError, UserOperation>>
 }
 
+export type ValidationServiceConfig = {
+  providerService: ProviderService
+  sim: Simulator
+  erc7562Parser: Erc7562Parser
+  preVerificationGasCalculator: PreVerificationGasCalculator
+  isUnsafeMode: boolean
+}
+
 export type ValidateInputParams = {
   userOpInput: UserOperation
   entryPointInput: string
@@ -67,12 +74,15 @@ export type ValidateInputParams = {
 }
 
 export const createValidationService = (
-  ps: ProviderService,
-  sim: Simulator,
-  pvgc: PreVerificationGasCalculator,
-  isUnsafeMode: boolean,
-  nativeTracerEnabled: boolean,
+  config: ValidationServiceConfig,
 ): ValidationService => {
+  const {
+    providerService: ps,
+    sim,
+    preVerificationGasCalculator: pvgc,
+    isUnsafeMode,
+    erc7562Parser,
+  } = config
   const HEX_REGEX = /^0x[a-fA-F\d]*$/i
   const getCodeHashesFactory = new ethers.ContractFactory(
     GET_CODE_HASH_ABI,
@@ -126,30 +136,23 @@ export const createValidationService = (
           )
         }
       }
-      const stateOverrideForEip7702 = await getAuthorizationsStateOverride(
-        authorizationList,
-        ps,
-      )
 
       // if we are in unsafe mode, we skip the full validation with custom tracer and only run the partial validation with no stake or opcode checks
       if (!isUnsafeMode) {
-        const fullSimulateValidationResult = await sim.fullSimulateValidation(
-          userOp,
-          nativeTracerEnabled,
-          stateOverrideForEip7702,
-        )
+        const fullSimulateValidationResult =
+          await sim.fullSimulateValidation(userOp)
 
         res = await fullSimulateValidationResult.foldAsync(
           async (error) => Either.Left<RpcError, ValidateUserOpResult>(error),
           async (result) =>
-            fullValResultSafeParse(
+            fullValResultSafeParse({
               ps,
-              sim,
               result,
               userOp,
-              getCodeHashesFactory,
+              codeHashesFactory: getCodeHashesFactory,
               previousCodeHashes,
-            ),
+              erc7562Parser,
+            }),
         )
       } else {
         const partialSimulateValidationResult =

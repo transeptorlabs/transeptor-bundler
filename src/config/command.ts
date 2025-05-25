@@ -17,10 +17,6 @@ export const getCmdOptionValues = (ops: CommandOptions): OptionValues => {
       'UNSAFE mode: Enable no storage or opcode checks during userOp simulation. SAFE mode(default).',
     )
     .option(
-      '--tracerRpcUrl <string>',
-      'Enables native tracer for full validation during userOp simulation with prestateTracer native tracer on the network provider. requires unsafe=false.',
-    )
-    .option(
       '--network <string>',
       'Ethereum network provider.',
       `${defaultNetwork}`,

@@ -81,3 +81,13 @@ export type StakeInfoWithAddr = {
   stake: BigNumberish
   unstakeDelaySec: BigNumberish
 }
+
+export type PaymasterValidationInfo = StakeInfo & {
+  context?: string
+}
+
+export type ValidationData = {
+  aggregator: string
+  validAfter: number
+  validUntil: number
+}

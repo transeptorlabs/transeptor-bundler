@@ -3,23 +3,17 @@ import { ContractFactory } from 'ethers'
 import {
   UserOperation,
   FullValidationResult,
-  EIP7702Authorization,
+  Erc7562Parser,
 } from '../types/index.js'
 import {
   ReferencedCodeHashes,
   ValidateUserOpResult,
   ValidationErrors,
   RpcError,
-  Simulator,
 } from '../types/index.js'
 
 import { ProviderService } from '../provider/index.js'
 import { Either } from '../monad/index.js'
-import {
-  EIP_7702_MARKER_CODE,
-  getEip7702AuthorizationSigner,
-} from '../utils/index.js'
-import { Logger } from '../logger/index.js'
 
 export const checkValidationResult = (
   res: ValidateUserOpResult,
@@ -90,86 +84,60 @@ export const checkValidationResult = (
   return Either.Right(res)
 }
 
-export const fullValResultSafeParse = async (
-  ps: ProviderService,
-  sim: Simulator,
-  result: FullValidationResult,
-  userOp: UserOperation,
-  codeHashesFactory: ContractFactory,
-  previousCodeHashes?: ReferencedCodeHashes,
-) => {
-  const [validationResult, tracerResults] = result
-  const res = sim.tracerResultParser(userOp, tracerResults, validationResult)
-
-  return res.foldAsync(
-    async (err) => Either.Left<RpcError, ValidateUserOpResult>(err),
-    async (tracerRes) => {
-      const [contractAddresses, storageMap] = tracerRes
-      let codeHashes: ReferencedCodeHashes = {
-        addresses: [],
-        hash: '',
-      }
-
-      // if no previous contract hashes, then calculate hashes of contracts
-      if (previousCodeHashes == null) {
-        const { hash } = await ps.runContractScript(codeHashesFactory, [
-          contractAddresses,
-        ])
-
-        codeHashes = {
-          addresses: contractAddresses,
-          hash: hash,
+export const fullValResultSafeParse = async (input: {
+  ps: ProviderService
+  result: FullValidationResult
+  userOp: UserOperation
+  codeHashesFactory: ContractFactory
+  erc7562Parser: Erc7562Parser
+  previousCodeHashes?: ReferencedCodeHashes
+}) => {
+  const {
+    ps,
+    result,
+    userOp,
+    codeHashesFactory,
+    erc7562Parser,
+    previousCodeHashes,
+  } = input
+  const [validationResult, erc7562Call] = result
+  return erc7562Parser
+    .parseTracerResult(userOp, erc7562Call, validationResult)
+    .foldAsync(
+      async (err) => Either.Left<RpcError, ValidateUserOpResult>(err),
+      async (tracerRes) => {
+        const { contractAddresses, storageMap } = tracerRes
+        let codeHashes: ReferencedCodeHashes = {
+          addresses: [],
+          hash: '',
         }
-      }
 
-      if ((result as any) === '0x') {
-        return Either.Left(
-          new RpcError(
-            'simulateValidation reverted with no revert string!',
-            ValidationErrors.SimulateValidation,
-          ),
-        )
-      }
+        // if no previous contract hashes, then calculate hashes of contracts
+        if (previousCodeHashes == null) {
+          const { hash } = await ps.runContractScript(codeHashesFactory, [
+            contractAddresses,
+          ])
 
-      return Either.Right({
-        ...validationResult,
-        storageMap,
-        referencedContracts: codeHashes,
-      })
-    },
-  )
-}
+          codeHashes = {
+            addresses: contractAddresses,
+            hash: hash,
+          }
+        }
 
-export const getAuthorizationsStateOverride = async (
-  authorizations: EIP7702Authorization[] = [],
-  ps: ProviderService,
-): Promise<{ [address: string]: { code: string } }> => {
-  const stateOverride: { [address: string]: { code: string } } = {}
-  for (const authorization of authorizations) {
-    const authSigner = getEip7702AuthorizationSigner(authorization)
-    const nonce = await ps.getTransactionCount(authSigner)
-    const authNonce: any = authorization.nonce
-    if (nonce !== Number(BigInt(authNonce.replace(/0x$/, '0x0')))) {
-      continue
-    }
-    const currentDelegateeCode = await ps.getCode(authSigner)
-    const newDelegateeCode =
-      EIP_7702_MARKER_CODE + authorization.address.slice(2)
-    const noCurrentDelegation = currentDelegateeCode.length <= 2
-    // TODO: do not send such authorizations to 'handleOps' as it is a waste of gas
-    const changeDelegation = newDelegateeCode !== currentDelegateeCode
-    if (noCurrentDelegation || changeDelegation) {
-      Logger.debug(
-        {
-          address: authSigner,
-          code: newDelegateeCode,
-        },
-        'Adding 7702 state override:',
-      )
-      stateOverride[authSigner] = {
-        code: newDelegateeCode,
-      }
-    }
-  }
-  return stateOverride
+        if ((result as any) === '0x') {
+          return Either.Left(
+            new RpcError(
+              'simulateValidation reverted with no revert string!',
+              ValidationErrors.SimulateValidation,
+            ),
+          )
+        }
+
+        return Either.Right({
+          ...validationResult,
+          storageMap,
+          referencedContracts: codeHashes,
+        })
+      },
+    )
 }

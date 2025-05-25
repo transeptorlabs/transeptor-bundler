@@ -68,7 +68,6 @@ export type ProviderService = {
 
 export const createProviderService = (
   networkProvider: JsonRpcProvider,
-  nativeTracerProvider: JsonRpcProvider | undefined,
 ): ProviderService => {
   /**
    * Note that the contract deployment will cost gas, so it is not free to run this function.
@@ -138,10 +137,8 @@ export const createProviderService = (
       }
     },
 
-    clientVersion: async (): Promise<string> => {
-      const ret = await networkProvider.send('web3_clientVersion', [])
-      return ret.result
-    },
+    clientVersion: async (): Promise<string> =>
+      networkProvider.send('web3_clientVersion', []),
 
     getChainId: async (): Promise<number> => {
       const { chainId } = await networkProvider.getNetwork()
@@ -208,12 +205,8 @@ export const createProviderService = (
     debug_traceCall: async <R>(
       tx: TransactionRequest,
       traceOptions: TraceOptions,
-      useNativeTracerProvider = false,
     ): Promise<Either<RpcError, R>> => {
-      const provider = useNativeTracerProvider
-        ? nativeTracerProvider
-        : networkProvider
-      if (!provider) {
+      if (!networkProvider) {
         return Either.Left(
           new RpcError('provider not found', ValidationErrors.InternalError),
         )
@@ -221,7 +214,7 @@ export const createProviderService = (
 
       try {
         const tx1 = await resolveProperties(tx)
-        const ret = await provider.send('debug_traceCall', [
+        const ret = await networkProvider.send('debug_traceCall', [
           tx1,
           'latest',
           traceOptions,

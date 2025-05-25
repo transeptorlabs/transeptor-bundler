@@ -825,7 +825,7 @@ export const tracerResultParser = (
   }
 
   // get the list of contract addresses and storage map for the user operation
-  const addresses = extractAddresses(tracerResults.callsFromEntryPoint)
+  const contractAddresses = extractAddresses(tracerResults.callsFromEntryPoint)
   const storageMap: StorageMap = {}
   tracerResults.callsFromEntryPoint.forEach((level) => {
     Object.keys(level.access).forEach((addr) => {
@@ -833,5 +833,5 @@ export const tracerResultParser = (
     })
   })
 
-  return Either.Right([addresses, storageMap])
+  return Either.Right([contractAddresses, storageMap])
 }

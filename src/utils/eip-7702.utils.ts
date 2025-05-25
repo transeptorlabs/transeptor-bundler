@@ -22,6 +22,7 @@ import { PrefixedHexString } from '@ethereumjs/util'
 
 const EIP7702_MAGIC = '0x05'
 export const EIP_7702_MARKER_CODE = '0xef0100'
+export const EIP_7702_MARKER_INIT_CODE = '0x7702'
 
 export type UnsignedEIP7702Authorization = {
   chainId: BigNumberish

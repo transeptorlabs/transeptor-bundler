@@ -15,8 +15,6 @@ const nodeVersion = '0.11.0-alpha.0' // manual update on each release
 
 export type Config = {
   provider: JsonRpcProvider
-  nativeTracerProvider: JsonRpcProvider | undefined
-  nativeTracerEnabled: boolean
 
   bundlerSignerWallets: BundlerSignerWallets
   minSignerBalance: bigint
@@ -154,11 +152,6 @@ export const createBuilderConfig = async (
 
   const provider = createProvider(programOpts.network as string)
 
-  const nativeTracerEnabled = (programOpts.tracerRpcUrl as string) !== undefined
-  const nativeTracerProvider = !(programOpts.tracerRpcUrl as string)
-    ? undefined
-    : createProvider(programOpts.tracerRpcUrl as string)
-
   const supportedEntryPointAddress =
     process.env.TRANSEPTOR_ENTRYPOINT_ADDRESS || DEFAULT_ENTRY_POINT
 
@@ -210,8 +203,6 @@ export const createBuilderConfig = async (
 
   return {
     provider,
-    nativeTracerProvider,
-    nativeTracerEnabled,
     entryPoint: {
       contract: entryPointContract,
       address: await entryPointContract.getAddress(),

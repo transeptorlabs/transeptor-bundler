@@ -53,15 +53,14 @@ nvm use
 # Install dependencies
 yarn install
 
-# Starts local `geth node` and `geth-tracer-node` Docker images and deploys entrypoint contract to the local network.
-yarn local-eth
+# Starts dev nodes `geth` and `geth-with-erc7562-tracer` Docker images and deploys entrypoint contract to the 1337 network.
+yarn start:eth-dev
 ```
 
 2. Please wait for environment vars to be printed in the terminal and copy it to your `.env` files.
-3. In a new terminal window, start the bundler node in dev mode with a live watch for changes in the `./src` path with auto restarts. There are three different dev modes:
-   - `yarn dev` - To start the bundler node in safe mode with full storage and opcode checks.
-   - `yarn dev:unsafe` - To start the bundler node in unsafe mode with no storage or opcode checks.
-   - `yarn dev:native-tracer` - To start the bundler node in safe mode with full storage and opcode checks enabled by the native tracer.
+3. In a new terminal window, start the bundler node in dev mode with a live watch for changes in the `./src` path with auto restarts. There are two different dev modes:
+  - `yarn dev` - To start the bundler node in safe mode with full storage and opcode checks.
+  - `yarn dev:unsafe` - To start the bundler node in unsafe mode with no storage or opcode checks.
 
 - The bundler node will start on `http://localhost:4337/rpc`.
 

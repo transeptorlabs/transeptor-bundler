@@ -38,7 +38,7 @@ export type EthAPIConfig = {
   vs: ValidationService
   eventsManager: EventManagerWithListener
   mempoolManageSender: MempoolManageSender
-  pvgc: PreVerificationGasCalculator
+  preVerificationGasCalculator: PreVerificationGasCalculator
   entryPoint: {
     contract: ethers.Contract
     address: string
@@ -54,7 +54,7 @@ export const createEthAPI = (config: EthAPIConfig): EthAPI => {
     vs,
     eventsManager,
     mempoolManageSender,
-    pvgc,
+    preVerificationGasCalculator: pvgc,
     entryPoint,
     eip7702Support,
   } = config
