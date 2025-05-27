@@ -1,7 +1,4 @@
-import { readFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'url'
-
+/* eslint-disable complexity */
 import {
   AbiCoder,
   ethers,
@@ -102,6 +99,13 @@ export const decodeRevertReason = (
   data: string | NetworkCallError,
   nullIfNoMatch = true,
 ): string | null => {
+  if (data == null || data === '0x') {
+    if (!nullIfNoMatch) {
+      return ''
+    }
+    return null
+  }
+
   const decodeRevertReasonContracts = new Interface(
     [
       ...new Interface(ENTRY_POINT_SIMULATIONS).fragments,
@@ -126,7 +130,7 @@ export const decodeRevertReason = (
   if (typeof data !== 'string') {
     const err = data.payload
     data = (err.data ?? err.error?.data) as string
-    if (typeof data !== 'string') throw err
+    // if (typeof data !== 'string') throw err
   }
 
   const methodSig = data.slice(0, 10)
@@ -161,27 +165,6 @@ export const decodeRevertReason = (
     }
     return null
   }
-}
-
-export const getBundlerCollectorTracerString = (): Either<RpcError, string> => {
-  const __filename = fileURLToPath(import.meta.url)
-  const __dirname = dirname(__filename)
-
-  const jsFilePath = join(__dirname, './tracer.js')
-  let tracer: string
-  try {
-    tracer = readFileSync(jsFilePath).toString()
-  } catch (error: any) {
-    return Either.Left(new RpcError('Tracer file path not found', -32000))
-  }
-
-  if (tracer == null) {
-    return Either.Left(new RpcError('Tracer not found', -32000))
-  }
-  const regexp =
-    /function \w+\s*\(\s*\)\s*{\s*return\s*(\{[\s\S]+\});?\s*\}\s*$/
-
-  return Either.Right(tracer.match(regexp)?.[1])
 }
 
 export const normalizePreState = (preState: {
@@ -264,6 +247,9 @@ export const parseSimulateValidationResult = (
 export const parseTracerResultCallsForRevert = (
   tracerResult: ERC7562Call,
 ): Either<RpcError, ERC7562Call> => {
+  if (tracerResult.output == null) {
+    return Either.Right(tracerResult)
+  }
   // during simulation, we pass gas enough for simulation, and little extra.
   // so either execution fails on OOG, (AA95) or the entire HandleOps fail on wrong beneficiary
   // both mean validation success
@@ -273,7 +259,7 @@ export const parseTracerResultCallsForRevert = (
   ])
 
   const decodedErrorReason = decodeRevertReason(
-    (tracerResult as ERC7562Call).output,
+    tracerResult.output,
     false,
   ) as string
 
@@ -331,7 +317,11 @@ export const getValidationCalls = (
     paymasterCall = entryPointCall.calls[callIndex++]
   }
   const innerCall = entryPointCall.calls[callIndex]
-  return { validationCall, paymasterCall, innerCall }
+  return {
+    validationCall,
+    paymasterCall,
+    innerCall,
+  }
 }
 
 export const decodeValidateUserOp = (call: ERC7562Call): ValidationData => {
@@ -430,7 +420,7 @@ export const decodeInnerHandleOp = (
 // generate validation result from trace(handleOps): by decoding inner calls.
 export const generateValidationResult = (
   userOp: UserOperation,
-  tracerResult: any,
+  tracerResult: ERC7562Call,
   stakeResults: {
     sender: StakeInfo
     paymaster?: StakeInfo
@@ -440,9 +430,10 @@ export const generateValidationResult = (
   try {
     const { validationCall, paymasterCall, innerCall } = getValidationCalls(
       userOp,
-      tracerResult as ERC7562Call,
+      tracerResult,
     )
     const validationData = decodeValidateUserOp(validationCall)
+
     let paymasterValidationData: ValidationData = {
       validAfter: 0,
       validUntil: maxUint48,

@@ -6,8 +6,6 @@ import {
 } from '../abis/index.js'
 import { Logger } from '../logger/index.js'
 import {
-  BundlerCollectorReturn,
-  StorageMap,
   UserOperation,
   ExecutionResult,
   ValidationErrors,
@@ -20,12 +18,10 @@ import {
 } from '../types/index.js'
 import { packUserOp, sum } from '../utils/index.js'
 import { ProviderService } from '../provider/index.js'
-import { tracerResultParser } from './parseTracerResult.js'
 import { Either } from '../monad/index.js'
 import {
   decodeRevertReason,
   generateValidationResult,
-  getBundlerCollectorTracerString,
   getStakes,
   parseExecutionResult,
   parseTracerResultCallsForRevert,
@@ -118,13 +114,14 @@ export const createSimulator = (config: SimulatorConfig): Simulator => {
 
     fullSimulateValidation: async (
       userOp: UserOperation,
+      stateOverride: { [address: string]: { code: string } } = {},
     ): Promise<Either<RpcError, FullValidationResult>> => {
       Logger.debug(
         'Running full validation with storage/opcode checks on userOp',
       )
 
       const prevg = BigInt(
-        preVerificationGasCalculator.calcPreVerificationGas(userOp),
+        preVerificationGasCalculator.calculatePreVerificationGas(userOp, {}),
       )
 
       /**
@@ -151,11 +148,7 @@ export const createSimulator = (config: SimulatorConfig): Simulator => {
           userOp.eip7702Auth == null ? null : [userOp.eip7702Auth],
       }
 
-      const tracerResult = await runErc7562NativeTracer(
-        ps,
-        tx,
-        defaultStateOverrides,
-      )
+      const tracerResult = await runErc7562NativeTracer(ps, tx, stateOverride)
 
       const stakeResults = await getStakes(
         entryPoint,
@@ -226,48 +219,6 @@ export const createSimulator = (config: SimulatorConfig): Simulator => {
           )
           return Either.Right(parseExecutionResult(res))
         },
-      )
-    },
-
-    tracerResultParser: (
-      userOp: UserOperation,
-      tracerResults: BundlerCollectorReturn,
-      validationResult: ValidationResult,
-    ): Either<RpcError, [string[], StorageMap]> => {
-      return tracerResultParser(
-        userOp,
-        tracerResults,
-        validationResult,
-        epAddress,
-      )
-    },
-
-    supportsDebugTraceCall: async (): Promise<Either<RpcError, boolean>> => {
-      Logger.debug(
-        'Checking if network provider supports debug_traceCall to run full validation with standard javascript tracer',
-      )
-      const checkTracerSupport = async (tracerStr: string) => {
-        const traceCallRes = await ps.debug_traceCall<BundlerCollectorReturn>(
-          {
-            from: ethers.ZeroAddress,
-            to: ethers.ZeroAddress,
-            data: '0x',
-          },
-          {
-            tracer: tracerStr,
-          },
-        )
-
-        return traceCallRes.fold(
-          (traceCallErr) => Either.Left<RpcError, boolean>(traceCallErr),
-          (tracerResult) =>
-            Either.Right<RpcError, boolean>(tracerResult.logs != null),
-        )
-      }
-
-      return getBundlerCollectorTracerString().foldAsync(
-        async (tracerFileErr) => Either.Left(tracerFileErr),
-        async (tracerStr) => checkTracerSupport(tracerStr),
       )
     },
 

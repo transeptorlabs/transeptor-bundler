@@ -1,12 +1,10 @@
 import { BigNumberish, BytesLike } from 'ethers'
-import { BundlerCollectorReturn } from './bundler-collector-tracer.types.js'
 import {
   ExecutionResult,
   StakeInfo,
-  StorageMap,
   ValidationResult,
 } from './validation.types.js'
-import { Either } from 'src/monad/either.js'
+import { Either } from '../monad/either.js'
 import { RpcError } from './error.types.js'
 import { UserOperation } from './userop.types.js'
 import { ERC7562Call, ERC7562ValidationResults } from './erc-7562.types.js'
@@ -71,17 +69,12 @@ export type Simulator = {
   ): Promise<Either<RpcError, ValidationResult>>
   fullSimulateValidation(
     userOp: UserOperation,
+    stateOverride: { [address: string]: { code: string } },
   ): Promise<Either<RpcError, FullValidationResult>>
   simulateHandleOp(
     userOp: UserOperation,
     stateOverride?: StateOverride,
   ): Promise<Either<RpcError, ExecutionResult>>
-  tracerResultParser(
-    userOp: UserOperation,
-    tracerResults: BundlerCollectorReturn,
-    validationResult: ValidationResult,
-  ): Either<RpcError, [string[], StorageMap]>
-  supportsDebugTraceCall(): Promise<Either<RpcError, boolean>>
   supportsDebugTraceCallWithNativeTracer(nativeTracer: string): Promise<boolean>
 }
 

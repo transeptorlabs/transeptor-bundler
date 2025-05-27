@@ -139,8 +139,10 @@ export const createValidationService = (
 
       // if we are in unsafe mode, we skip the full validation with custom tracer and only run the partial validation with no stake or opcode checks
       if (!isUnsafeMode) {
-        const fullSimulateValidationResult =
-          await sim.fullSimulateValidation(userOp)
+        const fullSimulateValidationResult = await sim.fullSimulateValidation(
+          userOp,
+          {},
+        )
 
         res = await fullSimulateValidationResult.foldAsync(
           async (error) => Either.Left<RpcError, ValidateUserOpResult>(error),
@@ -269,10 +271,10 @@ export const createValidationService = (
       requireAddressAndFields(userOp, 'factory', ['factoryData'])
 
       if (preVerificationGasCheck) {
-        const preVerificationGas = pvgc.calcPreVerificationGas(userOp)
+        const preVerificationGas = pvgc.estimatePreVerificationGas(userOp, {})
         if (preVerificationGas != null) {
           const { isPreVerificationGasValid, minRequiredPreVerificationGas } =
-            pvgc.validatePreVerificationGas(userOp)
+            pvgc.validatePreVerificationGas(userOp, {})
           requireCond(
             isPreVerificationGasValid,
             `preVerificationGas too low: expected at least ${minRequiredPreVerificationGas}, provided only ${Number(BigInt(userOp.preVerificationGas))})`,

@@ -115,10 +115,13 @@ export const createEthAPI = (config: EthAPIConfig): EthAPI => {
           })
             .map((estimate) => ({
               ...estimate,
-              preVerificationGas: pvgc.calcPreVerificationGas({
-                ...userOp,
-                signature: undefined, // ignore signature for gas estimation to allow calcPreVerificationGas to use dummy signature
-              }),
+              preVerificationGas: pvgc.estimatePreVerificationGas(
+                {
+                  ...userOp,
+                  signature: undefined, // ignore signature for gas estimation to allow estimatePreVerificationGas to use dummy signature
+                },
+                {},
+              ),
             }))
             .flatMap((estimate) => extractCallGasLimit(estimate, callGasLimit))
             .flatMap((estimate) =>

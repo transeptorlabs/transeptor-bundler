@@ -70,7 +70,10 @@ const runBundler = async () => {
     sim,
     preVerificationGasCalculator,
     isUnsafeMode: config.isUnsafeMode,
-    erc7562Parser: createErc7562Parser(),
+    erc7562Parser: createErc7562Parser({
+      entryPointAddress: config.entryPoint.address,
+      senderCreatorAddress: config.senderCreatorAddress,
+    }),
   })
 
   // Create manager instances

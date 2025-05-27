@@ -26,7 +26,7 @@ export type ValidationResult = {
 
   senderInfo: StakeInfo
   factoryInfo?: StakeInfo
-  paymasterInfo?: StakeInfo
+  paymasterInfo?: PaymasterValidationInfo
   aggregatorInfo?: StakeInfo
 }
 

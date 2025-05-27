@@ -91,7 +91,7 @@ export const fullValResultSafeParse = async (input: {
   codeHashesFactory: ContractFactory
   erc7562Parser: Erc7562Parser
   previousCodeHashes?: ReferencedCodeHashes
-}) => {
+}): Promise<Either<RpcError, ValidateUserOpResult>> => {
   const {
     ps,
     result,

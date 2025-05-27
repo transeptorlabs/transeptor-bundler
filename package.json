@@ -23,8 +23,8 @@
   },
   "scripts": {
     "clean": "rm -rf dist",
-    "ls-cmd": "tsx ./src/cli.ts --help",
-    "build": "rm -rf dist && pkgroll --target=node22.14.0 --minify && cp src/sim/tracer.js dist/tracer.js",
+    "ls:cmd": "tsx ./src/cli.ts --help",
+    "build": "rm -rf dist && pkgroll --target=node22.14.0 --minify",
     "build:contracts": "cd contracts && forge build",
     "build:typedocs": "typedoc",
     "dev": "tsx watch ./src/cli.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
