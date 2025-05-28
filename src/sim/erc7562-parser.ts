@@ -403,6 +403,7 @@ export const createErc7562Parser = (
     Logger.debug('Checking for banned opcodes')
     if (runnerState.erc7562Call.to.toLowerCase() === entryPointAddress) {
       // Currently inside the EntryPoint deposit code, no access control applies here
+      Logger.debug('Skipping banned opcode check for EntryPoint call')
       return Either.Right(runnerState)
     }
     const opcodes = runnerState.erc7562Call.usedOpcodes
@@ -479,6 +480,7 @@ export const createErc7562Parser = (
       runnerState.erc7562Call.type !== 'CREATE' &&
       runnerState.erc7562Call.type !== 'CREATE2'
     ) {
+      Logger.debug('Skipping CREATE2 check, not a CREATE or CREATE2 call')
       return Either.Right(runnerState)
     }
     const isFactoryStaked = isEntityStaked(
@@ -899,50 +901,86 @@ export const createErc7562Parser = (
    * @param runnerState - The current state of the parser runner.
    * @returns Either an error or the updated state.
    */
-  function run(
+  function runner(
     runnerState: Erc7562ParserRunnerState,
   ): Either<RpcError, Erc7562ParserRunnerState> {
-    Logger.debug('Running erc7562ParserRunner on traceCall result')
-    const address: string = runnerState.erc7562Call.to.toLowerCase()
-    if (
-      address === entryPointAddress &&
-      runnerState.erc7562Call.from === entryPointAddress
-    ) {
-      // don't enforce rules self-call (it's an "innerHandleOp" that slipped into the trace)
-      return Either.Right(runnerState)
+    // Use a stack to process the calls iteratively, adding top-level call first
+    const stack: Erc7562ParserRunnerState[] = [runnerState]
+    let result: Either<RpcError, Erc7562ParserRunnerState> =
+      Either.Right(runnerState)
+
+    while (stack.length > 0) {
+      Logger.debug(
+        `Processing ${stack.length === 1 ? 'call' : 'next subcall'} from stack at recursionDepth ${stack[stack.length - 1].recursionDepth}`,
+      )
+      const currentState = stack.pop()
+      if (!currentState) continue
+
+      const address: string = currentState.erc7562Call.to.toLowerCase()
+      if (
+        address === entryPointAddress &&
+        currentState.erc7562Call.from === entryPointAddress
+      ) {
+        // don't enforce rules self-call (it's an "innerHandleOp" that slipped into the trace)
+        Logger.debug(
+          'Skipping self-call to EntryPoint, no rules to enforce here',
+        )
+        continue
+      }
+
+      // TODO: This need to be a accumulation of all addresses across all calls/subcalls
+      currentState.contractAddresses.push(address)
+
+      result = detectEntityChange(currentState)
+        .flatMap(checkOp011)
+        .flatMap(checkOp020)
+        .flatMap(checkOp031)
+        .flatMap(checkOp041)
+        .flatMap(checkOp054)
+        .flatMap(checkOp054ExtCode)
+        .flatMap(checkOp061)
+        .flatMap(checkOp062AllowedPrecompiles)
+        .flatMap(checkOp080)
+        .flatMap(checkErep050)
+        .flatMap(checkStorage)
+
+      // If any rule violation was detected, return the error immediately
+      if (result.isLeft()) {
+        return result
+      }
+
+      //Push the subcall onto the stack with an incremented recursion depth for the current call
+      if (result.isRight()) {
+        const updatedState = result.getOrElse(undefined)
+        if (!updatedState) {
+          return Either.Left(
+            new RpcError(
+              'Unexpected error: updated state is undefined.',
+              ValidationErrors.InternalError,
+            ),
+          )
+        }
+
+        for (const call of updatedState.erc7562Call.calls ?? []) {
+          const newContext: string =
+            call.type === 'DELEGATECALL'
+              ? updatedState.delegatecallStorageAddress
+              : call.to
+
+          Logger.debug(
+            `Pushing subcall onto stack at recursion depth ${updatedState.recursionDepth + 1}...`,
+          )
+          stack.push({
+            ...updatedState,
+            erc7562Call: call,
+            delegatecallStorageAddress: newContext,
+            recursionDepth: updatedState.recursionDepth + 1,
+          })
+        }
+      }
     }
-    runnerState.contractAddresses.push(address)
 
-    // Run the checks
-    return detectEntityChange(runnerState)
-      .flatMap(checkOp011)
-      .flatMap(checkOp020)
-      .flatMap(checkOp031)
-      .flatMap(checkOp041)
-      .flatMap(checkOp054)
-      .flatMap(checkOp054ExtCode)
-      .flatMap(checkOp061)
-      .flatMap(checkOp062AllowedPrecompiles)
-      .flatMap(checkOp080)
-      .flatMap(checkErep050)
-      .flatMap(checkStorage)
-
-    // TODO: Find a simple approach for handling all subcalls to check validation rules
-    // Too dangerous: avoid using recursion to prevent stack overflow errors(ie. Maximum call stack size exceeded)
-    // We should avoid blowing the stack and make the logic easier to trace in memory
-    // .flatMap((updatedRunnerState) => {
-    //   for (const call of updatedRunnerState.erc7562Call.calls ?? []) {
-    //     const newContext: string =
-    //       call.type === 'DELEGATECALL'
-    //         ? updatedRunnerState.delegatecallStorageAddress
-    //         : call.to
-
-    //     updatedRunnerState.delegatecallStorageAddress = newContext
-    //     updatedRunnerState.recursionDepth += 1
-
-    //     return run(updatedRunnerState)
-    //   }
-    // })
+    return result
   }
 
   return {
@@ -959,7 +997,7 @@ export const createErc7562Parser = (
         init(userOp, erc7562Call, validationResult),
       )
         .flatMap(isERC7562Calls)
-        .flatMap(run)
+        .flatMap(runner)
         .flatMap(({ contractAddresses, ruleViolations, storageMap }) =>
           Either.Right({
             contractAddresses,
