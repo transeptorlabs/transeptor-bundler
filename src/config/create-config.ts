@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 import { ethers, HDNodeWallet, JsonRpcProvider, Mnemonic, Wallet } from 'ethers'
 import { createProvider } from '../provider/index.js'
 import { IENTRY_POINT_ABI, IStakeManager } from '../abis/index.js'
-import { DEFAULT_ENTRY_POINT } from '../constants/index.js'
+import { DEFAULT_ENTRY_POINT, SENDER_CREATOR } from '../constants/index.js'
 import { isValidAddress } from '../utils/index.js'
 import { InfluxdbConnection, BundlerSignerWallets } from '../types/index.js'
 import { getCmdOptionValues } from './command.js'
@@ -15,8 +15,6 @@ const nodeVersion = '0.11.0-alpha.0' // manual update on each release
 
 export type Config = {
   provider: JsonRpcProvider
-  nativeTracerProvider: JsonRpcProvider | undefined
-  nativeTracerEnabled: boolean
 
   bundlerSignerWallets: BundlerSignerWallets
   minSignerBalance: bigint
@@ -51,6 +49,9 @@ export type Config = {
 
   isMetricsEnabled: boolean
   influxdbConnection: InfluxdbConnection
+
+  eip7702Support: boolean
+  senderCreatorAddress: string
 }
 
 // Helper function to get bundler signer wallets
@@ -152,11 +153,6 @@ export const createBuilderConfig = async (
 
   const provider = createProvider(programOpts.network as string)
 
-  const nativeTracerEnabled = (programOpts.tracerRpcUrl as string) !== undefined
-  const nativeTracerProvider = !(programOpts.tracerRpcUrl as string)
-    ? undefined
-    : createProvider(programOpts.tracerRpcUrl as string)
-
   const supportedEntryPointAddress =
     process.env.TRANSEPTOR_ENTRYPOINT_ADDRESS || DEFAULT_ENTRY_POINT
 
@@ -208,8 +204,6 @@ export const createBuilderConfig = async (
 
   return {
     provider,
-    nativeTracerProvider,
-    nativeTracerEnabled,
     entryPoint: {
       contract: entryPointContract,
       address: await entryPointContract.getAddress(),
@@ -243,5 +237,7 @@ export const createBuilderConfig = async (
     isP2PMode,
     findPeers: programOpts.findPeers as boolean,
     peerMultiaddrs,
+    eip7702Support: programOpts.eip7702Support as boolean,
+    senderCreatorAddress: SENDER_CREATOR,
   }
 }

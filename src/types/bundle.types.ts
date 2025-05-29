@@ -1,6 +1,7 @@
 import { UserOperation } from './userop.types.js'
 import { Wallet } from 'ethers'
 import { StorageMap } from './validation.types.js'
+import { EIP7702Authorization } from './eip-7702.types.js'
 
 export type SendBundleReturn = {
   transactionHash: string
@@ -53,11 +54,13 @@ export type BundleProcessor = {
    * after submitting the bundle, remove all UserOps from the mempool
    *
    * @param userOps
+   * @param eip7702Tuples
    * @param storageMap
    * @returns SendBundleReturnWithSigner the transaction and UserOp hashes on successful transaction, or null on failed transaction
    */
   sendBundle: (
     userOps: UserOperation[],
+    eip7702Tuples: EIP7702Authorization[],
     storageMap: StorageMap,
   ) => Promise<SendBundleReturnWithSigner>
 }
@@ -102,6 +105,7 @@ export type RemoveUserOpDetails = {
 export type BundleReadyToSend = {
   bundle: UserOperation[]
   storageMap: StorageMap
+  eip7702Tuples: EIP7702Authorization[]
 }
 
 /**
@@ -110,6 +114,7 @@ export type BundleReadyToSend = {
 export type BundleBuilderResult = {
   bundle: UserOperation[]
   storageMap: StorageMap
+  eip7702Tuples: EIP7702Authorization[]
   notIncludedUserOpsHashes: string[]
   markedToRemoveUserOpsHashes: RemoveUserOpDetails[]
   totalGas: bigint

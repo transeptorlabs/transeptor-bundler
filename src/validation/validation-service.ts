@@ -1,7 +1,8 @@
+/* eslint-disable complexity */
 import { ContractFactory, ethers, resolveProperties } from 'ethers'
 
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from '../abis/index.js'
-import { UserOperation } from '../types/index.js'
+import { Erc7562Parser, UserOperation } from '../types/index.js'
 import {
   ReferencedCodeHashes,
   ValidateUserOpResult,
@@ -9,7 +10,12 @@ import {
   RpcError,
   Simulator,
 } from '../types/index.js'
-import { requireCond, requireAddressAndFields } from '../utils/index.js'
+import {
+  requireCond,
+  requireAddressAndFields,
+  getAuthorizationList,
+  getEip7702AuthorizationSigner,
+} from '../utils/index.js'
 
 import { ProviderService } from '../provider/index.js'
 import { PreVerificationGasCalculator } from '../gas/index.js'
@@ -39,30 +45,44 @@ export type ValidationService = {
   /**
    * perform static checking on input parameters.
    *
-   * @param userOp
-   * @param entryPointInput
-   * @param entryPointAddress
+   * @param params
    * @param requireSignature
    * @param requireGasParams
    * @param preVerificationGasCheck
    */
   validateInputParameters(
-    userOp: UserOperation,
-    entryPointInput: string,
-    entryPointAddress: string,
+    params: ValidateInputParams,
     requireSignature: boolean,
     requireGasParams: boolean,
     preVerificationGasCheck: boolean,
   ): Promise<Either<RpcError, UserOperation>>
 }
 
+export type ValidationServiceConfig = {
+  providerService: ProviderService
+  sim: Simulator
+  erc7562Parser: Erc7562Parser
+  preVerificationGasCalculator: PreVerificationGasCalculator
+  isUnsafeMode: boolean
+}
+
+export type ValidateInputParams = {
+  userOpInput: UserOperation
+  entryPointInput: string
+  entryPointAddress: string
+  eip7702Support: boolean
+}
+
 export const createValidationService = (
-  ps: ProviderService,
-  sim: Simulator,
-  pvgc: PreVerificationGasCalculator,
-  isUnsafeMode: boolean,
-  nativeTracerEnabled: boolean,
+  config: ValidationServiceConfig,
 ): ValidationService => {
+  const {
+    providerService: ps,
+    sim,
+    preVerificationGasCalculator: pvgc,
+    isUnsafeMode,
+    erc7562Parser,
+  } = config
   const HEX_REGEX = /^0x[a-fA-F\d]*$/i
   const getCodeHashesFactory = new ethers.ContractFactory(
     GET_CODE_HASH_ABI,
@@ -75,6 +95,9 @@ export const createValidationService = (
       checkStakes: boolean,
       previousCodeHashes?: ReferencedCodeHashes,
     ): Promise<Either<RpcError, ValidateUserOpResult>> => {
+      let res = Either.Right<RpcError, ValidateUserOpResult>(undefined)
+
+      // [COD-010]
       if (
         previousCodeHashes != null &&
         previousCodeHashes.addresses.length > 0
@@ -84,7 +107,6 @@ export const createValidationService = (
           [previousCodeHashes.addresses],
         )
 
-        // [COD-010]
         requireCond(
           codeHashes === previousCodeHashes.hash,
           'modified code after first validation',
@@ -92,26 +114,47 @@ export const createValidationService = (
         )
       }
 
-      let res = Either.Right<RpcError, ValidateUserOpResult>(undefined)
+      // prepare 7702 state override
+      const authorizationList = getAuthorizationList(userOp)
+      if (authorizationList.length > 0) {
+        const chainId = await ps.getNetwork().then((n) => n.chainId)
+
+        // list is required to be of size=1. for completeness, we still scan it as a list.
+        for (const authorization of authorizationList) {
+          const authChainId = BigInt(authorization.chainId)
+          requireCond(
+            authChainId === BigInt(0) || authChainId === chainId,
+            'Invalid chainId in authorization',
+            ValidationErrors.InvalidFields,
+          )
+          requireCond(
+            getEip7702AuthorizationSigner(
+              authorizationList[0],
+            ).toLowerCase() === userOp.sender.toLowerCase(),
+            'Authorization signer is not sender',
+            ValidationErrors.InvalidFields,
+          )
+        }
+      }
 
       // if we are in unsafe mode, we skip the full validation with custom tracer and only run the partial validation with no stake or opcode checks
       if (!isUnsafeMode) {
         const fullSimulateValidationResult = await sim.fullSimulateValidation(
           userOp,
-          nativeTracerEnabled,
+          {},
         )
 
         res = await fullSimulateValidationResult.foldAsync(
           async (error) => Either.Left<RpcError, ValidateUserOpResult>(error),
           async (result) =>
-            fullValResultSafeParse(
+            fullValResultSafeParse({
               ps,
-              sim,
               result,
               userOp,
-              getCodeHashesFactory,
+              codeHashesFactory: getCodeHashesFactory,
               previousCodeHashes,
-            ),
+              erc7562Parser,
+            }),
         )
       } else {
         const partialSimulateValidationResult =
@@ -135,18 +178,33 @@ export const createValidationService = (
     },
 
     validateInputParameters: async (
-      userOp1: UserOperation,
-      entryPointInput: string,
-      entryPointAddress: string,
+      params: ValidateInputParams,
       requireSignature = true,
       requireGasParams = true,
       preVerificationGasCheck = true,
     ): Promise<Either<RpcError, UserOperation>> => {
+      const {
+        entryPointInput,
+        entryPointAddress,
+        eip7702Support,
+        userOpInput,
+      } = params
+
       if (!entryPointInput) {
         return Either.Left(
           new RpcError('No entryPoint param', ValidationErrors.InvalidFields),
         )
       }
+
+      if (!eip7702Support && userOpInput.eip7702Auth != null) {
+        Either.Left(
+          new RpcError(
+            'EIP-7702 tuples are not supported',
+            ValidationErrors.InvalidFields,
+          ),
+        )
+      }
+
       if (
         entryPointInput?.toString().toLowerCase() !==
         entryPointAddress.toLowerCase()
@@ -159,7 +217,7 @@ export const createValidationService = (
         )
       }
       // minimal sanity check: userOp exists, and all members are hex
-      if (!userOp1) {
+      if (!userOpInput) {
         return Either.Left(
           new RpcError(
             'No UserOperation param',
@@ -168,7 +226,7 @@ export const createValidationService = (
         )
       }
 
-      const userOp = await resolveProperties(userOp1)
+      const userOp = await resolveProperties(userOpInput)
 
       const fields = ['sender', 'nonce', 'callData']
       if (requireSignature) {
@@ -213,10 +271,10 @@ export const createValidationService = (
       requireAddressAndFields(userOp, 'factory', ['factoryData'])
 
       if (preVerificationGasCheck) {
-        const preVerificationGas = pvgc.calcPreVerificationGas(userOp)
+        const preVerificationGas = pvgc.estimatePreVerificationGas(userOp, {})
         if (preVerificationGas != null) {
           const { isPreVerificationGasValid, minRequiredPreVerificationGas } =
-            pvgc.validatePreVerificationGas(userOp)
+            pvgc.validatePreVerificationGas(userOp, {})
           requireCond(
             isPreVerificationGasValid,
             `preVerificationGas too low: expected at least ${minRequiredPreVerificationGas}, provided only ${Number(BigInt(userOp.preVerificationGas))})`,

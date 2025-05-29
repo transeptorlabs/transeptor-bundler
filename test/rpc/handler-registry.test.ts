@@ -8,7 +8,11 @@ describe('Handler Registry', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    handlerRegistry = createBundlerHandlerRegistry(mockEth, mockWeb3, mockDebug)
+    handlerRegistry = createBundlerHandlerRegistry({
+      eth: mockEth,
+      web3: mockWeb3,
+      debug: mockDebug,
+    })
   })
 
   describe('web3_clientVersion', () => {
@@ -277,7 +281,9 @@ describe('Handler Registry', () => {
     it('should set bundle interval', async () => {
       mockDebug.setBundleInterval.mockResolvedValue('ok')
       const result =
-        await handlerRegistry.debug_bundler_setBundleInterval.handlerFunc([])
+        await handlerRegistry.debug_bundler_setBundleInterval.handlerFunc([
+          1000,
+        ])
       expect(result).toBe('ok')
       expect(mockDebug.setBundleInterval).toHaveBeenCalled()
     })

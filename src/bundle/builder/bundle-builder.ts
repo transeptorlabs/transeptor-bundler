@@ -2,8 +2,6 @@
 import { ethers } from 'ethers'
 import { Logger } from '../../logger/index.js'
 import {
-  StorageMap,
-  UserOperation,
   ReputationManager,
   MempoolEntry,
   MempoolManagerBuilder,
@@ -19,8 +17,9 @@ import {
   shouldIncludeInBundle,
   updateEntityStakeCountAndDeposit,
   parseFailedOpRevert,
-} from './builder-helpers.js'
-import { findEntityToBlame, checkFatal } from '../bundle-helper.js'
+  mergeEip7702Authorizations,
+} from './builder.helpers.js'
+import { findEntityToBlame, checkFatal } from '../bundle.helper.js'
 
 export type BundleBuilderConfig = {
   validationService: ValidationService
@@ -121,6 +120,116 @@ export const createBundleBuilder = (
     }
   }
 
+  const buildBundle = async (
+    entries: MempoolEntry[],
+    knownSenders: string[],
+    initialBundleBuilderAccResult: BundleBuilderResult,
+  ) =>
+    await entries.reduce(async (accPromise, entry) => {
+      const acc = await accPromise
+      const { userOp, userOpHash, referencedContracts } = entry
+      const { sender, paymaster, factory } = userOp
+      if (paymaster) {
+        if (!acc.paymasterDeposit[paymaster]) {
+          Logger.debug(
+            { paymaster },
+            'Setting paymaster deposit for paymaster if it does not exist',
+          )
+          acc.paymasterDeposit[paymaster] =
+            await opts.entryPointContract.balanceOf(paymaster)
+        }
+      }
+
+      const [paymasterStatus, factoryStatus] = await Promise.all([
+        reputationManager.getStatus(paymaster),
+        reputationManager.getStatus(factory),
+      ])
+
+      // re-validate UserOp and remove from mempool if failed. no need to check stake, since it cannot be reduced between first and 2nd validation
+      const { validationResult, passedValidation, reValidateError } =
+        await validateUserOperation(
+          userOp,
+          referencedContracts,
+          validationService,
+        )
+
+      if (validationResult === null || !passedValidation) {
+        Logger.error(
+          { error: reValidateError, userOp },
+          'failed 2nd validation, marking removal from mempool:',
+        )
+        acc.markedToRemoveUserOpsHashes.push({
+          userOp,
+          userOpHash: userOpHash,
+          reason: 'failed-2nd-validation',
+          err: reValidateError,
+        })
+        return acc
+      }
+
+      // Check if user operation should be included
+      const { include, reason } = shouldIncludeInBundle({
+        userOp,
+        paymasterStatus,
+        factoryStatus,
+        validationResult,
+        stakedEntityCount: acc.stakedEntityCount,
+        paymasterDeposit: acc.paymasterDeposit,
+        throttledEntityBundleCount: THROTTLED_ENTITY_BUNDLE_COUNT,
+        totalGas: acc.totalGas,
+        maxBundleGas: opts.maxBundleGas,
+        knownSenders,
+        senders: acc.senders,
+      })
+
+      if (!include) {
+        Logger.debug({ userOp, reason }, 'skipping user operation')
+        reason === 'banned'
+          ? acc.markedToRemoveUserOpsHashes.push({
+              userOpHash: userOpHash,
+              userOp,
+              reason,
+            })
+          : acc.notIncludedUserOpsHashes.push(userOpHash)
+
+        return acc
+      }
+
+      // Update staked entity counts and deposits
+      const { stakedEntityCount, paymasterDeposit } =
+        await updateEntityStakeCountAndDeposit({
+          userOp,
+          validationResult,
+          stakedEntityCount: acc.stakedEntityCount,
+          paymasterDeposit: acc.paymasterDeposit,
+        })
+      acc.stakedEntityCount = stakedEntityCount
+      acc.paymasterDeposit = paymasterDeposit
+
+      Logger.debug(
+        { sender: userOp.sender, nonce: userOp.nonce },
+        'Adding UserOp to bundle',
+      )
+      mergeStorageMap(acc.storageMap, validationResult.storageMap)
+
+      const mergeOk = mergeEip7702Authorizations(entry, acc.eip7702Tuples)
+      if (!mergeOk) {
+        Logger.debug(
+          { entry },
+          'unable to add bundle as it relies on an EIP-7702 tuple that conflicts with other UserOperations',
+        )
+        return acc
+      }
+
+      acc.bundle.push(userOp)
+      acc.totalGas +=
+        BigInt(validationResult.returnInfo.preOpGas) +
+        BigInt(userOp.callGasLimit)
+      acc.senders.add(sender)
+
+      return acc
+    }, Promise.resolve(initialBundleBuilderAccResult))
+
   return {
     createBundle: async (force?: boolean): Promise<BundleReadyToSend> => {
       Logger.info('Attempting to create bundle')
@@ -129,128 +238,40 @@ export const createBundleBuilder = (
         return {
           bundle: [],
           storageMap: {},
+          eip7702Tuples: [],
         }
       }
 
       const knownSenders = await mempoolManagerBuilder.getKnownSenders()
-      const bundleBuilderResult: BundleBuilderResult = {
-        bundle: [] as UserOperation[],
-        storageMap: {} as StorageMap,
-        notIncludedUserOpsHashes: [] as string[],
-        markedToRemoveUserOpsHashes: [] as RemoveUserOpDetails[],
+      const initialBundleBuilderAccResult: BundleBuilderResult = {
+        bundle: [],
+        storageMap: {},
+        eip7702Tuples: [], // each entry will add its own eip7702 tuple to this array(ie. shared AuthorizationList)
+        notIncludedUserOpsHashes: [],
+        markedToRemoveUserOpsHashes: [],
         totalGas: BigInt(0),
-        paymasterDeposit: {} as { [paymaster: string]: bigint }, // paymaster deposit should be enough for all UserOps in the bundle
-        stakedEntityCount: {} as { [addr: string]: number }, // throttled paymasters and deployers are allowed only small UserOps per bundle
+        paymasterDeposit: {}, // paymaster deposit should be enough for all UserOps in the bundle
+        stakedEntityCount: {}, // throttled paymasters and deployers are allowed only small UserOps per bundle
         senders: new Set<string>(), // each sender is allowed only once per bundle
       }
-      const buildBundle = async () =>
-        await entries.reduce(async (accPromise, entry) => {
-          const acc = await accPromise
-          const { userOp, userOpHash, referencedContracts } = entry
-          const { sender, paymaster, factory } = userOp
-          if (paymaster) {
-            if (!acc.paymasterDeposit[paymaster]) {
-              Logger.debug(
-                { paymaster },
-                'Setting paymaster deposit for paymaster if it does not exist',
-              )
-              acc.paymasterDeposit[paymaster] =
-                await opts.entryPointContract.balanceOf(paymaster)
-            }
-          }
-
-          const [paymasterStatus, factoryStatus] = await Promise.all([
-            reputationManager.getStatus(paymaster),
-            reputationManager.getStatus(factory),
-          ])
-
-          // re-validate UserOp and remove from mempool if failed. no need to check stake, since it cannot be reduced between first and 2nd validation
-          const { validationResult, passedValidation, reValidateError } =
-            await validateUserOperation(
-              userOp,
-              referencedContracts,
-              validationService,
-            )
-
-          if (validationResult === null || !passedValidation) {
-            Logger.error(
-              { error: reValidateError, userOp },
-              'failed 2nd validation, marking removal from mempool:',
-            )
-            acc.markedToRemoveUserOpsHashes.push({
-              userOp,
-              userOpHash: userOpHash,
-              reason: 'failed-2nd-validation',
-              err: reValidateError,
-            })
-            return acc
-          }
-
-          // Check if user operation should be included
-          const { include, reason } = shouldIncludeInBundle({
-            userOp,
-            paymasterStatus,
-            factoryStatus,
-            validationResult,
-            stakedEntityCount: acc.stakedEntityCount,
-            paymasterDeposit: acc.paymasterDeposit,
-            throttledEntityBundleCount: THROTTLED_ENTITY_BUNDLE_COUNT,
-            totalGas: acc.totalGas,
-            maxBundleGas: opts.maxBundleGas,
-            knownSenders,
-            senders: acc.senders,
-          })
-
-          if (!include) {
-            Logger.debug({ userOp, reason }, 'skipping user operation')
-            reason === 'banned'
-              ? acc.markedToRemoveUserOpsHashes.push({
-                  userOpHash: userOpHash,
-                  userOp,
-                  reason,
-                })
-              : acc.notIncludedUserOpsHashes.push(userOpHash)
-
-            return acc
-          }
-
-          // Update staked entity counts and deposits
-          const { stakedEntityCount, paymasterDeposit } =
-            await updateEntityStakeCountAndDeposit({
-              userOp,
-              validationResult,
-              stakedEntityCount: acc.stakedEntityCount,
-              paymasterDeposit: acc.paymasterDeposit,
-            })
-          acc.stakedEntityCount = stakedEntityCount
-          acc.paymasterDeposit = paymasterDeposit
-
-          Logger.debug(
-            { sender: userOp.sender, nonce: userOp.nonce },
-            'Adding UserOp to bundle',
-          )
-          mergeStorageMap(acc.storageMap, validationResult.storageMap)
-          acc.bundle.push(userOp)
-          acc.totalGas +=
-            BigInt(validationResult.returnInfo.preOpGas) +
-            BigInt(userOp.callGasLimit)
-          acc.senders.add(sender)
-
-          return acc
-        }, Promise.resolve(bundleBuilderResult))
-
       const {
         bundle,
         storageMap,
+        eip7702Tuples,
         notIncludedUserOpsHashes,
         markedToRemoveUserOpsHashes,
-      } = await buildBundle()
+      } = await buildBundle(
+        entries,
+        knownSenders,
+        initialBundleBuilderAccResult,
+      )
 
       await afterHook(notIncludedUserOpsHashes, markedToRemoveUserOpsHashes)
 
       return {
         bundle,
         storageMap,
+        eip7702Tuples,
       }
     },
   }

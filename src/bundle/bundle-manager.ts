@@ -51,7 +51,8 @@ export const createBundleManager = (
   ): Promise<SendBundleReturn> => {
     // Flush the mempool to remove successful userOps update failed userOps status
     await eventsManager.handlePastEvents()
-    const { bundle, storageMap } = await bundleBuilder.createBundle(force)
+    const { bundle, storageMap, eip7702Tuples } =
+      await bundleBuilder.createBundle(force)
     Logger.debug({ length: bundle.length }, 'bundle created(ready to send)')
     if (bundle.length === 0) {
       Logger.info('No bundle to send, skipping')
@@ -62,7 +63,7 @@ export const createBundleManager = (
     }
 
     const { isSendBundleSuccess, transactionHash, userOpHashes, signerIndex } =
-      await bundleProcessor.sendBundle(bundle, storageMap)
+      await bundleProcessor.sendBundle(bundle, eip7702Tuples, storageMap)
 
     if (isSendBundleSuccess) {
       Logger.info(

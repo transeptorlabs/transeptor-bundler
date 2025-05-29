@@ -1,6 +1,6 @@
-import { packUserOp } from '../../utils/index.js'
+import { packUserOp } from '../utils/index.js'
 import { ethers } from 'ethers'
-import { BundleManager } from '../../bundle/index.js'
+import { BundleManager } from '../bundle/index.js'
 import {
   MempoolManagerCore,
   ReputationEntry,
@@ -9,12 +9,12 @@ import {
   SendBundleReturn,
   UserOperation,
   DebugAPI,
-} from '../../types/index.js'
-import { EventManagerWithListener } from '../../event/index.js'
+} from '../types/index.js'
+import { EventManagerWithListener } from '../event/index.js'
 import {
   PreVerificationGasCalculator,
   PreVerificationGasConfig,
-} from '../../gas/index.js'
+} from '../gas/index.js'
 
 export const createDebugAPI = (
   bundleManager: BundleManager,

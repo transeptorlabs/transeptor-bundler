@@ -7,5 +7,6 @@ export const mockSimulator: MockedObject<Simulator> = {
   simulateHandleOp: vi.fn(),
   tracerResultParser: vi.fn(),
   supportsDebugTraceCall: vi.fn(),
-  supportsNativeTracer: vi.fn(),
+  supportsDebugTraceCallWithNativeTracer: vi.fn(),
+  erc7562TracerResultParser: vi.fn(),
 }

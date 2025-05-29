@@ -1,6 +1,8 @@
 import { ErrorDescription, ethers } from 'ethers'
 import { Either } from '../../monad/either.js'
 import {
+  EIP7702Authorization,
+  MempoolEntry,
   ReferencedCodeHashes,
   ReputationStatus,
   RpcError,
@@ -9,6 +11,10 @@ import {
   ValidationErrors,
 } from '../../types/index.js'
 import { ValidationService } from '../../validation/index.js'
+import {
+  getAuthorizationList,
+  getEip7702AuthorizationSigner,
+} from '../../utils/index.js'
 
 /**
  * Increment the count of a given key in the counts object.
@@ -339,4 +345,34 @@ export const parseFailedOpRevert = (
     opIndex,
     reasonStr: reason.toString(),
   }
+}
+
+/**
+ * Merges the EIP-7702 authorizations from the given mempool entry into the provided authorization list.
+ *
+ * @param entry - The mempool entry containing a list of UserOperation authorizations to be checked.
+ * @param authList - The list of existing EIP-7702 authorizations to update.
+ * @returns - `true` if the authorizations were successfully merged, otherwise `false`.
+ */
+export const mergeEip7702Authorizations = (
+  entry: MempoolEntry,
+  authList: EIP7702Authorization[],
+): boolean => {
+  const authorizationList = getAuthorizationList(entry.userOp)
+  for (const eip7702Authorization of authorizationList) {
+    const existingAuthorization = authList.find(
+      (it) =>
+        getEip7702AuthorizationSigner(it) ===
+        getEip7702AuthorizationSigner(eip7702Authorization),
+    )
+    if (existingAuthorization == null) {
+      authList.push(eip7702Authorization)
+    } else if (
+      existingAuthorization.address.toLowerCase() !==
+      eip7702Authorization.address.toLowerCase()
+    ) {
+      return false
+    }
+  }
+  return true
 }

@@ -144,6 +144,6 @@ class Right<L, R> extends Either<L, R> {
  * @param value - The value to check.
  * @returns `true` if the value is an instance of `Either`, `false` otherwise.
  */
-export const isEither = (value: unknown): value is Either<unknown, unknown> => {
+export const isEither = <L>(value: unknown): value is Either<L, unknown> => {
   return value instanceof Either
 }

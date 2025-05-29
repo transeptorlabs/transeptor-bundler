@@ -1,17 +1,15 @@
 import { BigNumberish, ethers, zeroPadValue, dataSlice, toBeHex } from 'ethers'
 
-import { UserOperation, ValidationErrors } from '../types/index.js'
+import {
+  UserOperation,
+  ValidationData,
+  ValidationErrors,
+} from '../types/index.js'
 
 import { requireCond } from './rpc.utils.js'
 
 export const maxUint48 = 2 ** 48 - 1
 export const SIG_VALIDATION_FAILED = zeroPadValue('0x01', 20)
-
-type ValidationData = {
-  aggregator: string
-  validAfter: number
-  validUntil: number
-}
 
 /**
  * Require address and fields.

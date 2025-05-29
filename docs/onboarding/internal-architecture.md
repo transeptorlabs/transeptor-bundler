@@ -68,61 +68,55 @@ The Request Flow Architecture diagram illustrates the path of an incoming RPC re
 - Manages supported API namespaces
 - Forwards specific handler function to the correct API namespace
 
-### 3. RPC Handler (`src/rpc/rpc-handler.ts`)
-- Processes individual RPC requests
-- Coordinates with validated JsonRpc specific handler function to resolve the request
-- Handles error cases when a specific handler returns an error response
-
-### 4. Validation Service (`src/validation/validation-service.ts`)
+### 3. Validation Service (`src/validation/validation-service.ts`)
 - Validates request parameters
 - Ensures data integrity
 - Provides type safety
 
-### 5. Bundle Manager (`src/bundle/bundle-manager.ts`)
-- Manages user operation bundles
-- Handles bundle creation and processing
+### 4. Bundle Manager (`src/bundle/bundle-manager.ts`)
+- Coordinates with `Bundle Builder` and `Bundle Processor` to handle bundle creation and processing
 - Coordinates with mempool
 - Manages bundling intervals
 - Handles bundle submission
 
-### 6. Bundle Builder (`src/bundle/bundle-builder.ts`)
+### 5. Bundle Builder (`src/bundle/bundle-builder.ts`)
 - Creates bundles from pending operations
 - Validates entity reputation
 - Handles bundle simulation
 - Manages bundle size limits
 
-### 7. Bundle Processor (`src/bundle/bundle-processor.ts`)
+### 6. Bundle Processor (`src/bundle/bundle-processor.ts`)
 - Processes and submits bundles
 - Handles transaction signing
 - Manages bundle submission
 - Updates reputation after submission
 
-### 8. Mempool Manager (`src/mempool/mempool-manager.ts`)
+### 7. Mempool Manager (`src/mempool/mempool-manager.ts`)
 - Manages pending user operations
 - Handles mempool operations
 - Coordinates with bundle manager
 - Maintains operation queue
 
-### 9. Event Manager (`src/event/event-manager-with-reputation.ts`)
+### 8. Event Manager (`src/event/event-manager-with-reputation.ts`)
 - Manages system events
 - Handles reputation tracking
 - Coordinates with other services
 - Manages reputation scores
 
-### 10. Provider Service (`src/provider/provider-service.ts`)
+### 9. Provider Service (`src/provider/provider-service.ts`)
 - Manages Ethereum provider interactions
 - Handles blockchain communication
 - Provides blockchain state information
 - Handles transaction simulation
 
-### 11. Simulation Service (`src/sim/sim.ts`)
+### 10. Simulation Service (`src/sim/sim.ts`)
 - Handles user operation simulation
 - Validates operation execution
 - Calculates gas estimates
 - Manages simulation state
 - Provides simulation results
 
-### 12. Reputation Manager (`src/reputation/reputation-manager.ts`)
+### 11. Reputation Manager (`src/reputation/reputation-manager.ts`)
 - Manages entity reputation scores
 - Handles reputation updates
 - Enforces reputation rules
@@ -133,3 +127,4 @@ The Request Flow Architecture diagram illustrates the path of an incoming RPC re
 
 - [ERC-4337 Specification](https://eips.ethereum.org/EIPS/eip-4337)
 - [ERC-7562 Specification](https://eips.ethereum.org/EIPS/eip-7562)
+- [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702)

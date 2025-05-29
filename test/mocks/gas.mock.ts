@@ -3,7 +3,8 @@ import { PreVerificationGasCalculator } from '../../src/gas/pre-verification-gas
 
 export const mockPreVerificationGasCalculator: MockedObject<PreVerificationGasCalculator> =
   {
-    calcPreVerificationGas: vi.fn(),
+    estimatePreVerificationGas: vi.fn(),
     validatePreVerificationGas: vi.fn(),
+    calculatePreVerificationGas: vi.fn(),
     updateGasConfig: vi.fn(),
   }

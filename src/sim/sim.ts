@@ -1,4 +1,4 @@
-import { BytesLike, ethers, Interface, TransactionRequest } from 'ethers'
+import { BytesLike, ethers, Interface } from 'ethers'
 
 import {
   EntryPointSimulationsDeployedBytecode,
@@ -6,8 +6,6 @@ import {
 } from '../abis/index.js'
 import { Logger } from '../logger/index.js'
 import {
-  BundlerCollectorReturn,
-  StorageMap,
   UserOperation,
   ExecutionResult,
   ValidationErrors,
@@ -18,25 +16,35 @@ import {
   Simulator,
   StateOverride,
 } from '../types/index.js'
-import { packUserOp } from '../utils/index.js'
+import { packUserOp, sum } from '../utils/index.js'
 import { ProviderService } from '../provider/index.js'
-import { tracerResultParser } from './parseTracerResult.js'
 import { Either } from '../monad/index.js'
 import {
   decodeRevertReason,
-  getBundlerCollectorTracerString,
+  generateValidationResult,
+  getStakes,
   parseExecutionResult,
-  parseTracerResultCalls,
-  parseValidationResult,
-  parseValidationResultSafe,
-  runNativeTracer,
-  runStandardTracer,
+  parseTracerResultCallsForRevert,
+  parseSimulateValidationResult,
+  runErc7562NativeTracer,
 } from './sim.helper.js'
+import { PreVerificationGasCalculator } from '../gas/index.js'
 
-export const createSimulator = (
-  ps: ProviderService,
-  epAddress: string,
-): Simulator => {
+export type SimulatorConfig = {
+  providerService: ProviderService
+  entryPoint: ethers.Contract
+  epAddress: string
+  preVerificationGasCalculator: PreVerificationGasCalculator
+}
+
+export const createSimulator = (config: SimulatorConfig): Simulator => {
+  const {
+    providerService: ps,
+    entryPoint,
+    epAddress,
+    preVerificationGasCalculator,
+  } = config
+
   const epSimsInterface = new Interface(I_ENTRY_POINT_SIMULATIONS)
   const simFunctionName = 'simulateValidation'
   const defaultStateOverrides: { [address: string]: { code: string } } = {
@@ -99,47 +107,60 @@ export const createSimulator = (
             simFunctionName,
             simulationResult,
           )
-          return Either.Right(parseValidationResult(userOp, res))
+          return Either.Right(parseSimulateValidationResult(userOp, res))
         },
       )
     },
 
     fullSimulateValidation: async (
       userOp: UserOperation,
-      nativeTracerEnabled: boolean,
+      stateOverride: { [address: string]: { code: string } } = {},
     ): Promise<Either<RpcError, FullValidationResult>> => {
       Logger.debug(
-        { nativeTracerEnabled },
         'Running full validation with storage/opcode checks on userOp',
       )
-      const tx: TransactionRequest = {
+
+      const prevg = BigInt(
+        preVerificationGasCalculator.calculatePreVerificationGas(userOp, {}),
+      )
+
+      /**
+       * The simulation gas limit is calculated as follows give simulation enough gas to run validations, but not more:
+       * - prevg: The pre-verification gas calculated by the preVerificationGasCalculator.
+       * - verificationGasLimit: The user-supplied verification gas limit.
+       * - paymasterVerificationGasLimit: The user-supplied paymaster verification gas limit (if any).
+       */
+      const simulationGas = sum(
+        prevg,
+        BigInt(userOp.verificationGasLimit),
+        BigInt(userOp.paymasterVerificationGasLimit ?? 0),
+      )
+
+      const tx: any = {
         from: ethers.ZeroAddress,
         to: epAddress,
-        data: epSimsInterface.encodeFunctionData(simFunctionName, [
-          packUserOp(userOp),
+        data: entryPoint.interface.encodeFunctionData('handleOps', [
+          [packUserOp(userOp)],
+          ethers.ZeroAddress,
         ]),
-        gasLimit: (
-          BigInt(userOp.preVerificationGas) +
-          BigInt(userOp.verificationGasLimit)
-        ).toString(),
+        gasLimit: simulationGas.toString(),
+        authorizationList:
+          userOp.eip7702Auth == null ? null : [userOp.eip7702Auth],
       }
 
-      const tracerResult = nativeTracerEnabled
-        ? await runNativeTracer(ps, tx, defaultStateOverrides)
-        : await getBundlerCollectorTracerString().foldAsync(
-            async (tracerFileErr) =>
-              Either.Left<RpcError, BundlerCollectorReturn>(tracerFileErr),
-            async (tracerStr) =>
-              runStandardTracer(ps, tx, tracerStr, defaultStateOverrides),
-          )
+      const tracerResult = await runErc7562NativeTracer(ps, tx, stateOverride)
+
+      const stakeResults = await getStakes(
+        entryPoint,
+        userOp.sender,
+        userOp.paymaster,
+        userOp.factory,
+      )
 
       return tracerResult
-        .flatMap(parseTracerResultCalls)
-        .flatMap(([tracer, exitInfoData]) =>
-          parseValidationResultSafe(userOp, exitInfoData, tracer, {
-            simFunctionName,
-            epSimsInterface,
-          }),
+        .flatMap(parseTracerResultCallsForRevert)
+        .flatMap((parsedTracerResult) =>
+          generateValidationResult(userOp, parsedTracerResult, stakeResults),
         )
     },
 
@@ -158,17 +179,39 @@ export const createSimulator = (
           ]),
         },
         'latest',
-        stateOverride ? stateOverride : defaultStateOverrides,
+        {
+          ...stateOverride,
+          ...defaultStateOverrides,
+        },
       ])
 
       return ethCallResult.fold(
-        (error: NetworkCallError) =>
-          Either.Left(
-            new RpcError(
-              decodeRevertReason(error) as string,
-              ValidationErrors.SimulateValidation,
-            ),
-          ),
+        (error: NetworkCallError) => {
+          const decodedError = decodeRevertReason(error)
+
+          // throw with specific error codes:
+          if (decodedError.startsWith('FailedOp(0,"AA24')) {
+            return Either.Left(
+              new RpcError(
+                'AA24: Invalid UserOp signature',
+                ValidationErrors.InvalidSignature,
+              ),
+            )
+          }
+
+          if (decodedError.startsWith('FailedOp(0,"AA34')) {
+            return Either.Left(
+              new RpcError(
+                'AA34: Invalid Paymaster signature',
+                ValidationErrors.InvalidSignature,
+              ),
+            )
+          }
+
+          return Either.Left(
+            new RpcError(decodedError, ValidationErrors.SimulateValidation),
+          )
+        },
         (simulateHandleOpResult: BytesLike) => {
           const [res] = epSimsInterface.decodeFunctionResult(
             'simulateHandleOp',
@@ -179,51 +222,8 @@ export const createSimulator = (
       )
     },
 
-    tracerResultParser: (
-      userOp: UserOperation,
-      tracerResults: BundlerCollectorReturn,
-      validationResult: ValidationResult,
-    ): Either<RpcError, [string[], StorageMap]> => {
-      return tracerResultParser(
-        userOp,
-        tracerResults,
-        validationResult,
-        epAddress,
-      )
-    },
-
-    supportsDebugTraceCall: async (): Promise<Either<RpcError, boolean>> => {
-      Logger.debug(
-        'Checking if network provider supports debug_traceCall to run full validation with standard javascript tracer',
-      )
-      const checkTracerSupport = async (tracerStr: string) => {
-        const traceCallRes = await ps.debug_traceCall<BundlerCollectorReturn>(
-          {
-            from: ethers.ZeroAddress,
-            to: ethers.ZeroAddress,
-            data: '0x',
-          },
-          {
-            tracer: tracerStr,
-          },
-        )
-
-        return traceCallRes.fold(
-          (traceCallErr) => Either.Left<RpcError, boolean>(traceCallErr),
-          (tracerResult) =>
-            Either.Right<RpcError, boolean>(tracerResult.logs != null),
-        )
-      }
-
-      return getBundlerCollectorTracerString().foldAsync(
-        async (tracerFileErr) => Either.Left(tracerFileErr),
-        async (tracerStr) => checkTracerSupport(tracerStr),
-      )
-    },
-
-    supportsNativeTracer: async (
-      nativeTracer,
-      useNativeTracerProvider = false,
+    supportsDebugTraceCallWithNativeTracer: async (
+      nativeTracer: string,
     ): Promise<boolean> => {
       return (
         await ps.debug_traceCall(
@@ -231,7 +231,6 @@ export const createSimulator = (
           {
             tracer: nativeTracer,
           },
-          useNativeTracerProvider,
         )
       ).fold(
         (_) => false,

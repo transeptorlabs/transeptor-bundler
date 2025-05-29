@@ -1,7 +1,4 @@
-import { readFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'url'
-
+/* eslint-disable complexity */
 import {
   AbiCoder,
   ethers,
@@ -13,12 +10,12 @@ import {
 
 import {
   ENTRY_POINT_SIMULATIONS,
+  I_ENTRY_POINT_SIMULATIONS,
+  IACCOUNT_ABI,
   IPAYMASTER_ABI,
   SIMPLE_ACCOUNT_ABI,
 } from '../abis/index.js'
 import {
-  BundlerCollectorReturn,
-  ExitInfo,
   UserOperation,
   ExecutionResult,
   StakeInfoWithAddr,
@@ -27,64 +24,23 @@ import {
   NetworkCallError,
   RpcError,
   ExecutionResultStruct,
-  FullValidationResult,
   SimulateValidationReturnStruct,
+  ERC7562Call,
+  ValidationData,
+  StakeInfo,
+  PaymasterValidationInfo,
+  FullValidationResult,
 } from '../types/index.js'
-import { mergeValidationDataValues } from '../utils/index.js'
-import { ProviderService } from '../provider/index.js'
 import {
-  bundlerNativeTracerName,
-  prestateTracerName,
-} from '../constants/index.js'
+  EIP_7702_MARKER_INIT_CODE,
+  maxUint48,
+  mergeValidationDataValues,
+  parseValidationData,
+} from '../utils/index.js'
+import { ProviderService } from '../provider/index.js'
+import { GethNativeTracerName } from '../constants/index.js'
 import { Either } from '../monad/index.js'
-
-export const parseValidationResult = (
-  userOp: UserOperation,
-  res: SimulateValidationReturnStruct,
-): ValidationResult => {
-  const mergedValidation = mergeValidationDataValues(
-    res.returnInfo.accountValidationData,
-    res.returnInfo.paymasterValidationData,
-  )
-
-  /**
-   * Fill entity with address and stake info.
-   *
-   * @param addr - The address.
-   * @param info - StakeInfo for the address.
-   * @returns StakeInfoWithAddr | undefined
-   */
-  function fillEntity(
-    addr: string | undefined,
-    info: any,
-  ): StakeInfoWithAddr | undefined {
-    if (addr == null || addr === ethers.ZeroAddress) return undefined
-    return {
-      addr,
-      stake: info.stake,
-      unstakeDelaySec: info.unstakeDelaySec,
-    }
-  }
-
-  const returnInfo = {
-    sigFailed: mergedValidation.aggregator !== ethers.ZeroAddress,
-    validUntil: mergedValidation.validUntil,
-    validAfter: mergedValidation.validAfter,
-    preOpGas: res.returnInfo.preOpGas,
-    prefund: res.returnInfo.prefund,
-  }
-
-  return {
-    returnInfo,
-    senderInfo: fillEntity(userOp.sender, res.senderInfo) as StakeInfoWithAddr,
-    paymasterInfo: fillEntity(userOp.paymaster, res.paymasterInfo),
-    factoryInfo: fillEntity(userOp.factory, res.factoryInfo),
-    aggregatorInfo: fillEntity(
-      res.aggregatorInfo.aggregator,
-      res.aggregatorInfo.stakeInfo,
-    ),
-  }
-}
+import { BigNumberish } from 'ethers'
 
 export const parseExecutionResult = (
   res: ExecutionResultStruct,
@@ -143,6 +99,13 @@ export const decodeRevertReason = (
   data: string | NetworkCallError,
   nullIfNoMatch = true,
 ): string | null => {
+  if (data == null || data === '0x') {
+    if (!nullIfNoMatch) {
+      return ''
+    }
+    return null
+  }
+
   const decodeRevertReasonContracts = new Interface(
     [
       ...new Interface(ENTRY_POINT_SIMULATIONS).fragments,
@@ -167,29 +130,28 @@ export const decodeRevertReason = (
   if (typeof data !== 'string') {
     const err = data.payload
     data = (err.data ?? err.error?.data) as string
-    if (typeof data !== 'string') throw err
+    // if (typeof data !== 'string') throw err
   }
 
   const methodSig = data.slice(0, 10)
   const dataParams = '0x' + data.slice(10)
-
-  // can't add Error(string) to xface...
-  if (methodSig === '0x08c379a0') {
-    const [err] = AbiCoder.defaultAbiCoder().decode(['string'], dataParams)
-    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-    return `Error(${err})`
-  } else if (methodSig === '0x4e487b71') {
-    const [code] = AbiCoder.defaultAbiCoder().decode(['uint256'], dataParams)
-    return `Panic(${panicCodes[code] ?? code} + ')`
-  }
-
   try {
+    // can't add Error(string) to xface...
+    if (methodSig === '0x08c379a0') {
+      const [err] = AbiCoder.defaultAbiCoder().decode(['string'], dataParams)
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+      return `Error(${err})`
+    } else if (methodSig === '0x4e487b71') {
+      const [code] = AbiCoder.defaultAbiCoder().decode(['uint256'], dataParams)
+      return `Panic(${panicCodes[code] ?? code} + ')`
+    }
+
     const err = decodeRevertReasonContracts.parseError(data)
     // treat any error "bytes" argument as possible error to decode (e.g. FailedOpWithRevert, PostOpReverted)
     const args = err.args.map((arg: any, index) => {
       switch (err.fragment.inputs[index].type) {
         case 'bytes':
-          return decodeRevertReason(arg)
+          return decodeRevertReason(arg, false)
         case 'string':
           return `"${arg as string}"`
         default:
@@ -203,27 +165,6 @@ export const decodeRevertReason = (
     }
     return null
   }
-}
-
-export const getBundlerCollectorTracerString = (): Either<RpcError, string> => {
-  const __filename = fileURLToPath(import.meta.url)
-  const __dirname = dirname(__filename)
-
-  const jsFilePath = join(__dirname, './tracer.js')
-  let tracer: string
-  try {
-    tracer = readFileSync(jsFilePath).toString()
-  } catch (error: any) {
-    return Either.Left(new RpcError('Tracer file path not found', -32000))
-  }
-
-  if (tracer == null) {
-    return Either.Left(new RpcError('Tracer not found', -32000))
-  }
-  const regexp =
-    /function \w+\s*\(\s*\)\s*{\s*return\s*(\{[\s\S]+\});?\s*\}\s*$/
-
-  return Either.Right(tracer.match(regexp)?.[1])
 }
 
 export const normalizePreState = (preState: {
@@ -246,83 +187,295 @@ export const normalizePreState = (preState: {
   return preStateCopy
 }
 
-export const runNativeTracer = async (
+export const runErc7562NativeTracer = async (
   ps: ProviderService,
   tx: TransactionRequest,
   stateOverrides: { [address: string]: { code: string } },
-): Promise<Either<RpcError, BundlerCollectorReturn>> => {
-  const preStateRes = await ps.debug_traceCall<{ [addr: string]: any }>(tx, {
-    tracer: prestateTracerName,
+): Promise<Either<RpcError, ERC7562Call>> => {
+  return ps.debug_traceCall<ERC7562Call>(tx, {
+    tracer: GethNativeTracerName,
     stateOverrides,
   })
+}
 
-  const runDebugNativeTracerWithPreState = async (preState: {
-    [addr: string]: any
-  }): Promise<Either<RpcError, BundlerCollectorReturn>> => {
-    return ps.debug_traceCall<BundlerCollectorReturn>(
-      tx,
-      {
-        tracer: bundlerNativeTracerName,
-        stateOverrides: normalizePreState(preState),
-      },
-      true,
-    )
+export const parseSimulateValidationResult = (
+  userOp: UserOperation,
+  res: SimulateValidationReturnStruct,
+): ValidationResult => {
+  const mergedValidation = mergeValidationDataValues(
+    res.returnInfo.accountValidationData,
+    res.returnInfo.paymasterValidationData,
+  )
+
+  /**
+   * Fill entity with address and stake info.
+   *
+   * @param addr - The address.
+   * @param info - StakeInfo for the address.
+   * @returns StakeInfoWithAddr | undefined
+   */
+  function fillEntity(
+    addr: string | undefined,
+    info: any,
+  ): StakeInfoWithAddr | undefined {
+    if (addr == null || addr === ethers.ZeroAddress) return undefined
+    return {
+      addr,
+      stake: info.stake,
+      unstakeDelaySec: info.unstakeDelaySec,
+    }
   }
 
-  return preStateRes.foldAsync(
-    async (error) => {
-      return Either.Left(error)
+  return {
+    returnInfo: {
+      sigFailed: mergedValidation.aggregator !== ethers.ZeroAddress,
+      validUntil: mergedValidation.validUntil,
+      validAfter: mergedValidation.validAfter,
+      preOpGas: res.returnInfo.preOpGas,
+      prefund: res.returnInfo.prefund,
     },
-    async (preState) => runDebugNativeTracerWithPreState(preState),
-  )
+    senderInfo: fillEntity(userOp.sender, res.senderInfo) as StakeInfoWithAddr,
+    paymasterInfo: fillEntity(userOp.paymaster, res.paymasterInfo),
+    factoryInfo: fillEntity(userOp.factory, res.factoryInfo),
+    aggregatorInfo: fillEntity(
+      res.aggregatorInfo.aggregator,
+      res.aggregatorInfo.stakeInfo,
+    ),
+  }
 }
 
-export const runStandardTracer = async (
-  ps: ProviderService,
-  tx: TransactionRequest,
-  tracer: string,
-  stateOverrides: { [address: string]: { code: string } },
-): Promise<Either<RpcError, BundlerCollectorReturn>> => {
-  return ps.debug_traceCall<BundlerCollectorReturn>(tx, {
-    tracer,
-    stateOverrides,
-  })
-}
+export const parseTracerResultCallsForRevert = (
+  tracerResult: ERC7562Call,
+): Either<RpcError, ERC7562Call> => {
+  if (tracerResult.output == null) {
+    return Either.Right(tracerResult)
+  }
+  // during simulation, we pass gas enough for simulation, and little extra.
+  // so either execution fails on OOG, (AA95) or the entire HandleOps fail on wrong beneficiary
+  // both mean validation success
+  const EXPECTED_INNER_HANDLE_OP_FAILURES = new Set([
+    'FailedOp(0,"AA95 out of gas")',
+    'Error(AA90 invalid beneficiary)',
+  ])
 
-export const parseTracerResultCalls = (
-  tracerResult: BundlerCollectorReturn,
-): Either<RpcError, [BundlerCollectorReturn, string]> => {
-  const lastCallResult = tracerResult.calls.slice(-1)[0]
-  const exitInfoData = (lastCallResult as ExitInfo).data
-  if (lastCallResult.type === 'REVERT') {
+  const decodedErrorReason = decodeRevertReason(
+    tracerResult.output,
+    false,
+  ) as string
+
+  if (decodedErrorReason.startsWith('FailedOp(0,"AA24')) {
     return Either.Left(
       new RpcError(
-        decodeRevertReason(exitInfoData, false) as string,
-        ValidationErrors.SimulateValidation,
+        'AA24: Invalid UserOp signature',
+        ValidationErrors.InvalidSignature,
       ),
     )
   }
-  return Either.Right([tracerResult, exitInfoData])
+  if (decodedErrorReason.startsWith('FailedOp(0,"AA34')) {
+    return Either.Left(
+      new RpcError(
+        'AA34: Invalid Paymaster signature',
+        ValidationErrors.InvalidSignature,
+      ),
+    )
+  }
+
+  if (!EXPECTED_INNER_HANDLE_OP_FAILURES.has(decodedErrorReason)) {
+    return Either.Left(
+      new RpcError(decodedErrorReason, ValidationErrors.SimulateValidation),
+    )
+  }
+
+  return Either.Right(tracerResult)
 }
 
-export const parseValidationResultSafe = (
+export const get4bytes = (input: string): string => {
+  return input.slice(0, 10)
+}
+
+export const getValidationCalls = (
+  op: UserOperation,
+  entryPointCall: ERC7562Call,
+): {
+  validationCall: ERC7562Call
+  paymasterCall?: ERC7562Call
+  innerCall: ERC7562Call
+} => {
+  let callIndex = 0
+  const hasFactoryCall =
+    op.factory != null && op.factory !== EIP_7702_MARKER_INIT_CODE
+  const hasEip7702InitCall =
+    op.factory === EIP_7702_MARKER_INIT_CODE &&
+    op.factoryData != null &&
+    op.factoryData.length > 0
+  if (hasFactoryCall || hasEip7702InitCall) {
+    callIndex++
+  }
+  const validationCall = entryPointCall.calls[callIndex++]
+  let paymasterCall: ERC7562Call | undefined
+  if (op.paymaster != null) {
+    paymasterCall = entryPointCall.calls[callIndex++]
+  }
+  const innerCall = entryPointCall.calls[callIndex]
+  return {
+    validationCall,
+    paymasterCall,
+    innerCall,
+  }
+}
+
+export const decodeValidateUserOp = (call: ERC7562Call): ValidationData => {
+  const methodSig = new Interface(IACCOUNT_ABI).getFunction(
+    'validateUserOp',
+  ).selector
+
+  if (get4bytes(call.input) !== methodSig) {
+    throw new Error('Not a validateUserOp')
+  }
+
+  if (call.output == null) {
+    throw new Error('validateUserOp: No output')
+  }
+  return parseValidationData(call.output)
+}
+
+export const decodeValidatePaymasterUserOp = (
+  call: ERC7562Call,
+): { context: string; validationData: ValidationData } => {
+  const iPaymaster = new Interface(IPAYMASTER_ABI)
+  const methodSig = iPaymaster.getFunction('validatePaymasterUserOp').selector
+  if (get4bytes(call.input) !== methodSig) {
+    throw new Error('Not a validatePaymasterUserOp')
+  }
+  if (call.output == null) {
+    throw new Error('validatePaymasterUserOp: No output')
+  }
+  const ret = iPaymaster.decodeFunctionResult(
+    'validatePaymasterUserOp',
+    call.output,
+  )
+  return {
+    context: ret.context,
+    validationData: parseValidationData(ret.validationData),
+  }
+}
+
+export const getStakes = async (
+  entryPoint: ethers.Contract,
+  sender: string,
+  paymaster?: string,
+  factory?: string,
+): Promise<{
+  sender: StakeInfo
+  paymaster?: StakeInfo
+  factory?: StakeInfo
+}> => {
+  const [senderInfo, paymasterInfo, factoryInfo] = await Promise.all([
+    entryPoint.getDepositInfo(sender),
+    paymaster != null ? entryPoint.getDepositInfo(paymaster) : null,
+    factory != null && factory !== EIP_7702_MARKER_INIT_CODE
+      ? entryPoint.getDepositInfo(factory)
+      : null,
+  ])
+  return {
+    sender: {
+      addr: sender,
+      stake: senderInfo.stake,
+      unstakeDelaySec: senderInfo.unstakeDelaySec,
+    },
+    paymaster:
+      paymasterInfo != null
+        ? {
+            addr: paymaster ?? '',
+            stake: paymasterInfo.stake,
+            unstakeDelaySec: paymasterInfo.unstakeDelaySec,
+          }
+        : undefined,
+    factory:
+      factoryInfo != null
+        ? {
+            addr: factory ?? '',
+            stake: factoryInfo.stake,
+            unstakeDelaySec: factoryInfo.unstakeDelaySec,
+          }
+        : undefined,
+  }
+}
+
+export const decodeInnerHandleOp = (
+  call: ERC7562Call,
+): { preOpGas: BigNumberish; prefund: BigNumberish } => {
+  const iEntrypointSim = new Interface(I_ENTRY_POINT_SIMULATIONS)
+  const methodSig = iEntrypointSim.getFunction('innerHandleOp').selector
+  if (get4bytes(call.input) !== methodSig) {
+    throw new Error('Not a innerHandleOp')
+  }
+  const params = iEntrypointSim.decodeFunctionData('innerHandleOp', call.input)
+  return {
+    preOpGas: params.opInfo.preOpGas,
+    prefund: params.opInfo.prefund,
+  }
+}
+
+// generate validation result from trace(handleOps): by decoding inner calls.
+export const generateValidationResult = (
   userOp: UserOperation,
-  exitInfoData: string,
-  tracer: BundlerCollectorReturn,
-  simDetails: {
-    simFunctionName: string
-    epSimsInterface: Interface
+  tracerResult: ERC7562Call,
+  stakeResults: {
+    sender: StakeInfo
+    paymaster?: StakeInfo
+    factory?: StakeInfo
   },
 ): Either<RpcError, FullValidationResult> => {
   try {
-    const { simFunctionName, epSimsInterface } = simDetails
-    const [decodedSimulations] = epSimsInterface.decodeFunctionResult(
-      simFunctionName,
-      exitInfoData,
+    const { validationCall, paymasterCall, innerCall } = getValidationCalls(
+      userOp,
+      tracerResult,
     )
-    const validationResult = parseValidationResult(userOp, decodedSimulations)
+    const validationData = decodeValidateUserOp(validationCall)
 
-    return Either.Right([validationResult, tracer])
+    let paymasterValidationData: ValidationData = {
+      validAfter: 0,
+      validUntil: maxUint48,
+      aggregator: ethers.ZeroAddress,
+    }
+    let paymasterContext: string | undefined
+    if (paymasterCall != null) {
+      const pmRet = decodeValidatePaymasterUserOp(paymasterCall)
+      paymasterContext = pmRet.context
+      paymasterValidationData = pmRet.validationData
+    }
+
+    const innerHandleOpsOut =
+      innerCall == null ? undefined : decodeInnerHandleOp(innerCall)
+
+    let paymasterInfo: PaymasterValidationInfo | undefined =
+      stakeResults.paymaster
+    if (paymasterInfo != null) {
+      paymasterInfo = { ...paymasterInfo, context: paymasterContext }
+    }
+
+    return Either.Right([
+      {
+        returnInfo: {
+          sigFailed: false, // can't fail here, since handleOps didn't revert.
+          validUntil: Math.min(
+            validationData.validUntil,
+            paymasterValidationData.validUntil,
+          ),
+          validAfter: Math.max(
+            validationData.validAfter,
+            paymasterValidationData.validAfter,
+          ),
+          preOpGas: innerHandleOpsOut?.preOpGas, // extract from innerHandleOps parameter
+          prefund: innerHandleOpsOut?.prefund, // extract from innerHandleOps parameter
+        },
+        senderInfo: stakeResults.sender,
+        paymasterInfo,
+        factoryInfo: stakeResults.factory,
+      },
+      tracerResult as ERC7562Call,
+    ])
   } catch (e: any) {
     // if already parsed, return as is
     if (e.code != null) {
@@ -331,7 +484,7 @@ export const parseValidationResultSafe = (
     // not a known error of EntryPoint (probably, only Error(string), since FailedOp is handled above)
     const err = decodeErrorReason(e)
     return Either.Left(
-      new RpcError(err != null ? err.reason : exitInfoData, -32000),
+      new RpcError(err != null ? err.reason : 'unknown reason', -32000),
     )
   }
 }

@@ -17,10 +17,6 @@ export const getCmdOptionValues = (ops: CommandOptions): OptionValues => {
       'UNSAFE mode: Enable no storage or opcode checks during userOp simulation. SAFE mode(default).',
     )
     .option(
-      '--tracerRpcUrl <string>',
-      'Enables native tracer for full validation during userOp simulation with prestateTracer native tracer on the network provider. requires unsafe=false.',
-    )
-    .option(
       '--network <string>',
       'Ethereum network provider.',
       `${defaultNetwork}`,
@@ -92,6 +88,11 @@ export const getCmdOptionValues = (ops: CommandOptions): OptionValues => {
     )
     .option('--p2p', 'p2p mode enabled', false)
     .option('--findPeers', 'Search for peers when p2p is enabled.', false)
+    .option(
+      '--eip7702Support',
+      'On networks with EIP-7702 enabled, the eth_sendUserOperation method accepts an extra eip7702Auth parameter.',
+      true,
+    )
 
   const programOpts: OptionValues = program.parse(args).opts()
   return programOpts

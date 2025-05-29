@@ -26,7 +26,7 @@ export type ValidationResult = {
 
   senderInfo: StakeInfo
   factoryInfo?: StakeInfo
-  paymasterInfo?: StakeInfo
+  paymasterInfo?: PaymasterValidationInfo
   aggregatorInfo?: StakeInfo
 }
 
@@ -80,4 +80,14 @@ export type StakeInfoWithAddr = {
   addr: string
   stake: BigNumberish
   unstakeDelaySec: BigNumberish
+}
+
+export type PaymasterValidationInfo = StakeInfo & {
+  context?: string
+}
+
+export type ValidationData = {
+  aggregator: string
+  validAfter: number
+  validUntil: number
 }

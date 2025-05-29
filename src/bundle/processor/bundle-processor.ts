@@ -10,11 +10,12 @@ import {
   BundleProcessor,
   CrashedHandleOps,
   ReputationManager,
+  EIP7702Authorization,
 } from '../../types/index.js'
-import { packUserOps } from '../../utils/index.js'
-import { getUserOpHashes, selectBeneficiary } from './processor-helpers.js'
-import { findEntityToBlame, checkFatal } from '../bundle-helper.js'
-import { parseFailedOpRevert } from '../builder/builder-helpers.js'
+import { packUserOps, prepareEip7702Transaction } from '../../utils/index.js'
+import { getUserOpHashes, selectBeneficiary } from './processor.helpers.js'
+import { findEntityToBlame, checkFatal } from '../bundle.helper.js'
+import { parseFailedOpRevert } from '../builder/builder.helpers.js'
 
 export type BundleProcessorConfig = {
   providerService: ProviderService
@@ -33,6 +34,8 @@ export type BundleProcessorConfig = {
 export const createBundleProcessor = (
   config: BundleProcessorConfig,
 ): BundleProcessor => {
+  const TX_TYPE_EIP_7702 = 4
+  const TX_TYPE_EIP_1559 = 2
   const {
     providerService,
     reputationManager,
@@ -80,6 +83,7 @@ export const createBundleProcessor = (
   return {
     sendBundle: async (
       userOps: UserOperation[],
+      eip7702Tuples: EIP7702Authorization[],
       _: StorageMap,
     ): Promise<SendBundleReturnWithSigner> => {
       const signerIndex = 0
@@ -99,7 +103,8 @@ export const createBundleProcessor = (
             packUserOps(userOps),
             useBeneficiary,
           )
-
+        const type =
+          eip7702Tuples.length > 0 ? TX_TYPE_EIP_7702 : TX_TYPE_EIP_1559
         const feeData = await providerService.getFeeData()
         const nonce = await signer.getNonce('pending')
         const tx: ethers.TransactionRequest = {
@@ -108,7 +113,7 @@ export const createBundleProcessor = (
           value,
           from: signer.address,
           nonce,
-          type: 2,
+          type,
           maxFeePerGas: feeData.maxFeePerGas.toString(),
           maxPriorityFeePerGas: feeData.maxPriorityFeePerGas.toString(),
         }
@@ -118,17 +123,55 @@ export const createBundleProcessor = (
         )
 
         let ret: string
-        switch (txMode) {
-          case 'base': {
+        switch (`${txMode}-${type}`) {
+          case 'base-2': {
             const respone = await signer.sendTransaction(tx)
             const receipt = await respone.wait()
             ret = receipt.hash
             break
           }
-          case 'searcher': {
+          case 'base-4': {
+            const signedEthereumJsTx = await prepareEip7702Transaction(
+              tx,
+              eip7702Tuples,
+              signer,
+            )
+            const res = await providerService.send<string>(
+              'eth_sendRawTransaction',
+              [signedEthereumJsTx],
+            )
+
+            const txHash = res.fold(
+              (err) => {
+                Logger.error(`Failed to send transaction: ${err.message}`, err)
+                throw new Error(err.message)
+              },
+              (res) => {
+                Logger.debug(`Transaction sent successfully: ${res}`)
+                return res
+              },
+            )
+
+            const receipt = await providerService.getTransactionReceipt(txHash)
+            ret = receipt.hash
+            break
+          }
+          case 'searcher-2': {
             const signedTx = await signer.signTransaction(tx)
             ret = await providerService.sendTransactionToFlashbots(
               signedTx,
+              signer.address,
+            )
+            break
+          }
+          case 'searcher-4': {
+            const signedEthereumJsTx = await prepareEip7702Transaction(
+              tx,
+              eip7702Tuples,
+              signer,
+            )
+            ret = await providerService.sendTransactionToFlashbots(
+              signedEthereumJsTx,
               signer.address,
             )
             break

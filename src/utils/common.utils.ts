@@ -64,3 +64,13 @@ type Compose = <A, B, C>(f: (x: B) => C, g: (x: A) => B) => (x: A) => C
  * @returns - The composed function.
  */
 export const compose: Compose = (f, g) => (x) => f(g(x))
+
+/**
+ * sum the given bignumberish items (numbers, hex, bignumbers, ignore nulls)
+ *
+ * @param args - The array of items to sum.
+ * @returns The sum of the items.
+ */
+export const sum = (...args: Array<BigNumberish | undefined>): bigint => {
+  return args.reduce((acc: bigint, cur) => acc + BigInt(cur ?? 0), BigInt(0))
+}

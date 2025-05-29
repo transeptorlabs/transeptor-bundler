@@ -20,6 +20,7 @@ import {
   ValidationErrors,
   NetworkCallError,
   RpcError,
+  EIP7702Authorization,
 } from '../types/index.js'
 import { Either } from '../monad/index.js'
 
@@ -34,6 +35,7 @@ export type ProviderService = {
     from: string,
     to: string,
     data: BytesLike,
+    authorizationList: EIP7702Authorization[] | null,
   ): Promise<Either<RpcError, number>>
   send<R>(method: string, params: any[]): Promise<Either<NetworkCallError, R>>
   call(contractAddress: string, data: string): Promise<any>
@@ -57,11 +59,15 @@ export type ProviderService = {
     refundAddress: string,
   ): Promise<string>
   getBalance(address: string): Promise<bigint>
+  getTransactionCount(
+    address: ethers.AddressLike,
+    blockTag?: ethers.BlockTag,
+  ): Promise<number>
+  getCode(address: ethers.AddressLike): Promise<string>
 }
 
 export const createProviderService = (
   networkProvider: JsonRpcProvider,
-  nativeTracerProvider: JsonRpcProvider | undefined,
 ): ProviderService => {
   /**
    * Note that the contract deployment will cost gas, so it is not free to run this function.
@@ -131,10 +137,8 @@ export const createProviderService = (
       }
     },
 
-    clientVersion: async (): Promise<string> => {
-      const ret = await networkProvider.send('web3_clientVersion', [])
-      return ret.result
-    },
+    clientVersion: async (): Promise<string> =>
+      networkProvider.send('web3_clientVersion', []),
 
     getChainId: async (): Promise<number> => {
       const { chainId } = await networkProvider.getNetwork()
@@ -153,13 +157,20 @@ export const createProviderService = (
       from: string,
       to: string,
       data: BytesLike,
+      authorizationList: EIP7702Authorization[] | null,
     ): Promise<Either<RpcError, number>> => {
       try {
-        const gasLimit = await networkProvider.estimateGas({
-          from,
-          to,
-          data: typeof data === 'object' ? hexlify(data) : data,
-        })
+        const gasLimit = await networkProvider.send('eth_estimateGas', [
+          {
+            from,
+            to,
+            data: typeof data === 'object' ? hexlify(data) : data,
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            authorizationList:
+              authorizationList.length === 0 ? null : authorizationList,
+          },
+        ])
         return Either.Right(Number(gasLimit))
       } catch (err: any) {
         const message =
@@ -194,12 +205,8 @@ export const createProviderService = (
     debug_traceCall: async <R>(
       tx: TransactionRequest,
       traceOptions: TraceOptions,
-      useNativeTracerProvider = false,
     ): Promise<Either<RpcError, R>> => {
-      const provider = useNativeTracerProvider
-        ? nativeTracerProvider
-        : networkProvider
-      if (!provider) {
+      if (!networkProvider) {
         return Either.Left(
           new RpcError('provider not found', ValidationErrors.InternalError),
         )
@@ -207,7 +214,7 @@ export const createProviderService = (
 
       try {
         const tx1 = await resolveProperties(tx)
-        const ret = await provider.send('debug_traceCall', [
+        const ret = await networkProvider.send('debug_traceCall', [
           tx1,
           'latest',
           traceOptions,
@@ -316,6 +323,17 @@ export const createProviderService = (
           }
           throw e
         })
+    },
+
+    getTransactionCount: async (
+      address: ethers.AddressLike,
+      blockTag?: ethers.BlockTag,
+    ): Promise<number> => {
+      return await networkProvider.getTransactionCount(address, blockTag)
+    },
+
+    getCode: async (address: ethers.AddressLike): Promise<string> => {
+      return await networkProvider.getCode(address)
     },
   }
 }

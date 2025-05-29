@@ -1,12 +1,15 @@
 import { ContractFactory } from 'ethers'
 
-import { UserOperation, FullValidationResult } from '../types/index.js'
+import {
+  UserOperation,
+  FullValidationResult,
+  Erc7562Parser,
+} from '../types/index.js'
 import {
   ReferencedCodeHashes,
   ValidateUserOpResult,
   ValidationErrors,
   RpcError,
-  Simulator,
 } from '../types/index.js'
 
 import { ProviderService } from '../provider/index.js'
@@ -81,52 +84,60 @@ export const checkValidationResult = (
   return Either.Right(res)
 }
 
-export const fullValResultSafeParse = async (
-  ps: ProviderService,
-  sim: Simulator,
-  result: FullValidationResult,
-  userOp: UserOperation,
-  codeHashesFactory: ContractFactory,
-  previousCodeHashes?: ReferencedCodeHashes,
-) => {
-  const [validationResult, tracerResults] = result
-  const res = sim.tracerResultParser(userOp, tracerResults, validationResult)
-
-  return res.foldAsync(
-    async (err) => Either.Left<RpcError, ValidateUserOpResult>(err),
-    async (tracerRes) => {
-      const [contractAddresses, storageMap] = tracerRes
-      let codeHashes: ReferencedCodeHashes = {
-        addresses: [],
-        hash: '',
-      }
-
-      // if no previous contract hashes, then calculate hashes of contracts
-      if (previousCodeHashes == null) {
-        const { hash } = await ps.runContractScript(codeHashesFactory, [
-          contractAddresses,
-        ])
-
-        codeHashes = {
-          addresses: contractAddresses,
-          hash: hash,
+export const fullValResultSafeParse = async (input: {
+  ps: ProviderService
+  result: FullValidationResult
+  userOp: UserOperation
+  codeHashesFactory: ContractFactory
+  erc7562Parser: Erc7562Parser
+  previousCodeHashes?: ReferencedCodeHashes
+}): Promise<Either<RpcError, ValidateUserOpResult>> => {
+  const {
+    ps,
+    result,
+    userOp,
+    codeHashesFactory,
+    erc7562Parser,
+    previousCodeHashes,
+  } = input
+  const [validationResult, erc7562Call] = result
+  return erc7562Parser
+    .parseTracerResult(userOp, erc7562Call, validationResult)
+    .foldAsync(
+      async (err) => Either.Left<RpcError, ValidateUserOpResult>(err),
+      async (tracerRes) => {
+        const { contractAddresses, storageMap } = tracerRes
+        let codeHashes: ReferencedCodeHashes = {
+          addresses: [],
+          hash: '',
         }
-      }
 
-      if ((result as any) === '0x') {
-        return Either.Left(
-          new RpcError(
-            'simulateValidation reverted with no revert string!',
-            ValidationErrors.SimulateValidation,
-          ),
-        )
-      }
+        // if no previous contract hashes, then calculate hashes of contracts
+        if (previousCodeHashes == null) {
+          const { hash } = await ps.runContractScript(codeHashesFactory, [
+            contractAddresses,
+          ])
 
-      return Either.Right({
-        ...validationResult,
-        storageMap,
-        referencedContracts: codeHashes,
-      })
-    },
-  )
+          codeHashes = {
+            addresses: contractAddresses,
+            hash: hash,
+          }
+        }
+
+        if ((result as any) === '0x') {
+          return Either.Left(
+            new RpcError(
+              'simulateValidation reverted with no revert string!',
+              ValidationErrors.SimulateValidation,
+            ),
+          )
+        }
+
+        return Either.Right({
+          ...validationResult,
+          storageMap,
+          referencedContracts: codeHashes,
+        })
+      },
+    )
 }
