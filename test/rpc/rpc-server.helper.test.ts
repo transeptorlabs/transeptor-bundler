@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { Either } from '../../src/monad/either.js'
-import { Logger } from '../../src/logger/index.js'
 import { RpcError } from '../../src/types/error.types.js'
 import type { ValidatedJsonRpcRequest } from '../../src/types/rpc.types.js'
 import { doHandleRequest } from '../../src/rpc/rpc-server.helper.js'
@@ -38,9 +37,6 @@ describe('RPC Server Helpers', () => {
             result: 'success',
           }),
         )
-        expect(Logger.debug).toHaveBeenCalledWith(
-          '---> Handling valid request for test_method with requestId(1)',
-        )
       })
 
       it('should handle successful request with Either.Right response', async () => {
@@ -61,9 +57,6 @@ describe('RPC Server Helpers', () => {
             result: 'success',
           }),
         )
-        expect(Logger.debug).toHaveBeenCalledWith(
-          '---> Handling valid request for test_method with requestId(2)',
-        )
       })
 
       it('should handle request with Either.Left response', async () => {
@@ -79,9 +72,6 @@ describe('RPC Server Helpers', () => {
         const result = await doHandleRequest(request)
 
         expect(result).toEqual(Either.Left(error))
-        expect(Logger.debug).toHaveBeenCalledWith(
-          '---> Handling valid request for test_method with requestId(3)',
-        )
       })
 
       it('should handle request with complex response object', async () => {
@@ -119,9 +109,6 @@ describe('RPC Server Helpers', () => {
             },
           }),
         )
-        expect(Logger.debug).toHaveBeenCalledWith(
-          '---> Handling valid request for test_method with requestId(4)',
-        )
       })
 
       it('should handle request with array parameters', async () => {
@@ -143,9 +130,6 @@ describe('RPC Server Helpers', () => {
             result: params,
           }),
         )
-        expect(Logger.debug).toHaveBeenCalledWith(
-          '---> Handling valid request for test_method with requestId(5)',
-        )
       })
 
       it('should handle request with null response', async () => {
@@ -165,9 +149,6 @@ describe('RPC Server Helpers', () => {
             id: 6,
             result: null,
           }),
-        )
-        expect(Logger.debug).toHaveBeenCalledWith(
-          '---> Handling valid request for test_method with requestId(6)',
         )
       })
     })

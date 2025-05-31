@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 import { ethers, HDNodeWallet, JsonRpcProvider, Mnemonic, Wallet } from 'ethers'
 import { createProvider } from '../provider/index.js'
 import { IENTRY_POINT_ABI, IStakeManager } from '../abis/index.js'
-import { DEFAULT_ENTRY_POINT, SENDER_CREATOR } from '../constants/index.js'
+import { DEFAULT_ENTRY_POINT } from '../constants/index.js'
 import { isValidAddress } from '../utils/index.js'
 import { InfluxdbConnection, BundlerSignerWallets } from '../types/index.js'
 import { getCmdOptionValues } from './command.js'
@@ -51,7 +51,6 @@ export type Config = {
   influxdbConnection: InfluxdbConnection
 
   eip7702Support: boolean
-  senderCreatorAddress: string
 }
 
 // Helper function to get bundler signer wallets
@@ -238,6 +237,5 @@ export const createBuilderConfig = async (
     findPeers: programOpts.findPeers as boolean,
     peerMultiaddrs,
     eip7702Support: programOpts.eip7702Support as boolean,
-    senderCreatorAddress: SENDER_CREATOR,
   }
 }

@@ -3,9 +3,6 @@
  */
 export const DEFAULT_ENTRY_POINT = '0x4337084d9e255ff0702461cf8895ce9e3b5ff108'
 
-export const SENDER_CREATOR = '0x3b3112c4376d037822decff3fe6cd30e1e726517'
-// export const SENDER_CREATOR = '0x449ED7C3e6Fee6a97311d4b55475DF59C44AdD33'
-
 /**
  * Name of the native tracer that is equivalent to the standard javascript
  */

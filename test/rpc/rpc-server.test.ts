@@ -239,7 +239,7 @@ describe('RPC Server', () => {
       })
       expect(Logger.error).toHaveBeenCalledWith(
         { error: 'Missing/invalid userOpHash' },
-        `Error handling method requestId(${mockReq.parsedRpcRequest.id})`,
+        `<--- Error handling method requestId(${mockReq.parsedRpcRequest.id})`,
       )
     })
 
@@ -284,7 +284,7 @@ describe('RPC Server', () => {
       })
       expect(Logger.error).toHaveBeenCalledWith(
         { error: 'Unknown error' },
-        `Unknown error handling method requestId(${mockReq.parsedRpcRequest.id})`,
+        `<--- Unknown error handling method requestId(${mockReq.parsedRpcRequest.id})`,
       )
     })
   })

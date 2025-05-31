@@ -72,7 +72,6 @@ const runBundler = async () => {
     isUnsafeMode: config.isUnsafeMode,
     erc7562Parser: createErc7562Parser({
       entryPointAddress: config.entryPoint.address,
-      senderCreatorAddress: config.senderCreatorAddress,
     }),
   })
 

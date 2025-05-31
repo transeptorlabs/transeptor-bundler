@@ -353,7 +353,6 @@ export const replaceOrAddUserOpChecks = async (
       .flatMap(checkReplaceUserOp)
   }
 
-  Logger.debug('New entry, checking reputation and throttling...')
   await checkReputation(
     reputationManager,
     mempoolEntryCount,
@@ -398,7 +397,6 @@ export const doUpdateMempoolState = (
     }
   }
 
-  Logger.debug('Reputation and throttling checks passed, adding to mempool...')
   const sender = userOp.sender.toLowerCase()
   const entriesCountToUpdate: EntryCount = {
     [sender]: (mempoolEntryCount[sender] ?? 0) + 1,

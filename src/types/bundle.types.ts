@@ -74,6 +74,11 @@ export type CrashedHandleOps = {
   failedUserOp: UserOperation
 }
 
+export type NonFatalSendBundleFailDetails = {
+  error: any
+  userOps: UserOperation[]
+}
+
 // Bundle builder
 
 /**

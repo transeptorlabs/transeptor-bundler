@@ -53,7 +53,7 @@ export const createBundleManager = (
     await eventsManager.handlePastEvents()
     const { bundle, storageMap, eip7702Tuples } =
       await bundleBuilder.createBundle(force)
-    Logger.debug({ length: bundle.length }, 'bundle created(ready to send)')
+
     if (bundle.length === 0) {
       Logger.info('No bundle to send, skipping')
       return {

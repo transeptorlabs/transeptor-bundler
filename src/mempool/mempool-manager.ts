@@ -119,6 +119,7 @@ export const createMempoolManagerCore = (
         ],
       )
 
+      Logger.debug('Reputation and throttling checks passed')
       return res.foldAsync(
         async (error) => Either.Left(error),
         async ([entry, metadata]) => {
@@ -155,6 +156,7 @@ export const createMempoolManagerCore = (
               nonce: userOp.nonce,
               userOpHash,
               status: entry.status,
+              is7702: userOp.eip7702Auth != null,
             },
             'Successfully added/updated UserOperation to mempool',
           )
@@ -291,17 +293,30 @@ export const createMempoolManagerCore = (
     },
 
     updateEntryStatus: async (
-      userOpHash: string,
+      userOpOrHash: string | UserOperation,
       status: EntryStatus,
     ): Promise<void> => {
+      let entry: MempoolEntry | undefined
       const { standardPool } = await state.getState(StateKey.StandardPool)
-      const entry = standardPool[userOpHash]
+      if (typeof userOpOrHash === 'string') {
+        entry = standardPool[userOpOrHash]
+      } else {
+        entry = findBySenderNonce(
+          userOpOrHash.sender,
+          userOpOrHash.nonce,
+          standardPool,
+        )
+      }
+
       if (entry) {
+        Logger.debug(
+          `Updating UserOperation status: ${entry.userOpHash} to ${status}`,
+        )
         await state.updateState(StateKey.StandardPool, ({ standardPool }) => {
           return {
             standardPool: {
               ...standardPool,
-              [userOpHash]: {
+              [entry.userOpHash]: {
                 ...entry,
                 status,
               },

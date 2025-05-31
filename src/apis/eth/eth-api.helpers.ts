@@ -4,9 +4,18 @@ import {
   ExecutionResult,
   ValidateUserOpResult,
   RpcError,
+  UserOperation,
+  NetworkCallError,
 } from '../../types/index.js'
 import { Either } from '../../monad/index.js'
 import { MAINNET_CONFIG } from '../../gas/index.js'
+import {
+  EIP_7702_MARKER_CODE,
+  hexConcat,
+  packUserOp,
+} from '../../utils/index.js'
+import { ethers } from 'ethers'
+import { ProviderService } from '../../provider/index.js'
 
 export const extractVerificationGasLimit = (
   estimate: EstimateUserOpGasResult,
@@ -76,4 +85,36 @@ export const sendUserOpToMempool = async (
     (error: RpcError) => Either.Left<RpcError, string>(error),
     (hash) => Either.Right<RpcError, string>(hash),
   )
+}
+
+export const getUserOpHashWithCode = async (
+  ps: ProviderService,
+  entryPoint: {
+    contract: ethers.Contract
+    address: string
+  },
+  userOp: UserOperation,
+): Promise<Either<NetworkCallError, string>> => {
+  let stateOverride = null
+  if (userOp.eip7702Auth != null) {
+    const deployedDelegateCode: string = hexConcat([
+      EIP_7702_MARKER_CODE,
+      userOp.eip7702Auth.address,
+    ])
+    stateOverride = {
+      [userOp.sender]: {
+        code: deployedDelegateCode,
+      },
+    }
+  }
+  return await ps.send<string>('eth_call', [
+    {
+      to: entryPoint.address,
+      data: entryPoint.contract.interface.encodeFunctionData('getUserOpHash', [
+        packUserOp(userOp),
+      ]),
+    },
+    'latest',
+    stateOverride,
+  ])
 }
