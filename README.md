@@ -62,7 +62,7 @@ yarn start:eth-dev
   - `yarn dev` - To start the bundler node in safe mode with full storage and opcode checks.
   - `yarn dev:unsafe` - To start the bundler node in unsafe mode with no storage or opcode checks.
 
-- The bundler node will start on `http://localhost:4337/rpc`.
+The bundler node will start on `http://localhost:4337/rpc`.
 
 ### Test
 

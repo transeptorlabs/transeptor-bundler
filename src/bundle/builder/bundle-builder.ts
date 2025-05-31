@@ -207,7 +207,7 @@ export const createBundleBuilder = (
       acc.paymasterDeposit = paymasterDeposit
 
       Logger.debug(
-        { sender: userOp.sender, nonce: userOp.nonce },
+        { sender: userOp.sender, nonce: userOp.nonce, userOpHash },
         'Adding UserOp to bundle',
       )
       mergeStorageMap(acc.storageMap, validationResult.storageMap)

@@ -15,6 +15,7 @@ import {
   requireAddressAndFields,
   getAuthorizationList,
   getEip7702AuthorizationSigner,
+  EIP_7702_MARKER_INIT_CODE,
 } from '../utils/index.js'
 
 import { ProviderService } from '../provider/index.js'
@@ -24,6 +25,7 @@ import {
   checkValidationResult,
   fullValResultSafeParse,
 } from './validation.helper.js'
+import { Logger } from '../logger/index.js'
 
 export type ValidationService = {
   /**
@@ -95,6 +97,7 @@ export const createValidationService = (
       checkStakes: boolean,
       previousCodeHashes?: ReferencedCodeHashes,
     ): Promise<Either<RpcError, ValidateUserOpResult>> => {
+      Logger.debug('Validating UserOperation')
       let res = Either.Right<RpcError, ValidateUserOpResult>(undefined)
 
       // [COD-010]
@@ -117,6 +120,7 @@ export const createValidationService = (
       // prepare 7702 state override
       const authorizationList = getAuthorizationList(userOp)
       if (authorizationList.length > 0) {
+        Logger.debug('Validating EIP-7702 authorization list')
         const chainId = await ps.getNetwork().then((n) => n.chainId)
 
         // list is required to be of size=1. for completeness, we still scan it as a list.
@@ -174,6 +178,10 @@ export const createValidationService = (
         )
       }
 
+      Logger.debug(
+        { status: res.isRight() ? 'valid' : 'invalid' },
+        'UserOperation validation result',
+      )
       return res.flatMap((res) => checkValidationResult(res, userOp))
     },
 
@@ -183,6 +191,7 @@ export const createValidationService = (
       requireGasParams = true,
       preVerificationGasCheck = true,
     ): Promise<Either<RpcError, UserOperation>> => {
+      Logger.debug('Validating input parameters for UserOperation')
       const {
         entryPointInput,
         entryPointAddress,
@@ -268,7 +277,9 @@ export const createValidationService = (
         ['paymasterPostOpGasLimit', 'paymasterVerificationGasLimit'],
         ['paymasterData'],
       )
-      requireAddressAndFields(userOp, 'factory', ['factoryData'])
+      if (userOp.factory !== EIP_7702_MARKER_INIT_CODE) {
+        requireAddressAndFields(userOp, 'factory', ['factoryData'])
+      }
 
       if (preVerificationGasCheck) {
         const preVerificationGas = pvgc.estimatePreVerificationGas(userOp, {})
@@ -283,6 +294,7 @@ export const createValidationService = (
         }
       }
 
+      Logger.debug('Input parameters for UserOperation are valid')
       return Either.Right(userOp)
     },
   }

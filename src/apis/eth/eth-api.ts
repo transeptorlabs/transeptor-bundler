@@ -12,11 +12,11 @@ import {
   RpcError,
   EthAPI,
   Simulator,
+  NetworkCallError,
 } from '../../types/index.js'
 import {
   deepHexlify,
   getAuthorizationList,
-  packUserOp,
   unpackUserOp,
 } from '../../utils/index.js'
 
@@ -29,6 +29,7 @@ import {
   extractCallGasLimit,
   extractUseropVerificationResult,
   extractVerificationGasLimit,
+  getUserOpHashWithCode,
   sendUserOpToMempool,
 } from './eth-api.helpers.js'
 
@@ -43,7 +44,7 @@ export type EthAPIConfig = {
     contract: ethers.Contract
     address: string
   }
-  eip7702Support
+  eip7702Support: boolean
 }
 
 export const createEthAPI = (config: EthAPIConfig): EthAPI => {
@@ -150,9 +151,9 @@ export const createEthAPI = (config: EthAPIConfig): EthAPI => {
       return opReady.foldAsync(
         async (error: RpcError) => Either.Left(error),
         async (userOp: UserOperation) => {
-          const [validationResult, userOpHash] = await Promise.all([
+          const [validationResult, userOpHashRes] = await Promise.all([
             vs.validateUserOp(userOp, true, undefined),
-            entryPoint.contract.getUserOpHash(packUserOp(userOp)),
+            getUserOpHashWithCode(ps, entryPoint, userOp),
           ])
 
           return Either.Right<RpcError, RelayUserOpParam>(undefined)
@@ -160,10 +161,20 @@ export const createEthAPI = (config: EthAPIConfig): EthAPI => {
               ...op,
               userOp,
             }))
-            .map((op) => ({
-              ...op,
-              userOpHash,
-            }))
+            .flatMap((relayUserOpParam: RelayUserOpParam) =>
+              userOpHashRes.fold(
+                (error: NetworkCallError) =>
+                  Either.Left<RpcError, RelayUserOpParam>(
+                    new RpcError(error.message, ValidationErrors.InternalError),
+                  ),
+                (userOpHash: string) => {
+                  return Either.Right<RpcError, RelayUserOpParam>({
+                    ...relayUserOpParam,
+                    userOpHash,
+                  })
+                },
+              ),
+            )
             .flatMap((op) =>
               extractUseropVerificationResult(op, validationResult),
             )

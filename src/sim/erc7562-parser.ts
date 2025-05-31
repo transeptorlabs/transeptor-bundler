@@ -33,7 +33,6 @@ import { toBytes32 } from '../utils/index.js'
 
 type Erc7562ParserConfig = {
   entryPointAddress: string
-  senderCreatorAddress: string
 }
 
 type Erc7562ParserRunnerState = {
@@ -54,7 +53,34 @@ export const createErc7562Parser = (
   config: Erc7562ParserConfig,
 ): Erc7562Parser => {
   const entryPointAddress = config.entryPointAddress.toLowerCase()
-  const senderCreatorAddress = config.senderCreatorAddress.toLowerCase()
+
+  type CreatorAddress =
+    | '0x3b3112c4376d037822decff3fe6cd30e1e726517'
+    | '0x449ED7C3e6Fee6a97311d4b55475DF59C44AdD33'
+  const CREATOR_ADDRESSES = [
+    '0x3b3112c4376d037822decff3fe6cd30e1e726517',
+    '0x449ED7C3e6Fee6a97311d4b55475DF59C44AdD33',
+  ].map((a) => a.toLowerCase())
+  const NORMALIZED_CREATORS = CREATOR_ADDRESSES.map((addr) =>
+    addr.toLowerCase(),
+  )
+
+  const isSenderCreator = (addressToCheck: string): boolean => {
+    return NORMALIZED_CREATORS.includes(addressToCheck.toLowerCase())
+  }
+
+  const isNotSenderCreator = (addressToCheck: string): boolean => {
+    return !isSenderCreator(addressToCheck)
+  }
+
+  const getSenderCreator = (
+    addressToCheck: string,
+  ): CreatorAddress | undefined => {
+    const index = NORMALIZED_CREATORS.indexOf(addressToCheck.toLowerCase())
+    return index !== -1
+      ? (CREATOR_ADDRESSES[index] as CreatorAddress)
+      : undefined
+  }
 
   /**
    * Removes duplicate names from the ABI interfaces.
@@ -146,7 +172,7 @@ export const createErc7562Parser = (
     if (
       erc7562Call.from.toLowerCase() !== ethers.ZeroAddress &&
       erc7562Call.from.toLowerCase() !== entryPointAddress &&
-      erc7562Call.from.toLowerCase() !== senderCreatorAddress
+      isNotSenderCreator(erc7562Call.from.toLowerCase())
     ) {
       return Either.Right(runnerState)
     }
@@ -154,7 +180,7 @@ export const createErc7562Parser = (
       runnerState.currentEntity = AccountAbstractionEntity.account
       runnerState.currentEntityAddress = userOp.sender
     } else if (
-      erc7562Call.from.toLowerCase() === senderCreatorAddress &&
+      isSenderCreator(erc7562Call.from.toLowerCase()) &&
       userOp.factory?.toLowerCase() === erc7562Call.to.toLowerCase()
     ) {
       runnerState.currentEntity = AccountAbstractionEntity.factory
@@ -167,9 +193,10 @@ export const createErc7562Parser = (
     } else if (entryPointAddress === erc7562Call.to.toLowerCase()) {
       runnerState.currentEntity = AccountAbstractionEntity.entryPoint
       runnerState.currentEntityAddress = entryPointAddress
-    } else if (senderCreatorAddress === erc7562Call.to.toLowerCase()) {
+    } else if (isSenderCreator(erc7562Call.to.toLowerCase())) {
       runnerState.currentEntity = AccountAbstractionEntity.senderCreator
-      runnerState.currentEntityAddress = senderCreatorAddress
+      runnerState.currentEntityAddress =
+        getSenderCreator(erc7562Call.to.toLowerCase()) ?? ''
     } else {
       return Either.Left(
         new RpcError(
@@ -343,7 +370,7 @@ export const createErc7562Parser = (
       return AccountAbstractionEntity.paymaster
     } else if (entryPointAddress === lowerAddress) {
       return AccountAbstractionEntity.entryPoint
-    } else if (senderCreatorAddress === lowerAddress) {
+    } else if (isSenderCreator(lowerAddress)) {
       return AccountAbstractionEntity.senderCreator
     }
     return address
@@ -400,10 +427,8 @@ export const createErc7562Parser = (
   function checkOp011(
     runnerState: Erc7562ParserRunnerState,
   ): Either<RpcError, Erc7562ParserRunnerState> {
-    Logger.debug('Checking for banned opcodes')
     if (runnerState.erc7562Call.to.toLowerCase() === entryPointAddress) {
       // Currently inside the EntryPoint deposit code, no access control applies here
-      Logger.debug('Skipping banned opcode check for EntryPoint call')
       return Either.Right(runnerState)
     }
     const opcodes = runnerState.erc7562Call.usedOpcodes
@@ -447,7 +472,6 @@ export const createErc7562Parser = (
   function checkOp020(
     runnerState: Erc7562ParserRunnerState,
   ): Either<RpcError, Erc7562ParserRunnerState> {
-    Logger.debug('Checking for out-of-gas revert')
     if (runnerState.erc7562Call.outOfGas) {
       return violationDetected({
         rule: ERC7562Rule.op020,
@@ -475,12 +499,10 @@ export const createErc7562Parser = (
   function checkOp031(
     runnerState: Erc7562ParserRunnerState,
   ): Either<RpcError, Erc7562ParserRunnerState> {
-    Logger.debug('Checking for CREATE2 opcode')
     if (
       runnerState.erc7562Call.type !== 'CREATE' &&
       runnerState.erc7562Call.type !== 'CREATE2'
     ) {
-      Logger.debug('Skipping CREATE2 check, not a CREATE or CREATE2 call')
       return Either.Right(runnerState)
     }
     const isFactoryStaked = isEntityStaked(
@@ -540,7 +562,6 @@ export const createErc7562Parser = (
   function checkOp041(
     runnerState: Erc7562ParserRunnerState,
   ): Either<RpcError, Erc7562ParserRunnerState> {
-    Logger.debug('Checking for un-deployed contract access')
     // the only contract we allow to access before its deployment is the "sender" itself, which gets created.
     let illegalZeroCodeAccess: any
     for (const address of Object.keys(runnerState.erc7562Call.contractSize)) {
@@ -910,9 +931,6 @@ export const createErc7562Parser = (
       Either.Right(runnerState)
 
     while (stack.length > 0) {
-      Logger.debug(
-        `Processing ${stack.length === 1 ? 'call' : 'next subcall'} from stack at recursionDepth ${stack[stack.length - 1].recursionDepth}`,
-      )
       const currentState = stack.pop()
       if (!currentState) continue
 
@@ -922,9 +940,6 @@ export const createErc7562Parser = (
         currentState.erc7562Call.from === entryPointAddress
       ) {
         // don't enforce rules self-call (it's an "innerHandleOp" that slipped into the trace)
-        Logger.debug(
-          'Skipping self-call to EntryPoint, no rules to enforce here',
-        )
         continue
       }
 
@@ -967,9 +982,6 @@ export const createErc7562Parser = (
               ? updatedState.delegatecallStorageAddress
               : call.to
 
-          Logger.debug(
-            `Pushing subcall onto stack at recursion depth ${updatedState.recursionDepth + 1}...`,
-          )
           stack.push({
             ...updatedState,
             erc7562Call: call,

@@ -15,6 +15,7 @@ import {
   UserOperation,
   PackedUserOperation,
 } from '../types/index.js'
+import { EIP_7702_MARKER_INIT_CODE } from './eip-7702.utils.js'
 
 /**
  * Merge all validationStorageMap objects into merged map
@@ -198,13 +199,19 @@ export function packUserOp(userOp: UserOperation): PackedUserOperation {
     )
   }
 
+  let initCode =
+    userOp.factory == null
+      ? '0x'
+      : hexConcat([userOp.factory, userOp.factoryData ?? '0x'])
+  if (userOp.factory === EIP_7702_MARKER_INIT_CODE) {
+    const eip7702FlagInitCode = EIP_7702_MARKER_INIT_CODE.padEnd(42, '0')
+    initCode = hexConcat([eip7702FlagInitCode, userOp.factoryData ?? '0x'])
+  }
+
   return {
     sender: userOp.sender,
     nonce: userOp.nonce,
-    initCode:
-      userOp.factory == null
-        ? '0x'
-        : hexConcat([userOp.factory, userOp.factoryData ?? '']),
+    initCode,
     callData: userOp.callData,
     accountGasLimits: packUint(
       userOp.verificationGasLimit,

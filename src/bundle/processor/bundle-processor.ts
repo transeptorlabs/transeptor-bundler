@@ -11,6 +11,7 @@ import {
   CrashedHandleOps,
   ReputationManager,
   EIP7702Authorization,
+  NonFatalSendBundleFailDetails,
 } from '../../types/index.js'
 import { packUserOps, prepareEip7702Transaction } from '../../utils/index.js'
 import { getUserOpHashes, selectBeneficiary } from './processor.helpers.js'
@@ -47,15 +48,20 @@ export const createBundleProcessor = (
     signers,
   } = config
 
-  const afterHook = async (crashedHandleOps: CrashedHandleOps | undefined) => {
+  const afterHook = async (
+    crashedHandleOps: CrashedHandleOps | undefined,
+    nonFatalSendBundleFailDetails: NonFatalSendBundleFailDetails | undefined,
+  ) => {
     Logger.debug('After hook running for bundle processor')
     if (crashedHandleOps) {
       const { failedUserOp, reasonStr, addressToBan } = crashedHandleOps
       Logger.warn(
-        `Bundle failed': Failed handleOps sender=${failedUserOp.sender} reason=${reasonStr}`,
+        `Bundle failed: Crashed handleOps sender=${failedUserOp.sender} reason=${reasonStr}`,
       )
       if (addressToBan) {
-        Logger.info(`Banning address: ${addressToBan} due to failed handleOps`)
+        Logger.info(
+          `Banning address: ${addressToBan} due to crashing handleOps`,
+        )
         await reputationManager.updateSeenStatus(
           failedUserOp.sender,
           'decrement',
@@ -72,11 +78,21 @@ export const createBundleProcessor = (
         await reputationManager.crashedHandleOps(addressToBan)
       } else {
         Logger.error(
-          `Failed handleOps, but no entity to blame. reason=${reasonStr}`,
+          `Crashed handleOps, but no entity to blame. reason=${reasonStr}`,
         )
       }
 
       await mempoolManagerBuilder.removeUserOp(failedUserOp)
+    }
+
+    if (nonFatalSendBundleFailDetails) {
+      Logger.warn(
+        nonFatalSendBundleFailDetails,
+        'Bundle failed: non-FailedOp error, sending userOps back to mempool with status of pending',
+      )
+      for (const userOp of nonFatalSendBundleFailDetails.userOps) {
+        await mempoolManagerBuilder.updateEntryStatus(userOp, 'pending')
+      }
     }
   }
 
@@ -86,6 +102,10 @@ export const createBundleProcessor = (
       eip7702Tuples: EIP7702Authorization[],
       _: StorageMap,
     ): Promise<SendBundleReturnWithSigner> => {
+      Logger.debug(
+        { length: userOps.length, eip7702TuplesLength: eip7702Tuples.length },
+        'Attempting to send bundle',
+      )
       const signerIndex = 0
       const signer = signers[signerIndex] // Default to the first signer for now
       const useBeneficiary = await selectBeneficiary(
@@ -95,6 +115,9 @@ export const createBundleProcessor = (
         minSignerBalance,
       )
       let crashedHandleOps: CrashedHandleOps | undefined
+      let nonFatalSendBundleFailDetails:
+        | NonFatalSendBundleFailDetails
+        | undefined
 
       try {
         // populate the transaction (e.g to, data, and value)
@@ -107,7 +130,9 @@ export const createBundleProcessor = (
           eip7702Tuples.length > 0 ? TX_TYPE_EIP_7702 : TX_TYPE_EIP_1559
         const feeData = await providerService.getFeeData()
         const nonce = await signer.getNonce('pending')
+        const chainId = await providerService.getChainId()
         const tx: ethers.TransactionRequest = {
+          chainId,
           to,
           data,
           value,
@@ -117,12 +142,17 @@ export const createBundleProcessor = (
           maxFeePerGas: feeData.maxFeePerGas.toString(),
           maxPriorityFeePerGas: feeData.maxPriorityFeePerGas.toString(),
         }
-        tx.gasLimit = await entryPoint.contract.handleOps.estimateGas(
-          packUserOps(userOps),
-          beneficiary,
-        )
+        if (type === TX_TYPE_EIP_1559) {
+          tx.gasLimit = await entryPoint.contract.handleOps.estimateGas(
+            packUserOps(userOps),
+            beneficiary,
+          )
+        }
 
         let ret: string
+        Logger.debug(
+          `Sending bundle transaction with type: ${type}, txMode: ${txMode}`,
+        )
         switch (`${txMode}-${type}`) {
           case 'base-2': {
             const respone = await signer.sendTransaction(tx)
@@ -136,6 +166,10 @@ export const createBundleProcessor = (
               eip7702Tuples,
               signer,
             )
+            Logger.debug({
+              signedEthereumJsTx,
+              message: '7702 transaction prepared',
+            })
             const res = await providerService.send<string>(
               'eth_sendRawTransaction',
               [signedEthereumJsTx],
@@ -192,17 +226,25 @@ export const createBundleProcessor = (
           userOpHashes: hashes,
           signerIndex,
           isSendBundleSuccess: true,
-        } as SendBundleReturnWithSigner
+        }
       } catch (e: any) {
-        Logger.debug('Failed handleOps, attempting to parse error...')
+        Logger.debug('Failed send bundle, attempting to parse error...')
         const { opIndex, reasonStr } = parseFailedOpRevert(
           e,
           config.entryPoint.contract,
         )
         if (opIndex == null || reasonStr == null) {
           checkFatal(e)
-          Logger.warn('Failed handleOps, but non-FailedOp error', e)
-          return
+          nonFatalSendBundleFailDetails = {
+            userOps,
+            error: e,
+          }
+          return {
+            transactionHash: '',
+            userOpHashes: [],
+            signerIndex,
+            isSendBundleSuccess: false,
+          }
         }
 
         // Find entity address that caused handleOps to fail
@@ -227,7 +269,7 @@ export const createBundleProcessor = (
           isSendBundleSuccess: false,
         }
       } finally {
-        await afterHook(crashedHandleOps)
+        await afterHook(crashedHandleOps, nonFatalSendBundleFailDetails)
       }
     },
   }

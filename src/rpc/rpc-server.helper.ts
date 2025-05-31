@@ -27,7 +27,7 @@ export const safeParseHandlerResult = (
     (error: RpcError) => {
       Logger.error(
         { error: error.message },
-        `Error handling method requestId(${requestId})`,
+        `<--- Error handling method requestId(${requestId})`,
       )
       res.json({
         jsonrpc: '2.0',
@@ -39,7 +39,10 @@ export const safeParseHandlerResult = (
         },
       })
     },
-    (response: JsonRpcResponse) => res.json(response),
+    (response: JsonRpcResponse) => {
+      Logger.debug(`<--- Successfully handled method requestId(${requestId})`)
+      return res.json(response)
+    },
   )
 }
 
@@ -50,7 +53,7 @@ export const safeParseUnknownError = (
 ) => {
   Logger.error(
     { error: unknownError.message },
-    `Unknown error handling method requestId(${requestId})`,
+    `<--- Unknown error handling method requestId(${requestId})`,
   )
   res.json({
     jsonrpc: '2.0',
@@ -69,9 +72,6 @@ export const safeParseUnknownError = (
 export const doHandleRequest = async <M extends MethodNames>(
   request: ValidatedJsonRpcRequest<M>,
 ): Promise<Either<RpcError, JsonRpcResponse>> => {
-  Logger.debug(
-    `---> Handling valid request for ${request.method} with requestId(${request.id})`,
-  )
   const { params, id, handlerFunc } = request
   const handlerResult = await Promise.resolve(handlerFunc(params))
 
@@ -116,6 +116,9 @@ export const createApp = (
     }
 
     try {
+      Logger.debug(
+        `---> Handling valid request for ${request.method} with requestId(${request.id})`,
+      )
       const result = await doHandleRequest(request)
       safeParseHandlerResult(res, request.id, result)
     } catch (unknownError: any) {

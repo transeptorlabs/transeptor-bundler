@@ -67,10 +67,13 @@ export type MempoolManagerCore = {
   /**
    * Updates the status of the UserOperation with the given userOpHash to the given status.
    *
-   * @param userOpHash - The hash of the UserOperation to update.
+   * @param userOpOrHash - The UserOperation or its hash to update.
    * @param status - The new status of the UserOperation.
    */
-  updateEntryStatus(userOpHash: string, status: EntryStatus): Promise<void>
+  updateEntryStatus(
+    userOpOrHash: string | UserOperation,
+    status: EntryStatus,
+  ): Promise<void>
 
   /**
    * Checks if the mempool is overloaded using the current bundleSize.
