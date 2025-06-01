@@ -10,31 +10,26 @@ title: Running Transeptor
 ## Features
 
 - **Metrics** - Transeptor bundler can be configured to store metrics using a push(InfluxDB) and pull(Prometheus) metrics system. Grafana is used to visualize all the metrics. Use `--metrics` flag to enable.
-- **Entity Reputation System** - When staked(i.e., with an entrypoint contract), an entity can also use its own associated storage and senders' associated storage as ETH. Transeptor can be pre-configured to blocklist and allowlist entities on startup.
-- **Native Tracer** - Supports native tracer to enforce ERC-7562: Account Abstraction Validation Scope Rules. [accountabstraction/geth-native-tracer](https://hub.docker.com/r/accountabstraction/geth-native-tracer) node.
-- **Entrypoint contract** - Supports Entrypoint contract [releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7).
+- **Entity Reputation System** - When staked(i.e., with an entrypoint contract), an entity can also use its own associated storage and senders' associated storage as ETH. Transeptor can be pre-configured to [blacklist(computing)](https://en.wikipedia.org/wiki/Blacklist_(computing)) and [whitelist(computing)](https://en.wikipedia.org/wiki/Whitelist) entities on startup.
+- **Geth ERC-7562 Tracer** - Supports native tracer to enforce [ERC-7562: Account Abstraction Validation Scope Rules](https://eips.ethereum.org/EIPS/eip-7562). [accountabstraction/geth-with-erc7562-tracer](https://hub.docker.com/r/accountabstraction/geth-with-erc7562-tracer) node.
+- **Entrypoint contract** - Supports Entrypoint contract [releases/v0.8](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.8).
+- **EIP-7702 authorizations** - On networks with [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702) enabled, the `eth_sendUserOperation` method accepts an extra `eip7702Auth` parameter. Transeptor include all UserOperations that require `eip7702Auth` in a bundle to the `authorizationList` and execute the bundle using a transaction `type 4`.
 - **p2p mempool** - Coming soon.
 
-
-To run Transeptor with [ERC-7562: Account Abstraction Validation Rules](https://eips.ethereum.org/EIPS/eip-7562), a fully synced geth node or a native tracer node must be running alongside the bundler. Both options require the node to be enabled with `debug_traceCall`.
-
-> A native tracer node does not need to be fully synced. To reduce infrastructure overhead, we recommend running Transpetor with a native tracer node.
+To run Transeptor with [ERC-7562: Account Abstraction Validation Rules](https://eips.ethereum.org/EIPS/eip-7562), a fully synced geth node node must be running alongside the bundler. Both options require the node to be enabled with `debug_traceCall`.
 
 ## Modes
 
-> It is recommended not to run Transpetor with `--unsafe` in production. This flag is disabled by default and is only intended for experimental and development purposes. Running Transeptor with `--unsafe` will disable all storage access rules, opcode banning, and code rule validation.
+> It is recommended not to run Transeptor with `--unsafe` in production. This flag is disabled by default and is only intended for experimental and development purposes. Running Transeptor with `--unsafe` will disable all storage access rules, opcode banning, and code rule validation.
 
-
-| Feature                                | Base (No Native Tracer)                                        | Base (Native Tracer)                                                                                    | Searcher (No Native Tracer)                                                                                       | Searcher (Native Tracer)                                                                                          |
-| -------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Mempool Support                        | Private mempool                                                | Private mempool                                                                                         | Private mempool                                                                                                   | Private mempool                                                                                                   |
-| EVM Networks                           | All EVM clients                                                | All EVM clients                                                                                         | Ethereum and Sepolia                                                                                              | Ethereum and Sepolia                                                                                              |
-| Bundle Sending Strategy                | Uses `eth_sendRawTransaction` RPC                              | Uses `eth_sendRawTransaction` RPC                                                                       | Uses [Flashbots](https://docs.flashbots.net/flashbots-auction/searchers/quick-start) `eth_sendPrivateTransaction` | Uses [Flashbots](https://docs.flashbots.net/flashbots-auction/searchers/quick-start) `eth_sendPrivateTransaction` |
-| Ethereum Network Provider              | fully synced [geth](https://geth.ethereum.org/docs/getting-started) node         | Node services like Infura, Alchemy, etc                                                                 | fully synced [geth](https://geth.ethereum.org/docs/getting-started) node                                                            | Node services like Infura, Alchemy, etc                                                                           |
-| Ethereum Network Provider Requirements | Must support `debug_traceCall` with standard javascript tracer | Must support `debug_traceCall` with `prestateTracer`                                                      | Must support `debug_traceCall` with standard javascript tracer                                                    | Must support `debug_traceCall` with `prestateTracer`                                                                |
-| Native Tracer Provider                 | No                                                            | [accountabstraction/geth-native-tracer](https://hub.docker.com/r/accountabstraction/geth-native-tracer) node | No                                                                                                                | [accountabstraction/geth-native-tracer](https://hub.docker.com/r/accountabstraction/geth-native-tracer) node           |
-| Native Tracer Provider Requirements    | No                                                            | Must support `debug_traceCall` with tracer name: `bundlerCollectorTracer` | No                                                                                                               | Tracer name: `bundlerCollectorTracer` |
-
+| Feature                                | Base Mode (ERC-7562 tracer)                               | Searcher Mode (ERC-7562 tracer)                                                                                 |
+|----------------------------------------|-----------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| Mempool Support                        | Private mempool                                           | Private mempool                                                                                                 |
+| EVM Networks                           | Ethereum and Sepolia                                      | Ethereum and Sepolia                                                                                            |
+| Bundle Sending Strategy                | Uses eth_sendRawTransaction RPC                           | Uses [Flashbots](https://docs.flashbots.net/flashbots-auction/searchers/quick-start) eth_sendPrivateTransaction |
+| Ethereum Network Provider              | accountabstraction/geth-with-erc7562-tracer               | accountabstraction/geth-with-erc7562-tracer                                                                     |
+| Ethereum Network Provider Requirements | Must support debug_traceCall with 'erc7562Tracer'  tracer | Must support debug_traceCall with 'erc7562Tracer' tracer                                                        |
+| EIP-7702 support                       | yes                                                       | yes                                                                                                             |                                                      |
 
 ## Command line arguments
 
@@ -48,7 +43,9 @@ docker run -p 4337:4337 --env-file .env transeptorlabs/bundler:latest --help
 Options:
   -V, --version                  output the version number
   --unsafe                       UNSAFE mode: Enable no storage or opcode checks during userOp simulation. SAFE mode(default).
-  --tracerRpcUrl <string>        Enables native tracer for full validation during userOp simulation with prestateTracer native tracer on the network provider. requires unsafe=false.
+  --eip7702Support               On networks with EIP-7702 enabled, the eth_sendUserOperation
+                                 method accepts an extra eip7702Auth parameter. (default:
+                                 true)
   --network <string>             Ethereum network provider. (default: "http://localhost:8545")
   --httpApi <string>             ERC4337 rpc method namespaces to enable. (default: "web3,eth")
   --port <number>                Bundler node listening port. (default: "4337")
@@ -87,3 +84,12 @@ TRANSEPTOR_INFLUX_TOKEN=DEV_TOKEN
 TRANSEPTOR_WHITE_LIST=<address_to_whitelist_SEPARATED_BY_COMMA>
 TRANSEPTOR_BLACK_LIST=<address_to_blacklist_SEPARATED_BY_COMMA>
 ```
+
+## Legacy Entrypoint support
+
+> :warning: **If you are using an older version of EntryPoint, please refer to the links below. We only provide support for the most recent release of our software. We strongly recommend updating your smart contract to use [Entrypoint releases/v0.8](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.8). For more information, see our [Security Policy](https://github.com/transeptorlabs/transeptor-bundler/security/policy).**
+>
+
+**Legacy Transeptor releases:**
+- Compatible with [Entrypoint releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7): [Transeptor v0.11.0-alpha.0](https://github.com/transeptorlabs/transeptor-bundler/tree/v0.11.0-alpha.0)
+- Compatible with [Entrypoint releases/v0.6](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.6): [Transeptor v0.5.3-alpha.0](https://github.com/transeptorlabs/transeptor-bundler/tree/v0.5.3-alpha.0)

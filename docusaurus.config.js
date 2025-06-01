@@ -80,7 +80,7 @@ const config = {
       image: 'img/transeptor.jpg',
       metadata: [{name: 'keywords', content: 'bundler, erc-4337, account abstraction, smart contract account, ethereum'}],
       navbar: {
-        title: 'Transeptor Labs',
+        title: 'Transeptor',
         logo: {
           alt: 'Transeptor labs Logo',
           src: 'img/brand/logo-2.png',

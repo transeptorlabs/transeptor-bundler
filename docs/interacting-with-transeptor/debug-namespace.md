@@ -6,7 +6,7 @@ description: Describe all Eth namespace RPC methods supported by Transeptor.
 title: debug Namespace
 ---
 
-*All `debug` namespace RPC methods listed here require our Bundler to be 100% compliant as an [EIP-4337](https://eips.ethereum.org/EIPS/eip-4337) Bundler.*
+*All `debug` namespace RPC methods listed here require our Bundler to be 100% compliant as an [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) Bundler.*
 
 <hr></hr>
 
