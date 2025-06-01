@@ -15,15 +15,15 @@ forge script ./scripts/DeployBundlerE2e.s.sol --rpc-url <network_provider_url> -
 The last command will output the address of the deployed contract.
 
 
-## Runing bundler
+## Running bundler
 
-1. Start up geth native tracer node
+1. Start up geth with ERC-7562 tracer 
 ```bash
-docker run -d --name geth-native-tracer -p 8888:8888 accountabstraction/geth-native-tracer \
+docker run -d --name geth-with-erc7562-tracer -p 8545:8545 accountabstraction/geth-with-erc7562-tracer \
     --verbosity 1 \
     --http.vhosts '*,localhost,host.docker.internal' \
     --http \
-    --http.port 8888 \
+    --http.port 8545 \
     --http.api eth,net,web3,debug \
     --http.corsdomain '*' \
     --http.addr "0.0.0.0" \
@@ -59,12 +59,11 @@ docker run -d --name transeptor -p 4337:4337 --env-file .env.test bundler-typesc
     --txMode searcher \
     --port 4337 \
     --minBalance 0.01 \
-    --network https://sepolia.infura.io/v3/your-project-id \
-    --tracerRpcUrl http://host.docker.internal:8888 \
+    --network http://host.docker.internal:8545 \
     --auto
 ```
 
-Traneptor will start on `http://localhost:4437/rpc.` Run curl command to check if the Transeptor is running:
+Transeptor will start on `http://localhost:4437/rpc.` Run curl command to check if the Transeptor is running:
 
 ```bash
 curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"web3_clientVersion","params":[],"id":67}' http://localhost:4337/rpc
