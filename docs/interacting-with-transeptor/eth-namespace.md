@@ -6,7 +6,7 @@ description: Describe all Eth namespace RPC methods supported by Transeptor.
 title: eth Namespace
 ---
 
-*All `eth` namespace RPC methods listed here require our Bundler to be 100% compliant as an [EIP-4337](https://eips.ethereum.org/EIPS/eip-4337) Bundler.*
+*All `eth` namespace RPC methods listed here require our Bundler to be 100% compliant as an [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) Bundler.*
 
 <hr></hr>
 
@@ -80,7 +80,7 @@ Example Request:
       "maxPriorityFeePerGas": "0x05",
       "signature": "0x1234...5678"
     },
-    "0x_entryPoint"
+    "0x4337084d9e255ff0702461cf8895ce9e3b5ff108"
   ]
 }
 ```
@@ -121,7 +121,7 @@ Example Request with no paymaster:
       "maxPriorityFeePerGas": "0x05",
       "signature": "0x1234...5678"
     },
-    "0x_entryPoint"
+    "0x4337084d9e255ff0702461cf8895ce9e3b5ff108"
   ]
 }
 ```
@@ -149,7 +149,7 @@ Example Request with paymaster:
       "paymasterData": "0x1234...5678",
       "signature": "0x1234...5678"
     },
-    "0x_entryPoint"
+    "0x4337084d9e255ff0702461cf8895ce9e3b5ff108"
   ]
 }
 ```
@@ -238,7 +238,7 @@ or
       "signature": "0x1234...5678"
       },
    },
-   "entryPoint": "0x_entryPoint",
+   "entryPoint": "0x4337084d9e255ff0702461cf8895ce9e3b5ff108",
    "blockNumber": "1111",
    "blockHash": "0x_blockHash",
    "transactionHash": "0x_transactionHash"
@@ -279,7 +279,7 @@ or
   "id": 1,
   "result": {
     "userOpHash": "0x_userOpHash",
-    "entryPoint": "0x_entryPoint",
+    "entryPoint": "0x4337084d9e255ff0702461cf8895ce9e3b5ff108",
     "sender": "0x_sender",
     "nonce": "0x01",
     "paymaster": "0x_paymaster",
