@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - XXX-XX-XX
 
+## [v0.12.0-alpha.0] - 2025-06-01
+
+## Added
+- Support for EntryPoint release`v0.8` #136 
+- Support for [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702) #140 
+- Add `Erc7562Parser` to enforce [ERC-7562](https://eips.ethereum.org/EIPS/eip-7562) rules #140 
+- CLI flag `--eip7702Support`: enables eip7702Auth parameter for eth_sendUserOperation on networks with EIP-7702 enabled #140 
+- Support for sending EIP-7702 Auth Type 4 transactions #140
+- `Docs contribution` section added to project documentation  #144
+
+## Changes
+- Updated `eth-node` script to use the[accountabstraction/geth-with-erc7562-tracer](https://hub.docker.com/r/accountabstraction/geth-with-erc7562-tracer) Docker image #140 
+- Added [@ethereumjs](https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/tx#eoa-code-transaction-eip-7702) dependency to prepare EIP-7702 transactions  #140 
+- Update PreVerificationGasCalculator calculations  #140 
+
+##  Removed
+- Drops CLI flags `--tracerRpcUrl` #140 
+- Drops support for legacy JS tracer/parser  #140 
+
+## Fixes
+- Fixed multiple failing EntryPoint v0.8 spec tests #137
+
 ## [v0.11.0-alpha.0] - 2025-05-02
 
 ### Changed

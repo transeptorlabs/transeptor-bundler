@@ -1,7 +1,7 @@
 {
   "name": "transeptor-bundler",
   "private": true,
-  "version": "0.11.0-alpha.0",
+  "version": "0.12.0-alpha.0",
   "description": "A light weight blazing fast, modular ERC-4337 TypeScript bundler built with the power of declarative functional programming.",
   "author": {
     "name": "Transeptor Labs",
