@@ -32,12 +32,27 @@ To quickly start using Transeptor, follow the instructions in our [Quick Start g
 
 ## Development
 
-**Prerequisites**
+### Prerequisites
 
-- [NodeJS](https://nodejs.org/) (>=v22.14.0)
-- [Yarn](https://classic.yarnpkg.com/lang/en/) (v4.7.0)
-- [Docker](https://docs.docker.com/compose/install/) (>=v27.5.1)
-- [Git](https://git-scm.com/) (>=v2.39.5)
+Before getting started, make sure you have the following tools installed on your machine:
+
+- [Node.js](https://nodejs.org/) (>= **v22.14.0**)
+- [nvm](https://github.com/nvm-sh/nvm) – Node version manager
+- [Yarn](https://classic.yarnpkg.com/lang/en/) (**v4.7.0**)
+- [Docker](https://docs.docker.com/compose/install/) – with Docker Compose **v2**
+- [Git](https://git-scm.com/)
+- [Foundry (forge)](https://getfoundry.sh/introduction/installation) (>= **1.1.0**)
+
+> **Tip:** You can run the `./scripts/check-prerequisites.sh` script to verify your system is ready to run the development environment:
+>
+> This script will validate the required versions of Node.js, Yarn, Git, Docker Compose, and Foundry.
+
+```bash
+chmod +x ./scripts/check-prerequisites.sh
+./scripts/check-prerequisites.sh
+```
+
+### Getting started
 
 Follow these instructions to get the project up and running on your local machine for development purposes:
 
@@ -50,6 +65,9 @@ git submodule update --init --recursive
 # Use the correct node version
 nvm use
 
+# Use yarn version 4.7.0
+corepack enable
+
 # Install dependencies
 yarn install
 
@@ -59,8 +77,9 @@ yarn start:eth-dev
 
 2. Please wait for environment vars to be printed in the terminal and copy it to your `.env` files.
 3. In a new terminal window, start the bundler node in dev mode with a live watch for changes in the `./src` path with auto restarts. There are two different dev modes:
-  - `yarn dev` - To start the bundler node in safe mode with full storage and opcode checks.
-  - `yarn dev:unsafe` - To start the bundler node in unsafe mode with no storage or opcode checks.
+
+- `yarn dev` - To start the bundler node in safe mode with full storage and opcode checks.
+- `yarn dev:unsafe` - To start the bundler node in unsafe mode with no storage or opcode checks.
 
 The bundler node will start on `http://localhost:4337/rpc`.
 
@@ -95,7 +114,7 @@ For detailed configuration options, including command-line arguments and environ
 
 ## Contribute
 
-We welcome contributions to enhance our ERC-4337 Bundler. Please follow our [contribution guidelines.](https://github.com/transeptorlabs/transeptor-bundler/blob/main/CONTRIBUTING.md).
+We welcome contributions to enhance our ERC-4337 Bundler. Please follow our [contribution guidelines](https://github.com/transeptorlabs/transeptor-bundler/blob/main/CONTRIBUTING.md).
 
 ## Contact Us
 
