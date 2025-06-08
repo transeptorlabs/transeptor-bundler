@@ -64,6 +64,7 @@ start_geth_with_erc7562_native_tracer() {
   TRANSEPTOR_E2E_GLOBAL_COUNTER=$(echo "$OUTPUT" | grep -o "GlobalCounter: 0x[0-9a-fA-F]*" | cut -d' ' -f2)
   echo -e "$(tput setaf 4)▼▼▼ $(tput setaf 7)Please add to local .env$(tput setaf 4) ▼▼▼$(tput sgr0)\n
   TRANSEPTOR_MNEMONIC=$DEV_MNEMONIC
+  TRANSEPTOR_LOG_LEVEL=debug
   TRANSEPTOR_ENTRYPOINT_ADDRESS=$TRANSEPTOR_ENTRYPOINT_ADDRESS_V8
   TRANSEPTOR_BENEFICIARY=$TRANSEPTOR_BENEFICIARY\n
   TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY=$TRANSEPTOR_E2E_SIMPLE_ACCOUNT_FACTORY
