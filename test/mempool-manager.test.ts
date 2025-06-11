@@ -15,12 +15,12 @@ describe('MempoolManagerCore', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mempoolManager = createMempoolManagerCore(
-      createState(),
-      mockReputationManager,
-      mockDepositManager,
-      MOCK_BUNDLE_SIZE,
-    )
+    mempoolManager = createMempoolManagerCore({
+      state: createState(),
+      reputationManager: mockReputationManager,
+      depositManager: mockDepositManager,
+      bundleSize: MOCK_BUNDLE_SIZE,
+    })
   })
 
   it('should addUserOp and findByHash correctly', async () => {

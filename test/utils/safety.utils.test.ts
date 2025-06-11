@@ -76,4 +76,59 @@ describe('withReadonly', () => {
     expect(wrapped.numbers).toEqual([1, 2, 3])
     expect(wrapped.nested.value).toBe(42)
   })
+
+  test('should handle primitive values', () => {
+    const deps = {
+      str: 'test',
+      num: 42,
+      bool: true,
+      null: null,
+      undefined: undefined,
+    }
+    const createModule = (
+      deps: Readonly<{
+        str: string
+        num: number
+        bool: boolean
+        null: null
+        undefined: undefined
+      }>,
+    ) => deps
+    const wrapped = withReadonly(createModule)(deps)
+
+    expect(wrapped.str).toBe('test')
+    expect(wrapped.num).toBe(42)
+    expect(wrapped.bool).toBe(true)
+    expect(wrapped.null).toBe(null)
+    expect(wrapped.undefined).toBe(undefined)
+  })
+
+  test('should throw error for class instances', () => {
+    class TestClass {
+      value = 42
+    }
+
+    const deps = {
+      instance: new TestClass(),
+    }
+    const createModule = (deps: Readonly<{ instance: TestClass }>) => deps
+
+    expect(() => {
+      withReadonly(createModule)(deps)
+    }).toThrow('deepFreezeClone only supports plain objects and arrays')
+  })
+
+  test('should handle empty objects and arrays', () => {
+    const deps = {
+      emptyObj: {},
+      emptyArr: [],
+    }
+    const createModule = (
+      deps: Readonly<{ emptyObj: Record<string, never>; emptyArr: never[] }>,
+    ) => deps
+    const wrapped = withReadonly(createModule)(deps)
+
+    expect(wrapped.emptyObj).toEqual({})
+    expect(wrapped.emptyArr).toEqual([])
+  })
 })
