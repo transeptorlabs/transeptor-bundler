@@ -1,5 +1,4 @@
 /* eslint-disable complexity */
-import { ethers } from 'ethers'
 import { Logger } from '../../logger/index.js'
 import {
   ReputationManager,
@@ -10,7 +9,7 @@ import {
   BundleReadyToSend,
   RemoveUserOpDetails,
 } from '../../types/index.js'
-import { mergeStorageMap } from '../../utils/index.js'
+import { mergeStorageMap, withReadonly } from '../../utils/index.js'
 import { ValidationService } from '../../validation/index.js'
 import {
   validateUserOperation,
@@ -20,24 +19,36 @@ import {
   mergeEip7702Authorizations,
 } from './builder.helpers.js'
 import { findEntityToBlame, checkFatal } from '../bundle.helper.js'
+import { ProviderService } from '../../provider/index.js'
 
 export type BundleBuilderConfig = {
+  providerService: ProviderService
   validationService: ValidationService
   reputationManager: ReputationManager
   mempoolManagerBuilder: MempoolManagerBuilder
   opts: {
     maxBundleGas: number
     txMode: string
-    entryPointContract: ethers.Contract
-    entryPointAddress: string
   }
 }
 
-export const createBundleBuilder = (
-  config: BundleBuilderConfig,
-): BundleBuilder => {
-  const { validationService, reputationManager, mempoolManagerBuilder, opts } =
-    config
+/**
+ * Creates an instance of the BundleBuilder module.
+ *
+ * @param config - The configuration object for the BundleBuilder instance.
+ * @returns An instance of the BundleBuilder module.
+ */
+function _createBundleBuilder(
+  config: Readonly<BundleBuilderConfig>,
+): BundleBuilder {
+  const {
+    providerService,
+    validationService,
+    reputationManager,
+    mempoolManagerBuilder,
+    opts,
+  } = config
+  const entryPoint = providerService.getEntryPointContractDetails()
   const THROTTLED_ENTITY_BUNDLE_COUNT = 4
 
   const getEntries = async (force?: boolean): Promise<MempoolEntry[]> => {
@@ -80,7 +91,7 @@ export const createBundleBuilder = (
           Logger.debug({ error: failedValError }, 'failed 2nd validation')
           const { opIndex, reasonStr } = parseFailedOpRevert(
             failedValError,
-            config.opts.entryPointContract,
+            entryPoint.contract,
           )
           if (opIndex == null || reasonStr == null) {
             checkFatal(failedValError)
@@ -93,7 +104,7 @@ export const createBundleBuilder = (
             reasonStr,
             opDetails.userOp,
             reputationManager,
-            config.opts.entryPointAddress,
+            entryPoint.address,
           )
           if (addr !== null) {
             // TODO: Make this a batch operation to the reputationManager
@@ -136,7 +147,7 @@ export const createBundleBuilder = (
             'Setting paymaster deposit for paymaster if it does not exist',
           )
           acc.paymasterDeposit[paymaster] =
-            await opts.entryPointContract.balanceOf(paymaster)
+            await entryPoint.contract.balanceOf(paymaster)
         }
       }
 
@@ -276,3 +287,8 @@ export const createBundleBuilder = (
     },
   }
 }
+
+export const createBundleBuilder = withReadonly<
+  BundleBuilderConfig,
+  BundleBuilder
+>(_createBundleBuilder)

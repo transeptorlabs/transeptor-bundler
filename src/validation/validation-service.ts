@@ -15,8 +15,9 @@ import {
   requireAddressAndFields,
   getAuthorizationList,
   getEip7702AuthorizationSigner,
-  EIP_7702_MARKER_INIT_CODE,
+  withReadonly,
 } from '../utils/index.js'
+import { EIP_7702_MARKER_INIT_CODE } from '../constants/index.js'
 
 import { ProviderService } from '../provider/index.js'
 import { PreVerificationGasCalculator } from '../gas/index.js'
@@ -75,9 +76,15 @@ export type ValidateInputParams = {
   eip7702Support: boolean
 }
 
-export const createValidationService = (
-  config: ValidationServiceConfig,
-): ValidationService => {
+/**
+ * Creates an instance of the ValidationService module.
+ *
+ * @param config - The configuration object for the ValidationService instance.
+ * @returns An instance of the ValidationService module.
+ */
+function _createValidationService(
+  config: Readonly<ValidationServiceConfig>,
+): ValidationService {
   const {
     providerService: ps,
     sim,
@@ -299,3 +306,8 @@ export const createValidationService = (
     },
   }
 }
+
+export const createValidationService = withReadonly<
+  ValidationServiceConfig,
+  ValidationService
+>(_createValidationService)

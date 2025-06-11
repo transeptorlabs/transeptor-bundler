@@ -1,4 +1,3 @@
-import { ethers } from 'ethers'
 import {
   EstimateUserOpGasResult,
   PackedUserOperation,
@@ -18,11 +17,12 @@ import {
   deepHexlify,
   getAuthorizationList,
   unpackUserOp,
+  withReadonly,
 } from '../../utils/index.js'
 
 import { ProviderService } from '../../provider/index.js'
 import { ValidationService } from '../../validation/index.js'
-import { EventManagerWithListener } from '../../event/index.js'
+import { EventManager } from '../../event/index.js'
 import { PreVerificationGasCalculator } from '../../gas/index.js'
 import { Either } from '../../monad/index.js'
 import {
@@ -34,31 +34,33 @@ import {
 } from './eth-api.helpers.js'
 
 export type EthAPIConfig = {
-  ps: ProviderService
+  providerService: ProviderService
   sim: Simulator
-  vs: ValidationService
-  eventsManager: EventManagerWithListener
+  validationService: ValidationService
+  eventsManager: EventManager
   mempoolManageSender: MempoolManageSender
   preVerificationGasCalculator: PreVerificationGasCalculator
-  entryPoint: {
-    contract: ethers.Contract
-    address: string
-  }
   eip7702Support: boolean
 }
 
-export const createEthAPI = (config: EthAPIConfig): EthAPI => {
+/**
+ * Creates an instance of the EthAPI module.
+ *
+ * @param config - The configuration object for the EthAPI instance.
+ * @returns An instance of the EthAPI module.
+ */
+function _createEthAPI(config: Readonly<EthAPIConfig>): EthAPI {
   const HEX_REGEX = /^0x[a-fA-F\d]*$/i
   const {
-    ps,
+    providerService: ps,
     sim,
-    vs,
+    validationService: vs,
     eventsManager,
     mempoolManageSender,
     preVerificationGasCalculator: pvgc,
-    entryPoint,
     eip7702Support,
   } = config
+  const entryPoint = ps.getEntryPointContractDetails()
 
   return {
     getChainId: async (): Promise<number> => ps.getChainId(),
@@ -299,3 +301,5 @@ export const createEthAPI = (config: EthAPIConfig): EthAPI => {
     },
   }
 }
+
+export const createEthAPI = withReadonly<EthAPIConfig, EthAPI>(_createEthAPI)

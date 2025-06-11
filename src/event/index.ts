@@ -1,1 +1,1 @@
-export * from './event-manager-with-reputation.js'
+export * from './event-manager.js'

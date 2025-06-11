@@ -1,5 +1,3 @@
-import { ethers } from 'ethers'
-
 import { Logger } from '../logger/index.js'
 import {
   ReputationEntry,
@@ -11,38 +9,64 @@ import {
   StakeInfo,
   ValidationErrors,
 } from '../types/index.js'
-import { requireCond, tostr } from '../utils/index.js'
+import { requireCond, tostr, withReadonly } from '../utils/index.js'
 import { StateService, ReputationEntries, StateKey } from '../types/index.js'
+import { ProviderService } from '../provider/index.js'
 
-export const createReputationManagerUpdater = (
-  reputationManager: ReputationManager,
-): ReputationManagerUpdater => {
+export type ReputationManagerConfig = {
+  providerService: ProviderService
+  state: StateService
+  minStake: bigint
+  minUnstakeDelay: bigint
+}
+
+/**
+ * Creates an instance of the ReputationManagerUpdater module.
+ *
+ * @param reputationManager - The ReputationManager instance.
+ * @returns An instance of the ReputationManagerUpdater module.
+ */
+function _createReputationManagerUpdater(
+  reputationManager: Readonly<ReputationManager>,
+): ReputationManagerUpdater {
   return {
     updateSeenStatus: reputationManager.updateSeenStatus,
     crashedHandleOps: reputationManager.crashedHandleOps,
   }
 }
 
-export const createReputationManagerReader = (
-  reputationManager: ReputationManager,
-): ReputationManagerReader => {
+/**
+ * Creates an instance of the ReputationManagerReader module.
+ *
+ * @param reputationManager - The ReputationManager instance.
+ * @returns An instance of the ReputationManagerReader module.
+ */
+function _createReputationManagerReader(
+  reputationManager: Readonly<ReputationManager>,
+): ReputationManagerReader {
   return {
     getStakeStatus: reputationManager.getStakeStatus,
   }
 }
 
-export const createReputationManager = (
-  state: StateService,
-  minStake: bigint,
-  minUnstakeDelay: bigint,
-  stakeManagerContract: ethers.Contract,
-): ReputationManager => {
+/**
+ * Creates an instance of the ReputationManager module.
+ *
+ * @param config - The configuration object for the ReputationManager instance.
+ * @returns An instance of the ReputationManager module.
+ */
+function _createReputationManager(
+  config: Readonly<ReputationManagerConfig>,
+): ReputationManager {
   let interval: NodeJS.Timer | null = null
   const bundlerReputationParams: ReputationParams = {
     minInclusionDenominator: 10,
     throttlingSlack: 10,
     banSlack: 50,
   }
+  const { providerService, state, minStake, minUnstakeDelay } = config
+  const stakeManagerContract =
+    providerService.getStakeManagerContractDetails().contract
 
   const stopHourlyCron = () => {
     if (interval) {
@@ -465,3 +489,18 @@ export const createReputationManager = (
     },
   }
 }
+
+export const createReputationManagerUpdater = withReadonly<
+  ReputationManager,
+  ReputationManagerUpdater
+>(_createReputationManagerUpdater)
+
+export const createReputationManagerReader = withReadonly<
+  ReputationManager,
+  ReputationManagerReader
+>(_createReputationManagerReader)
+
+export const createReputationManager = withReadonly<
+  ReputationManagerConfig,
+  ReputationManager
+>(_createReputationManager)

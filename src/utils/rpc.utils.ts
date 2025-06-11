@@ -4,7 +4,7 @@ import {
   JsonRpcSuccessResponse,
   RpcError,
 } from '../types/index.js'
-import { Either } from 'src/monad/index.js'
+import { Either } from '../monad/index.js'
 
 export const requireCond = (
   cond: boolean,

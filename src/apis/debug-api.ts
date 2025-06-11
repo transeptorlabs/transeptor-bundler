@@ -1,5 +1,4 @@
-import { packUserOp } from '../utils/index.js'
-import { ethers } from 'ethers'
+import { packUserOp, withReadonly } from '../utils/index.js'
 import { BundleManager } from '../bundle/index.js'
 import {
   MempoolManagerCore,
@@ -10,20 +9,40 @@ import {
   UserOperation,
   DebugAPI,
 } from '../types/index.js'
-import { EventManagerWithListener } from '../event/index.js'
+import { EventManager } from '../event/index.js'
 import {
   PreVerificationGasCalculator,
   PreVerificationGasConfig,
 } from '../gas/index.js'
+import { ProviderService } from '../provider/index.js'
 
-export const createDebugAPI = (
-  bundleManager: BundleManager,
-  reputationManager: ReputationManager,
-  mempoolManagerCore: MempoolManagerCore,
-  eventsManager: EventManagerWithListener,
-  pvgc: PreVerificationGasCalculator,
-  entryPointContract: ethers.Contract,
-): DebugAPI => {
+export type DebugAPIConfig = {
+  providerService: ProviderService
+  bundleManager: BundleManager
+  reputationManager: ReputationManager
+  mempoolManagerCore: MempoolManagerCore
+  eventsManager: EventManager
+  preVerificationGasCalculator: PreVerificationGasCalculator
+}
+
+/**
+ * Creates an instance of the DebugAPI module.
+ *
+ * @param config - The configuration object for the DebugAPI instance.
+ * @returns An instance of the DebugAPI module.
+ */
+function _createDebugAPI(config: Readonly<DebugAPIConfig>): DebugAPI {
+  const {
+    providerService,
+    bundleManager,
+    reputationManager,
+    mempoolManagerCore,
+    eventsManager,
+    preVerificationGasCalculator: pvgc,
+  } = config
+  const entryPointContract =
+    providerService.getEntryPointContractDetails().contract
+
   return {
     setBundleInterval: async (): Promise<string> => {
       // TODO: Implement this on the bundle manager
@@ -114,3 +133,7 @@ export const createDebugAPI = (
     },
   }
 }
+
+export const createDebugAPI = withReadonly<DebugAPIConfig, DebugAPI>(
+  _createDebugAPI,
+)

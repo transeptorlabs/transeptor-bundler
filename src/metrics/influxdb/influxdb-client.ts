@@ -1,7 +1,11 @@
 'use strict'
 import os from 'os'
 import { InfluxDB, Point } from '@influxdata/influxdb-client'
-import { MeasurementName } from '../../types/metrics.types.js'
+import {
+  InfluxdbConnection,
+  MeasurementName,
+} from '../../types/metrics.types.js'
+import { withReadonly } from '../../utils/index.js'
 
 export type InfluxdbClient = {
   writePoint: (
@@ -10,12 +14,16 @@ export type InfluxdbClient = {
   ) => Promise<void>
 }
 
-export const createInfluxdbClient = (
-  url: string,
-  token: string,
-  org: string,
-  bucket: string,
-) => {
+/**
+ * Creates an instance of the InfluxdbClient module.
+ *
+ * @param config - The configuration object for the InfluxdbClient instance.
+ * @returns An instance of the InfluxdbClient module.
+ */
+function _createInfluxdbClient(
+  config: Readonly<InfluxdbConnection>,
+): InfluxdbClient {
+  const { url, token, org, bucket } = config
   const influxDB: InfluxDB = new InfluxDB({ url, token })
 
   return {
@@ -43,3 +51,8 @@ export const createInfluxdbClient = (
     },
   }
 }
+
+export const createInfluxdbClient = withReadonly<
+  InfluxdbConnection,
+  InfluxdbClient
+>(_createInfluxdbClient)

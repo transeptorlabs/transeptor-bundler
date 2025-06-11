@@ -16,7 +16,7 @@ import {
   Simulator,
   StateOverride,
 } from '../types/index.js'
-import { packUserOp, sum } from '../utils/index.js'
+import { packUserOp, sum, withReadonly } from '../utils/index.js'
 import { ProviderService } from '../provider/index.js'
 import { Either } from '../monad/index.js'
 import {
@@ -32,23 +32,23 @@ import { PreVerificationGasCalculator } from '../gas/index.js'
 
 export type SimulatorConfig = {
   providerService: ProviderService
-  entryPoint: ethers.Contract
-  epAddress: string
   preVerificationGasCalculator: PreVerificationGasCalculator
 }
 
-export const createSimulator = (config: SimulatorConfig): Simulator => {
-  const {
-    providerService: ps,
-    entryPoint,
-    epAddress,
-    preVerificationGasCalculator,
-  } = config
+/**
+ * Creates an instance of the Simulator module.
+ *
+ * @param config - The configuration object for the Simulator instance.
+ * @returns An instance of the Simulator module.
+ */
+function _createSimulator(config: Readonly<SimulatorConfig>): Simulator {
+  const { providerService: ps, preVerificationGasCalculator } = config
+  const entryPointContract = ps.getEntryPointContractDetails()
 
   const epSimsInterface = new Interface(I_ENTRY_POINT_SIMULATIONS)
   const simFunctionName = 'simulateValidation'
   const defaultStateOverrides: { [address: string]: { code: string } } = {
-    [epAddress]: {
+    [entryPointContract.address]: {
       code: EntryPointSimulationsDeployedBytecode,
     },
   }
@@ -63,7 +63,7 @@ export const createSimulator = (config: SimulatorConfig): Simulator => {
 
       const ethCallResult = await ps.send<BytesLike>('eth_call', [
         {
-          to: epAddress,
+          to: entryPointContract.address,
           data: epSimsInterface.encodeFunctionData(simFunctionName, [
             packUserOp(userOp),
           ]),
@@ -138,11 +138,11 @@ export const createSimulator = (config: SimulatorConfig): Simulator => {
 
       const tx: any = {
         from: ethers.ZeroAddress,
-        to: epAddress,
-        data: entryPoint.interface.encodeFunctionData('handleOps', [
-          [packUserOp(userOp)],
-          ethers.ZeroAddress,
-        ]),
+        to: entryPointContract.address,
+        data: entryPointContract.contract.interface.encodeFunctionData(
+          'handleOps',
+          [[packUserOp(userOp)], ethers.ZeroAddress],
+        ),
         gasLimit: simulationGas.toString(),
         authorizationList:
           userOp.eip7702Auth == null ? null : [userOp.eip7702Auth],
@@ -151,7 +151,7 @@ export const createSimulator = (config: SimulatorConfig): Simulator => {
       const tracerResult = await runErc7562NativeTracer(ps, tx, stateOverride)
 
       const stakeResults = await getStakes(
-        entryPoint,
+        entryPointContract.contract,
         userOp.sender,
         userOp.paymaster,
         userOp.factory,
@@ -171,7 +171,7 @@ export const createSimulator = (config: SimulatorConfig): Simulator => {
       Logger.debug('Running simulateHandleOp on userOp')
       const ethCallResult = await ps.send<BytesLike>('eth_call', [
         {
-          to: epAddress,
+          to: entryPointContract.address,
           data: epSimsInterface.encodeFunctionData('simulateHandleOp', [
             packUserOp(userOp),
             ethers.ZeroAddress,
@@ -239,3 +239,7 @@ export const createSimulator = (config: SimulatorConfig): Simulator => {
     },
   }
 }
+
+export const createSimulator = withReadonly<SimulatorConfig, Simulator>(
+  _createSimulator,
+)

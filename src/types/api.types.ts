@@ -1,4 +1,4 @@
-import { PreVerificationGasConfig } from 'src/gas/pre-verification-gas.js'
+import { PreVerificationGasConfig } from '../gas/index.js'
 import { SendBundleReturn } from './bundle.types.js'
 import { ReputationEntry } from './reputation.types.js'
 import { StateOverride } from './sim-types.js'
@@ -9,7 +9,7 @@ import {
   UserOperationByHashResponse,
 } from './userop.types.js'
 import { StakeInfo } from './validation.types.js'
-import { Either } from 'src/monad/either.js'
+import { Either } from '../monad/index.js'
 import { RpcError } from './error.types.js'
 
 /**

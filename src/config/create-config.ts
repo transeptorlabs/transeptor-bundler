@@ -1,9 +1,8 @@
 import dotenv from 'dotenv'
 import { ethers, HDNodeWallet, JsonRpcProvider, Mnemonic, Wallet } from 'ethers'
 import { createProvider } from '../provider/index.js'
-import { IENTRY_POINT_ABI, IStakeManager } from '../abis/index.js'
 import { DEFAULT_ENTRY_POINT } from '../constants/index.js'
-import { isValidAddress } from '../utils/index.js'
+import { isValidAddress, withReadonly } from '../utils/index.js'
 import { InfluxdbConnection, BundlerSignerWallets } from '../types/index.js'
 import { getCmdOptionValues } from './command.js'
 
@@ -24,11 +23,8 @@ export type Config = {
   clientVersion: string
   httpApis: string[]
   port: number
-  entryPoint: {
-    contract: ethers.Contract
-    address: string
-  }
-  stakeManagerContract: ethers.Contract
+
+  supportedEntryPointAddress: string
 
   whitelist: string[]
   blacklist: string[]
@@ -78,30 +74,6 @@ const getBundlerSignerWallets = (
   }, initialValue)
 }
 
-// Helper function to set up contracts
-const setupContracts = (
-  supportedEntryPointAddress: string,
-  provider: JsonRpcProvider,
-) => {
-  if (!isValidAddress(supportedEntryPointAddress)) {
-    throw new Error('Entry point not a valid address')
-  }
-
-  const entryPointContract = new ethers.Contract(
-    supportedEntryPointAddress,
-    IENTRY_POINT_ABI,
-    provider,
-  )
-
-  const stakeManagerContract = new ethers.Contract(
-    supportedEntryPointAddress,
-    IStakeManager,
-    provider,
-  )
-
-  return { entryPointContract, stakeManagerContract }
-}
-
 // Helper function to set up P2P configuration
 const setupP2PConfig = (isP2PMode: boolean) => {
   const peerMultiaddrs = isP2PMode
@@ -140,9 +112,13 @@ const validateHttpApis = (
   })
 }
 
-export const createBuilderConfig = async (
-  args: readonly string[],
-): Promise<Config> => {
+/**
+ * Creates an instance of the Config module.
+ *
+ * @param args - The arguments to create the Config instance.
+ * @returns An instance of the Config module.
+ */
+function _createConfig(args: Readonly<string[]>): Config {
   const SUPPORTED_NAMESPACES = ['web3', 'eth', 'debug']
   const programOpts = getCmdOptionValues({
     args,
@@ -154,12 +130,6 @@ export const createBuilderConfig = async (
 
   const supportedEntryPointAddress =
     process.env.TRANSEPTOR_ENTRYPOINT_ADDRESS || DEFAULT_ENTRY_POINT
-
-  // Set up contracts
-  const { entryPointContract, stakeManagerContract } = setupContracts(
-    supportedEntryPointAddress,
-    provider,
-  )
 
   // Set up signers
   const bundlerSignerWallets = getBundlerSignerWallets(
@@ -203,11 +173,7 @@ export const createBuilderConfig = async (
 
   return {
     provider,
-    entryPoint: {
-      contract: entryPointContract,
-      address: await entryPointContract.getAddress(),
-    },
-    stakeManagerContract,
+    supportedEntryPointAddress,
 
     bundlerSignerWallets,
     beneficiaryAddr: process.env.TRANSEPTOR_BENEFICIARY as string,
@@ -239,3 +205,5 @@ export const createBuilderConfig = async (
     eip7702Support: programOpts.eip7702Support as boolean,
   }
 }
+
+export const createConfig = withReadonly<string[], Config>(_createConfig)

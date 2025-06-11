@@ -2,8 +2,9 @@ import { BundleBuilder, StateKey, StateService } from '../types/index.js'
 import { Logger } from '../logger/index.js'
 import { SendBundleReturn, BundleProcessor } from '../types/index.js'
 
-import { EventManagerWithListener } from '../event/index.js'
+import { EventManager } from '../event/index.js'
 import { Mutex } from 'async-mutex'
+import { withReadonly } from '../utils/index.js'
 
 export type BundleManager = {
   /**
@@ -24,15 +25,21 @@ export type BundleManager = {
 export type BundleManagerConfig = {
   bundleProcessor: BundleProcessor
   bundleBuilder: BundleBuilder
-  eventsManager: EventManagerWithListener
+  eventsManager: EventManager
   state: StateService
   isAutoBundle: boolean
   autoBundleInterval: number
 }
 
-export const createBundleManager = (
-  config: BundleManagerConfig,
-): BundleManager => {
+/**
+ * Creates an instance of the BundleManager module.
+ *
+ * @param config - The configuration object for the BundleManager instance.
+ * @returns An instance of the BundleManager module.
+ */
+function _createBundleManager(
+  config: Readonly<BundleManagerConfig>,
+): BundleManager {
   const {
     bundleProcessor,
     bundleBuilder,
@@ -136,3 +143,8 @@ export const createBundleManager = (
     doAttemptBundle,
   }
 }
+
+export const createBundleManager = withReadonly<
+  BundleManagerConfig,
+  BundleManager
+>(_createBundleManager)

@@ -3,6 +3,7 @@ import { createServer, Server } from 'http'
 import { Logger } from '../logger/index.js'
 import type { HandlerRegistry, RpcServer } from '../types/index.js'
 import { createApp } from './rpc-server.helper.js'
+import { withReadonly } from '../utils/index.js'
 
 export type RpcServerConfig = {
   handlerRegistry: HandlerRegistry
@@ -10,9 +11,15 @@ export type RpcServerConfig = {
   port: number
 }
 
-export const createRpcServerWithHandlers = (
-  config: RpcServerConfig,
-): RpcServer => {
+/**
+ * Creates an instance of the RpcServer module.
+ *
+ * @param config - The configuration object for the RpcServer instance.
+ * @returns An instance of the RpcServer module.
+ */
+function _createRpcServerWithHandlers(
+  config: Readonly<RpcServerConfig>,
+): RpcServer {
   const { supportedApiPrefixes, port, handlerRegistry } = config
 
   const app = createApp(handlerRegistry, supportedApiPrefixes)
@@ -49,3 +56,8 @@ export const createRpcServerWithHandlers = (
     },
   }
 }
+
+export const createRpcServerWithHandlers = withReadonly<
+  RpcServerConfig,
+  RpcServer
+>(_createRpcServerWithHandlers)

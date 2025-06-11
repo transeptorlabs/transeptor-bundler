@@ -21,8 +21,11 @@ import {
   NetworkCallError,
   RpcError,
   EIP7702Authorization,
+  BundlerSignerWallets,
 } from '../types/index.js'
 import { Either } from '../monad/index.js'
+import { IENTRY_POINT_ABI, IStakeManager } from '../abis/index.js'
+import { isValidAddress } from '../utils/index.js'
 
 export type ProviderService = {
   getNetwork(): Promise<Network>
@@ -64,11 +67,62 @@ export type ProviderService = {
     blockTag?: ethers.BlockTag,
   ): Promise<number>
   getCode(address: ethers.AddressLike): Promise<string>
+  getEntryPointContractDetails(): ContractDetails
+  getStakeManagerContractDetails(): ContractDetails
+  getBundlerSignerWallets(): BundlerSignerWallets
 }
 
-export const createProviderService = (
-  networkProvider: JsonRpcProvider,
-): ProviderService => {
+export type ProviderServiceConfig = {
+  networkProvider: JsonRpcProvider
+  supportedEntryPointAddress: string
+  signers: BundlerSignerWallets
+}
+
+export type ContractDetails = {
+  contract: ethers.Contract
+  address: string
+}
+
+export type ContractMapping = {
+  entryPoint: ContractDetails
+  stakeManager: ContractDetails
+}
+
+export const createProviderService = async (
+  config: Readonly<ProviderServiceConfig>,
+): Promise<ProviderService> => {
+  const { networkProvider, supportedEntryPointAddress, signers } = config
+  const FLASHBOTS_BUNDLE_RELAY_URL: Record<number, string> = {
+    1: '	https://relay.flashbots.net',
+    11155111: 'https://relay-sepolia.flashbots.net',
+  }
+
+  // Helper function to set up contracts
+  const setupContracts = async (): Promise<ContractMapping> => {
+    if (!isValidAddress(supportedEntryPointAddress)) {
+      throw new Error('Entry point not a valid address')
+    }
+
+    return {
+      entryPoint: {
+        contract: new ethers.Contract(
+          supportedEntryPointAddress,
+          IENTRY_POINT_ABI,
+          networkProvider,
+        ),
+        address: supportedEntryPointAddress,
+      },
+      stakeManager: {
+        contract: new ethers.Contract(
+          supportedEntryPointAddress,
+          IStakeManager,
+          networkProvider,
+        ),
+        address: supportedEntryPointAddress,
+      },
+    }
+  }
+
   /**
    * Note that the contract deployment will cost gas, so it is not free to run this function.
    * Run the constructor of the given type as a script: it is expected to revert with the script's return values.
@@ -107,12 +161,15 @@ export const createProviderService = (
     }
   }
 
-  const FLASHBOTS_BUNDLE_RELAY_URL: Record<number, string> = {
-    1: '	https://relay.flashbots.net',
-    11155111: 'https://relay-sepolia.flashbots.net',
-  }
+  const contractMapping: ContractMapping = await setupContracts()
 
   return {
+    getEntryPointContractDetails: () => contractMapping.entryPoint,
+
+    getStakeManagerContractDetails: () => contractMapping.stakeManager,
+
+    getBundlerSignerWallets: () => signers,
+
     getBalance: async (address: string): Promise<bigint> => {
       return await networkProvider.getBalance(address)
     },

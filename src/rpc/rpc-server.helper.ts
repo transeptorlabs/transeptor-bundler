@@ -16,7 +16,7 @@ import {
   validateRequest,
 } from './rpc-middleware.js'
 import { Either, isEither } from '../monad/index.js'
-import { createSuccessResponse } from 'src/utils/index.js'
+import { createSuccessResponse } from '../utils/index.js'
 
 export const safeParseHandlerResult = (
   res: Response,

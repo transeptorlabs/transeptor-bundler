@@ -29,7 +29,7 @@ import {
   SENDER_CREATOR_ABI,
 } from '../abis/index.js'
 import { get4bytes } from './sim.helper.js'
-import { toBytes32 } from '../utils/index.js'
+import { toBytes32, withReadonly } from '../utils/index.js'
 
 type Erc7562ParserConfig = {
   entryPointAddress: string
@@ -49,9 +49,15 @@ type Erc7562ParserRunnerState = {
   readonly erc7562Call: ERC7562Call
 }
 
-export const createErc7562Parser = (
-  config: Erc7562ParserConfig,
-): Erc7562Parser => {
+/**
+ * Creates an instance of the Erc7562Parser module.
+ *
+ * @param config - The configuration object for the Erc7562Parser instance.
+ * @returns An instance of the Erc7562Parser module.
+ */
+function _createErc7562Parser(
+  config: Readonly<Erc7562ParserConfig>,
+): Erc7562Parser {
   const entryPointAddress = config.entryPointAddress.toLowerCase()
 
   type CreatorAddress =
@@ -1020,3 +1026,5 @@ export const createErc7562Parser = (
     },
   }
 }
+
+export const createErc7562Parser = withReadonly(_createErc7562Parser)

@@ -32,11 +32,11 @@ import {
   FullValidationResult,
 } from '../types/index.js'
 import {
-  EIP_7702_MARKER_INIT_CODE,
   maxUint48,
   mergeValidationDataValues,
   parseValidationData,
 } from '../utils/index.js'
+import { EIP_7702_MARKER_INIT_CODE } from '../constants/index.js'
 import { ProviderService } from '../provider/index.js'
 import { GethNativeTracerName } from '../constants/index.js'
 import { Either } from '../monad/index.js'

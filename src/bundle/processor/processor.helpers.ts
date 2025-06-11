@@ -2,8 +2,8 @@ import { ContractFactory, ethers, Wallet } from 'ethers'
 import {
   GET_USEROP_HASHES_ABI,
   GET_USEROP_HASHES_BYTECODE,
-} from 'src/abis/helper.abi.js'
-import { Logger } from 'src/logger/base-logger.js'
+} from '../../abis/helper.abi.js'
+import { Logger } from '../../logger/base-logger.js'
 import { ProviderService } from '../../provider/index.js'
 import { UserOperation } from '../../types/index.js'
 import { packUserOps } from '../../utils/index.js'

@@ -15,14 +15,11 @@ import { encodeRlp } from 'ethers'
 import { ChainConfig, Common, Hardfork, Mainnet } from '@ethereumjs/common'
 import { createEOACode7702Tx, EOACode7702TxData } from '@ethereumjs/tx'
 import { PrefixedHexString } from '@ethereumjs/util'
+import { EIP7702_MAGIC } from '../constants/index.js'
 
 // from: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7702.md
 // authority = ecrecover(keccak(MAGIC || rlp([chain_id, address, nonce])), y_parity, r, s)
 // RLP: https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp/
-
-const EIP7702_MAGIC = '0x05'
-export const EIP_7702_MARKER_CODE = '0xef0100'
-export const EIP_7702_MARKER_INIT_CODE = '0x7702'
 
 export type UnsignedEIP7702Authorization = {
   chainId: BigNumberish

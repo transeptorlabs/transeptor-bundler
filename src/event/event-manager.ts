@@ -4,8 +4,9 @@ import { Logger } from '../logger/index.js'
 import { ProviderService } from '../provider/index.js'
 import { MempoolManageUpdater, ReputationManager } from '../types/index.js'
 import { Either } from '../monad/index.js'
+import { withReadonly } from '../utils/index.js'
 
-export type EventManagerWithListener = {
+export type EventManager = {
   /**
    * Process all new events since last run
    */
@@ -26,12 +27,24 @@ export type EventManagerWithListener = {
   ): Either<Error, Log[]>
 }
 
-export const createEventManagerWithListener = (
-  providerService: ProviderService,
-  reputationManager: ReputationManager,
-  mempoolManageUpdater: MempoolManageUpdater,
-  entryPointContract: ethers.Contract,
-): EventManagerWithListener => {
+export type EventManagerConfig = {
+  providerService: ProviderService
+  reputationManager: ReputationManager
+  mempoolManageUpdater: MempoolManageUpdater
+}
+
+/**
+ * Creates an instance of the EventManager module.
+ *
+ * @param config - The configuration object for the EventManager instance.
+ * @returns An instance of the EventManager module.
+ */
+function _createEventManager(
+  config: Readonly<EventManagerConfig>,
+): EventManager {
+  const { providerService, reputationManager, mempoolManageUpdater } = config
+  const entryPointContract =
+    providerService.getEntryPointContractDetails().contract
   let lastBlock: number | null = null
   let eventAggregator: string | null = null
   let eventAggregatorTxHash: string | null = null
@@ -240,3 +253,8 @@ export const createEventManagerWithListener = (
     },
   }
 }
+
+export const createEventManager = withReadonly<
+  EventManagerConfig,
+  EventManager
+>(_createEventManager)
