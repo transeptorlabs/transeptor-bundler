@@ -5,7 +5,8 @@ import {
   StateKey,
   ValidationErrors,
 } from '../types/index.js'
-import { getUserOpMaxCost, requireCond } from '../utils/index.js'
+import { getUserOpMaxCost, requireCond, withReadonly } from '../utils/index.js'
+import { ProviderService } from '../provider/index.js'
 
 /**
  * The DepositManager is responsible for managing the deposits of paymasters. It ensures that each paymaster has enough deposit to cover the gas costs of the pending UserOperations in the mempool.
@@ -17,10 +18,24 @@ export type DepositManager = {
   checkPaymasterDeposit(userOp: UserOperation): Promise<void>
 }
 
-export const createDepositManager = (
-  state: StateService,
-  entryPointContract: ethers.Contract,
-): DepositManager => {
+export type DepositManagerConfig = {
+  providerService: ProviderService
+  state: StateService
+}
+
+/**
+ * Creates an instance of the DepositManager module.
+ *
+ * @param config - The configuration object for the DepositManager instance.
+ * @returns An instance of the DepositManager module.
+ */
+function _createDepositManager(
+  config: Readonly<DepositManagerConfig>,
+): DepositManager {
+  const { providerService, state } = config
+  const entryPointContract =
+    providerService.getEntryPointContractDetails().contract
+
   return {
     checkPaymasterDeposit: async (userOp: UserOperation) => {
       const paymaster = userOp.paymaster
@@ -50,3 +65,8 @@ export const createDepositManager = (
     },
   }
 }
+
+export const createDepositManager = withReadonly<
+  DepositManagerConfig,
+  DepositManager
+>(_createDepositManager)

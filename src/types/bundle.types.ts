@@ -33,16 +33,6 @@ export type BundleTxs = Record<string, PendingTxDetails>
 // Signers
 export type BundlerSignerWallets = Record<number, Wallet>
 
-export type SignerService = {
-  /**
-   * Finds the first signer without a pending bundle transaction and returns the index.
-   *
-   * @param bundleTxs - Record of bundleTxs.
-   * @returns - Return the index of the available signer, -1 if all are busy, or 0 immediately if bundleTxs is empty.
-   */
-  getReadySigner(bundleTxs: BundleTxs): Promise<number>
-}
-
 // Bundle processor
 
 /**

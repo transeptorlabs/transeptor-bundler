@@ -15,7 +15,7 @@ import {
   UserOperation,
   PackedUserOperation,
 } from '../types/index.js'
-import { EIP_7702_MARKER_INIT_CODE } from './eip-7702.utils.js'
+import { EIP_7702_MARKER_INIT_CODE } from '../constants/index.js'
 
 /**
  * Merge all validationStorageMap objects into merged map

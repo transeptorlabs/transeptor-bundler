@@ -4,6 +4,7 @@ import type {
   Web3API,
   HandlerRegistry,
 } from '../types/index.js'
+import { withReadonly } from '../utils/index.js'
 
 export type BundlerHandlerRegistryConfig = {
   eth: EthAPI
@@ -11,9 +12,15 @@ export type BundlerHandlerRegistryConfig = {
   debug: DebugAPI
 }
 
-export const createBundlerHandlerRegistry = (
-  config: BundlerHandlerRegistryConfig,
-): HandlerRegistry => {
+/**
+ * Creates an instance of the BundlerHandlerRegistry module.
+ *
+ * @param config - The configuration object for the BundlerHandlerRegistry instance.
+ * @returns An instance of the BundlerHandlerRegistry module.
+ */
+function _createBundlerHandlerRegistry(
+  config: Readonly<BundlerHandlerRegistryConfig>,
+): HandlerRegistry {
   const { eth, web3, debug } = config
   return {
     web3_clientVersion: {
@@ -135,3 +142,8 @@ export const createBundlerHandlerRegistry = (
     },
   }
 }
+
+export const createBundlerHandlerRegistry = withReadonly<
+  BundlerHandlerRegistryConfig,
+  HandlerRegistry
+>(_createBundlerHandlerRegistry)

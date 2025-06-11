@@ -1,6 +1,6 @@
 import { vi, MockedObject } from 'vitest'
 import { EventLog } from 'ethers'
-import { EventManagerWithListener } from '../../src/event/index.js'
+import { EventManager } from '../../src/event/index.js'
 
 export const mockEventLog: EventLog = {
   args: {
@@ -36,7 +36,7 @@ export const mockEventLog: EventLog = {
   }),
 } as unknown as EventLog
 
-export const mockEventManager: MockedObject<EventManagerWithListener> = {
+export const mockEventManager: MockedObject<EventManager> = {
   handlePastEvents: vi.fn(),
   getUserOperationEvent: vi.fn(),
   filterLogs: vi.fn(),

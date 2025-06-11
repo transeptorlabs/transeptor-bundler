@@ -2,23 +2,25 @@ import osUtils from 'os-utils'
 import { Logger } from '../logger/index.js'
 import { InfluxdbConnection, MeasurementName } from '../types/index.js'
 import { createInfluxdbClient } from './influxdb/index.js'
+import { withReadonly } from '../utils/index.js'
 
 export type MetricsTracker = {
   startTracker: () => void
   stopTracker: () => void
 }
 
-export const createMetricsTracker = (
-  options: InfluxdbConnection,
-): MetricsTracker => {
+/**
+ * Creates an instance of the MetricsTracker module.
+ *
+ * @param config - The configuration object for the MetricsTracker instance.
+ * @returns An instance of the MetricsTracker module.
+ */
+function _createMetricsTracker(
+  config: Readonly<InfluxdbConnection>,
+): MetricsTracker {
   const intervalTime = 1000 // Run every second
   const startUsage: NodeJS.CpuUsage = process.cpuUsage()
-  const client = createInfluxdbClient(
-    options.url,
-    options.token,
-    options.org,
-    options.bucket,
-  )
+  const client = createInfluxdbClient(config)
   let interval: NodeJS.Timer | null = null
 
   const getCpuUsage = async (): Promise<number> => {
@@ -184,3 +186,8 @@ export const createMetricsTracker = (
     stopTracker,
   }
 }
+
+export const createMetricsTracker = withReadonly<
+  InfluxdbConnection,
+  MetricsTracker
+>(_createMetricsTracker)

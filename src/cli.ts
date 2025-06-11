@@ -10,7 +10,7 @@ import {
   createBundlerHandlerRegistry,
   createRpcServerWithHandlers,
 } from './rpc/index.js'
-import { createBuilderConfig } from './config/index.js'
+import { createConfig } from './config/index.js'
 import { createEthAPI, createWeb3API, createDebugAPI } from './apis/index.js'
 import { Libp2pNode } from './p2p/index.js'
 
@@ -25,7 +25,7 @@ import {
   createMempoolManageSender,
   createMempoolManageUpdater,
 } from './mempool/index.js'
-import { createEventManagerWithListener } from './event/event-manager-with-reputation.js'
+import { createEventManager } from './event/index.js'
 import { createState } from './state/index.js'
 import { createDepositManager } from './deposit/index.js'
 import { createMetricsTracker } from './metrics/index.js'
@@ -49,9 +49,15 @@ const stopBundlerServer = async () => {
 
 const runBundler = async () => {
   const args = process.argv
-  const config = await createBuilderConfig(args)
+  const config = createConfig(args)
   const state = createState()
-  const providerService = createProviderService(config.provider)
+  const providerService = await createProviderService({
+    networkProvider: config.provider,
+    supportedEntryPointAddress: config.supportedEntryPointAddress,
+    signers: config.bundlerSignerWallets,
+  })
+  const entryPointAddress =
+    providerService.getEntryPointContractDetails().address
 
   const { name, chainId } = await providerService.getNetwork()
   const chainIdNum = Number(chainId)
@@ -61,8 +67,6 @@ const runBundler = async () => {
     createPreVerificationGasCalculator(chainIdNum)
   const sim = createSimulator({
     providerService,
-    entryPoint: config.entryPoint.contract,
-    epAddress: config.entryPoint.address,
     preVerificationGasCalculator,
   })
   const validationService = createValidationService({
@@ -71,56 +75,52 @@ const runBundler = async () => {
     preVerificationGasCalculator,
     isUnsafeMode: config.isUnsafeMode,
     erc7562Parser: createErc7562Parser({
-      entryPointAddress: config.entryPoint.address,
+      entryPointAddress,
     }),
   })
 
   // Create manager instances
-  const reputationManager = createReputationManager(
+  const reputationManager = createReputationManager({
+    providerService,
     state,
-    config.minStake,
-    config.minUnstakeDelay,
-    config.stakeManagerContract,
-  )
+    minStake: config.minStake,
+    minUnstakeDelay: config.minUnstakeDelay,
+  })
   await reputationManager.addWhitelist(config.whitelist)
   await reputationManager.addBlacklist(config.blacklist)
   reputationManager.startHourlyCron()
 
-  const depositManager = createDepositManager(state, config.entryPoint.contract)
-  const mempoolManagerCore = createMempoolManagerCore(
+  const depositManager = createDepositManager({ providerService, state })
+  const mempoolManagerCore = createMempoolManagerCore({
     state,
     reputationManager,
     depositManager,
-    config.bundleSize,
-  )
+    bundleSize: config.bundleSize,
+  })
 
-  const eventsManager = createEventManagerWithListener(
+  const eventsManager = createEventManager({
     providerService,
     reputationManager,
-    createMempoolManageUpdater(mempoolManagerCore),
-    config.entryPoint.contract,
-  )
+    mempoolManageUpdater: createMempoolManageUpdater(mempoolManagerCore),
+  })
 
   const bundleManager = createBundleManager({
     bundleProcessor: createBundleProcessor({
       providerService,
       reputationManager,
       mempoolManagerBuilder: createMempoolManagerBuilder(mempoolManagerCore),
-      entryPoint: config.entryPoint,
       txMode: config.txMode,
       beneficiary: config.beneficiaryAddr,
       minSignerBalance: config.minSignerBalance,
-      signers: config.bundlerSignerWallets,
     }),
     bundleBuilder: createBundleBuilder({
+      providerService,
       validationService,
       reputationManager,
       mempoolManagerBuilder: createMempoolManagerBuilder(mempoolManagerCore),
       opts: {
         maxBundleGas: config.maxBundleGas,
         txMode: config.txMode,
-        entryPointContract: config.entryPoint.contract,
-        entryPointAddress: config.entryPoint.address,
       },
     }),
     eventsManager,
@@ -137,24 +137,23 @@ const runBundler = async () => {
   // start rpc server
   const handlerRegistry = createBundlerHandlerRegistry({
     eth: createEthAPI({
-      ps: providerService,
-      sim: sim,
-      vs: validationService,
+      providerService,
+      sim,
+      validationService,
       eventsManager,
       mempoolManageSender: createMempoolManageSender(mempoolManagerCore),
       preVerificationGasCalculator,
-      entryPoint: config.entryPoint,
       eip7702Support: config.eip7702Support,
     }),
     web3: createWeb3API(config.clientVersion),
-    debug: createDebugAPI(
+    debug: createDebugAPI({
+      providerService,
       bundleManager,
       reputationManager,
       mempoolManagerCore,
       eventsManager,
       preVerificationGasCalculator,
-      config.entryPoint.contract,
-    ),
+    }),
   })
   bundlerServer = createRpcServerWithHandlers({
     handlerRegistry,
@@ -173,7 +172,7 @@ const runBundler = async () => {
 
     // Make sure the entry point contract is deployed to the network
     const [isDeployed, providerClientVersion] = await Promise.all([
-      providerService.checkContractDeployment(config.entryPoint.address),
+      providerService.checkContractDeployment(entryPointAddress),
       providerService.clientVersion(),
     ])
     if (!isDeployed) {
@@ -239,7 +238,7 @@ const runBundler = async () => {
 }
 
 runBundler().catch(async (error) => {
-  Logger.fatal({ error: error.message }, 'Aborted')
+  Logger.fatal({ error: error.message }, 'Aborted failed to start up node...')
   process.exit(1)
 })
 

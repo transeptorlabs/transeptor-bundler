@@ -136,6 +136,12 @@ export type GasOptions = {
   totalGasUsed?: number
 }
 
+/**
+ * Creates an instance of the PreVerificationGasCalculator module.
+ *
+ * @param chainId - The chain ID to create the PreVerificationGasCalculator for.
+ * @returns An instance of the PreVerificationGasCalculator module.
+ */
 export const createPreVerificationGasCalculator = (
   chainId: number,
 ): PreVerificationGasCalculator => {

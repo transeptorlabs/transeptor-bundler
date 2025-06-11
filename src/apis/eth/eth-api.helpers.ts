@@ -9,11 +9,8 @@ import {
 } from '../../types/index.js'
 import { Either } from '../../monad/index.js'
 import { MAINNET_CONFIG } from '../../gas/index.js'
-import {
-  EIP_7702_MARKER_CODE,
-  hexConcat,
-  packUserOp,
-} from '../../utils/index.js'
+import { hexConcat, packUserOp } from '../../utils/index.js'
+import { EIP_7702_MARKER_CODE } from '../../constants/index.js'
 import { ethers } from 'ethers'
 import { ProviderService } from '../../provider/index.js'
 

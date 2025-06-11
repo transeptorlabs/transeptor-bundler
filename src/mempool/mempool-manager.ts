@@ -27,27 +27,57 @@ import {
   replaceOrAddUserOpChecks,
   updateSeenStatus,
 } from './mempool-helper.js'
+import { withReadonly } from '../utils/index.js'
 
-export const createMempoolManageSender = (
-  mempoolManagerCore: MempoolManagerCore,
-): MempoolManageSender => {
+export type MempoolManagerCoreConfig = {
+  state: StateService
+  reputationManager: ReputationManager
+  depositManager: DepositManager
+
+  /**
+   * maximum # of entities allowed in a bundle
+   */
+  bundleSize: number
+}
+
+/**
+ * Creates an instance of the MempoolManageSender module.
+ *
+ * @param mempoolManagerCore - The MempoolManagerCore instance.
+ * @returns An instance of the MempoolManageSender module.
+ */
+function _createMempoolManageSender(
+  mempoolManagerCore: Readonly<MempoolManagerCore>,
+): MempoolManageSender {
   return {
     addUserOp: mempoolManagerCore.addUserOp,
   }
 }
 
-export const createMempoolManageUpdater = (
-  mempoolManagerCore: MempoolManagerCore,
-): MempoolManageUpdater => {
+/**
+ * Creates an instance of the MempoolManageUpdater module.
+ *
+ * @param mempoolManagerCore - The MempoolManagerCore instance.
+ * @returns An instance of the MempoolManageUpdater module.
+ */
+function _createMempoolManageUpdater(
+  mempoolManagerCore: Readonly<MempoolManagerCore>,
+): MempoolManageUpdater {
   return {
     removeUserOp: mempoolManagerCore.removeUserOp,
     updateEntryStatus: mempoolManagerCore.updateEntryStatus,
   }
 }
 
-export const createMempoolManagerBuilder = (
-  mempoolManagerCore: MempoolManagerCore,
-): MempoolManagerBuilder => {
+/**
+ * Creates an instance of the MempoolManagerBuilder module.
+ *
+ * @param mempoolManagerCore - The MempoolManagerCore instance.
+ * @returns An instance of the MempoolManagerBuilder module.
+ */
+function _createMempoolManagerBuilder(
+  mempoolManagerCore: Readonly<MempoolManagerCore>,
+): MempoolManagerBuilder {
   return {
     size: mempoolManagerCore.size,
     getAllPending: mempoolManagerCore.getAllPending,
@@ -59,12 +89,17 @@ export const createMempoolManagerBuilder = (
   }
 }
 
-export const createMempoolManagerCore = (
-  state: StateService,
-  reputationManager: ReputationManager,
-  depositManager: DepositManager,
-  bundleSize: number, // maximum # of entities allowed in a bundle
-): MempoolManagerCore => {
+/**
+ * Creates an instance of the MempoolManagerCore module.
+ *
+ * @param config - The configuration object for the MempoolManagerCore instance.
+ * @returns An instance of the MempoolManagerCore module.
+ */
+function _createMempoolManagerCore(
+  config: Readonly<MempoolManagerCoreConfig>,
+): MempoolManagerCore {
+  const { state, reputationManager, depositManager, bundleSize } = config
+
   return {
     getKnownSenders: async (): Promise<string[]> => {
       const standardPool = await state.getState(StateKey.StandardPool)
@@ -357,3 +392,23 @@ export const createMempoolManagerCore = (
     },
   }
 }
+
+export const createMempoolManageSender = withReadonly<
+  MempoolManagerCore,
+  MempoolManageSender
+>(_createMempoolManageSender)
+
+export const createMempoolManagerBuilder = withReadonly<
+  MempoolManagerCore,
+  MempoolManagerBuilder
+>(_createMempoolManagerBuilder)
+
+export const createMempoolManageUpdater = withReadonly<
+  MempoolManagerCore,
+  MempoolManageUpdater
+>(_createMempoolManageUpdater)
+
+export const createMempoolManagerCore = withReadonly<
+  MempoolManagerCoreConfig,
+  MempoolManagerCore
+>(_createMempoolManagerCore)

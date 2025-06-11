@@ -5,7 +5,6 @@ import {
   SendBundleReturnWithSigner,
   StorageMap,
   UserOperation,
-  BundlerSignerWallets,
   MempoolManagerBuilder,
   BundleProcessor,
   CrashedHandleOps,
@@ -13,7 +12,11 @@ import {
   EIP7702Authorization,
   NonFatalSendBundleFailDetails,
 } from '../../types/index.js'
-import { packUserOps, prepareEip7702Transaction } from '../../utils/index.js'
+import {
+  packUserOps,
+  prepareEip7702Transaction,
+  withReadonly,
+} from '../../utils/index.js'
 import { getUserOpHashes, selectBeneficiary } from './processor.helpers.js'
 import { findEntityToBlame, checkFatal } from '../bundle.helper.js'
 import { parseFailedOpRevert } from '../builder/builder.helpers.js'
@@ -22,31 +25,32 @@ export type BundleProcessorConfig = {
   providerService: ProviderService
   reputationManager: ReputationManager
   mempoolManagerBuilder: MempoolManagerBuilder
-  entryPoint: {
-    contract: ethers.Contract
-    address: string
-  }
   txMode: string
   beneficiary: string
   minSignerBalance: bigint
-  signers: BundlerSignerWallets
 }
 
-export const createBundleProcessor = (
-  config: BundleProcessorConfig,
-): BundleProcessor => {
+/**
+ * Creates an instance of the BundleProcessor module.
+ *
+ * @param config - The configuration object for the BundleProcessor instance.
+ * @returns An instance of the BundleProcessor module.
+ */
+function _createBundleProcessor(
+  config: Readonly<BundleProcessorConfig>,
+): BundleProcessor {
   const TX_TYPE_EIP_7702 = 4
   const TX_TYPE_EIP_1559 = 2
   const {
     providerService,
     reputationManager,
     mempoolManagerBuilder,
-    entryPoint,
     txMode,
     beneficiary,
     minSignerBalance,
-    signers,
   } = config
+  const entryPoint = providerService.getEntryPointContractDetails()
+  const signers = providerService.getBundlerSignerWallets()
 
   const afterHook = async (
     crashedHandleOps: CrashedHandleOps | undefined,
@@ -231,7 +235,7 @@ export const createBundleProcessor = (
         Logger.debug('Failed send bundle, attempting to parse error...')
         const { opIndex, reasonStr } = parseFailedOpRevert(
           e,
-          config.entryPoint.contract,
+          entryPoint.contract,
         )
         if (opIndex == null || reasonStr == null) {
           checkFatal(e)
@@ -274,3 +278,8 @@ export const createBundleProcessor = (
     },
   }
 }
+
+export const createBundleProcessor = withReadonly<
+  BundleProcessorConfig,
+  BundleProcessor
+>(_createBundleProcessor)
