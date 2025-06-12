@@ -11,6 +11,7 @@ dotenv.config()
 const DEFAULT_NETWORK = 'http://localhost:8545'
 const SUPPORTED_MODES = ['base', 'searcher']
 const nodeVersion = '0.12.0-alpha.0' // manual update on each release
+const AUDIT_LOG_PATH = './logs/audit.log'
 
 export type Config = {
   provider: JsonRpcProvider
@@ -21,6 +22,10 @@ export type Config = {
   beneficiaryAddr: string
 
   clientVersion: string
+  commitHash: string
+  auditLogDestinationPath: string
+  auditLogFlushIntervalMs: number
+  environment: string
   httpApis: string[]
   port: number
 
@@ -181,6 +186,11 @@ function _createConfig(args: Readonly<string[]>): Config {
     numberOfSigners: parseInt(programOpts.numberOfSigners),
 
     clientVersion: nodeVersion,
+    commitHash: 'unknown', // TODO: replace with actual commit hash
+    environment: process.env.NODE_ENV || 'development',
+    auditLogFlushIntervalMs: 100, // every 100ms flush audit log queue
+    auditLogDestinationPath:
+      (process.env.TRANSEPTOR_AUDIT_LOG_PATH as string) || AUDIT_LOG_PATH,
     httpApis: httpApis,
     port: parseInt(programOpts.port as string),
 

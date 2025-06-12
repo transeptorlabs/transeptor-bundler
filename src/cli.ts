@@ -1,6 +1,12 @@
 #!/user/bin/env node
 
-import { Logger } from './logger/index.js'
+import {
+  createAuditLogWriter,
+  Logger,
+  createAuditLogger,
+  withModuleContext,
+  createAuditLogQueue,
+} from './logger/index.js'
 import {
   createBundleBuilder,
   createBundleManager,
@@ -30,26 +36,53 @@ import { createState } from './state/index.js'
 import { createDepositManager } from './deposit/index.js'
 import { createMetricsTracker } from './metrics/index.js'
 import { createPreVerificationGasCalculator } from './gas/index.js'
-import { RpcServer } from './types/index.js'
+import { AuditLogger, RpcServer } from './types/index.js'
 
-const p2pNode: Libp2pNode | undefined = undefined
+let p2pNode: Libp2pNode | undefined = undefined
 let bundlerServer: RpcServer | undefined = undefined
+let auditLogger: AuditLogger | undefined = undefined
 
 const stopLibp2p = async () => {
   if (p2pNode) {
     await p2pNode.stop()
+    p2pNode = undefined
+    Logger.info('P2P node stopped gracefully.')
   }
 }
 
 const stopBundlerServer = async () => {
   if (bundlerServer) {
     await bundlerServer.stop()
+    bundlerServer = undefined
+    Logger.info('Bundler server stopped gracefully.')
+  }
+}
+
+const stopAuditLogger = async () => {
+  if (auditLogger) {
+    await auditLogger.shutdown()
+    auditLogger = undefined
+    Logger.info('Audit logger stopped gracefully.')
   }
 }
 
 const runBundler = async () => {
   const args = process.argv
   const config = createConfig(args)
+  auditLogger = createAuditLogger({
+    auditLogQueue: createAuditLogQueue({
+      auditLogWriter: createAuditLogWriter({
+        backend: 'pino',
+        destinationPath: config.auditLogDestinationPath,
+        logger: withModuleContext('audit-log-writer'),
+      }),
+      flushIntervalMs: config.auditLogFlushIntervalMs,
+      logger: withModuleContext('audit-log-queue'),
+    }),
+    clientVersion: config.clientVersion,
+    nodeCommitHash: config.commitHash,
+    environment: config.environment,
+  })
   const state = createState()
   const providerService = await createProviderService({
     networkProvider: config.provider,
@@ -70,6 +103,7 @@ const runBundler = async () => {
     preVerificationGasCalculator,
   })
   const validationService = createValidationService({
+    logger: withModuleContext('validation'),
     providerService,
     sim,
     preVerificationGasCalculator,
@@ -135,28 +169,29 @@ const runBundler = async () => {
   }
 
   // start rpc server
-  const handlerRegistry = createBundlerHandlerRegistry({
-    eth: createEthAPI({
-      providerService,
-      sim,
-      validationService,
-      eventsManager,
-      mempoolManageSender: createMempoolManageSender(mempoolManagerCore),
-      preVerificationGasCalculator,
-      eip7702Support: config.eip7702Support,
-    }),
-    web3: createWeb3API(config.clientVersion),
-    debug: createDebugAPI({
-      providerService,
-      bundleManager,
-      reputationManager,
-      mempoolManagerCore,
-      eventsManager,
-      preVerificationGasCalculator,
-    }),
-  })
   bundlerServer = createRpcServerWithHandlers({
-    handlerRegistry,
+    handlerRegistry: createBundlerHandlerRegistry({
+      eth: createEthAPI({
+        logUserOpLifecycleEvent:
+          auditLogger.logUserOpLifecycleEvent.bind(auditLogger),
+        providerService,
+        sim,
+        validationService,
+        eventsManager,
+        mempoolManageSender: createMempoolManageSender(mempoolManagerCore),
+        preVerificationGasCalculator,
+        eip7702Support: config.eip7702Support,
+      }),
+      web3: createWeb3API(config.clientVersion),
+      debug: createDebugAPI({
+        providerService,
+        bundleManager,
+        reputationManager,
+        mempoolManagerCore,
+        eventsManager,
+        preVerificationGasCalculator,
+      }),
+    }),
     supportedApiPrefixes: config.httpApis,
     port: config.port,
   })
@@ -246,6 +281,8 @@ process.on('SIGTERM', async () => {
   Logger.debug('Gracefully shutting down...')
   await stopBundlerServer()
   await stopLibp2p()
+  await stopAuditLogger()
+  Logger.info('Shutdown complete.')
   process.exit(0)
 })
 
@@ -253,5 +290,7 @@ process.on('SIGTERM', async () => {
   Logger.debug('Gracefully shutting down...')
   await stopBundlerServer()
   await stopLibp2p()
+  await stopAuditLogger()
+  Logger.info('Shutdown complete.')
   process.exit(0)
 })
