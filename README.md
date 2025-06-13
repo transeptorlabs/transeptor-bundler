@@ -5,13 +5,13 @@
 </p>
 
 <p align="center">
- A lightweight, blazing-fast, modular ERC-4337 TypeScript bundler built with functional programming
+  Built by <a href="https://github.com/transeptorlabs">Transeptor Labs</a>, we champion bundler diversity, mempool compatibility, and open experimentation—because a decentralized Ethereum depends on resilient public-good infrastructure.
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/node-22.14.0-green" alt="Node Version">
   <img src="https://badgen.net/badge/-/TypeScript?icon=typescript&label&labelColor=blue&color=555555" alt="TypeScript">
-    <img src="https://github.com/transeptorlabs/transeptor-bundler/actions/workflows/main.yml/badge.svg?branch=main">
+  <img src="https://github.com/transeptorlabs/transeptor-bundler/actions/workflows/main.yml/badge.svg?branch=main">
   <a href="https://app.codecov.io/gh/transeptorlabs/transeptor-bundler">
     <img src="https://img.shields.io/codecov/c/github/transeptorlabs/transeptor-bundler.svg?style=flat-square" alt="codecov">
   </a>
@@ -25,6 +25,44 @@
 >
 > - Compatible with [Entrypoint releases/v0.7](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.7): [Transeptor v0.11.0-alpha.0](https://github.com/transeptorlabs/transeptor-bundler/tree/v0.11.0-alpha.0)
 > - Compatible with [Entrypoint releases/v0.6](https://github.com/eth-infinitism/account-abstraction/tree/releases/v0.6): [Transeptor v0.5.3-alpha.0](https://github.com/transeptorlabs/transeptor-bundler/tree/v0.5.3-alpha.0)
+
+**Table of Contents**
+
+<!--TOC-->
+
+- [What is Transeptor?](#what-is-transeptor)
+- [Quick Start](#quick-start)
+- [Development](#development)
+  - [Prerequisites](#prerequisites)
+  - [Getting started](#getting-started)
+  - [Test](#test)
+  - [Lint](#lint)
+- [Running Transeptor](#running-transeptor)
+- [Node Configuration](#node-configuration)
+- [Contribute](#contribute)
+- [Contact Us](#contact-us)
+- [License](#license)
+- [Acknowledgements](#acknowledgements)
+- [Relevant Documents](#relevant-documents)
+
+<!--TOC-->
+
+## What is Transeptor?
+
+> Run a node. Join the ecosystem. Help shape the future of account abstraction.
+
+**Transeptor is a high-performance, modular ERC-4337 bundler designed to make smart accounts scalable and usable on Ethereum.** Built in TypeScript with a functional programming foundation, it prioritizes security and developer experience. Transeptor helps abstract complexity so teams can build intuitive applications on top of Account Abstraction.
+
+This project is maintained by **[Transeptor Labs](https://github.com/transeptorlabs)**, an open-source collective building public-good infrastructure to support Ethereum’s evolution toward a user-centric experience.
+
+Our long-term vision is to:
+
+- **Run it yourself** - Make it easy for anyone to run their own bundler node.
+- **Promote bundler diversity and reduce centralization risks** — We are committed to decentralization by offering public bundlers anyone can use, and empowering developers to run and customize their own.
+- **Bundler compatibility** - Maintain strict compatibility with [erc-4337/bundler-spec-test](https://www.erc4337.io/bundlers) to preserve the vision of a [Unified ERC-4337 mempool](https://notes.ethereum.org/@yoav/unified-erc-4337-mempool).
+- **Embrace the Future** - Experiment safely with advanced features to push bundler UX and performance forward. Any system that can be written down can be realized.
+
+By contributing to Transeptor, you're helping build an open, composable infrastructure layer that strengthens Ethereum’s decentralization and usability without requiring any changes to the protocol.
 
 ## Quick Start
 
