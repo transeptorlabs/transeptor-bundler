@@ -12,6 +12,7 @@ import {
   EthAPI,
   Simulator,
   NetworkCallError,
+  LogUserOpLifecycleEvent,
 } from '../../types/index.js'
 import {
   deepHexlify,
@@ -34,6 +35,7 @@ import {
 } from './eth-api.helpers.js'
 
 export type EthAPIConfig = {
+  logUserOpLifecycleEvent: LogUserOpLifecycleEvent
   providerService: ProviderService
   sim: Simulator
   validationService: ValidationService
