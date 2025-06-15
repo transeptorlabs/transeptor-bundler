@@ -3,7 +3,6 @@ import {
   GET_USEROP_HASHES_ABI,
   GET_USEROP_HASHES_BYTECODE,
 } from '../../abis/helper.abi.js'
-import { Logger } from '../../logger/logger.js'
 import { ProviderService } from '../../provider/index.js'
 import { UserOperation } from '../../types/index.js'
 import { packUserOps } from '../../utils/index.js'
@@ -29,9 +28,6 @@ export const selectBeneficiary = async (
   // below min-balance redeem to the signer, to keep it active.
   if (currentBalance <= minSignerBalance) {
     beneficiaryToUse = await signer.getAddress()
-    Logger.debug(
-      `low balance. using, ${beneficiaryToUse}, as beneficiary instead of , ${beneficiary}`,
-    )
   }
   return beneficiaryToUse
 }
@@ -62,10 +58,6 @@ export const getUserOpHashes = async (
 
     return userOpHashes
   } catch (e) {
-    Logger.warn(
-      { e },
-      'Failed to get userOpHashes, but bundle was sent successfully',
-    )
     return []
   }
 }

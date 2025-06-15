@@ -1,4 +1,10 @@
+import { Logger } from 'pino'
 import { UserOperation } from './userop.types.js'
+
+/**
+ * Alias for the Pino logger.
+ */
+export type TranseptorLogger = Logger
 
 export type LifecycleStage =
   | 'userOpReceived'

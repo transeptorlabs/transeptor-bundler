@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createAuditLogQueue } from '../../src/logger/audit/audit-queue.js'
-import { Logger } from 'pino'
-import { UserOpAuditEvent, LifecycleStage } from '../../src/types/index.js'
+import {
+  UserOpAuditEvent,
+  LifecycleStage,
+  TranseptorLogger,
+} from '../../src/types/index.js'
 
 describe('createAuditLogQueue', () => {
   const mockAuditLogWriter = {
@@ -13,7 +16,7 @@ describe('createAuditLogQueue', () => {
     error: vi.fn(),
     warn: vi.fn(),
     info: vi.fn(),
-  } as unknown as Logger
+  } as unknown as TranseptorLogger
 
   const config = {
     auditLogWriter: mockAuditLogWriter,

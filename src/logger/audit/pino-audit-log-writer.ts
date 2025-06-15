@@ -1,10 +1,14 @@
-import { Logger, pino } from 'pino'
-import { AuditLogWriter, UserOpAuditEvent } from '../../types/index.js'
+import { pino } from 'pino'
+import {
+  AuditLogWriter,
+  UserOpAuditEvent,
+  TranseptorLogger,
+} from '../../types/index.js'
 import { withReadonly } from '../../utils/index.js'
 
 export type PinoAuditLogWriterConfig = {
   destinationPath: string
-  logger: Logger
+  logger: TranseptorLogger
 }
 
 /**

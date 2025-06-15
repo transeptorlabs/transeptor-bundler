@@ -1,8 +1,11 @@
 import { ethers, EventFragment, Log } from 'ethers'
 
-import { Logger } from '../logger/index.js'
 import { ProviderService } from '../provider/index.js'
-import { MempoolManageUpdater, ReputationManager } from '../types/index.js'
+import {
+  MempoolManageUpdater,
+  ReputationManager,
+  TranseptorLogger,
+} from '../types/index.js'
 import { Either } from '../monad/index.js'
 import { withReadonly } from '../utils/index.js'
 
@@ -31,6 +34,7 @@ export type EventManagerConfig = {
   providerService: ProviderService
   reputationManager: ReputationManager
   mempoolManageUpdater: MempoolManageUpdater
+  logger: TranseptorLogger
 }
 
 /**
@@ -42,7 +46,8 @@ export type EventManagerConfig = {
 function _createEventManager(
   config: Readonly<EventManagerConfig>,
 ): EventManager {
-  const { providerService, reputationManager, mempoolManageUpdater } = config
+  const { providerService, reputationManager, mempoolManageUpdater, logger } =
+    config
   const entryPointContract =
     providerService.getEntryPointContractDetails().contract
   let lastBlock: number | null = null
@@ -141,12 +146,12 @@ function _createEventManager(
     entryPointContract.on('UserOperationEvent', async (...args) => {
       const ev = args.slice(-1)[0] // last argument is the event
       if (ev.args == null) {
-        Logger.error('UserOperationEvent event without args')
+        logger.error('UserOperationEvent event without args')
         return
       }
       await handleEvent(ev as any)
     })
-    Logger.debug(
+    logger.debug(
       'Entrypoint contract EventListener listening to events(UserOperationEvent)',
     )
   }
@@ -174,7 +179,7 @@ function _createEventManager(
       )
       const events = allEventLogs.flat()
 
-      Logger.debug(
+      logger.debug(
         { lastBlock: lastBlock, events: events.length },
         'Handling past Entrypoint events since last run',
       )

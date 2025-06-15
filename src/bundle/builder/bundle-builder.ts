@@ -1,5 +1,4 @@
 /* eslint-disable complexity */
-import { Logger } from '../../logger/index.js'
 import {
   ReputationManager,
   MempoolEntry,
@@ -8,6 +7,7 @@ import {
   BundleBuilderResult,
   BundleReadyToSend,
   RemoveUserOpDetails,
+  TranseptorLogger,
 } from '../../types/index.js'
 import { mergeStorageMap, withReadonly } from '../../utils/index.js'
 import { ValidationService } from '../../validation/index.js'
@@ -30,6 +30,7 @@ export type BundleBuilderConfig = {
     maxBundleGas: number
     txMode: string
   }
+  logger: TranseptorLogger
 }
 
 /**
@@ -47,6 +48,7 @@ function _createBundleBuilder(
     reputationManager,
     mempoolManagerBuilder,
     opts,
+    logger,
   } = config
   const entryPoint = providerService.getEntryPointContractDetails()
   const THROTTLED_ENTITY_BUNDLE_COUNT = 4
@@ -68,9 +70,9 @@ function _createBundleBuilder(
     notIncludedUserOpsHashes: string[],
     markedToRemoveUserOpsHashes: RemoveUserOpDetails[],
   ) => {
-    Logger.debug('After hook running for bundle builder')
+    logger.debug('After hook running for bundle builder')
     if (notIncludedUserOpsHashes.length > 0) {
-      Logger.debug(
+      logger.debug(
         { total: notIncludedUserOpsHashes.length },
         'Sending userOps not included in built bundle back to mempool with status of pending',
       )
@@ -80,7 +82,7 @@ function _createBundleBuilder(
     }
 
     if (markedToRemoveUserOpsHashes.length > 0) {
-      Logger.debug(
+      logger.debug(
         { total: markedToRemoveUserOpsHashes.length },
         'Marked to remove: removing UserOps from mempool',
       )
@@ -88,14 +90,14 @@ function _createBundleBuilder(
       for (const opDetails of markedToRemoveUserOpsHashes) {
         if (opDetails.reason === 'failed-2nd-validation' && opDetails.err) {
           const failedValError = opDetails.err
-          Logger.debug({ error: failedValError }, 'failed 2nd validation')
+          logger.debug({ error: failedValError }, 'failed 2nd validation')
           const { opIndex, reasonStr } = parseFailedOpRevert(
             failedValError,
             entryPoint.contract,
           )
           if (opIndex == null || reasonStr == null) {
             checkFatal(failedValError)
-            Logger.warn('Failed validation, but non-FailedOp error')
+            logger.warn('Failed validation, but non-FailedOp error')
             await mempoolManagerBuilder.removeUserOp(opDetails.userOpHash)
             return
           }
@@ -142,7 +144,7 @@ function _createBundleBuilder(
       const { sender, paymaster, factory } = userOp
       if (paymaster) {
         if (!acc.paymasterDeposit[paymaster]) {
-          Logger.debug(
+          logger.debug(
             { paymaster },
             'Setting paymaster deposit for paymaster if it does not exist',
           )
@@ -165,7 +167,7 @@ function _createBundleBuilder(
         )
 
       if (validationResult === null || !passedValidation) {
-        Logger.error(
+        logger.error(
           { error: reValidateError, userOp },
           'failed 2nd validation, marking removal from mempool:',
         )
@@ -194,7 +196,7 @@ function _createBundleBuilder(
       })
 
       if (!include) {
-        Logger.debug({ userOp, reason }, 'skipping user operation')
+        logger.debug({ userOp, reason }, 'skipping user operation')
         reason === 'banned'
           ? acc.markedToRemoveUserOpsHashes.push({
               userOpHash: userOpHash,
@@ -217,7 +219,7 @@ function _createBundleBuilder(
       acc.stakedEntityCount = stakedEntityCount
       acc.paymasterDeposit = paymasterDeposit
 
-      Logger.debug(
+      logger.debug(
         { sender: userOp.sender, nonce: userOp.nonce, userOpHash },
         'Adding UserOp to bundle',
       )
@@ -225,7 +227,7 @@ function _createBundleBuilder(
 
       const mergeOk = mergeEip7702Authorizations(entry, acc.eip7702Tuples)
       if (!mergeOk) {
-        Logger.debug(
+        logger.debug(
           { entry },
           'unable to add bundle as it relies on an EIP-7702 tuple that conflicts with other UserOperations',
         )
@@ -243,7 +245,7 @@ function _createBundleBuilder(
 
   return {
     createBundle: async (force?: boolean): Promise<BundleReadyToSend> => {
-      Logger.info('Attempting to create bundle')
+      logger.info('Attempting to create bundle')
       const entries = await getEntries(force)
       if (entries.length === 0) {
         return {

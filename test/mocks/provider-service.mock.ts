@@ -13,7 +13,6 @@ export const mockProviderService: MockedObject<ProviderService> = {
   send: vi.fn().mockResolvedValue(Either.Right({})),
   call: vi.fn(),
   debug_traceCall: vi.fn().mockResolvedValue(Either.Right({})),
-  debug_traceTransaction: vi.fn(),
   runContractScript: vi.fn(),
   getTransactionReceipt: vi.fn(),
   getSupportedNetworks: vi.fn(),

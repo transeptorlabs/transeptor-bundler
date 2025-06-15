@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createAuditLogWriter } from '../../src/logger/audit/audit-factory.js'
-import { Logger } from 'pino'
-import { AuditLogWriter } from '../../src/types/index.js'
+import { AuditLogWriter, TranseptorLogger } from '../../src/types/index.js'
 
 // Mock the pino-audit-log-writer module before any tests run
 vi.mock('../../src/logger/audit/pino-audit-log-writer.js', () => ({
@@ -9,7 +8,7 @@ vi.mock('../../src/logger/audit/pino-audit-log-writer.js', () => ({
 }))
 
 describe('Audit Factory', () => {
-  let mockLogger: Logger
+  let mockLogger: TranseptorLogger
   let mockPinoAuditLogWriter: AuditLogWriter
 
   beforeEach(async () => {
@@ -20,7 +19,7 @@ describe('Audit Factory', () => {
       error: vi.fn(),
       warn: vi.fn(),
       debug: vi.fn(),
-    } as unknown as Logger
+    } as unknown as TranseptorLogger
 
     // Mock the Pino audit log writer
     mockPinoAuditLogWriter = {

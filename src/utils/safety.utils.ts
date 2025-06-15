@@ -13,6 +13,11 @@ function deepFreezeClone<T>(obj: T): Readonly<T> {
   const isPlain = proto === Object.prototype || proto === Array.prototype
 
   if (!isPlain) {
+    // Skip over class instances of Pino to avoid freezing the logger
+    if (proto?.constructor?.name === 'Pino') {
+      return obj
+    }
+
     throw new Error(
       `deepFreezeClone only supports plain objects and arrays. Got instance of ${proto?.constructor?.name}`,
     )

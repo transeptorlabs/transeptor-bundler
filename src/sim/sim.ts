@@ -4,7 +4,6 @@ import {
   EntryPointSimulationsDeployedBytecode,
   I_ENTRY_POINT_SIMULATIONS,
 } from '../abis/index.js'
-import { Logger } from '../logger/index.js'
 import {
   UserOperation,
   ExecutionResult,
@@ -15,6 +14,7 @@ import {
   FullValidationResult,
   Simulator,
   StateOverride,
+  TranseptorLogger,
 } from '../types/index.js'
 import { packUserOp, sum, withReadonly } from '../utils/index.js'
 import { ProviderService } from '../provider/index.js'
@@ -33,6 +33,7 @@ import { PreVerificationGasCalculator } from '../gas/index.js'
 export type SimulatorConfig = {
   providerService: ProviderService
   preVerificationGasCalculator: PreVerificationGasCalculator
+  logger: TranseptorLogger
 }
 
 /**
@@ -42,7 +43,7 @@ export type SimulatorConfig = {
  * @returns An instance of the Simulator module.
  */
 function _createSimulator(config: Readonly<SimulatorConfig>): Simulator {
-  const { providerService: ps, preVerificationGasCalculator } = config
+  const { providerService: ps, preVerificationGasCalculator, logger } = config
   const entryPointContract = ps.getEntryPointContractDetails()
 
   const epSimsInterface = new Interface(I_ENTRY_POINT_SIMULATIONS)
@@ -57,7 +58,7 @@ function _createSimulator(config: Readonly<SimulatorConfig>): Simulator {
     partialSimulateValidation: async (
       userOp: UserOperation,
     ): Promise<Either<RpcError, ValidationResult>> => {
-      Logger.debug(
+      logger.debug(
         'Running partial validation no stake or opcode checks on userOp',
       )
 
@@ -116,7 +117,7 @@ function _createSimulator(config: Readonly<SimulatorConfig>): Simulator {
       userOp: UserOperation,
       stateOverride: { [address: string]: { code: string } } = {},
     ): Promise<Either<RpcError, FullValidationResult>> => {
-      Logger.debug(
+      logger.debug(
         'Running full validation with storage/opcode checks on userOp',
       )
 
@@ -136,7 +137,7 @@ function _createSimulator(config: Readonly<SimulatorConfig>): Simulator {
         BigInt(userOp.paymasterVerificationGasLimit ?? 0),
       )
 
-      const tx: any = {
+      const tx: unknown = {
         from: ethers.ZeroAddress,
         to: entryPointContract.address,
         data: entryPointContract.contract.interface.encodeFunctionData(
@@ -168,7 +169,7 @@ function _createSimulator(config: Readonly<SimulatorConfig>): Simulator {
       userOp: UserOperation,
       stateOverride?: StateOverride,
     ): Promise<Either<RpcError, ExecutionResult>> => {
-      Logger.debug('Running simulateHandleOp on userOp')
+      logger.debug('Running simulateHandleOp on userOp')
       const ethCallResult = await ps.send<BytesLike>('eth_call', [
         {
           to: entryPointContract.address,

@@ -1,6 +1,5 @@
 /* eslint-disable complexity */
 import { ethers, FunctionFragment, Interface, keccak256 } from 'ethers'
-import { Logger } from '../logger/index.js'
 import { Either } from '../monad/index.js'
 import {
   AccountAbstractionEntity,
@@ -13,6 +12,7 @@ import {
   SlotMap,
   StakeInfo,
   StorageMap,
+  TranseptorLogger,
   UserOperation,
   ValidationErrors,
   ValidationResult,
@@ -33,6 +33,7 @@ import { toBytes32, withReadonly } from '../utils/index.js'
 
 type Erc7562ParserConfig = {
   entryPointAddress: string
+  logger: TranseptorLogger
 }
 
 type Erc7562ParserRunnerState = {
@@ -58,6 +59,7 @@ type Erc7562ParserRunnerState = {
 function _createErc7562Parser(
   config: Readonly<Erc7562ParserConfig>,
 ): Erc7562Parser {
+  const { logger } = config
   const entryPointAddress = config.entryPointAddress.toLowerCase()
 
   type CreatorAddress =
@@ -140,7 +142,7 @@ function _createErc7562Parser(
   function violationDetected(
     violation: ERC7562Violation,
   ): Either<RpcError, Erc7562ParserRunnerState> {
-    Logger.error({ violation }, 'ERC7562Parser(violationDetected)')
+    logger.error({ violation }, 'ERC7562Parser(violationDetected)')
     return Either.Left(new RpcError(violation.description, violation.errorCode))
   }
 
@@ -1007,7 +1009,7 @@ function _createErc7562Parser(
       erc7562Call: ERC7562Call,
       validationResult: ValidationResult,
     ): Either<RpcError, ERC7562ValidationResults> => {
-      Logger.debug(
+      logger.debug(
         'Running erc7562TracerResultParser on full validation results',
       )
 

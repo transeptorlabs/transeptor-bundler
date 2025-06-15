@@ -1,5 +1,9 @@
-import { BundleBuilder, StateKey, StateService } from '../types/index.js'
-import { Logger } from '../logger/index.js'
+import {
+  BundleBuilder,
+  StateKey,
+  StateService,
+  TranseptorLogger,
+} from '../types/index.js'
 import { SendBundleReturn, BundleProcessor } from '../types/index.js'
 
 import { EventManager } from '../event/index.js'
@@ -29,6 +33,7 @@ export type BundleManagerConfig = {
   state: StateService
   isAutoBundle: boolean
   autoBundleInterval: number
+  logger: TranseptorLogger
 }
 
 /**
@@ -47,6 +52,7 @@ function _createBundleManager(
     state,
     isAutoBundle,
     autoBundleInterval,
+    logger,
   } = config
 
   const mutex = new Mutex()
@@ -62,7 +68,7 @@ function _createBundleManager(
       await bundleBuilder.createBundle(force)
 
     if (bundle.length === 0) {
-      Logger.info('No bundle to send, skipping')
+      logger.info('No bundle to send, skipping')
       return {
         transactionHash: '',
         userOpHashes: [],
@@ -73,7 +79,7 @@ function _createBundleManager(
       await bundleProcessor.sendBundle(bundle, eip7702Tuples, storageMap)
 
     if (isSendBundleSuccess) {
-      Logger.info(
+      logger.info(
         {
           transactionHash: transactionHash,
           userOpHashes: userOpHashes,
@@ -104,14 +110,14 @@ function _createBundleManager(
     if (interval) {
       clearInterval(interval)
       interval = null
-      Logger.info('Stopping auto bundler interval')
+      logger.info('Stopping auto bundler interval')
     }
   }
 
   const startAutoBundler = () => {
     stopAutoBundler()
 
-    Logger.info(`Set auto bundler with interval: ${autoBundleInterval} ms`)
+    logger.info(`Set auto bundler with interval: ${autoBundleInterval} ms`)
 
     interval = setInterval(async () => {
       try {
@@ -119,7 +125,7 @@ function _createBundleManager(
           await doAttemptBundle()
         })
       } catch (error: any) {
-        Logger.error({ error: error.message }, 'Error running auto bundle:')
+        logger.error({ error: error.message }, 'Error running auto bundle:')
       }
     }, autoBundleInterval)
   }
@@ -131,7 +137,7 @@ function _createBundleManager(
   return {
     setBundlingMode: (mode: 'auto' | 'manual') => {
       bundleMode = mode
-      Logger.info({ mode }, 'Set bundling mode')
+      logger.info({ mode }, 'Set bundling mode')
 
       if (mode === 'auto') {
         startAutoBundler()

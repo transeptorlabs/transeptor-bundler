@@ -1,4 +1,3 @@
-import { Logger } from '../logger/index.js'
 import {
   ReputationEntry,
   ReputationManager,
@@ -8,9 +7,12 @@ import {
   ReputationManagerReader,
   StakeInfo,
   ValidationErrors,
+  TranseptorLogger,
+  StateService,
+  ReputationEntries,
+  StateKey,
 } from '../types/index.js'
 import { requireCond, tostr, withReadonly } from '../utils/index.js'
-import { StateService, ReputationEntries, StateKey } from '../types/index.js'
 import { ProviderService } from '../provider/index.js'
 
 export type ReputationManagerConfig = {
@@ -18,6 +20,7 @@ export type ReputationManagerConfig = {
   state: StateService
   minStake: bigint
   minUnstakeDelay: bigint
+  logger: TranseptorLogger
 }
 
 /**
@@ -64,7 +67,7 @@ function _createReputationManager(
     throttlingSlack: 10,
     banSlack: 50,
   }
-  const { providerService, state, minStake, minUnstakeDelay } = config
+  const { providerService, state, minStake, minUnstakeDelay, logger } = config
   const stakeManagerContract =
     providerService.getStakeManagerContractDetails().contract
 
@@ -72,14 +75,14 @@ function _createReputationManager(
     if (interval) {
       clearInterval(interval)
       interval = null
-      Logger.info('Stopping reputation interval')
+      logger.info('Stopping reputation interval')
     }
   }
 
   const startHourlyCron = async () => {
     stopHourlyCron()
 
-    Logger.info(
+    logger.info(
       `Set reputation interval to execute every ${60 * 60 * 1000} (ms)`,
     )
 
@@ -254,7 +257,7 @@ function _createReputationManager(
         return
       }
 
-      Logger.debug({ addr }, 'Updating seen status with reputation manager')
+      logger.debug({ addr }, 'Updating seen status with reputation manager')
       addr = addr.toLowerCase()
       await state.updateState(
         StateKey.ReputationEntries,
@@ -360,7 +363,7 @@ function _createReputationManager(
             opsSeen: entry ? entry.opsSeen + 10000 : 10000,
             opsIncluded: 0,
           }
-          Logger.debug({ addr, entry: bannedEntry }, 'crashedHandleOps')
+          logger.debug({ addr, entry: bannedEntry }, 'crashedHandleOps')
           return {
             reputationEntries: {
               ...reputationEntries,

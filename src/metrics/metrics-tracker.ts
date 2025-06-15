@@ -1,8 +1,12 @@
 import osUtils from 'os-utils'
-import { Logger } from '../logger/index.js'
-import { InfluxdbConnection, MeasurementName } from '../types/index.js'
-import { createInfluxdbClient } from './influxdb/index.js'
+import { MeasurementName, TranseptorLogger } from '../types/index.js'
+import { InfluxdbClient } from './clients/index.js'
 import { withReadonly } from '../utils/index.js'
+
+export type MetricsTrackerConfig = {
+  logger: TranseptorLogger
+  influxdbClient: InfluxdbClient
+}
 
 export type MetricsTracker = {
   startTracker: () => void
@@ -16,11 +20,11 @@ export type MetricsTracker = {
  * @returns An instance of the MetricsTracker module.
  */
 function _createMetricsTracker(
-  config: Readonly<InfluxdbConnection>,
+  config: Readonly<MetricsTrackerConfig>,
 ): MetricsTracker {
   const intervalTime = 1000 // Run every second
   const startUsage: NodeJS.CpuUsage = process.cpuUsage()
-  const client = createInfluxdbClient(config)
+  const { logger, influxdbClient } = config
   let interval: NodeJS.Timer | null = null
 
   const getCpuUsage = async (): Promise<number> => {
@@ -61,7 +65,7 @@ function _createMetricsTracker(
   }
 
   const collectAndStoreSystemMetrics = async () => {
-    Logger.debug('Collecting and storing system metrics')
+    logger.debug('Collecting and storing system metrics')
     // CPU (system)
     const cpuUsagePerc = await getCpuUsage()
     const cpuCount = osUtils.cpuCount()
@@ -94,7 +98,7 @@ function _createMetricsTracker(
     const totalSystemCpuUsagePerc =
       (systemUsageInSeconds / process.uptime()) * 100
 
-    await client.writePoint('system_metrics', [
+    await influxdbClient.writePoint('system_metrics', [
       //  Process metrics
       {
         name: MeasurementName.ALLOC,
@@ -170,14 +174,14 @@ function _createMetricsTracker(
     if (interval) {
       clearInterval(interval)
       interval = null
-      Logger.info('Stopping metrics tracker interval')
+      logger.info('Stopping metrics tracker interval')
     }
   }
 
   return {
     startTracker: () => {
       stopTracker()
-      Logger.info(`Set metrics interval to report every ${1000} (ms)`)
+      logger.info(`Set metrics interval to report every ${1000} (ms)`)
       interval = setInterval(async () => {
         await collectAndStoreSystemMetrics()
       }, intervalTime)
@@ -188,6 +192,6 @@ function _createMetricsTracker(
 }
 
 export const createMetricsTracker = withReadonly<
-  InfluxdbConnection,
+  MetricsTrackerConfig,
   MetricsTracker
 >(_createMetricsTracker)

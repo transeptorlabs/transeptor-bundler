@@ -2,7 +2,11 @@
 import { ContractFactory, ethers, resolveProperties } from 'ethers'
 
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from '../abis/index.js'
-import { Erc7562Parser, UserOperation } from '../types/index.js'
+import {
+  Erc7562Parser,
+  TranseptorLogger,
+  UserOperation,
+} from '../types/index.js'
 import {
   ReferencedCodeHashes,
   ValidateUserOpResult,
@@ -26,7 +30,6 @@ import {
   checkValidationResult,
   fullValResultSafeParse,
 } from './validation.helper.js'
-import { Logger } from 'pino'
 
 export type ValidationService = {
   /**
@@ -62,7 +65,7 @@ export type ValidationService = {
 }
 
 export type ValidationServiceConfig = {
-  logger: Logger
+  logger: TranseptorLogger
   providerService: ProviderService
   sim: Simulator
   erc7562Parser: Erc7562Parser

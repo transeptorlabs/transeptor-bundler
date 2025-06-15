@@ -2,10 +2,10 @@
 
 import {
   createAuditLogWriter,
-  Logger,
   createAuditLogger,
   withModuleContext,
   createAuditLogQueue,
+  createLogger,
 } from './logger/index.js'
 import {
   createBundleBuilder,
@@ -34,10 +34,11 @@ import {
 import { createEventManager } from './event/index.js'
 import { createState } from './state/index.js'
 import { createDepositManager } from './deposit/index.js'
-import { createMetricsTracker } from './metrics/index.js'
+import { createInfluxdbClient, createMetricsTracker } from './metrics/index.js'
 import { createPreVerificationGasCalculator } from './gas/index.js'
 import { AuditLogger, RpcServer } from './types/index.js'
 
+const logger = createLogger()
 let p2pNode: Libp2pNode | undefined = undefined
 let bundlerServer: RpcServer | undefined = undefined
 let auditLogger: AuditLogger | undefined = undefined
@@ -46,7 +47,7 @@ const stopLibp2p = async () => {
   if (p2pNode) {
     await p2pNode.stop()
     p2pNode = undefined
-    Logger.info('P2P node stopped gracefully.')
+    logger.info('P2P node stopped gracefully.')
   }
 }
 
@@ -54,7 +55,7 @@ const stopBundlerServer = async () => {
   if (bundlerServer) {
     await bundlerServer.stop()
     bundlerServer = undefined
-    Logger.info('Bundler server stopped gracefully.')
+    logger.info('Bundler server stopped gracefully.')
   }
 }
 
@@ -62,7 +63,7 @@ const stopAuditLogger = async () => {
   if (auditLogger) {
     await auditLogger.shutdown()
     auditLogger = undefined
-    Logger.info('Audit logger stopped gracefully.')
+    logger.info('Audit logger stopped gracefully.')
   }
 }
 
@@ -74,18 +75,21 @@ const runBundler = async () => {
       auditLogWriter: createAuditLogWriter({
         backend: 'pino',
         destinationPath: config.auditLogDestinationPath,
-        logger: withModuleContext('audit-log-writer'),
+        logger: withModuleContext('audit-log-writer', logger),
       }),
       flushIntervalMs: config.auditLogFlushIntervalMs,
-      logger: withModuleContext('audit-log-queue'),
+      logger: withModuleContext('audit-log-queue', logger),
       bufferCapacity: config.auditLogBufferSize,
     }),
     clientVersion: config.clientVersion,
     nodeCommitHash: config.commitHash,
     environment: config.environment,
   })
-  const state = createState()
+  const state = createState({
+    logger,
+  })
   const providerService = await createProviderService({
+    logger: withModuleContext('provider-service', logger),
     networkProvider: config.provider,
     supportedEntryPointAddress: config.supportedEntryPointAddress,
     signers: config.bundlerSignerWallets,
@@ -102,20 +106,23 @@ const runBundler = async () => {
   const sim = createSimulator({
     providerService,
     preVerificationGasCalculator,
+    logger: withModuleContext('simulator', logger),
   })
   const validationService = createValidationService({
-    logger: withModuleContext('validation'),
+    logger: withModuleContext('validation', logger),
     providerService,
     sim,
     preVerificationGasCalculator,
     isUnsafeMode: config.isUnsafeMode,
     erc7562Parser: createErc7562Parser({
       entryPointAddress,
+      logger: withModuleContext('erc7562-parser', logger),
     }),
   })
 
   // Create manager instances
   const reputationManager = createReputationManager({
+    logger: withModuleContext('reputation-manager', logger),
     providerService,
     state,
     minStake: config.minStake,
@@ -127,6 +134,7 @@ const runBundler = async () => {
 
   const depositManager = createDepositManager({ providerService, state })
   const mempoolManagerCore = createMempoolManagerCore({
+    logger: withModuleContext('mempool-manager-core', logger),
     state,
     reputationManager,
     depositManager,
@@ -134,6 +142,7 @@ const runBundler = async () => {
   })
 
   const eventsManager = createEventManager({
+    logger: withModuleContext('events-manager', logger),
     providerService,
     reputationManager,
     mempoolManageUpdater: createMempoolManageUpdater(mempoolManagerCore),
@@ -141,6 +150,7 @@ const runBundler = async () => {
 
   const bundleManager = createBundleManager({
     bundleProcessor: createBundleProcessor({
+      logger: withModuleContext('bundle-processor', logger),
       providerService,
       reputationManager,
       mempoolManagerBuilder: createMempoolManagerBuilder(mempoolManagerCore),
@@ -149,6 +159,7 @@ const runBundler = async () => {
       minSignerBalance: config.minSignerBalance,
     }),
     bundleBuilder: createBundleBuilder({
+      logger: withModuleContext('bundle-builder', logger),
       providerService,
       validationService,
       reputationManager,
@@ -162,6 +173,7 @@ const runBundler = async () => {
     state,
     isAutoBundle: config.isAutoBundle,
     autoBundleInterval: config.autoBundleInterval,
+    logger: withModuleContext('bundle-manager', logger),
   })
 
   // start p2p node
@@ -195,6 +207,7 @@ const runBundler = async () => {
     }),
     supportedApiPrefixes: config.httpApis,
     port: config.port,
+    logger: withModuleContext('rpc-server', logger),
   })
   await bundlerServer.start(async () => {
     const supportedNetworks = providerService.getSupportedNetworks()
@@ -246,7 +259,7 @@ const runBundler = async () => {
       }
     }
 
-    Logger.info(
+    logger.info(
       {
         signerDetails,
         bundleConfig: {
@@ -268,30 +281,33 @@ const runBundler = async () => {
 
   // stat metrics server
   if (config.isMetricsEnabled) {
-    const metricsTracker = createMetricsTracker(config.influxdbConnection)
+    const metricsTracker = createMetricsTracker({
+      logger: withModuleContext('metrics-tracker', logger),
+      influxdbClient: createInfluxdbClient(config.influxdbConnection),
+    })
     metricsTracker.startTracker()
   }
 }
 
 runBundler().catch(async (error) => {
-  Logger.fatal({ error: error.message }, 'Aborted failed to start up node...')
+  logger.fatal({ error: error.message }, 'Aborted failed to start up node...')
   process.exit(1)
 })
 
 process.on('SIGTERM', async () => {
-  Logger.debug('Gracefully shutting down...')
+  logger.debug('Gracefully shutting down...')
   await stopBundlerServer()
   await stopLibp2p()
   await stopAuditLogger()
-  Logger.info('Shutdown complete.')
+  logger.info('Shutdown complete.')
   process.exit(0)
 })
 
 process.on('SIGTERM', async () => {
-  Logger.debug('Gracefully shutting down...')
+  logger.debug('Gracefully shutting down...')
   await stopBundlerServer()
   await stopLibp2p()
   await stopAuditLogger()
-  Logger.info('Shutdown complete.')
+  logger.info('Shutdown complete.')
   process.exit(0)
 })

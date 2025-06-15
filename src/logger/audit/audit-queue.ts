@@ -4,15 +4,15 @@ import {
   AuditLogWriter,
   UserOpAuditEvent,
   AuditLogQueue,
+  TranseptorLogger,
 } from '../../types/index.js'
-import { Logger } from 'pino'
 
 /**
  * Configuration options for the audit log queue.
  */
 export type AuditLogQueueConfig = {
   auditLogWriter: AuditLogWriter
-  logger: Logger
+  logger: TranseptorLogger
 
   /**
    * Interval (in milliseconds) at which the queue will flush logs to the writer.
