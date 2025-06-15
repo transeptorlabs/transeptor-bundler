@@ -19,4 +19,9 @@ export const mockProviderService: MockedObject<ProviderService> = {
   getSupportedNetworks: vi.fn(),
   sendTransactionToFlashbots: vi.fn(),
   getBalance: vi.fn(),
+  getTransactionCount: vi.fn(),
+  getCode: vi.fn(),
+  getEntryPointContractDetails: vi.fn(),
+  getStakeManagerContractDetails: vi.fn(),
+  getBundlerSignerWallets: vi.fn(),
 }

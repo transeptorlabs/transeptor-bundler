@@ -28,12 +28,12 @@ export type UserOpAuditEvent = Readonly<{
 }>
 
 export type AuditLogQueue = {
-  enqueue: (event: UserOpAuditEvent) => void
+  enqueue: (event: UserOpAuditEvent) => Promise<void>
   shutdown: () => Promise<void>
 }
 
 export interface AuditLogWriter {
-  write(event: UserOpAuditEvent): void
+  write(event: UserOpAuditEvent): Promise<void>
   healthCheck(): Promise<boolean>
 }
 

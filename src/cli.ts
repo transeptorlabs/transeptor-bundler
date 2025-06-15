@@ -78,6 +78,7 @@ const runBundler = async () => {
       }),
       flushIntervalMs: config.auditLogFlushIntervalMs,
       logger: withModuleContext('audit-log-queue'),
+      bufferCapacity: config.auditLogBufferSize,
     }),
     clientVersion: config.clientVersion,
     nodeCommitHash: config.commitHash,

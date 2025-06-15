@@ -25,6 +25,7 @@ export type Config = {
   commitHash: string
   auditLogDestinationPath: string
   auditLogFlushIntervalMs: number
+  auditLogBufferSize: number
   environment: string
   httpApis: string[]
   port: number
@@ -189,6 +190,7 @@ function _createConfig(args: Readonly<string[]>): Config {
     commitHash: 'unknown', // TODO: replace with actual commit hash
     environment: process.env.NODE_ENV || 'development',
     auditLogFlushIntervalMs: 100, // every 100ms flush audit log queue
+    auditLogBufferSize: 5000, // Maximum buffer size for the audit log queue (5000 events)
     auditLogDestinationPath:
       (process.env.TRANSEPTOR_AUDIT_LOG_PATH as string) || AUDIT_LOG_PATH,
     httpApis: httpApis,
