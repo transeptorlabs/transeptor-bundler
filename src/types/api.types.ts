@@ -1,7 +1,7 @@
 import { PreVerificationGasConfig } from '../gas/index.js'
 import { SendBundleReturn } from './bundle.types.js'
 import { ReputationEntry } from './reputation.types.js'
-import { StateOverride } from './sim-types.js'
+import { StateOverride } from './sim.types.js'
 import {
   UserOperation,
   EstimateUserOpGasResult,

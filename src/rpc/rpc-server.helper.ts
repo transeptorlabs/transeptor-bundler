@@ -13,6 +13,7 @@ import type {
 import {
   headerChecks,
   parseValidRequest,
+  requestLoggerMiddleware,
   validateRequest,
 } from './rpc-middleware.js'
 import { Either, isEither } from '../monad/index.js'
@@ -98,6 +99,7 @@ export const createApp = (
   app.use(express.json())
   app.use(headerChecks)
   app.use(validateRequest(supportedApiPrefixes))
+  app.use(requestLoggerMiddleware)
   app.use(parseValidRequest(handlerRegistry))
 
   app.post('/rpc', async (req: Request, res: Response) => {

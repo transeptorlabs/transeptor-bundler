@@ -7,7 +7,7 @@ import {
   RpcError,
   ValidatedJsonRpcRequest,
 } from '../types/index.js'
-import { Logger } from '../logger/index.js'
+import { Logger, setBaseLoggerRequestContext } from '../logger/index.js'
 import { Request, Response } from 'express'
 import { Either } from '../monad/either.js'
 import {
@@ -143,6 +143,22 @@ export const validateRequest = (supportedApiPrefixes: string[]) => {
       next()
     }
   }
+}
+
+/**
+ * Middleware to set the request context
+ *
+ * @param req - The request object
+ * @param res - The response object
+ * @param next - The next middleware function
+ */
+export const requestLoggerMiddleware = (
+  req: Request,
+  res: Response,
+  next: () => void,
+) => {
+  setBaseLoggerRequestContext({ requestId: req.validRpcRequest.id as string })
+  next()
 }
 
 /**

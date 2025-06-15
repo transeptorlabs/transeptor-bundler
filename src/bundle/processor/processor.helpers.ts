@@ -3,7 +3,7 @@ import {
   GET_USEROP_HASHES_ABI,
   GET_USEROP_HASHES_BYTECODE,
 } from '../../abis/helper.abi.js'
-import { Logger } from '../../logger/base-logger.js'
+import { Logger } from '../../logger/logger.js'
 import { ProviderService } from '../../provider/index.js'
 import { UserOperation } from '../../types/index.js'
 import { packUserOps } from '../../utils/index.js'

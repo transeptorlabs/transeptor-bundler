@@ -47,5 +47,6 @@ function readonlyWrapper<T>(obj: T): Readonly<T> {
 export function withReadonly<TDependencies, TModule>(
   createModuleFn: (deps: Readonly<TDependencies>) => TModule,
 ) {
-  return (deps: TDependencies): TModule => createModuleFn(readonlyWrapper(deps))
+  return (deps: TDependencies): TModule =>
+    Object.freeze(createModuleFn(readonlyWrapper(deps)))
 }
