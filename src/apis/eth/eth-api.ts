@@ -28,7 +28,7 @@ import { PreVerificationGasCalculator } from '../../gas/index.js'
 import { Either } from '../../monad/index.js'
 import {
   extractCallGasLimit,
-  extractUseropVerificationResult,
+  extractUserOpVerificationResult,
   extractVerificationGasLimit,
   getUserOpHashWithCode,
   sendUserOpToMempool,
@@ -43,6 +43,7 @@ export type EthAPIConfig = {
   mempoolManageSender: MempoolManageSender
   preVerificationGasCalculator: PreVerificationGasCalculator
   eip7702Support: boolean
+  chainId: number
 }
 
 /**
@@ -61,6 +62,8 @@ function _createEthAPI(config: Readonly<EthAPIConfig>): EthAPI {
     mempoolManageSender,
     preVerificationGasCalculator: pvgc,
     eip7702Support,
+    chainId,
+    logUserOpLifecycleEvent,
   } = config
   const entryPoint = ps.getEntryPointContractDetails()
 
@@ -140,7 +143,16 @@ function _createEthAPI(config: Readonly<EthAPIConfig>): EthAPI {
       userOpInput: UserOperation,
       entryPointInput: string,
     ): Promise<Either<RpcError, string>> => {
-      const opReady = await vs.validateInputParameters(
+      await logUserOpLifecycleEvent({
+        lifecycleStage: 'userOpReceived',
+        chainId,
+        userOpHash: '0x0',
+        entryPoint: entryPoint.address,
+        userOp: userOpInput,
+      })
+
+      // Validate the input parameters
+      const inputValResult = await vs.validateInputParameters(
         {
           userOpInput,
           entryPointInput,
@@ -152,46 +164,106 @@ function _createEthAPI(config: Readonly<EthAPIConfig>): EthAPI {
         true,
       )
 
-      return opReady.foldAsync(
-        async (error: RpcError) => Either.Left(error),
-        async (userOp: UserOperation) => {
-          const [validationResult, userOpHashRes] = await Promise.all([
-            vs.validateUserOp(userOp, true, undefined),
-            getUserOpHashWithCode(ps, entryPoint, userOp),
-          ])
-
-          return Either.Right<RpcError, RelayUserOpParam>(undefined)
-            .map((op) => ({
-              ...op,
-              userOp,
-            }))
-            .flatMap((relayUserOpParam: RelayUserOpParam) =>
-              userOpHashRes.fold(
-                (error: NetworkCallError) =>
-                  Either.Left<RpcError, RelayUserOpParam>(
-                    new RpcError(error.message, ValidationErrors.InternalError),
-                  ),
-                (userOpHash: string) => {
-                  return Either.Right<RpcError, RelayUserOpParam>({
-                    ...relayUserOpParam,
-                    userOpHash,
-                  })
-                },
-              ),
-            )
-            .flatMap((op) =>
-              extractUseropVerificationResult(op, validationResult),
-            )
-            .foldAsync(
-              async (error: RpcError) => Either.Left<RpcError, string>(error),
-              async (relayUserOpParam: RelayUserOpParam) =>
-                sendUserOpToMempool(
-                  relayUserOpParam,
-                  mempoolManageSender.addUserOp,
-                ),
-            )
+      const parsedInputValRes: {
+        userOp: UserOperation
+        error?: RpcError
+      } = inputValResult.fold(
+        (error: RpcError) => {
+          return {
+            error,
+            userOp: undefined,
+          }
+        },
+        (userOp: UserOperation) => {
+          return {
+            error: undefined,
+            userOp,
+          }
         },
       )
+
+      if (parsedInputValRes.error) {
+        await logUserOpLifecycleEvent({
+          lifecycleStage: 'userOpRejected',
+          chainId,
+          userOpHash: '0x0',
+          entryPoint: entryPoint.address,
+          userOp: userOpInput,
+          details: {
+            reason: parsedInputValRes.error.message,
+          },
+        })
+        return Either.Left(parsedInputValRes.error)
+      }
+
+      // Get the userOpHash
+      const userOp = parsedInputValRes.userOp
+      const userOpHashRes = await getUserOpHashWithCode(ps, entryPoint, userOp)
+      const parsedUserOpHashRes: {
+        userOpHash: string
+        error?: NetworkCallError
+      } = userOpHashRes.fold(
+        (error: NetworkCallError) => {
+          return {
+            error,
+            userOpHash: '0x0',
+          }
+        },
+        (userOpHash: string) => {
+          return {
+            error: undefined,
+            userOpHash,
+          }
+        },
+      )
+      if (parsedUserOpHashRes.error) {
+        await logUserOpLifecycleEvent({
+          lifecycleStage: 'userOpRejected',
+          chainId,
+          userOpHash: '0x0',
+          entryPoint: entryPoint.address,
+          userOp: userOpInput,
+          details: {
+            reason: parsedUserOpHashRes.error.message,
+          },
+        })
+        return Either.Left(
+          new RpcError(
+            parsedUserOpHashRes.error.message,
+            ValidationErrors.InternalError,
+          ),
+        )
+      }
+
+      // Validate the userOp and relay it to the mempool if validation passes
+      const validationResult = await vs.validateUserOp(userOp, true, undefined)
+      return Either.Right<RpcError, RelayUserOpParam>(undefined)
+        .map((op) => ({
+          ...op,
+          userOp,
+          userOpHash: parsedUserOpHashRes.userOpHash,
+        }))
+        .flatMap((op) => extractUserOpVerificationResult(op, validationResult))
+        .foldAsync(
+          async (error: RpcError) => {
+            await logUserOpLifecycleEvent({
+              lifecycleStage: 'userOpRejected',
+              chainId,
+              userOpHash: parsedUserOpHashRes.userOpHash,
+              entryPoint: entryPoint.address,
+              userOp: userOpInput,
+              details: {
+                reason: error.message,
+              },
+            })
+            return Either.Left<RpcError, string>(error)
+          },
+          async (relayUserOpParam: RelayUserOpParam) =>
+            sendUserOpToMempool(
+              relayUserOpParam,
+              mempoolManageSender.addUserOp,
+            ),
+        )
     },
 
     getSupportedEntryPoints: async (): Promise<string[]> => {

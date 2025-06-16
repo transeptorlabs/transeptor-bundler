@@ -50,7 +50,7 @@ export const extractCallGasLimit = (
   )
 }
 
-export const extractUseropVerificationResult = (
+export const extractUserOpVerificationResult = (
   relayUserOpParam: RelayUserOpParam,
   validationResult: Either<RpcError, ValidateUserOpResult>,
 ): Either<RpcError, RelayUserOpParam> => {

@@ -11,8 +11,6 @@ export type LifecycleStage =
   | 'userOpValidationStarted'
   | 'userOpValidated'
   | 'userOpValidationFailed'
-  | 'userOpSimulationStarted'
-  | 'userOpSimulationCompleted'
   | 'userOpIncluded'
   | 'userOpSubmittedOnChain'
   | 'userOpOnChainReceipt'
@@ -26,9 +24,9 @@ export type UserOpAuditEvent = Readonly<{
   data: {
     lifecycleStage: LifecycleStage
     userOpHash: string
-    userOp: UserOperation
+    userOp: UserOpRedacted
     entryPoint: string
-    chainId: string
+    chainId: number
     details: Record<string, unknown>
   }
 }>
@@ -43,14 +41,26 @@ export interface AuditLogWriter {
   healthCheck(): Promise<boolean>
 }
 
-export type LogUserOpLifecycleEvent = (
-  eventType: LifecycleStage,
-  userOp: UserOperation,
-  chainId: string,
-  userOpHash: string,
-  entryPoint: string,
-  details?: Record<string, unknown>,
-) => Promise<void>
+/**
+ * Redacts the signature and callData from the userOp to avoid logging sensitive data about the userOp intent.
+ */
+export type UserOpRedacted = Omit<
+  UserOperation,
+  'signature' | 'callData' | 'factoryData' | 'eip7702Auth'
+>
+
+export type LogUserOpLifecycleEvent = (eventInput: {
+  lifecycleStage: LifecycleStage
+
+  /**
+   * The chain ID in Hex format.
+   */
+  chainId: number
+  userOpHash: string
+  entryPoint: string
+  userOp: UserOperation
+  details?: Record<string, unknown>
+}) => Promise<void>
 
 export type AuditLogger = {
   logUserOpLifecycleEvent: LogUserOpLifecycleEvent

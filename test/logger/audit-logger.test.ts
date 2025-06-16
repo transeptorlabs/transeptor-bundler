@@ -52,18 +52,18 @@ describe('AuditLogger', () => {
     it('should enqueue audit event in production environment', async () => {
       const logger = createAuditLogger(defaultDeps)
       const userOpHash = '0xabc'
-      const chainId = '1'
+      const chainId = 1
       const entryPoint = '0x456'
       const details = { reason: 'test' }
 
-      await logger.logUserOpLifecycleEvent(
-        'RECEIVED' as LifecycleStage,
-        mockUserOp,
+      await logger.logUserOpLifecycleEvent({
+        lifecycleStage: 'RECEIVED' as LifecycleStage,
+        userOp: mockUserOp,
         userOpHash,
         chainId,
         entryPoint,
         details,
-      )
+      })
 
       expect(mockAuditLogQueue.enqueue).toHaveBeenCalledTimes(1)
       const event = mockAuditLogQueue.enqueue.mock.calls[0][0]
@@ -90,13 +90,14 @@ describe('AuditLogger', () => {
         environment: 'development',
       })
 
-      await logger.logUserOpLifecycleEvent(
-        'RECEIVED' as LifecycleStage,
-        mockUserOp,
-        '0xabc',
-        '1',
-        '0x456',
-      )
+      await logger.logUserOpLifecycleEvent({
+        lifecycleStage: 'RECEIVED' as LifecycleStage,
+        userOp: mockUserOp,
+        userOpHash: '0xabc',
+        chainId: 1,
+        entryPoint: '0x456',
+        details: { reason: 'test' },
+      })
 
       expect(mockAuditLogQueue.enqueue).not.toHaveBeenCalled()
     })

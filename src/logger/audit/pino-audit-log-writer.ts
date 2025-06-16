@@ -46,7 +46,22 @@ function _createPinoAuditLogWriter(
   return {
     write: async (event: UserOpAuditEvent) => {
       try {
-        auditLogger.info(event)
+        // ensure all sensitive data  about the userOps intent is redacted before logging
+        const redactedEvent = {
+          ...event,
+          data: {
+            ...event.data,
+            userOp: {
+              ...event.data.userOp,
+              signature: '0x_REDACTED',
+              callData: '0x_REDACTED',
+              factoryData: '0x_REDACTED',
+              eip7702Auth: '0x_REDACTED',
+            },
+          },
+        }
+
+        auditLogger.info(redactedEvent)
       } catch (err) {
         logger.error(
           { err, event },

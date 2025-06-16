@@ -52,16 +52,14 @@ describe('createPinoAuditLogWriter', () => {
       userOp: {
         sender: '0x123',
         nonce: '0x1',
-        callData: '0x',
         callGasLimit: '0x100000',
         verificationGasLimit: '0x100000',
         preVerificationGas: '0x100000',
         maxFeePerGas: '0x100000',
         maxPriorityFeePerGas: '0x100000',
-        signature: '0x',
       },
       entryPoint: '0x456',
-      chainId: '1',
+      chainId: 1,
       details: {},
     },
   }
@@ -98,7 +96,19 @@ describe('createPinoAuditLogWriter', () => {
     await writer.write(mockUserOpEvent)
 
     // Verify pino logger was called with correct event
-    expect(mockAuditLogger.info).toHaveBeenCalledWith(mockUserOpEvent)
+    expect(mockAuditLogger.info).toHaveBeenCalledWith({
+      ...mockUserOpEvent,
+      data: {
+        ...mockUserOpEvent.data,
+        userOp: {
+          ...mockUserOpEvent.data.userOp,
+          signature: '0x_REDACTED',
+          callData: '0x_REDACTED',
+          factoryData: '0x_REDACTED',
+          eip7702Auth: '0x_REDACTED',
+        },
+      },
+    })
   })
 
   it('should handle write errors gracefully', async () => {

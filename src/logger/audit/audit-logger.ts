@@ -32,14 +32,22 @@ function _createAuditLogger(deps: Readonly<AuditLoggerDeps>): AuditLogger {
   const { clientVersion, nodeCommitHash, auditLogQueue, environment } = deps
 
   return {
-    logUserOpLifecycleEvent: async (
-      lifecycleStage: LifecycleStage,
-      userOp: UserOperation,
-      userOpHash: string,
-      chainId: string,
-      entryPoint: string,
-      details: Record<string, unknown> = {},
-    ): Promise<void> => {
+    logUserOpLifecycleEvent: async (eventInput: {
+      lifecycleStage: LifecycleStage
+      chainId: number
+      userOp: UserOperation
+      userOpHash: string
+      entryPoint: string
+      details?: Record<string, unknown>
+    }): Promise<void> => {
+      const {
+        lifecycleStage,
+        chainId,
+        userOp,
+        userOpHash,
+        entryPoint,
+        details,
+      } = eventInput
       if (environment !== 'production') {
         // only log in production so that we don't clutter the logs in development
         return
