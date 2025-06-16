@@ -261,6 +261,7 @@ const runBundler = async () => {
 
     logger.info(
       {
+        environment: config.environment,
         signerDetails,
         bundleConfig: {
           mode: config.isUnsafeMode ? 'UNSAFE' : 'SAFE',

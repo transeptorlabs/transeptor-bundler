@@ -11,7 +11,7 @@ dotenv.config()
 const DEFAULT_NETWORK = 'http://localhost:8545'
 const SUPPORTED_MODES = ['base', 'searcher']
 const nodeVersion = '0.12.0-alpha.0' // manual update on each release
-const AUDIT_LOG_PATH = './logs/audit.log'
+const AUDIT_LOG_DESTINATION_PATH = './logs/audit.log'
 
 export type Config = {
   provider: JsonRpcProvider
@@ -191,8 +191,7 @@ function _createConfig(args: Readonly<string[]>): Config {
     environment: process.env.NODE_ENV || 'development',
     auditLogFlushIntervalMs: 100, // every 100ms flush audit log queue
     auditLogBufferSize: 5000, // Maximum buffer size for the audit log queue (5000 events)
-    auditLogDestinationPath:
-      (process.env.TRANSEPTOR_AUDIT_LOG_PATH as string) || AUDIT_LOG_PATH,
+    auditLogDestinationPath: AUDIT_LOG_DESTINATION_PATH,
     httpApis: httpApis,
     port: parseInt(programOpts.port as string),
 

@@ -5,6 +5,8 @@ import {
   TranseptorLogger,
 } from '../../types/index.js'
 import { withReadonly } from '../../utils/index.js'
+import fs from 'fs'
+import path from 'path'
 
 export type PinoAuditLogWriterConfig = {
   destinationPath: string
@@ -21,6 +23,12 @@ function _createPinoAuditLogWriter(
   config: Readonly<PinoAuditLogWriterConfig>,
 ): AuditLogWriter {
   const { destinationPath, logger } = config
+  // if the destinationPath is a file, we need to create the file if it doesn't exist
+  const dir = path.dirname(destinationPath)
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
+  }
+
   const destination = pino.destination({
     dest: destinationPath,
     sync: true,

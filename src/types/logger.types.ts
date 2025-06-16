@@ -50,7 +50,7 @@ export type LogUserOpLifecycleEvent = (
   userOpHash: string,
   entryPoint: string,
   details?: Record<string, unknown>,
-) => void
+) => Promise<void>
 
 export type AuditLogger = {
   logUserOpLifecycleEvent: LogUserOpLifecycleEvent
