@@ -1,10 +1,13 @@
 import { describe, it, vi, expect, beforeEach } from 'vitest'
 import { createRpcServerWithHandlers } from '../../src/rpc/rpc-server.js'
-import { Logger } from '../../src/logger/index.js'
-import { RpcError, type HandlerRegistry } from '../../src/types/index.js'
+import {
+  RpcError,
+  RpcServer,
+  type HandlerRegistry,
+} from '../../src/types/index.js'
 import express, { Express, Request, Response, NextFunction } from 'express'
 import { createServer } from 'http'
-import { MockHandlerRegistry } from '../mocks/rpc-mocks.js'
+import { MockHandlerRegistry, mockLogger } from '../mocks/index.js'
 import { Either } from '../../src/monad/index.js'
 
 // Mock dependencies
@@ -62,39 +65,32 @@ vi.mock('helmet', () => ({
     ),
 }))
 
-vi.mock('../../src/logger/index.js', () => ({
-  Logger: {
-    info: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}))
-
 describe('RPC Server', () => {
   const mockHandlerRegistry: HandlerRegistry = MockHandlerRegistry
   let mockPreflightCheck: () => Promise<void>
   let mockExpress: typeof express
   const mockSupportedApiPrefixes = ['eth', 'web3', 'debug']
+  let server: RpcServer
 
   beforeEach(() => {
     vi.clearAllMocks()
     mockExpress = vi.mocked(express)
 
     mockPreflightCheck = vi.fn().mockResolvedValue(undefined)
+    server = createRpcServerWithHandlers({
+      handlerRegistry: mockHandlerRegistry,
+      supportedApiPrefixes: mockSupportedApiPrefixes,
+      port: 3000,
+      logger: mockLogger,
+    })
   })
 
   describe('start', () => {
     it('should start server successfully', async () => {
-      const server = createRpcServerWithHandlers({
-        handlerRegistry: mockHandlerRegistry,
-        supportedApiPrefixes: mockSupportedApiPrefixes,
-        port: 3000,
-      })
-
       await server.start(mockPreflightCheck)
 
       expect(mockPreflightCheck).toHaveBeenCalled()
-      expect(Logger.info).toHaveBeenCalledWith(
+      expect(mockLogger.info).toHaveBeenCalledWith(
         'Node listening on http://localhost:3000/rpc',
       )
     })
@@ -103,14 +99,8 @@ describe('RPC Server', () => {
       const error = new Error('Preflight check failed')
       vi.mocked(mockPreflightCheck).mockRejectedValue(error)
 
-      const server = createRpcServerWithHandlers({
-        handlerRegistry: mockHandlerRegistry,
-        supportedApiPrefixes: mockSupportedApiPrefixes,
-        port: 3000,
-      })
-
       await expect(server.start(mockPreflightCheck)).rejects.toThrow(error)
-      expect(Logger.error).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         { error: 'Preflight check failed' },
         'Preflight check failed',
       )
@@ -119,14 +109,8 @@ describe('RPC Server', () => {
 
   describe('stop', () => {
     it('should stop server successfully', async () => {
-      const server = createRpcServerWithHandlers({
-        handlerRegistry: mockHandlerRegistry,
-        supportedApiPrefixes: mockSupportedApiPrefixes,
-        port: 3000,
-      })
-
       await server.stop()
-      expect(Logger.info).toHaveBeenCalledWith('Stopping server')
+      expect(mockLogger.info).toHaveBeenCalledWith('Stopping server')
     })
 
     it('should handle server closure error', async () => {
@@ -136,14 +120,15 @@ describe('RPC Server', () => {
         close: vi.fn((cb) => cb(error)),
       } as any)
 
-      const server = createRpcServerWithHandlers({
-        handlerRegistry: mockHandlerRegistry,
-        supportedApiPrefixes: mockSupportedApiPrefixes,
-        port: 3000,
-      })
-
-      await expect(server.stop()).rejects.toThrow(error)
-      expect(Logger.error).toHaveBeenCalledWith(
+      await expect(
+        createRpcServerWithHandlers({
+          handlerRegistry: mockHandlerRegistry,
+          supportedApiPrefixes: mockSupportedApiPrefixes,
+          port: 3000,
+          logger: mockLogger,
+        }).stop(),
+      ).rejects.toThrow(error)
+      expect(mockLogger.error).toHaveBeenCalledWith(
         { error: 'Server closure failed' },
         'Failed to close server',
       )
@@ -152,12 +137,6 @@ describe('RPC Server', () => {
 
   describe('RPC endpoint handling', () => {
     it('should register RPC endpoint with correct middleware', async () => {
-      const server = createRpcServerWithHandlers({
-        handlerRegistry: mockHandlerRegistry,
-        supportedApiPrefixes: mockSupportedApiPrefixes,
-        port: 3000,
-      })
-
       await server.start(mockPreflightCheck)
 
       const app = mockExpress()
@@ -166,12 +145,6 @@ describe('RPC Server', () => {
     })
 
     it('should handle RPC request with correct response', async () => {
-      const server = createRpcServerWithHandlers({
-        handlerRegistry: mockHandlerRegistry,
-        supportedApiPrefixes: mockSupportedApiPrefixes,
-        port: 3000,
-      })
-
       await server.start(mockPreflightCheck)
 
       const mockReq = {
@@ -197,12 +170,6 @@ describe('RPC Server', () => {
     })
 
     it('should handle RPC request with known error response', async () => {
-      const server = createRpcServerWithHandlers({
-        handlerRegistry: mockHandlerRegistry,
-        supportedApiPrefixes: mockSupportedApiPrefixes,
-        port: 3000,
-      })
-
       await server.start(mockPreflightCheck)
 
       const mockReq = {
@@ -210,8 +177,11 @@ describe('RPC Server', () => {
           id: 1,
           method: 'eth_getUserOperationReceipt',
           params: [''],
-          handlerFunc:
-            mockHandlerRegistry.eth_getUserOperationReceipt.handlerFunc,
+          handlerFunc: vi
+            .fn()
+            .mockResolvedValue(
+              Either.Left(new RpcError('Missing/invalid userOpHash', -32602)),
+            ),
         },
       }
 
@@ -219,13 +189,7 @@ describe('RPC Server', () => {
         json: vi.fn(),
       }
 
-      vi.spyOn(
-        mockHandlerRegistry.eth_getUserOperationReceipt,
-        'handlerFunc',
-      ).mockResolvedValue(
-        Either.Left(new RpcError('Missing/invalid userOpHash', -32602)),
-      )
-
+      vi.clearAllMocks() // Clear previous mock calls
       await rpcHandler(mockReq, mockRes)
 
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -237,19 +201,13 @@ describe('RPC Server', () => {
           data: undefined,
         },
       })
-      expect(Logger.error).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         { error: 'Missing/invalid userOpHash' },
         `<--- Error handling method requestId(${mockReq.parsedRpcRequest.id})`,
       )
     })
 
     it('should handle RPC request with unknown error', async () => {
-      const server = createRpcServerWithHandlers({
-        handlerRegistry: mockHandlerRegistry,
-        supportedApiPrefixes: mockSupportedApiPrefixes,
-        port: 3000,
-      })
-
       await server.start(mockPreflightCheck)
 
       const mockReq = {
@@ -282,7 +240,7 @@ describe('RPC Server', () => {
           data: undefined,
         },
       })
-      expect(Logger.error).toHaveBeenCalledWith(
+      expect(mockLogger.error).toHaveBeenCalledWith(
         { error: 'Unknown error' },
         `<--- Unknown error handling method requestId(${mockReq.parsedRpcRequest.id})`,
       )

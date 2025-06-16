@@ -1,15 +1,11 @@
 import { BigNumberish } from 'ethers'
 
-import { Logger } from '../logger/index.js'
 import {
   UserOperation,
   ReputationManager,
   StakeInfo,
   ValidationErrors,
   RpcError,
-} from '../types/index.js'
-import { Either } from '../monad/index.js'
-import type {
   MempoolEntryMetadata,
   MempoolEntryWithMetadata,
   EntryCount,
@@ -17,6 +13,7 @@ import type {
   StandardPool,
   State,
 } from '../types/index.js'
+import { Either } from '../monad/index.js'
 
 /**
  * Checks the reputation status of the given stakeInfo.
@@ -337,8 +334,6 @@ export const replaceOrAddUserOpChecks = async (
 
   const oldEntry = findBySenderNonce(userOp.sender, userOp.nonce, standardPool)
   if (oldEntry) {
-    Logger.debug('Old entry found, checking if needs replacement...')
-
     return res
       .map((mempoolEntryWithMetadata) => {
         const [entry, metadata] = mempoolEntryWithMetadata
@@ -386,7 +381,6 @@ export const doUpdateMempoolState = (
   const { oldEntry } = metadata
 
   if (oldEntry) {
-    Logger.debug('Replacing userOp in mempool...')
     delete standardPool[oldEntry.userOpHash]
     return {
       mempoolEntryCount,
@@ -405,7 +399,6 @@ export const doUpdateMempoolState = (
   if (userOp.paymaster) {
     const paymaster = userOp.paymaster.toLowerCase()
     if (paymaster !== '0x') {
-      Logger.debug({ addr: paymaster }, 'Updating paymaster count...')
       entriesCountToUpdate[paymaster] = (mempoolEntryCount[paymaster] ?? 0) + 1
     }
   }
@@ -413,7 +406,6 @@ export const doUpdateMempoolState = (
   if (userOp.factory) {
     const factory = userOp.factory.toLowerCase()
     if (factory !== '0x') {
-      Logger.debug({ addr: factory }, 'Updating factory count...')
       entriesCountToUpdate[factory] = (mempoolEntryCount[factory] ?? 0) + 1
     }
   }

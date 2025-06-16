@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { withReadonly } from '../../src/utils/index.js'
+import { createLogger } from '../../src/logger/index.js'
 
 describe('withReadonly', () => {
   test('should make a simple object readonly', () => {
@@ -130,5 +131,31 @@ describe('withReadonly', () => {
 
     expect(wrapped.emptyObj).toEqual({})
     expect(wrapped.emptyArr).toEqual([])
+  })
+
+  test('should skip freezing Pino logger instances', () => {
+    const mockPinoLogger = createLogger()
+
+    const deps = {
+      logger: mockPinoLogger,
+      config: { enabled: true },
+    }
+    const createModule = (
+      deps: Readonly<{
+        logger: typeof mockPinoLogger
+        config: { enabled: boolean }
+      }>,
+    ) => deps
+    const wrapped = withReadonly(createModule)(deps)
+
+    // Verify the logger is not frozen
+    expect(() => {
+      wrapped.logger.info = () => undefined
+    }).not.toThrow()
+
+    // Verify other properties are still frozen
+    expect(() => {
+      ;(wrapped.config as any).enabled = false
+    }).toThrow()
   })
 })

@@ -1,10 +1,21 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createState } from '../src/state/state.js'
-import { State, StateKey } from '../src/types/index.js'
+import { State, StateKey, StateService } from '../src/types/index.js'
+import { mockLogger } from './mocks/index.js'
 
 describe('createState', () => {
+  let stateService: StateService
+  beforeEach(() => {
+    vi.clearAllMocks()
+    stateService = createState({
+      logger: mockLogger,
+    })
+  })
+
   it('should initialize state correctly', async () => {
-    const stateService = createState()
+    const stateService = createState({
+      logger: mockLogger,
+    })
     const state = await stateService.getState([
       StateKey.StandardPool,
       StateKey.BlackList,
@@ -17,13 +28,11 @@ describe('createState', () => {
 
   describe('getState', () => {
     it('should get a single key from state', async () => {
-      const stateService = createState()
       const state = await stateService.getState(StateKey.WhiteList)
       expect(state).toEqual({ whiteList: [] })
     })
 
     it('should get multiple keys from state', async () => {
-      const stateService = createState()
       const state = await stateService.getState([
         StateKey.MempoolEntryCount,
         StateKey.BundleTxs,
@@ -37,7 +46,6 @@ describe('createState', () => {
 
   describe('updateState', () => {
     it('should update a single key in state', async () => {
-      const stateService = createState()
       await stateService.updateState(StateKey.BlackList, (current) => ({
         blackList: [...current.blackList, 'newEntry'],
       }))
@@ -47,7 +55,6 @@ describe('createState', () => {
     })
 
     it('should update multiple keys in state', async () => {
-      const stateService = createState()
       await stateService.updateState(
         [StateKey.BlackList, StateKey.WhiteList],
         (current) => ({
@@ -67,7 +74,6 @@ describe('createState', () => {
     })
 
     it('should return false if updated value is empty (single)', async () => {
-      const stateService = createState()
       const res = await stateService.updateState(
         StateKey.BlackList,
         () => ({}) as Partial<State>,
@@ -76,7 +82,6 @@ describe('createState', () => {
     })
 
     it('should return false if updated value has incorrect keys (single)', async () => {
-      const stateService = createState()
       const res = await stateService.updateState(
         StateKey.BlackList,
         () => ({ whiteList: [] }) as Partial<State>,
@@ -85,7 +90,6 @@ describe('createState', () => {
     })
 
     it('should return false if updated value is empty (multiple)', async () => {
-      const stateService = createState()
       const res = await stateService.updateState(
         [StateKey.BlackList, StateKey.WhiteList],
         () => ({}) as Partial<State>,
@@ -94,7 +98,6 @@ describe('createState', () => {
     })
 
     it('should return false if updated value is missing keys (multiple)', async () => {
-      const stateService = createState()
       const res = await stateService.updateState(
         [StateKey.BlackList, StateKey.WhiteList],
         () => ({
@@ -106,7 +109,6 @@ describe('createState', () => {
     })
 
     it('should return false if updated value has extra keys (multiple)', async () => {
-      const stateService = createState()
       const res = await stateService.updateState(
         [StateKey.BlackList, StateKey.WhiteList],
         () => ({

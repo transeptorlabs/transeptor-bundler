@@ -13,19 +13,26 @@ import {
   toBeHex,
 } from 'ethers'
 
-import { Logger } from '../logger/index.js'
+import { withModuleContext } from '../logger/index.js'
 import {
   TraceOptions,
-  TraceResult,
   ValidationErrors,
   NetworkCallError,
   RpcError,
   EIP7702Authorization,
   BundlerSignerWallets,
+  TranseptorLogger,
 } from '../types/index.js'
 import { Either } from '../monad/index.js'
 import { IENTRY_POINT_ABI, IStakeManager } from '../abis/index.js'
 import { isValidAddress } from '../utils/index.js'
+
+export type ProviderServiceConfig = {
+  networkProvider: JsonRpcProvider
+  supportedEntryPointAddress: string
+  signers: BundlerSignerWallets
+  logger: TranseptorLogger
+}
 
 export type ProviderService = {
   getNetwork(): Promise<Network>
@@ -47,10 +54,6 @@ export type ProviderService = {
     traceOptions: TraceOptions,
     useNativeTracerProvider?: boolean,
   ): Promise<Either<RpcError, R>>
-  debug_traceTransaction(
-    hash: string,
-    options: TraceOptions,
-  ): Promise<TraceResult | any>
   runContractScript<T extends ContractFactory>(
     c: T,
     ctrParams: Parameters<T['getDeployTransaction']>,
@@ -72,12 +75,6 @@ export type ProviderService = {
   getBundlerSignerWallets(): BundlerSignerWallets
 }
 
-export type ProviderServiceConfig = {
-  networkProvider: JsonRpcProvider
-  supportedEntryPointAddress: string
-  signers: BundlerSignerWallets
-}
-
 export type ContractDetails = {
   contract: ethers.Contract
   address: string
@@ -91,7 +88,9 @@ export type ContractMapping = {
 export const createProviderService = async (
   config: Readonly<ProviderServiceConfig>,
 ): Promise<ProviderService> => {
-  const { networkProvider, supportedEntryPointAddress, signers } = config
+  const { networkProvider, supportedEntryPointAddress, signers, logger } =
+    config
+  const moduleLogger = withModuleContext('provider', logger)
   const FLASHBOTS_BUNDLE_RELAY_URL: Record<number, string> = {
     1: '	https://relay.flashbots.net',
     11155111: 'https://relay-sepolia.flashbots.net',
@@ -279,7 +278,7 @@ export const createProviderService = async (
 
         return Either.Right(ret)
       } catch (err: any) {
-        Logger.error(
+        moduleLogger.error(
           {
             error: err,
           },
@@ -303,17 +302,6 @@ export const createProviderService = async (
           ),
         )
       }
-    },
-
-    debug_traceTransaction: async (
-      hash: string,
-      options: TraceOptions,
-    ): Promise<TraceResult | any> => {
-      const ret = await networkProvider.send('debug_traceTransaction', [
-        hash,
-        options,
-      ])
-      return ret
     },
 
     runContractScript: async <T extends ContractFactory>(

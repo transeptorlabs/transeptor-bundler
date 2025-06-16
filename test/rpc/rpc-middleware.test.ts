@@ -7,15 +7,6 @@ import {
 } from '../../src/rpc/rpc-middleware.js'
 import { MockHandlerRegistry } from '../mocks/index.js'
 
-// Mock the Logger
-vi.mock('../../src/logger/index.js', () => ({
-  Logger: {
-    info: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  },
-}))
-
 interface ExtendedRequest extends Request {
   validRpcRequest?: any
   parsedRpcRequest?: any

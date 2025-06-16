@@ -2,7 +2,11 @@
 import { ContractFactory, ethers, resolveProperties } from 'ethers'
 
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from '../abis/index.js'
-import { Erc7562Parser, UserOperation } from '../types/index.js'
+import {
+  Erc7562Parser,
+  TranseptorLogger,
+  UserOperation,
+} from '../types/index.js'
 import {
   ReferencedCodeHashes,
   ValidateUserOpResult,
@@ -26,7 +30,6 @@ import {
   checkValidationResult,
   fullValResultSafeParse,
 } from './validation.helper.js'
-import { Logger } from '../logger/index.js'
 
 export type ValidationService = {
   /**
@@ -62,6 +65,7 @@ export type ValidationService = {
 }
 
 export type ValidationServiceConfig = {
+  logger: TranseptorLogger
   providerService: ProviderService
   sim: Simulator
   erc7562Parser: Erc7562Parser
@@ -91,6 +95,7 @@ function _createValidationService(
     preVerificationGasCalculator: pvgc,
     isUnsafeMode,
     erc7562Parser,
+    logger,
   } = config
   const HEX_REGEX = /^0x[a-fA-F\d]*$/i
   const getCodeHashesFactory = new ethers.ContractFactory(
@@ -104,7 +109,7 @@ function _createValidationService(
       checkStakes: boolean,
       previousCodeHashes?: ReferencedCodeHashes,
     ): Promise<Either<RpcError, ValidateUserOpResult>> => {
-      Logger.debug('Validating UserOperation')
+      logger.debug('Validating UserOperation')
       let res = Either.Right<RpcError, ValidateUserOpResult>(undefined)
 
       // [COD-010]
@@ -127,7 +132,7 @@ function _createValidationService(
       // prepare 7702 state override
       const authorizationList = getAuthorizationList(userOp)
       if (authorizationList.length > 0) {
-        Logger.debug('Validating EIP-7702 authorization list')
+        logger.debug('Validating EIP-7702 authorization list')
         const chainId = await ps.getNetwork().then((n) => n.chainId)
 
         // list is required to be of size=1. for completeness, we still scan it as a list.
@@ -185,7 +190,7 @@ function _createValidationService(
         )
       }
 
-      Logger.debug(
+      logger.debug(
         { status: res.isRight() ? 'valid' : 'invalid' },
         'UserOperation validation result',
       )
@@ -198,7 +203,7 @@ function _createValidationService(
       requireGasParams = true,
       preVerificationGasCheck = true,
     ): Promise<Either<RpcError, UserOperation>> => {
-      Logger.debug('Validating input parameters for UserOperation')
+      logger.debug('Validating input parameters for UserOperation')
       const {
         entryPointInput,
         entryPointAddress,
@@ -301,7 +306,7 @@ function _createValidationService(
         }
       }
 
-      Logger.debug('Input parameters for UserOperation are valid')
+      logger.debug('Input parameters for UserOperation are valid')
       return Either.Right(userOp)
     },
   }

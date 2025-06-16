@@ -14,7 +14,6 @@ import {
 } from 'ethers'
 
 import { IENTRY_POINT_ABI } from '../src/abis/index.js'
-import { Logger } from '../src/logger/index.js'
 import { UserOperation, UserOperationReceipt } from '../src/types/index.js'
 import { packUserOp, deepHexlify, hexConcat } from '../src/utils/index.js'
 
@@ -23,7 +22,11 @@ import {
   simpleAccountABI,
   simpleAccountFactoryABI,
 } from './abi.e2e.js'
+import { createLogger } from '../src/logger/index.js'
+
 dotenv.config()
+
+const logger = createLogger()
 
 const network: ethers.Network = new ethers.Network(
   'localhost',
@@ -101,7 +104,7 @@ const getSenderCfAddress = async (initCode: string): Promise<string> => {
       error.data === null ||
       error.errorName === null
     ) {
-      Logger.error(error, 'Error must have errorArgs, data and errorName')
+      logger.error(error, 'Error must have errorArgs, data and errorName')
       throw error
     }
 
@@ -110,7 +113,7 @@ const getSenderCfAddress = async (initCode: string): Promise<string> => {
       toUtf8Bytes('SenderAddressResult(address)'),
     ).slice(0, 10)
     if (!errorData.startsWith(SenderAddressResult)) {
-      Logger.error(
+      logger.error(
         error,
         'Invalid error, looking for SenderAddressResult(address)',
       )
@@ -139,7 +142,7 @@ const sendDeposit = async (senderAddress: string, feeData: FeeData) => {
   const minSenderDeposit = process.env
     .TRANSEPTOR_E2E_MIN_SENDER_DEPOSIT as string
   if (senderDeposit >= ethers.parseEther(minSenderDeposit)) {
-    Logger.info(`Current deposit: ${senderDeposit.toString()} wei`)
+    logger.info(`Current deposit: ${senderDeposit.toString()} wei`)
     return
   }
 
@@ -163,7 +166,7 @@ const sendDeposit = async (senderAddress: string, feeData: FeeData) => {
   const res = await secondWallet.sendTransaction(tx)
   await res.wait()
 
-  Logger.info(
+  logger.info(
     `Sender deposit(sent deposit): ${await getDeposit(senderAddress)} wei`,
   )
 }
@@ -207,7 +210,7 @@ const estimateUserOpGas = async (
     .send('eth_estimateUserOperationGas', [deepHexlify(userOp), epAddress])
     .catch((error: any) => {
       const parseJson = JSON.parse(error.body)
-      Logger.error(
+      logger.error(
         {
           ...parseJson,
           parsedErrorData: decodeSCAccountRevertReason(parseJson.error.data),
@@ -217,7 +220,7 @@ const estimateUserOpGas = async (
       throw new Error('Failed to estimate gas.')
     })
 
-  Logger.info(gasEstimate, 'Gas Estimate')
+  logger.info(gasEstimate, 'Gas Estimate')
   return {
     ...userOp,
     callGasLimit: toBeHex(BigInt(gasEstimate.callGasLimit)),
@@ -240,16 +243,16 @@ const signUserOp = async (userOp: UserOperation): Promise<UserOperation> => {
 const waitForReceipt = async (
   userOpHash: string,
 ): Promise<UserOperationReceipt> => {
-  Logger.info({ userOpHash }, 'Waiting for user operation receipt...')
+  logger.info({ userOpHash }, 'Waiting for user operation receipt...')
 
   let result: UserOperationReceipt | null = null
   while (result === null) {
-    Logger.info('Polling bundler...')
+    logger.info('Polling bundler...')
     result = await bundlerNode
       .send('eth_getUserOperationReceipt', [userOpHash])
       .catch((error: any) => {
         const parseJson = JSON.parse(error.body)
-        Logger.error(parseJson, 'Failed to get user operation receipt')
+        logger.error(parseJson, 'Failed to get user operation receipt')
         throw new Error('Failed to get user operation receipt.')
       })
 
@@ -273,9 +276,9 @@ const parseUserOpRevertReason = (
         if (!parsedLog) {
           continue
         }
-        Logger.info(parsedLog, 'Parsed log')
+        logger.info(parsedLog, 'Parsed log')
       } catch (error: any) {
-        Logger.error(error, 'Failed to parse error')
+        logger.error(error, 'Failed to parse error')
       }
     }
   }
@@ -293,7 +296,7 @@ const checkAccountDeployed = async (
  * Run user operation through bundler
  */
 async function main() {
-  Logger.info('Sending user operation...')
+  logger.info('Sending user operation...')
   const { factory, factoryData, salt } = await getCfFactoryData(secondWallet)
   const senderCfAddress = await getSenderCfAddress(
     hexConcat([factory, factoryData]),
@@ -320,7 +323,7 @@ async function main() {
     ? ((await simpleAccountContract.getNonce()) as bigint)
     : BigInt(0)
 
-  Logger.info(
+  logger.info(
     {
       eoaOwner: {
         address: secondWallet.address,
@@ -339,7 +342,7 @@ async function main() {
   )
 
   if (ownerBalance === BigInt(0)) {
-    Logger.error('Signer account balance is zero.')
+    logger.error('Signer account balance is zero.')
     throw new Error('Signer account balance is zero.')
   }
 
@@ -360,36 +363,36 @@ async function main() {
   const signedUserOp = await signUserOp(userOp)
 
   // Send userOp
-  Logger.info({ signedUserOp }, 'Sending UserOp to increment Global Counter...')
+  logger.info({ signedUserOp }, 'Sending UserOp to increment Global Counter...')
   const userOpHash = await bundlerNode
     .send('eth_sendUserOperation', [deepHexlify(signedUserOp), epAddress])
     .catch((error: any) => {
       const parseJson = JSON.parse(error.body)
-      Logger.error(parseJson, 'Failed to send user operation.')
+      logger.error(parseJson, 'Failed to send user operation.')
       throw new Error('Failed to send user operation.')
     })
-  Logger.info({ userOpHash }, 'UserOp hash:')
+  logger.info({ userOpHash }, 'UserOp hash:')
 
   const res = await bundlerNode
     .send('debug_bundler_sendBundleNow', [])
     .catch((error: any) => {
       const parseJson = JSON.parse(error.body)
-      Logger.error(parseJson, 'Failed to send bundle now.')
+      logger.error(parseJson, 'Failed to send bundle now.')
       throw new Error('Failed to send bundle now.')
     })
-  Logger.info({ res }, 'Sending bundle now...')
+  logger.info({ res }, 'Sending bundle now...')
 
   // Wait for userOp receipt
   const receipt = await waitForReceipt(userOpHash)
   if (!receipt.success) {
     const revertReason = parseUserOpRevertReason(receipt, senderCfAddress)
-    Logger.error({ revertReason }, 'UserOp revert reason:')
+    logger.error({ revertReason }, 'UserOp revert reason:')
     throw new Error('UserOp failed')
   }
 
   // Check that the global counter has been incremented by reading the currentCount value
   const countAfter = (await globalCounter.currentCount()) as bigint
-  Logger.info(
+  logger.info(
     {
       countBefore: (countBefore as bigint).toString(),
       countAfter: countAfter.toString(),
@@ -404,6 +407,6 @@ async function main() {
 main()
   .then(() => process.exit(0))
   .catch((err: any) => {
-    Logger.error(err, 'Script failed')
+    logger.error(err, 'Script failed')
     process.exit(1)
   })

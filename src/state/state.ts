@@ -1,9 +1,25 @@
 import { Mutex } from 'async-mutex'
-import { State, StateKey, StateService } from '../types/index.js'
-import { Logger } from '../logger/index.js'
+import {
+  State,
+  StateKey,
+  StateService,
+  TranseptorLogger,
+} from '../types/index.js'
+import { withReadonly } from '../utils/index.js'
 
-export const createState = (): StateService => {
+export type StateConfig = {
+  logger: TranseptorLogger
+}
+
+/**
+ * Creates an instance of the StateService module.
+ *
+ * @param config - The configuration object for the StateService instance.
+ * @returns An instance of the StateService module.
+ */
+function _createState(config: Readonly<StateConfig>): StateService {
   const mutex = new Mutex()
+  const { logger } = config
   let state: State = {
     standardPool: {},
     mempoolEntryCount: {},
@@ -47,7 +63,7 @@ export const createState = (): StateService => {
           keyType: 'single' | 'multiple',
         ) => {
           if (Object.keys(updatedValues).length === 0) {
-            Logger.warn(`Updated value must not be empty(${keyType})`)
+            logger.warn(`Updated value must not be empty(${keyType})`)
             return false
           }
           return true
@@ -62,7 +78,7 @@ export const createState = (): StateService => {
             (key) => !updatedKeys.includes(key),
           )
           if (missingKeys.length > 0) {
-            Logger.warn(
+            logger.warn(
               `Updated value must contain the same keys as input, missing ${missingKeys.join(', ')}(${keyType})`,
             )
             return false
@@ -72,7 +88,7 @@ export const createState = (): StateService => {
             (key) => !expectedKeys.includes(key),
           )
           if (extraKeys.length > 0) {
-            Logger.warn(
+            logger.warn(
               `Updated value must only contain the same keys as input: received ${extraKeys.join(', ')}(${keyType})`,
             )
             return false
@@ -122,3 +138,5 @@ export const createState = (): StateService => {
     },
   }
 }
+
+export const createState = withReadonly<StateConfig, StateService>(_createState)

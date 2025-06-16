@@ -7,7 +7,7 @@ import {
   RpcError,
   ValidatedJsonRpcRequest,
 } from '../types/index.js'
-import { Logger } from '../logger/index.js'
+import { setBaseLoggerRequestContext } from '../logger/index.js'
 import { Request, Response } from 'express'
 import { Either } from '../monad/either.js'
 import {
@@ -81,9 +81,6 @@ const isParamsValid = (
  */
 export const headerChecks = (req: Request, res: Response, next: () => void) => {
   if (req.headers['content-type'] !== 'application/json') {
-    Logger.error(
-      `Invalid content type: ${req.headers['content-type']}, expected application/json`,
-    )
     res.json({
       jsonrpc: '2.0',
       id: null,
@@ -118,9 +115,6 @@ export const validateRequest = (supportedApiPrefixes: string[]) => {
 
     const errorRes = rpcValidation.fold(
       (error: RpcError) => {
-        Logger.error(
-          `Failed to validate request: ${error.message}, code: ${error.code}`,
-        )
         return {
           jsonrpc: '2.0',
           id: req.body.id,
@@ -133,6 +127,9 @@ export const validateRequest = (supportedApiPrefixes: string[]) => {
       },
       (validReq) => {
         req.validRpcRequest = validReq
+        setBaseLoggerRequestContext({
+          requestId: req.validRpcRequest.id as string,
+        })
         return null
       },
     )
@@ -173,11 +170,8 @@ export const parseValidRequest = (handlerRegistry: HandlerRegistry) => {
       )
       .flatMap(isParamsValid)
 
-    const errorRes = rpcParsed.fold(
+    const errorRes: JsonRpcErrorResponse | null = rpcParsed.fold(
       (error: RpcError) => {
-        Logger.error(
-          `Failed to parse request: ${error.message} for requestId(${req.body.id})`,
-        )
         return {
           jsonrpc: '2.0',
           id: req.body.id,

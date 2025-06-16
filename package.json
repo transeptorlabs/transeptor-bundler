@@ -31,7 +31,7 @@
     "dev:unsafe": "tsx watch ./src/cli.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
     "dev:metrics": "tsx watch ./src/cli.ts --httpApi web3,eth,debug --metrics --txMode base | pino-pretty",
     "start": "tsx ./src/cli.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "start:prod": "yarn build && node dist/index.mjs --httpApi web3,eth,debug --txMode base | pino-pretty",
+    "start:prod": "yarn build && node dist/cli.mjs --httpApi web3,eth,debug --txMode base | pino-pretty",
     "test": "vitest run --config ./vitest.config.ts --coverage",
     "test:dev": "vitest --config ./vitest.config.ts",
     "lint": "eslint . --ext ts",

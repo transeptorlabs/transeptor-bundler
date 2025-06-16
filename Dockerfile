@@ -24,8 +24,16 @@ COPY --from=deps /app/node_modules ./node_modules
 
 EXPOSE 4337
 
-# Use a non-root user if possible
+# Create user and group first
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Create logs directory and audit.log file with correct permissions
+RUN mkdir -p /app/logs && \
+    touch /app/logs/audit.log && \
+    chown -R appuser:appgroup /app/logs && \
+    chmod 755 /app/logs && \
+    chmod 644 /app/logs/audit.log
+
 USER appuser
 
 ENTRYPOINT ["node", "./dist/cli.mjs"]

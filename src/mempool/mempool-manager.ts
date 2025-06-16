@@ -1,23 +1,19 @@
-import { Logger } from '../logger/index.js'
-import {
-  RelayUserOpParam,
-  UserOperation,
-  ReputationManager,
-  RpcError,
-} from '../types/index.js'
+import { DepositManager } from '../deposit/index.js'
+import { Either } from '../monad/index.js'
 import {
   StateKey,
   StateService,
   EntryStatus,
   MempoolEntry,
-} from '../types/index.js'
-import { DepositManager } from '../deposit/index.js'
-import { Either } from '../monad/index.js'
-import {
   MempoolManagerBuilder,
   MempoolManagerCore,
   MempoolManageSender,
   MempoolManageUpdater,
+  RelayUserOpParam,
+  UserOperation,
+  ReputationManager,
+  RpcError,
+  TranseptorLogger,
 } from '../types/index.js'
 import {
   doUpdateMempoolState,
@@ -33,6 +29,7 @@ export type MempoolManagerCoreConfig = {
   state: StateService
   reputationManager: ReputationManager
   depositManager: DepositManager
+  logger: TranseptorLogger
 
   /**
    * maximum # of entities allowed in a bundle
@@ -98,7 +95,8 @@ function _createMempoolManagerBuilder(
 function _createMempoolManagerCore(
   config: Readonly<MempoolManagerCoreConfig>,
 ): MempoolManagerCore {
-  const { state, reputationManager, depositManager, bundleSize } = config
+  const { state, reputationManager, depositManager, bundleSize, logger } =
+    config
 
   return {
     getKnownSenders: async (): Promise<string[]> => {
@@ -114,7 +112,7 @@ function _createMempoolManagerCore(
     addUserOp: async (
       relayUserOpParam: RelayUserOpParam,
     ): Promise<Either<RpcError, string>> => {
-      Logger.debug('Attempting to replace/add UserOperation to mempool')
+      logger.debug('Attempting to replace/add UserOperation to mempool')
       const {
         userOp,
         userOpHash,
@@ -132,6 +130,7 @@ function _createMempoolManagerCore(
         StateKey.MempoolEntryCount,
       ])
 
+      logger.debug('Old entry found, checking if needs replacement...')
       const res = await replaceOrAddUserOpChecks(
         reputationManager,
         mempoolEntryCount,
@@ -154,7 +153,7 @@ function _createMempoolManagerCore(
         ],
       )
 
-      Logger.debug('Reputation and throttling checks passed')
+      logger.debug('Reputation and throttling checks passed')
       return res.foldAsync(
         async (error) => Either.Left(error),
         async ([entry, metadata]) => {
@@ -185,7 +184,7 @@ function _createMempoolManagerCore(
             senderInfo,
             'increment',
           )
-          Logger.debug(
+          logger.debug(
             {
               sender: userOp.sender,
               nonce: userOp.nonce,
@@ -344,7 +343,7 @@ function _createMempoolManagerCore(
       }
 
       if (entry) {
-        Logger.debug(
+        logger.debug(
           `Updating UserOperation status: ${entry.userOpHash} to ${status}`,
         )
         await state.updateState(StateKey.StandardPool, ({ standardPool }) => {

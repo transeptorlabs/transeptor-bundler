@@ -6,7 +6,11 @@ import {
 } from './test-helpers.js'
 import { createState } from '../src/state/index.js'
 import { createMempoolManagerCore } from '../src/mempool/mempool-manager.js'
-import { mockReputationManager, mockDepositManager } from './mocks/index.js'
+import {
+  mockReputationManager,
+  mockDepositManager,
+  mockLogger,
+} from './mocks/index.js'
 import { MempoolManagerCore } from '../src/types/index.js'
 
 describe('MempoolManagerCore', () => {
@@ -16,10 +20,13 @@ describe('MempoolManagerCore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mempoolManager = createMempoolManagerCore({
-      state: createState(),
+      state: createState({
+        logger: mockLogger,
+      }),
       reputationManager: mockReputationManager,
       depositManager: mockDepositManager,
       bundleSize: MOCK_BUNDLE_SIZE,
+      logger: mockLogger,
     })
   })
 
