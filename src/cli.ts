@@ -158,17 +158,24 @@ async function runNode() {
     logger: withModuleContext('provider-service', logger),
     networkProvider: config.provider,
     supportedEntryPointAddress: config.supportedEntryPointAddress,
-    signers: config.bundlerSignerWallets,
+    txSignerPrivateKey: config.bundlerSignerWallets[0].privateKey,
   })
   const { chainId } = await providerService.getNetwork()
-  const { preVerificationGasCalculator, sim, validationService, stateService } =
-    await createCoreServices({
-      logger,
-      isUnsafeMode: config.isUnsafeMode,
-      entryPointAddress: providerService.getEntryPointContractDetails().address,
-      providerService,
-      chainId: Number(chainId),
-    })
+  const {
+    preVerificationGasCalculator,
+    sim,
+    validationService,
+    stateService,
+    capabilitiesService,
+  } = await createCoreServices({
+    logger,
+    isUnsafeMode: config.isUnsafeMode,
+    entryPointAddress: providerService.getEntryPointContractDetails().address,
+    providerService,
+    chainId: Number(chainId),
+    ocapsIssuerSignerPrivateKey: config.bundlerSignerWallets[1].privateKey,
+    clientVersion: config.clientVersion,
+  })
 
   // Create managers
   const {
@@ -181,6 +188,7 @@ async function runNode() {
     providerService,
     validationService,
     stateService,
+    capabilitiesService,
     minStake: config.minStake,
     minUnstakeDelay: config.minUnstakeDelay,
     whitelist: config.whitelist,

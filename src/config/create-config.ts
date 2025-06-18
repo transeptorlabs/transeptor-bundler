@@ -18,7 +18,6 @@ export type Config = {
 
   bundlerSignerWallets: BundlerSignerWallets
   minSignerBalance: bigint
-  numberOfSigners: number
   beneficiaryAddr: string
 
   clientVersion: string
@@ -56,7 +55,7 @@ export type Config = {
 }
 
 // Helper function to get bundler signer wallets
-const getBundlerSignerWallets = (
+const getBundlerSignerWallet = (
   numberOfSigners: number,
   provider: ethers.JsonRpcProvider,
 ): BundlerSignerWallets => {
@@ -138,10 +137,7 @@ function _createConfig(args: Readonly<string[]>): Config {
     process.env.TRANSEPTOR_ENTRYPOINT_ADDRESS || DEFAULT_ENTRY_POINT
 
   // Set up signers
-  const bundlerSignerWallets = getBundlerSignerWallets(
-    parseInt(programOpts.numberOfSigners),
-    provider,
-  )
+  const bundlerSignerWallets = getBundlerSignerWallet(2, provider)
   if (!process.env.TRANSEPTOR_BENEFICIARY) {
     throw new Error('TRANSEPTOR_BENEFICIARY env var not set')
   }
@@ -184,7 +180,6 @@ function _createConfig(args: Readonly<string[]>): Config {
     bundlerSignerWallets,
     beneficiaryAddr: process.env.TRANSEPTOR_BENEFICIARY as string,
     minSignerBalance: ethers.parseEther(programOpts.minBalance as string),
-    numberOfSigners: parseInt(programOpts.numberOfSigners),
 
     clientVersion: nodeVersion,
     commitHash: 'unknown', // TODO: replace with actual commit hash

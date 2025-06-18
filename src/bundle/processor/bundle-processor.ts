@@ -52,7 +52,7 @@ function _createBundleProcessor(
     logger,
   } = config
   const entryPoint = providerService.getEntryPointContractDetails()
-  const signers = providerService.getBundlerSignerWallets()
+  const signer = providerService.getBundlerSignerWallet()
 
   const afterHook = async (
     crashedHandleOps: CrashedHandleOps | undefined,
@@ -113,7 +113,6 @@ function _createBundleProcessor(
         'Attempting to send bundle',
       )
       const signerIndex = 0
-      const signer = signers[signerIndex] // Default to the first signer for now
       const useBeneficiary = await selectBeneficiary(
         signer,
         providerService,

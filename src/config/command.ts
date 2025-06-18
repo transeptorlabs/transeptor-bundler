@@ -28,11 +28,6 @@ export const getCmdOptionValues = (ops: CommandOptions): OptionValues => {
     )
     .option('--port <number>', 'Bundler node listening port.', '4337')
     .option(
-      '--numberOfSigners <number>',
-      'Number of signers HD paths to use from mnemonic',
-      '1',
-    )
-    .option(
       '--minBalance <string>',
       'Minimum ETH balance needed for signer address.',
       '1',

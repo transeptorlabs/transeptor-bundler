@@ -20,7 +20,6 @@ import {
   NetworkCallError,
   RpcError,
   EIP7702Authorization,
-  BundlerSignerWallets,
   TranseptorLogger,
 } from '../types/index.js'
 import { Either } from '../monad/index.js'
@@ -30,7 +29,7 @@ import { isValidAddress } from '../utils/index.js'
 export type ProviderServiceConfig = {
   networkProvider: JsonRpcProvider
   supportedEntryPointAddress: string
-  signers: BundlerSignerWallets
+  txSignerPrivateKey: string
   logger: TranseptorLogger
 }
 
@@ -72,7 +71,7 @@ export type ProviderService = {
   getCode(address: ethers.AddressLike): Promise<string>
   getEntryPointContractDetails(): ContractDetails
   getStakeManagerContractDetails(): ContractDetails
-  getBundlerSignerWallets(): BundlerSignerWallets
+  getBundlerSignerWallet(): ethers.Wallet
 }
 
 export type ContractDetails = {
@@ -88,8 +87,12 @@ export type ContractMapping = {
 export const createProviderService = async (
   config: Readonly<ProviderServiceConfig>,
 ): Promise<ProviderService> => {
-  const { networkProvider, supportedEntryPointAddress, signers, logger } =
-    config
+  const {
+    networkProvider,
+    supportedEntryPointAddress,
+    txSignerPrivateKey,
+    logger,
+  } = config
   const moduleLogger = withModuleContext('provider', logger)
   const FLASHBOTS_BUNDLE_RELAY_URL: Record<number, string> = {
     1: '	https://relay.flashbots.net',
@@ -167,7 +170,7 @@ export const createProviderService = async (
 
     getStakeManagerContractDetails: () => contractMapping.stakeManager,
 
-    getBundlerSignerWallets: () => signers,
+    getBundlerSignerWallet: () => new ethers.Wallet(txSignerPrivateKey),
 
     getBalance: async (address: string): Promise<bigint> => {
       return await networkProvider.getBalance(address)

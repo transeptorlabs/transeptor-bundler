@@ -30,7 +30,12 @@ export type PendingTxDetails = {
  */
 export type BundleTxs = Record<string, PendingTxDetails>
 
-// Signers
+/**
+ * A record of signer wallets
+ *
+ * - Signer [0] will sign transactions
+ * - Signer [1] will sign capabilities
+ */
 export type BundlerSignerWallets = Record<number, Wallet>
 
 // Bundle processor

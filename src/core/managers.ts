@@ -17,6 +17,7 @@ import {
   ReputationManager,
   StateService,
   TranseptorLogger,
+  CapabilitiesService,
 } from '../types/index.js'
 import { withModuleContext } from '../logger/index.js'
 import { ValidationService } from '../validation/index.js'
@@ -34,6 +35,7 @@ export type ManagersConfig = {
   providerService: ProviderService
   validationService: ValidationService
   stateService: StateService
+  capabilitiesService: CapabilitiesService
   minStake: bigint
   minUnstakeDelay: bigint
   whitelist: string[]
