@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+
 import { Either } from '../src/monad/either'
 import { RpcError } from '../src/types/index.js'
 

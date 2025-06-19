@@ -1,7 +1,8 @@
-import { UserOperation } from './userop.types.js'
 import { Wallet } from 'ethers'
-import { StorageMap } from './validation.types.js'
+
 import { EIP7702Authorization } from './eip-7702.types.js'
+import { UserOperation } from './userop.types.js'
+import { StorageMap } from './validation.types.js'
 
 export type SendBundleReturn = {
   transactionHash: string

@@ -4,6 +4,9 @@ import {
   EntryPointSimulationsDeployedBytecode,
   I_ENTRY_POINT_SIMULATIONS,
 } from '../abis/index.js'
+import { PreVerificationGasCalculator } from '../gas/index.js'
+import { Either } from '../monad/index.js'
+import { ProviderService } from '../provider/index.js'
 import {
   UserOperation,
   ExecutionResult,
@@ -17,8 +20,7 @@ import {
   TranseptorLogger,
 } from '../types/index.js'
 import { packUserOp, sum, withReadonly } from '../utils/index.js'
-import { ProviderService } from '../provider/index.js'
-import { Either } from '../monad/index.js'
+
 import {
   decodeRevertReason,
   generateValidationResult,
@@ -28,7 +30,6 @@ import {
   parseSimulateValidationResult,
   runErc7562NativeTracer,
 } from './sim.helper.js'
-import { PreVerificationGasCalculator } from '../gas/index.js'
 
 export type SimulatorConfig = {
   providerService: ProviderService

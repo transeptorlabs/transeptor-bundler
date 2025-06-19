@@ -1,11 +1,10 @@
+import { Either, isEither } from '../monad/index.js'
 import type {
   JsonRpcResponse,
   RpcError,
   ValidatedJsonRpcRequest,
   MethodNames,
 } from '../types/index.js'
-
-import { Either, isEither } from '../monad/index.js'
 import { createSuccessResponse } from '../utils/index.js'
 
 export const doHandleRequest = async <M extends MethodNames>(

@@ -1,4 +1,5 @@
 import { ErrorDescription, ethers } from 'ethers'
+
 import { Either } from '../../monad/either.js'
 import {
   EIP7702Authorization,
@@ -10,11 +11,11 @@ import {
   ValidateUserOpResult,
   ValidationErrors,
 } from '../../types/index.js'
-import { ValidationService } from '../../validation/index.js'
 import {
   getAuthorizationList,
   getEip7702AuthorizationSigner,
 } from '../../utils/index.js'
+import { ValidationService } from '../../validation/index.js'
 
 /**
  * Increment the count of a given key in the counts object.

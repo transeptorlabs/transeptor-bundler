@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
 import { createAuditLogWriter } from '../../src/logger/audit/audit-factory.js'
 import { AuditLogWriter, TranseptorLogger } from '../../src/types/index.js'
 

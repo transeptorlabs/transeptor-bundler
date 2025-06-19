@@ -6,6 +6,7 @@ import {
   keccak256,
   toUtf8Bytes,
   TransactionRequest,
+  BigNumberish,
 } from 'ethers'
 
 import {
@@ -15,6 +16,12 @@ import {
   IPAYMASTER_ABI,
   SIMPLE_ACCOUNT_ABI,
 } from '../abis/index.js'
+import {
+  EIP_7702_MARKER_INIT_CODE,
+  GethNativeTracerName,
+} from '../constants/index.js'
+import { Either } from '../monad/index.js'
+import { ProviderService } from '../provider/index.js'
 import {
   UserOperation,
   ExecutionResult,
@@ -36,11 +43,6 @@ import {
   mergeValidationDataValues,
   parseValidationData,
 } from '../utils/index.js'
-import { EIP_7702_MARKER_INIT_CODE } from '../constants/index.js'
-import { ProviderService } from '../provider/index.js'
-import { GethNativeTracerName } from '../constants/index.js'
-import { Either } from '../monad/index.js'
-import { BigNumberish } from 'ethers'
 
 export const parseExecutionResult = (
   res: ExecutionResultStruct,

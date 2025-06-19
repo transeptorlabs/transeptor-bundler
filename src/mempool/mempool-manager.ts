@@ -17,6 +17,8 @@ import {
   Capability,
   CapabilityTypes,
 } from '../types/index.js'
+import { withReadonly } from '../utils/index.js'
+
 import {
   doUpdateMempoolState,
   findBySenderNonce,
@@ -25,7 +27,6 @@ import {
   replaceOrAddUserOpChecks,
   updateSeenStatus,
 } from './mempool-helper.js'
-import { withReadonly } from '../utils/index.js'
 
 export type MempoolManagerCoreConfig = {
   state: StateService

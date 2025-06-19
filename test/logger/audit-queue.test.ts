@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
 import { createAuditLogQueue } from '../../src/logger/audit/audit-queue.js'
 import {
   UserOpAuditEvent,

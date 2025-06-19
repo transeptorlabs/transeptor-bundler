@@ -1,5 +1,10 @@
-import { packUserOp, withReadonly } from '../utils/index.js'
 import { BundleManager } from '../bundle/index.js'
+import { EventManager } from '../event/index.js'
+import {
+  PreVerificationGasCalculator,
+  PreVerificationGasConfig,
+} from '../gas/index.js'
+import { ProviderService } from '../provider/index.js'
 import {
   MempoolManagerCore,
   ReputationEntry,
@@ -9,12 +14,7 @@ import {
   UserOperation,
   DebugAPI,
 } from '../types/index.js'
-import { EventManager } from '../event/index.js'
-import {
-  PreVerificationGasCalculator,
-  PreVerificationGasConfig,
-} from '../gas/index.js'
-import { ProviderService } from '../provider/index.js'
+import { packUserOp, withReadonly } from '../utils/index.js'
 
 export type DebugAPIConfig = {
   providerService: ProviderService

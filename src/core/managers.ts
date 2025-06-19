@@ -1,17 +1,20 @@
-import { createReputationManager } from '../reputation/index.js'
-import { createDepositManager } from '../deposit/index.js'
-import {
-  createMempoolManagerCore,
-  createMempoolManagerBuilder,
-  createMempoolManageUpdater,
-} from '../mempool/index.js'
-import { createEventManager, EventManager } from '../event/index.js'
 import {
   createBundleManager,
   createBundleProcessor,
   createBundleBuilder,
   BundleManager,
 } from '../bundle/index.js'
+import { createDepositManager } from '../deposit/index.js'
+import { createEventManager, EventManager } from '../event/index.js'
+import { withModuleContext } from '../logger/index.js'
+import {
+  createMempoolManagerCore,
+  createMempoolManagerBuilder,
+  createMempoolManageUpdater,
+} from '../mempool/index.js'
+import { IssuedStateCapabilitiesMapping } from '../ocaps/bootstrap.js'
+import { ProviderService } from '../provider/index.js'
+import { createReputationManager } from '../reputation/index.js'
 import {
   MempoolManagerCore,
   ReputationManager,
@@ -20,10 +23,7 @@ import {
   Capability,
   CapabilityTypes,
 } from '../types/index.js'
-import { withModuleContext } from '../logger/index.js'
 import { ValidationService } from '../validation/index.js'
-import { ProviderService } from '../provider/index.js'
-import { IssuedStateCapabilitiesMapping } from '../ocaps/bootstrap.js'
 
 export type Managers = {
   reputationManager: ReputationManager

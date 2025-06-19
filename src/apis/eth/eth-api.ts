@@ -1,3 +1,7 @@
+import { EventManager } from '../../event/index.js'
+import { PreVerificationGasCalculator } from '../../gas/index.js'
+import { Either } from '../../monad/index.js'
+import { ProviderService } from '../../provider/index.js'
 import {
   EstimateUserOpGasResult,
   PackedUserOperation,
@@ -20,12 +24,8 @@ import {
   unpackUserOp,
   withReadonly,
 } from '../../utils/index.js'
-
-import { ProviderService } from '../../provider/index.js'
 import { ValidationService } from '../../validation/index.js'
-import { EventManager } from '../../event/index.js'
-import { PreVerificationGasCalculator } from '../../gas/index.js'
-import { Either } from '../../monad/index.js'
+
 import {
   extractCallGasLimit,
   extractUserOpVerificationResult,

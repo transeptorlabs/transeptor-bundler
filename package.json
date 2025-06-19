@@ -78,6 +78,8 @@
     "@vitest/coverage-istanbul": "3.0.5",
     "eslint": "^8.39.0",
     "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "^4.4.3",
+    "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-jsdoc": "^50.2.2",
     "eslint-plugin-prettier": "^5.2.1",
     "pino-pretty": "^10.0.0",

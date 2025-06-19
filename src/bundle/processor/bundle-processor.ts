@@ -1,4 +1,5 @@
 import { ethers } from 'ethers'
+
 import { ProviderService } from '../../provider/index.js'
 import {
   SendBundleReturnWithSigner,
@@ -17,9 +18,10 @@ import {
   prepareEip7702Transaction,
   withReadonly,
 } from '../../utils/index.js'
-import { getUserOpHashes, selectBeneficiary } from './processor.helpers.js'
-import { findEntityToBlame, checkFatal } from '../bundle.helper.js'
 import { parseFailedOpRevert } from '../builder/builder.helpers.js'
+import { findEntityToBlame, checkFatal } from '../bundle.helper.js'
+
+import { getUserOpHashes, selectBeneficiary } from './processor.helpers.js'
 
 export type BundleProcessorConfig = {
   providerService: ProviderService

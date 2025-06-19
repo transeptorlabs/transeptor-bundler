@@ -1,5 +1,6 @@
-import { vi, MockedObject } from 'vitest'
 import { EventLog } from 'ethers'
+import { vi, MockedObject } from 'vitest'
+
 import { EventManager } from '../../src/event/index.js'
 
 export const mockEventLog: EventLog = {

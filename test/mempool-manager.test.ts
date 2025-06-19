@@ -1,19 +1,21 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import {
-  mockUserOperationFactory,
-  mockBuildRelayUserOpParam,
-  mockEntryPointGetUserOpHash,
-  createTestStateCapability,
-} from './test-helpers.js'
-import { createState } from '../src/state/index.js'
+
 import { createMempoolManagerCore } from '../src/mempool/mempool-manager.js'
+import { createState } from '../src/state/index.js'
+import { MempoolManagerCore, StateKey } from '../src/types/index.js'
+
 import {
   mockReputationManager,
   mockDepositManager,
   mockLogger,
   mockCapabilityVerifier,
 } from './mocks/index.js'
-import { MempoolManagerCore, StateKey } from '../src/types/index.js'
+import {
+  mockUserOperationFactory,
+  mockBuildRelayUserOpParam,
+  mockEntryPointGetUserOpHash,
+  createTestStateCapability,
+} from './test-helpers.js'
 
 describe('MempoolManagerCore', () => {
   let mempoolManager: MempoolManagerCore

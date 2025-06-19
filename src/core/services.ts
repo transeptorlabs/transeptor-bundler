@@ -1,22 +1,8 @@
 import {
-  createValidationService,
-  ValidationService,
-} from '../validation/index.js'
-import {
   createPreVerificationGasCalculator,
   PreVerificationGasCalculator,
 } from '../gas/index.js'
-import { createErc7562Parser, createSimulator } from '../sim/index.js'
-import {
-  BundlerSignerWallets,
-  CapabilityService,
-  Simulator,
-  StateService,
-  TranseptorLogger,
-} from '../types/index.js'
 import { withModuleContext } from '../logger/index.js'
-import { createState } from '../state/index.js'
-import { ProviderService } from '../provider/index.js'
 import {
   StateCapabilityRegistry,
   createStateCapabilitiesBootstrap,
@@ -25,6 +11,20 @@ import {
   createCapabilityVerifier,
   IssuedStateCapabilitiesMapping,
 } from '../ocaps/index.js'
+import { ProviderService } from '../provider/index.js'
+import { createErc7562Parser, createSimulator } from '../sim/index.js'
+import { createState } from '../state/index.js'
+import {
+  BundlerSignerWallets,
+  CapabilityService,
+  Simulator,
+  StateService,
+  TranseptorLogger,
+} from '../types/index.js'
+import {
+  createValidationService,
+  ValidationService,
+} from '../validation/index.js'
 
 export type CoreServices = {
   preVerificationGasCalculator: PreVerificationGasCalculator

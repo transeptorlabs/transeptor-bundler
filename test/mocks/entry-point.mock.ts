@@ -1,5 +1,6 @@
-import { vi, MockedObject } from 'vitest'
 import { Contract, Interface, JsonRpcProvider } from 'ethers'
+import { vi, MockedObject } from 'vitest'
+
 import { IENTRY_POINT_ABI } from '../../src/abis/index.js'
 
 const mockProvider = new JsonRpcProvider('http://localhost:8545')

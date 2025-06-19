@@ -1,3 +1,5 @@
+import { MockedObject, vi } from 'vitest'
+
 import {
   HandlerRegistry,
   EthAPI,
@@ -5,7 +7,6 @@ import {
   DebugAPI,
   StakeInfo,
 } from '../../src/types/index.js'
-import { MockedObject, vi } from 'vitest'
 
 export const mockEth: MockedObject<EthAPI> = {
   getChainId: vi.fn(),

@@ -1,4 +1,5 @@
 import { vi, MockedObject } from 'vitest'
+
 import { Simulator } from '../../src/types/index.js'
 
 export const mockSimulator: MockedObject<Simulator> = {

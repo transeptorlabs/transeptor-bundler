@@ -1,4 +1,5 @@
 import { MockedObject, vi } from 'vitest'
+
 import {
   CapabilityIssuer,
   CapabilityService,

@@ -1,4 +1,5 @@
 import { vi, MockedObject } from 'vitest'
+
 import {
   ReputationManager,
   ReputationStatus,

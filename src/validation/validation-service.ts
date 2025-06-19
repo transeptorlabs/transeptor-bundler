@@ -2,12 +2,14 @@
 import { ContractFactory, ethers, resolveProperties } from 'ethers'
 
 import { GET_CODE_HASH_ABI, GET_CODE_HASH_BYTECODE } from '../abis/index.js'
+import { EIP_7702_MARKER_INIT_CODE } from '../constants/index.js'
+import { PreVerificationGasCalculator } from '../gas/index.js'
+import { Either } from '../monad/index.js'
+import { ProviderService } from '../provider/index.js'
 import {
   Erc7562Parser,
   TranseptorLogger,
   UserOperation,
-} from '../types/index.js'
-import {
   ReferencedCodeHashes,
   ValidateUserOpResult,
   ValidationErrors,
@@ -21,11 +23,7 @@ import {
   getEip7702AuthorizationSigner,
   withReadonly,
 } from '../utils/index.js'
-import { EIP_7702_MARKER_INIT_CODE } from '../constants/index.js'
 
-import { ProviderService } from '../provider/index.js'
-import { PreVerificationGasCalculator } from '../gas/index.js'
-import { Either } from '../monad/index.js'
 import {
   checkValidationResult,
   fullValResultSafeParse,

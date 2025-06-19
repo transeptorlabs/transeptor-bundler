@@ -1,5 +1,6 @@
 import { BigNumberish } from 'ethers'
 
+import { Either } from '../monad/index.js'
 import {
   UserOperation,
   ReputationManager,
@@ -13,7 +14,6 @@ import {
   StandardPool,
   State,
 } from '../types/index.js'
-import { Either } from '../monad/index.js'
 
 /**
  * Checks the reputation status of the given stakeInfo.

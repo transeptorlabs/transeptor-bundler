@@ -1,4 +1,5 @@
 /* eslint-disable complexity */
+import { ProviderService } from '../../provider/index.js'
 import {
   ReputationManager,
   MempoolEntry,
@@ -11,6 +12,8 @@ import {
 } from '../../types/index.js'
 import { mergeStorageMap, withReadonly } from '../../utils/index.js'
 import { ValidationService } from '../../validation/index.js'
+import { findEntityToBlame, checkFatal } from '../bundle.helper.js'
+
 import {
   validateUserOperation,
   shouldIncludeInBundle,
@@ -18,8 +21,6 @@ import {
   parseFailedOpRevert,
   mergeEip7702Authorizations,
 } from './builder.helpers.js'
-import { findEntityToBlame, checkFatal } from '../bundle.helper.js'
-import { ProviderService } from '../../provider/index.js'
 
 export type BundleBuilderConfig = {
   providerService: ProviderService

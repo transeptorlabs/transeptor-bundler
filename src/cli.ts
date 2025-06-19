@@ -1,21 +1,20 @@
 #!/user/bin/env node
 
-import { createLogger, withModuleContext } from './logger/index.js'
 import { Config, createConfig } from './config/index.js'
-import { createProviderService, ProviderService } from './provider/index.js'
-import { createRpcServerWithHandlers } from './rpc/index.js'
-import { Libp2pNode } from './p2p/index.js'
 import { GethNativeTracerName } from './constants/index.js'
-import { createMempoolManageSender } from './mempool/index.js'
-import { AuditLogger, RpcServer, Simulator } from './types/index.js'
-import { STATE_CAPABILITY_REGISTRY } from './ocaps/index.js'
-
 import {
   createCoreServices,
   createManagers,
   createInternalAPIs,
   createInfrastructure,
 } from './core/index.js'
+import { createLogger, withModuleContext } from './logger/index.js'
+import { createMempoolManageSender } from './mempool/index.js'
+import { STATE_CAPABILITY_REGISTRY } from './ocaps/index.js'
+import { Libp2pNode } from './p2p/index.js'
+import { createProviderService, ProviderService } from './provider/index.js'
+import { createRpcServerWithHandlers } from './rpc/index.js'
+import { AuditLogger, RpcServer, Simulator } from './types/index.js'
 
 const logger = createLogger()
 let p2pNode: Libp2pNode | undefined = undefined

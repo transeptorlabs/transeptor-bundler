@@ -1,21 +1,27 @@
+import { ChainConfig, Common, Hardfork, Mainnet } from '@ethereumjs/common'
+import { createEOACode7702Tx, EOACode7702TxData } from '@ethereumjs/tx'
+import { PrefixedHexString } from '@ethereumjs/util'
 import {
   ecrecover,
   pubToAddress,
   toBuffer,
   toChecksumAddress,
 } from 'ethereumjs-util'
+import {
+  BigNumberish,
+  keccak256,
+  encodeRlp,
+  ethers,
+  getBytes,
+  hexlify,
+  toBeHex,
+  Wallet,
+} from 'ethers'
 
-import { EIP7702Authorization, UserOperation } from '../types/index.js'
-import { ethers, getBytes, hexlify, toBeHex, Wallet } from 'ethers'
-import { BigNumberish } from 'ethers'
-import { keccak256 } from 'ethers'
-import { hexConcat } from './bundle.utils.js'
-import { encodeRlp } from 'ethers'
-
-import { ChainConfig, Common, Hardfork, Mainnet } from '@ethereumjs/common'
-import { createEOACode7702Tx, EOACode7702TxData } from '@ethereumjs/tx'
-import { PrefixedHexString } from '@ethereumjs/util'
 import { EIP7702_MAGIC } from '../constants/index.js'
+import { EIP7702Authorization, UserOperation } from '../types/index.js'
+
+import { hexConcat } from './bundle.utils.js'
 
 // from: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7702.md
 // authority = ecrecover(keccak(MAGIC || rlp([chain_id, address, nonce])), y_parity, r, s)

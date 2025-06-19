@@ -1,10 +1,10 @@
 import { BigNumberish } from 'ethers'
 
-import { UserOperation } from './userop.types.js'
-import { ReputationEntry } from './reputation.types.js'
-import { ReferencedCodeHashes } from './validation.types.js'
 import { BundleTxs } from './bundle.types.js'
 import { Capability, CapabilityTypes } from './ocaps.types.js'
+import { ReputationEntry } from './reputation.types.js'
+import { UserOperation } from './userop.types.js'
+import { ReferencedCodeHashes } from './validation.types.js'
 
 export type EntryStatus = 'bundling' | 'pending' | 'bundled' | 'failed'
 

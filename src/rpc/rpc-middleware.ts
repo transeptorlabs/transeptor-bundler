@@ -1,3 +1,7 @@
+import { Request, Response } from 'express'
+
+import { setBaseLoggerRequestContext } from '../logger/index.js'
+import { Either } from '../monad/either.js'
 import {
   HandlerRegistry,
   JsonRpcErrorResponse,
@@ -7,9 +11,6 @@ import {
   RpcError,
   ValidatedJsonRpcRequest,
 } from '../types/index.js'
-import { setBaseLoggerRequestContext } from '../logger/index.js'
-import { Request, Response } from 'express'
-import { Either } from '../monad/either.js'
 import {
   apiEnabled,
   idTypeStringOrNumber,

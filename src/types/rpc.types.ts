@@ -1,4 +1,5 @@
 import { Either } from '../monad/index.js'
+
 import { MethodMapping, MethodNames } from './api.types.js'
 import { RpcError } from './error.types.js'
 

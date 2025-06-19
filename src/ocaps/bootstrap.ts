@@ -4,6 +4,7 @@ import {
   Capability,
   CapabilityIssuer,
 } from '../types/index.js'
+
 import { StateCapabilityRegistry } from './capability-registry.js'
 
 export type StateCapabilitiesBootstrapConfig = {

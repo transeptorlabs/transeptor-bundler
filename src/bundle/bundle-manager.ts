@@ -1,3 +1,6 @@
+import { Mutex } from 'async-mutex'
+
+import { EventManager } from '../event/index.js'
 import {
   BundleBuilder,
   StateKey,
@@ -5,11 +8,9 @@ import {
   TranseptorLogger,
   Capability,
   CapabilityTypes,
+  SendBundleReturn,
+  BundleProcessor,
 } from '../types/index.js'
-import { SendBundleReturn, BundleProcessor } from '../types/index.js'
-
-import { EventManager } from '../event/index.js'
-import { Mutex } from 'async-mutex'
 import { withReadonly } from '../utils/index.js'
 
 export type BundleManager = {

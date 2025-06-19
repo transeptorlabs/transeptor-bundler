@@ -1,5 +1,8 @@
 import { PreVerificationGasConfig } from '../gas/index.js'
+import { Either } from '../monad/index.js'
+
 import { SendBundleReturn } from './bundle.types.js'
+import { RpcError } from './error.types.js'
 import { ReputationEntry } from './reputation.types.js'
 import { StateOverride } from './sim.types.js'
 import {
@@ -9,8 +12,6 @@ import {
   UserOperationByHashResponse,
 } from './userop.types.js'
 import { StakeInfo } from './validation.types.js'
-import { Either } from '../monad/index.js'
-import { RpcError } from './error.types.js'
 
 /**
  * The JSON-RPC API for the web3 namespace mapping with the method names that

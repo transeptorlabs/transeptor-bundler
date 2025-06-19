@@ -6,12 +6,14 @@ module.exports = {
       files: ['src/**/*.ts'],
     },
   ],
-  plugins: ['@typescript-eslint', 'jsdoc', 'prettier'],
+  plugins: ['@typescript-eslint', 'jsdoc', 'prettier', 'import'],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:jsdoc/recommended',
     'plugin:prettier/recommended',
+    'plugin:import/recommended',
+    'plugin:import/typescript',
   ],
   rules: {
     "complexity": ["warn", { "max": 10 }],
@@ -23,6 +25,27 @@ module.exports = {
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     semi: ['error', 'never'],
     quotes: ['error', 'single'],
+
+    // Import rules for duplicate detection
+    'import/no-duplicates': 'error',
+    'import/order': [
+      'error',
+      {
+        groups: [
+          'builtin',
+          'external',
+          'internal',
+          'parent',
+          'sibling',
+          'index',
+        ],
+        'newlines-between': 'always',
+        alphabetize: {
+          order: 'asc',
+          caseInsensitive: true,
+        },
+      },
+    ],
 
     // Prettier specific rule
     'prettier/prettier': ['error', {
@@ -56,6 +79,12 @@ module.exports = {
   settings: {
     jsdoc: {
       mode: 'typescript',
+    },
+    'import/resolver': {
+      typescript: {
+        alwaysTryTypes: true,
+        project: './tsconfig.json',
+      },
     },
   },
 }

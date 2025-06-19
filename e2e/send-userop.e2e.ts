@@ -14,6 +14,7 @@ import {
 } from 'ethers'
 
 import { IENTRY_POINT_ABI } from '../src/abis/index.js'
+import { createLogger } from '../src/logger/index.js'
 import { UserOperation, UserOperationReceipt } from '../src/types/index.js'
 import { packUserOp, deepHexlify, hexConcat } from '../src/utils/index.js'
 
@@ -22,7 +23,6 @@ import {
   simpleAccountABI,
   simpleAccountFactoryABI,
 } from './abi.e2e.js'
-import { createLogger } from '../src/logger/index.js'
 
 dotenv.config()
 

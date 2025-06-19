@@ -1,9 +1,11 @@
 import dotenv from 'dotenv'
 import { ethers, HDNodeWallet, JsonRpcProvider, Mnemonic, Wallet } from 'ethers'
-import { createProvider } from '../provider/index.js'
+
 import { DEFAULT_ENTRY_POINT } from '../constants/index.js'
-import { isValidAddress, withReadonly } from '../utils/index.js'
+import { createProvider } from '../provider/index.js'
 import { InfluxdbConnection, BundlerSignerWallets } from '../types/index.js'
+import { isValidAddress, withReadonly } from '../utils/index.js'
+
 import { getCmdOptionValues } from './command.js'
 
 dotenv.config()

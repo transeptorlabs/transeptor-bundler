@@ -1,7 +1,9 @@
 import osUtils from 'os-utils'
+
 import { MeasurementName, TranseptorLogger } from '../types/index.js'
-import { InfluxdbClient } from './clients/index.js'
 import { withReadonly } from '../utils/index.js'
+
+import { InfluxdbClient } from './clients/index.js'
 
 export type MetricsTrackerConfig = {
   logger: TranseptorLogger

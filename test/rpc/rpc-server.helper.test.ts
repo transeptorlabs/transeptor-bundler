@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+
 import { Either } from '../../src/monad/either.js'
+import { doHandleRequest } from '../../src/rpc/rpc-server.helper.js'
 import { RpcError } from '../../src/types/error.types.js'
 import type { ValidatedJsonRpcRequest } from '../../src/types/rpc.types.js'
-import { doHandleRequest } from '../../src/rpc/rpc-server.helper.js'
 
 vi.mock('../../src/logger/index.js', () => ({
   Logger: {

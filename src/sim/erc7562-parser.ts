@@ -1,5 +1,12 @@
 /* eslint-disable complexity */
 import { ethers, FunctionFragment, Interface, keccak256 } from 'ethers'
+
+import {
+  IACCOUNT_ABI,
+  IENTRY_POINT_ABI,
+  IPAYMASTER_ABI,
+  SENDER_CREATOR_ABI,
+} from '../abis/index.js'
 import { Either } from '../monad/index.js'
 import {
   AccountAbstractionEntity,
@@ -17,19 +24,14 @@ import {
   ValidationErrors,
   ValidationResult,
 } from '../types/index.js'
-import { getOpcodeName } from './evm-opcodes.js'
+import { toBytes32, withReadonly } from '../utils/index.js'
+
 import {
   bannedOpCodes,
   opcodesOnlyInStakedEntities,
 } from './erc7562-banned-opcodes.js'
-import {
-  IACCOUNT_ABI,
-  IENTRY_POINT_ABI,
-  IPAYMASTER_ABI,
-  SENDER_CREATOR_ABI,
-} from '../abis/index.js'
+import { getOpcodeName } from './evm-opcodes.js'
 import { get4bytes } from './sim.helper.js'
-import { toBytes32, withReadonly } from '../utils/index.js'
 
 type Erc7562ParserConfig = {
   entryPointAddress: string

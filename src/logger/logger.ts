@@ -1,6 +1,8 @@
+import { AsyncLocalStorage } from 'async_hooks'
+
 import dotenv from 'dotenv'
 import { pino, LoggerOptions } from 'pino'
-import { AsyncLocalStorage } from 'async_hooks'
+
 import { TranseptorLogger } from '../types/index.js'
 
 dotenv.config()

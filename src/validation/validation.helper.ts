@@ -1,19 +1,16 @@
 import { ContractFactory } from 'ethers'
 
+import { Either } from '../monad/index.js'
+import { ProviderService } from '../provider/index.js'
 import {
   UserOperation,
   FullValidationResult,
   Erc7562Parser,
-} from '../types/index.js'
-import {
   ReferencedCodeHashes,
   ValidateUserOpResult,
   ValidationErrors,
   RpcError,
 } from '../types/index.js'
-
-import { ProviderService } from '../provider/index.js'
-import { Either } from '../monad/index.js'
 
 export const checkValidationResult = (
   res: ValidateUserOpResult,

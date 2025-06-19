@@ -1,3 +1,4 @@
+import { ProviderService } from '../provider/index.js'
 import {
   ReputationEntry,
   ReputationManager,
@@ -15,7 +16,6 @@ import {
   CapabilityTypes,
 } from '../types/index.js'
 import { requireCond, tostr, withReadonly } from '../utils/index.js'
-import { ProviderService } from '../provider/index.js'
 
 export type ReputationManagerConfig = {
   providerService: ProviderService

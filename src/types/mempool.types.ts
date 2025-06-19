@@ -1,9 +1,9 @@
-import { RelayUserOpParam, UserOperation } from './userop.types.js'
-
 import { Either } from '../monad/index.js'
-import { EntryStatus, MempoolEntry } from './state.types.js'
-import { StakeInfo } from './validation.types.js'
+
 import { RpcError } from './error.types.js'
+import { EntryStatus, MempoolEntry } from './state.types.js'
+import { RelayUserOpParam, UserOperation } from './userop.types.js'
+import { StakeInfo } from './validation.types.js'
 
 export type MempoolManagerCore = {
   /**
