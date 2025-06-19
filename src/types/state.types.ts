@@ -4,6 +4,7 @@ import { UserOperation } from './userop.types.js'
 import { ReputationEntry } from './reputation.types.js'
 import { ReferencedCodeHashes } from './validation.types.js'
 import { BundleTxs } from './bundle.types.js'
+import { Capability, CapabilityTypes } from './ocaps.types.js'
 
 export type EntryStatus = 'bundling' | 'pending' | 'bundled' | 'failed'
 
@@ -64,6 +65,7 @@ export type StateService = {
    * Consumers of the getState function will get the proper return type based on the key they pass,
    * without needing to cast the result manually.
    *
+   * @param stateCapability - The capability assigned to to caller to access the specific state keys.
    * @param keys - A single key or an array of keys to retrieve from the state.
    * @returns A promise that resolves to the requested state value.
    *
@@ -81,12 +83,14 @@ export type StateService = {
    * console.log(blackList)     // Logs the blackList value
    */
   getState: <K extends keyof State>(
+    stateCapability: Capability<CapabilityTypes.State>,
     keys: StateKey | StateKey[],
   ) => Promise<Pick<State, K>>
 
   /**
    * Allows atomic updates of any part of the state. A functional version to express general state transitions.
    *
+   * @param stateCapability - The capability assigned to to caller to mutate the specific state keys.
    * @param keys - Specifies which parts of the state need to be updated
    * @param updateFn - A state transition function used by caller to make atomic updates to current state to produce the new state
    * @returns A promise that resolves to true if the update was successful and false otherwise.
@@ -111,6 +115,7 @@ export type StateService = {
    * }})
    */
   updateState: <K extends keyof State>(
+    stateCapability: Capability<CapabilityTypes.State>,
     key: StateKey | StateKey[],
     updateFn: (currentValue: Pick<State, K>) => Partial<State>,
   ) => Promise<boolean>

@@ -17,11 +17,13 @@ import {
   ReputationManager,
   StateService,
   TranseptorLogger,
-  CapabilitiesService,
+  Capability,
+  CapabilityTypes,
 } from '../types/index.js'
 import { withModuleContext } from '../logger/index.js'
 import { ValidationService } from '../validation/index.js'
 import { ProviderService } from '../provider/index.js'
+import { IssuedStateCapabilitiesMapping } from '../ocaps/bootstrap.js'
 
 export type Managers = {
   reputationManager: ReputationManager
@@ -35,7 +37,6 @@ export type ManagersConfig = {
   providerService: ProviderService
   validationService: ValidationService
   stateService: StateService
-  capabilitiesService: CapabilitiesService
   minStake: bigint
   minUnstakeDelay: bigint
   whitelist: string[]
@@ -47,6 +48,7 @@ export type ManagersConfig = {
   maxBundleGas: number
   isAutoBundle: boolean
   autoBundleInterval: number
+  issuedCapabilitiesMapping: IssuedStateCapabilitiesMapping
 }
 
 export const createManagers = async (config: ManagersConfig) => {
@@ -66,15 +68,26 @@ export const createManagers = async (config: ManagersConfig) => {
     maxBundleGas,
     isAutoBundle,
     autoBundleInterval,
+    issuedCapabilitiesMapping,
   } = config
+  const extractStateCapability = (
+    moduleName: string,
+  ): Capability<CapabilityTypes.State> => {
+    const capability = issuedCapabilitiesMapping[moduleName]
+    if (!capability) {
+      throw new Error(`Capability for module ${moduleName} not found`)
+    }
+    return capability
+  }
   logger.info('Initializing managers')
 
   const reputationManager = createReputationManager({
     logger: withModuleContext('reputation-manager', logger),
     providerService,
-    state: stateService,
+    stateService,
     minStake,
     minUnstakeDelay,
+    stateCapability: extractStateCapability('reputation-manager'),
   })
 
   await reputationManager.addWhitelist(whitelist)
@@ -83,7 +96,8 @@ export const createManagers = async (config: ManagersConfig) => {
 
   const depositManager = createDepositManager({
     providerService,
-    state: stateService,
+    stateService,
+    stateCapability: extractStateCapability('deposit-manager'),
   })
 
   const mempoolManagerCore = createMempoolManagerCore({
@@ -92,6 +106,7 @@ export const createManagers = async (config: ManagersConfig) => {
     reputationManager,
     depositManager,
     bundleSize,
+    stateCapability: extractStateCapability('mempool-manager'),
   })
 
   const eventsManager = createEventManager({
@@ -102,6 +117,12 @@ export const createManagers = async (config: ManagersConfig) => {
   })
 
   const bundleManager = createBundleManager({
+    logger: withModuleContext('bundle-manager', logger),
+    eventsManager,
+    stateService,
+    stateCapability: extractStateCapability('bundle-manager'),
+    isAutoBundle,
+    autoBundleInterval,
     bundleProcessor: createBundleProcessor({
       logger: withModuleContext('bundle-processor', logger),
       providerService,
@@ -122,11 +143,6 @@ export const createManagers = async (config: ManagersConfig) => {
         txMode,
       },
     }),
-    eventsManager,
-    state: stateService,
-    isAutoBundle,
-    autoBundleInterval,
-    logger: withModuleContext('bundle-manager', logger),
   })
 
   return {

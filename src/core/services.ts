@@ -8,7 +8,8 @@ import {
 } from '../gas/index.js'
 import { createErc7562Parser, createSimulator } from '../sim/index.js'
 import {
-  CapabilitiesService,
+  BundlerSignerWallets,
+  CapabilityService,
   Simulator,
   StateService,
   TranseptorLogger,
@@ -16,14 +17,22 @@ import {
 import { withModuleContext } from '../logger/index.js'
 import { createState } from '../state/index.js'
 import { ProviderService } from '../provider/index.js'
-import { createCapabilitiesService } from '../ocaps/index.js'
+import {
+  StateCapabilityRegistry,
+  createStateCapabilitiesBootstrap,
+  createCapabilityIssuer,
+  createCapabilityService,
+  createCapabilityVerifier,
+  IssuedStateCapabilitiesMapping,
+} from '../ocaps/index.js'
 
 export type CoreServices = {
   preVerificationGasCalculator: PreVerificationGasCalculator
   sim: Simulator
   validationService: ValidationService
   stateService: StateService
-  capabilitiesService: CapabilitiesService
+  capabilityService: CapabilityService
+  bootstrapStateCapabilities: () => Promise<IssuedStateCapabilitiesMapping>
 }
 
 export type CoreServicesConfig = {
@@ -32,8 +41,9 @@ export type CoreServicesConfig = {
   entryPointAddress: string
   providerService: ProviderService
   chainId: number
-  ocapsIssuerSignerPrivateKey: string
+  signers: BundlerSignerWallets
   clientVersion: string
+  STATE_CAPABILITY_REGISTRY: StateCapabilityRegistry
 }
 
 export const createCoreServices = async (config: CoreServicesConfig) => {
@@ -43,8 +53,9 @@ export const createCoreServices = async (config: CoreServicesConfig) => {
     entryPointAddress,
     providerService,
     chainId,
-    ocapsIssuerSignerPrivateKey,
+    signers,
     clientVersion,
+    STATE_CAPABILITY_REGISTRY,
   } = config
   logger.info('Initializing core services')
 
@@ -69,14 +80,20 @@ export const createCoreServices = async (config: CoreServicesConfig) => {
     }),
   })
 
-  const stateService = createState({
-    logger: withModuleContext('state', logger),
+  const capabilityService = createCapabilityService({
+    logger: withModuleContext('capability-service', logger),
+    issuerSignerPrivateKey: signers[1].privateKey,
+    clientVersion,
   })
 
-  const capabilitiesService = createCapabilitiesService({
-    logger: withModuleContext('capabilities-manager', logger),
-    issuerSignerPrivateKey: ocapsIssuerSignerPrivateKey,
-    clientVersion,
+  const stateService = createState({
+    logger: withModuleContext('state-service', logger),
+    capabilityVerifier: createCapabilityVerifier(capabilityService),
+  })
+
+  const bootstrapStateCapabilities = createStateCapabilitiesBootstrap({
+    capabilityIssuer: createCapabilityIssuer(capabilityService),
+    stateCapabilityRegistry: STATE_CAPABILITY_REGISTRY,
   })
 
   return {
@@ -84,6 +101,7 @@ export const createCoreServices = async (config: CoreServicesConfig) => {
     sim,
     validationService,
     stateService,
-    capabilitiesService,
+    capabilityService,
+    bootstrapStateCapabilities,
   }
 }

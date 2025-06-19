@@ -8,6 +8,7 @@ import { Libp2pNode } from './p2p/index.js'
 import { GethNativeTracerName } from './constants/index.js'
 import { createMempoolManageSender } from './mempool/index.js'
 import { AuditLogger, RpcServer, Simulator } from './types/index.js'
+import { STATE_CAPABILITY_REGISTRY } from './ocaps/index.js'
 
 import {
   createCoreServices,
@@ -158,7 +159,7 @@ async function runNode() {
     logger: withModuleContext('provider-service', logger),
     networkProvider: config.provider,
     supportedEntryPointAddress: config.supportedEntryPointAddress,
-    txSignerPrivateKey: config.bundlerSignerWallets[0].privateKey,
+    signers: config.bundlerSignerWallets,
   })
   const { chainId } = await providerService.getNetwork()
   const {
@@ -166,18 +167,20 @@ async function runNode() {
     sim,
     validationService,
     stateService,
-    capabilitiesService,
+    bootstrapStateCapabilities,
   } = await createCoreServices({
     logger,
     isUnsafeMode: config.isUnsafeMode,
     entryPointAddress: providerService.getEntryPointContractDetails().address,
     providerService,
     chainId: Number(chainId),
-    ocapsIssuerSignerPrivateKey: config.bundlerSignerWallets[1].privateKey,
+    signers: config.bundlerSignerWallets,
     clientVersion: config.clientVersion,
+    STATE_CAPABILITY_REGISTRY,
   })
 
   // Create managers
+  const issuedCapabilitiesMapping = await bootstrapStateCapabilities()
   const {
     reputationManager,
     mempoolManagerCore,
@@ -188,7 +191,7 @@ async function runNode() {
     providerService,
     validationService,
     stateService,
-    capabilitiesService,
+    issuedCapabilitiesMapping,
     minStake: config.minStake,
     minUnstakeDelay: config.minUnstakeDelay,
     whitelist: config.whitelist,

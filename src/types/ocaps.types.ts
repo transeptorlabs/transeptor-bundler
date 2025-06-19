@@ -1,4 +1,3 @@
-import { TranseptorLogger } from './logger.types.js'
 import { StateKey } from './state.types.js'
 
 export enum CapabilityTypes {
@@ -16,6 +15,10 @@ export type StateCapability = {
     key: StateKey
     operations: StateOperations[]
   }
+}
+
+export type CapabilityTypesMapping = {
+  [CapabilityTypes.State]: StateCapability[]
 }
 
 /**
@@ -40,37 +43,31 @@ export type Capability<TCapType extends CapabilityTypes> = {
   moduleName: string
 
   /**
+   * List of capabilities that the recipient is allowed to have access to
+   */
+  caps: CapabilityTypesMapping[TCapType]
+
+  /**
+   * A salt that is used to ensure that the capability is unique
+   */
+  salt: string
+
+  /**
    * signed hash of the capability, excluding the signature
    */
   signature: string
-
-  /**
-   * List of capabilities that the recipient is allowed to have access to
-   */
-  caps: TCapType[]
-}
-
-export type CapabilitiesServiceConfig = {
-  logger: TranseptorLogger
-  issuerSignerPrivateKey: string
-  clientVersion: string
 }
 
 /**
  *
- * This is the request that is sent to the CapabilitiesService to request a capability
+ * This is the request that is sent to the CapabilityService to request a capability
  */
 export type CapabilityRequest<TCapType extends CapabilityTypes> = Omit<
   Capability<TCapType>,
   'signature' | 'issuer' | 'clientVersion'
 >
 
-export type BaseCapability<TCapType extends CapabilityTypes> = Omit<
-  Capability<TCapType>,
-  'signature' | 'caps' | 'moduleName'
->
-
-export type CapabilitiesService = {
+export type CapabilityService = {
   /**
    * Issues a capability to the given recipient for the given state key
    *
@@ -92,12 +89,9 @@ export type CapabilitiesService = {
   ) => Promise<boolean>
 }
 
-export type CapabilitiesIssuer = Pick<
-  CapabilitiesService,
-  'issueStateCapability'
->
+export type CapabilityIssuer = Pick<CapabilityService, 'issueStateCapability'>
 
-export type CapabilitiesVerifier = Pick<
-  CapabilitiesService,
+export type CapabilityVerifier = Pick<
+  CapabilityService,
   'verifyStateCapability'
 >

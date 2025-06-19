@@ -11,14 +11,14 @@ To mitigate this risk, the `StateService` enforces a object capability access co
 
 The second signers on the bundlers `TRANSEPTOR_MNEMONIC` will be responsible for signing Capabilities at startup.
 
-1. At node start up a central `OCAPS` service issues signed capabilities to each module that requires access to `state` via the `CapabilitiesService`.
+1. At node start up a central `OCAPS` service issues signed capabilities to each module that requires access to `state` via the `CapabilityService`.
 2. When a module needs to access `state` is uses either `StateService.getState()` or `StateService.updateState`, providing the key to access along with a granted capability object
-3. The `StateService` will call `CapabilitiesService` to verify the signed capability before granting read/write access to the state segments.
+3. The `StateService` will call `CapabilityService` to verify the signed capability before granting read/write access to the state segments.
 
 ```mermaid
 graph TD
     A[Node Startup] --> B[OCAPS Service]
-    B --> C[CapabilitiesService]
+    B --> C[CapabilityService]
     C --> D[Issue Capabilities to Modules]
     
     D --> E[Bundle Manager<br/>standardPool.read, bundleTxs.write]
@@ -29,7 +29,7 @@ graph TD
     F --> I[StateService.updateState<br/>standardPool, mempoolEntryCount]
     G --> J[StateService.getState<br/>blackList, whiteList]
     
-    H --> K[CapabilitiesService.verify]
+    H --> K[CapabilityService.verify]
     I --> K
     J --> K
     
