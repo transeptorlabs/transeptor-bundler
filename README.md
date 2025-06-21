@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://transeptor.transeptorlabs.io/docs">
-    <img width="500" title="Transeptor" src='https://transeptorlabs.io/transeptor.png' />
+    <img width="500" title="Transeptor" src='https://www.transeptorlabs.io/transeptor.png' />
   </a>
 </p>
 
