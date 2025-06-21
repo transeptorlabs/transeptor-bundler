@@ -17,7 +17,7 @@ The second signers on the bundlers `TRANSEPTOR_MNEMONIC` will be responsible for
 
 ```mermaid
 graph TD
-    A[Node Startup] --> B[OCAPS Service]
+    A[CLI Startup] --> B[runNode]
     B --> C[CapabilityService]
     C --> D[Issue Capabilities to Modules]
     
@@ -33,24 +33,10 @@ graph TD
     I --> K
     J --> K
     
-    K --> L{All Capabilities Valid?}
+    K --> L{All Capability Valid?}
     L -->|Yes| M[Grant Access]
     L -->|No| N[Access Denied]
     
     M --> O[Read/Write State Segments]
-    N --> P[Error: Insufficient Capabilities]
-    
-    style A fill:#e1f5fe
-    style B fill:#ffcdd2
-    style C fill:#ffcdd2
-    style H fill:#ffcdd2
-    style I fill:#ffcdd2
-    style J fill:#ffcdd2
-    style K fill:#ffcdd2
-    style E fill:#c8e6c9
-    style F fill:#c8e6c9
-    style G fill:#c8e6c9
-    style L fill:#ffebee
-    style M fill:#e8f5e8
-    style N fill:#ffebee
+    N --> P[Error: Insufficient Capability]
 ```

@@ -5,6 +5,7 @@ import {
   CapabilityIssuer,
 } from '../types/index.js'
 
+import { randomSalt } from './capability-helper.js'
 import { StateCapabilityRegistry } from './capability-registry.js'
 
 export type StateCapabilitiesBootstrapConfig = {
@@ -31,10 +32,11 @@ export function createStateCapabilitiesBootstrap(
   const buildStateCapabilityRequests =
     (): CapabilityRequest<CapabilityTypes.State>[] =>
       Object.entries(stateCapabilityRegistry).map(
-        ([moduleName, caps]) =>
+        ([moduleName, ocaps]) =>
           ({
             moduleName,
-            caps,
+            ocaps,
+            salt: randomSalt(),
           }) as CapabilityRequest<CapabilityTypes.State>,
       )
 

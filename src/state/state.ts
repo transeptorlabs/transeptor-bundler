@@ -40,7 +40,7 @@ function _createState(config: Readonly<StateConfig>): StateService {
       stateCapability: Capability<CapabilityTypes.State>,
       keys: StateKey | StateKey[],
     ): Promise<Pick<State, K>> => {
-      if (!(await capabilityVerifier.verifyStateCapability(stateCapability))) {
+      if (!capabilityVerifier.verifyStateCapability(stateCapability)) {
         throw new Error(
           'Caller does not have access to the requested state keys',
         )
@@ -66,7 +66,7 @@ function _createState(config: Readonly<StateConfig>): StateService {
       keys: StateKey | StateKey[],
       updateFn: (currentValue: Pick<State, K>) => Partial<State>,
     ): Promise<boolean> => {
-      if (!(await capabilityVerifier.verifyStateCapability(stateCapability))) {
+      if (!capabilityVerifier.verifyStateCapability(stateCapability)) {
         throw new Error(
           'Caller does not have access to the requested state keys to update',
         )

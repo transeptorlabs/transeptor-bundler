@@ -21,7 +21,7 @@ describe('createState', () => {
   })
 
   it('should initialize state correctly', async () => {
-    mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+    mockCapabilityVerifier.verifyStateCapability.mockReturnValue(true)
     const state = await stateService.getState(
       createTestStateCapability('test', [
         StateKey.StandardPool,
@@ -37,7 +37,7 @@ describe('createState', () => {
 
   describe('getState', () => {
     it('should get a single key from state', async () => {
-      mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+      mockCapabilityVerifier.verifyStateCapability.mockReturnValue(true)
       const state = await stateService.getState(
         createTestStateCapability('test', [StateKey.WhiteList]),
         StateKey.WhiteList,
@@ -46,7 +46,7 @@ describe('createState', () => {
     })
 
     it('should get multiple keys from state', async () => {
-      mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+      mockCapabilityVerifier.verifyStateCapability.mockReturnValue(true)
       const state = await stateService.getState(
         createTestStateCapability('test', [
           StateKey.MempoolEntryCount,
@@ -61,7 +61,7 @@ describe('createState', () => {
     })
 
     it('should throw error when caller does not have access to the requested state keys', async () => {
-      mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(false)
+      mockCapabilityVerifier.verifyStateCapability.mockReturnValue(false)
 
       await expect(
         stateService.getState(
@@ -76,7 +76,7 @@ describe('createState', () => {
 
   describe('updateState', () => {
     it('should update a single key in state', async () => {
-      mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+      mockCapabilityVerifier.verifyStateCapability.mockReturnValue(true)
       await stateService.updateState(
         createTestStateCapability('test', [StateKey.BlackList]),
         StateKey.BlackList,
@@ -93,7 +93,7 @@ describe('createState', () => {
     })
 
     it('should update multiple keys in state', async () => {
-      mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+      mockCapabilityVerifier.verifyStateCapability.mockReturnValue(true)
       await stateService.updateState(
         createTestStateCapability('test', [
           StateKey.BlackList,
@@ -120,7 +120,7 @@ describe('createState', () => {
     })
 
     it('should return false if updated value is empty (single)', async () => {
-      mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+      mockCapabilityVerifier.verifyStateCapability.mockReturnValue(true)
       const res = await stateService.updateState(
         createTestStateCapability('test', [StateKey.BlackList]),
         StateKey.BlackList,
@@ -130,7 +130,7 @@ describe('createState', () => {
     })
 
     it('should return false if updated value has incorrect keys (single)', async () => {
-      mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+      mockCapabilityVerifier.verifyStateCapability.mockReturnValue(true)
       const res = await stateService.updateState(
         createTestStateCapability('test', [StateKey.BlackList]),
         StateKey.BlackList,
@@ -140,7 +140,7 @@ describe('createState', () => {
     })
 
     it('should return false if updated value is empty (multiple)', async () => {
-      mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+      mockCapabilityVerifier.verifyStateCapability.mockReturnValue(true)
       const res = await stateService.updateState(
         createTestStateCapability('test', [
           StateKey.BlackList,
@@ -153,7 +153,7 @@ describe('createState', () => {
     })
 
     it('should return false if updated value is missing keys (multiple)', async () => {
-      mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+      mockCapabilityVerifier.verifyStateCapability.mockReturnValue(true)
       const res = await stateService.updateState(
         createTestStateCapability('test', [
           StateKey.BlackList,
@@ -169,7 +169,7 @@ describe('createState', () => {
     })
 
     it('should return false if updated value has extra keys (multiple)', async () => {
-      mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+      mockCapabilityVerifier.verifyStateCapability.mockReturnValue(true)
       const res = await stateService.updateState(
         createTestStateCapability('test', [
           StateKey.BlackList,
@@ -186,7 +186,7 @@ describe('createState', () => {
     })
 
     it('should throw error when caller does not have access to the requested state keys to update', async () => {
-      mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(false)
+      mockCapabilityVerifier.verifyStateCapability.mockReturnValue(false)
 
       await expect(
         stateService.updateState(

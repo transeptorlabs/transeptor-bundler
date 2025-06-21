@@ -45,7 +45,7 @@ export type Capability<TCapType extends CapabilityTypes> = {
   /**
    * List of capabilities that the recipient is allowed to have access to
    */
-  caps: CapabilityTypesMapping[TCapType]
+  ocaps: CapabilityTypesMapping[TCapType]
 
   /**
    * A salt that is used to ensure that the capability is unique
@@ -81,12 +81,12 @@ export type CapabilityService = {
   /**
    * Verifies a capability for the given recipient for the given state key
    *
-   * @param capability - The capability to verify
+   * @param capabilityToVerify - The capability to verify
    * @returns True if the capability is valid, false otherwise
    */
   verifyStateCapability: (
-    capability: Capability<CapabilityTypes.State>,
-  ) => Promise<boolean>
+    capabilityToVerify: Capability<CapabilityTypes.State>,
+  ) => boolean
 }
 
 export type CapabilityIssuer = Pick<CapabilityService, 'issueStateCapability'>

@@ -9,7 +9,9 @@ import {
   CapabilityTypes,
   TranseptorLogger,
 } from '../types/index.js'
-import { withReadonly } from '../utils/index.js'
+import { isValidAddress, withReadonly } from '../utils/index.js'
+
+import { getStateCapabilityHash } from './capability-helper.js'
 
 export type CapabilityServiceConfig = {
   logger: TranseptorLogger
@@ -69,7 +71,7 @@ function _createCapabilityService(
 
   const baseStateCapability: Omit<
     Capability<CapabilityTypes.State>,
-    'signature' | 'caps' | 'moduleName' | 'salt'
+    'signature' | 'ocaps' | 'moduleName' | 'salt'
   > = {
     issuer: issuerWallet.address,
     clientVersion: clientVersion,
@@ -79,33 +81,72 @@ function _createCapabilityService(
     issueStateCapability: async (
       capabilityRequest: CapabilityRequest<CapabilityTypes.State>,
     ) => {
-      logger.debug(
-        {
-          capabilityRequest,
-        },
-        'Issuing capability',
-      )
-
-      // TODO: Implement capability issuance
-      const capToIssue = {
+      const capToIssue: Capability<CapabilityTypes.State> = {
         ...baseStateCapability,
         ...capabilityRequest,
-        signature: '0x0000000000000000000000000000000000000000',
-        caps: capabilityRequest.caps,
+        signature: '0x',
       }
 
-      return capToIssue
+      const signature = await issuerWallet.signMessage(
+        getStateCapabilityHash(capToIssue),
+      )
+
+      logger.debug(`Issuing capability for module ${capToIssue.moduleName}`)
+
+      return {
+        ...capToIssue,
+        signature,
+      }
     },
-    verifyStateCapability: async (
-      capability: Capability<CapabilityTypes.State>,
+    verifyStateCapability: (
+      capabilityToVerify: Capability<CapabilityTypes.State>,
     ) => {
       logger.debug(
-        {
-          capability,
-        },
-        'Attempting to verify capability',
+        `Attempting to verify capability for module ${capabilityToVerify.moduleName}`,
       )
-      // TODO: Implement capability verification
+
+      if (capabilityToVerify.signature === '0x') {
+        logger.warn(
+          {
+            capabilityToVerify,
+          },
+          'Capability verification failed: signature is empty',
+        )
+        return false
+      }
+
+      if (!isValidAddress(capabilityToVerify.issuer)) {
+        logger.warn(
+          {
+            capabilityToVerify,
+          },
+          'Capability verification failed: issuer is not a valid address',
+        )
+        return false
+      }
+
+      let recoveredAddress: string
+      try {
+        recoveredAddress = ethers.verifyMessage(
+          getStateCapabilityHash(capabilityToVerify),
+          capabilityToVerify.signature,
+        )
+      } catch (error) {
+        logger.warn(error, 'Capability verification failed: invalid signature')
+        return false
+      }
+
+      if (
+        recoveredAddress.toLowerCase() !== issuerWallet.address.toLowerCase()
+      ) {
+        logger.warn('Capability verification failed: address mismatch')
+        return false
+      }
+
+      logger.debug(
+        `Capability verified successfully for module ${capabilityToVerify.moduleName}`,
+      )
+
       return true
     },
   }
