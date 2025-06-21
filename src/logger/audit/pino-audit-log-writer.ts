@@ -1,12 +1,14 @@
+import fs from 'fs'
+import path from 'path'
+
 import { pino } from 'pino'
+
 import {
   AuditLogWriter,
   UserOpAuditEvent,
   TranseptorLogger,
 } from '../../types/index.js'
 import { withReadonly } from '../../utils/index.js'
-import fs from 'fs'
-import path from 'path'
 
 export type PinoAuditLogWriterConfig = {
   destinationPath: string

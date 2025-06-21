@@ -1,6 +1,7 @@
 import type { BigNumberish, BytesLike, ethers } from 'ethers'
-import { ReferencedCodeHashes, StakeInfo } from './validation.types.js'
+
 import { EIP7702Authorization } from './eip-7702.types.js'
+import { ReferencedCodeHashes, StakeInfo } from './validation.types.js'
 
 // New transaction types for account-abstracted transactions
 export type UserOperation = {

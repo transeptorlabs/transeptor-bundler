@@ -1,13 +1,8 @@
 import { createServer, Server } from 'http'
+
 import cors from 'cors'
 import express, { Request, Response } from 'express'
 import helmet from 'helmet'
-
-import {
-  headerChecks,
-  parseValidRequest,
-  validateRequest,
-} from './rpc-middleware.js'
 
 import type {
   HandlerRegistry,
@@ -17,6 +12,12 @@ import type {
   TranseptorLogger,
 } from '../types/index.js'
 import { withReadonly } from '../utils/index.js'
+
+import {
+  headerChecks,
+  parseValidRequest,
+  validateRequest,
+} from './rpc-middleware.js'
 import { doHandleRequest } from './rpc-server.helper.js'
 
 export type RpcServerConfig = {

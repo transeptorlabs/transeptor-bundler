@@ -1,17 +1,21 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import {
-  mockUserOperationFactory,
-  mockBuildRelayUserOpParam,
-  mockEntryPointGetUserOpHash,
-} from './test-helpers.js'
-import { createState } from '../src/state/index.js'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+
 import { createMempoolManagerCore } from '../src/mempool/mempool-manager.js'
+import { createState } from '../src/state/index.js'
+import { MempoolManagerCore, StateKey } from '../src/types/index.js'
+
 import {
   mockReputationManager,
   mockDepositManager,
   mockLogger,
+  mockCapabilityVerifier,
 } from './mocks/index.js'
-import { MempoolManagerCore } from '../src/types/index.js'
+import {
+  mockUserOperationFactory,
+  mockBuildRelayUserOpParam,
+  mockEntryPointGetUserOpHash,
+  createTestStateCapability,
+} from './test-helpers.js'
 
 describe('MempoolManagerCore', () => {
   let mempoolManager: MempoolManagerCore
@@ -22,15 +26,26 @@ describe('MempoolManagerCore', () => {
     mempoolManager = createMempoolManagerCore({
       state: createState({
         logger: mockLogger,
+        capabilityVerifier: mockCapabilityVerifier,
       }),
       reputationManager: mockReputationManager,
       depositManager: mockDepositManager,
       bundleSize: MOCK_BUNDLE_SIZE,
       logger: mockLogger,
+      stateCapability: createTestStateCapability('test', [
+        StateKey.MempoolEntryCount,
+        StateKey.StandardPool,
+      ]),
     })
   })
 
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('should addUserOp and findByHash correctly', async () => {
+    mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+
     const userOp1 = mockUserOperationFactory('x0001', true, 1)
     const userOp2 = mockUserOperationFactory('x0002', true, 1)
     const userOp3 = mockUserOperationFactory('x0003', true, 1)
@@ -75,6 +90,8 @@ describe('MempoolManagerCore', () => {
   })
 
   it('should remove removeUserOp correctly', async () => {
+    mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+
     const userOp1 = mockUserOperationFactory('x0004', true, 1)
     const userOp2 = mockUserOperationFactory('x0005', true, 1)
     const userOp3 = mockUserOperationFactory('x0006', true, 1)
@@ -124,6 +141,8 @@ describe('MempoolManagerCore', () => {
   })
 
   it('should getNextPending using pending userOps using bundleSize', async () => {
+    mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+
     const userOp1 = mockUserOperationFactory('x0001', true, 1)
     const userOp2 = mockUserOperationFactory('x0002', true, 1)
     const userOp3 = mockUserOperationFactory('x0003', true, 1)
@@ -204,6 +223,8 @@ describe('MempoolManagerCore', () => {
   })
 
   it('should return all addresses that are currently known to be "senders" according to the current mempool', async () => {
+    mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+
     const userOp1 = mockUserOperationFactory('x0001', true, 1)
     const userOp2 = mockUserOperationFactory('x0002', true, 1)
     const userOp3 = mockUserOperationFactory('x0003', true, 1)
@@ -244,6 +265,8 @@ describe('MempoolManagerCore', () => {
   })
 
   it('should return addresses that are currently known to be any kind of entity according to the current mempool excluding "sender"', async () => {
+    mockCapabilityVerifier.verifyStateCapability.mockResolvedValue(true)
+
     const userOp1 = mockUserOperationFactory('x0001', false, 1)
     const userOp2 = mockUserOperationFactory('x0002', false, 1)
     const userOp3 = mockUserOperationFactory('x0003', false, 1, {

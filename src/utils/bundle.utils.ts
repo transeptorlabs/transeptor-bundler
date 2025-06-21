@@ -9,13 +9,13 @@ import {
   toBeHex,
 } from 'ethers'
 
+import { EIP_7702_MARKER_INIT_CODE } from '../constants/index.js'
 import {
   SlotMap,
   StorageMap,
   UserOperation,
   PackedUserOperation,
 } from '../types/index.js'
-import { EIP_7702_MARKER_INIT_CODE } from '../constants/index.js'
 
 /**
  * Merge all validationStorageMap objects into merged map

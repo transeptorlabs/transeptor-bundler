@@ -1,8 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createPinoAuditLogWriter } from '../../src/logger/audit/pino-audit-log-writer.js'
-import { Logger, pino } from 'pino'
-import { UserOpAuditEvent, LifecycleStage } from '../../src/types/index.js'
 import * as fs from 'fs'
+
+import { Logger, pino } from 'pino'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
+import { createPinoAuditLogWriter } from '../../src/logger/audit/pino-audit-log-writer.js'
+import { UserOpAuditEvent, LifecycleStage } from '../../src/types/index.js'
 
 // Mock pino
 vi.mock('pino', () => {

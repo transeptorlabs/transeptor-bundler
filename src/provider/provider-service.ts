@@ -13,18 +13,18 @@ import {
   toBeHex,
 } from 'ethers'
 
+import { IENTRY_POINT_ABI, IStakeManager } from '../abis/index.js'
 import { withModuleContext } from '../logger/index.js'
+import { Either } from '../monad/index.js'
 import {
   TraceOptions,
   ValidationErrors,
   NetworkCallError,
   RpcError,
   EIP7702Authorization,
-  BundlerSignerWallets,
   TranseptorLogger,
+  BundlerSignerWallets,
 } from '../types/index.js'
-import { Either } from '../monad/index.js'
-import { IENTRY_POINT_ABI, IStakeManager } from '../abis/index.js'
 import { isValidAddress } from '../utils/index.js'
 
 export type ProviderServiceConfig = {

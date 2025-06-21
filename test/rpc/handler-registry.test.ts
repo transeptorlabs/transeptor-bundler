@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+
 import { createBundlerHandlerRegistry } from '../../src/rpc/bundler-handler-registry.js'
-import { mockEth, mockWeb3, mockDebug } from '../mocks/index.js'
 import type { HandlerRegistry } from '../../src/types/index.js'
+import { mockEth, mockWeb3, mockDebug } from '../mocks/index.js'
 
 describe('Handler Registry', () => {
   let handlerRegistry: HandlerRegistry

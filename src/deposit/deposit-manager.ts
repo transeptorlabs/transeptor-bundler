@@ -1,12 +1,15 @@
 import { ethers } from 'ethers'
+
+import { ProviderService } from '../provider/index.js'
 import {
   UserOperation,
   StateService,
   StateKey,
   ValidationErrors,
+  Capability,
+  CapabilityTypes,
 } from '../types/index.js'
 import { getUserOpMaxCost, requireCond, withReadonly } from '../utils/index.js'
-import { ProviderService } from '../provider/index.js'
 
 /**
  * The DepositManager is responsible for managing the deposits of paymasters. It ensures that each paymaster has enough deposit to cover the gas costs of the pending UserOperations in the mempool.
@@ -20,7 +23,8 @@ export type DepositManager = {
 
 export type DepositManagerConfig = {
   providerService: ProviderService
-  state: StateService
+  stateService: StateService
+  stateCapability: Capability<CapabilityTypes.State>
 }
 
 /**
@@ -32,7 +36,7 @@ export type DepositManagerConfig = {
 function _createDepositManager(
   config: Readonly<DepositManagerConfig>,
 ): DepositManager {
-  const { providerService, state } = config
+  const { providerService, stateService: state, stateCapability } = config
   const entryPointContract =
     providerService.getEntryPointContractDetails().contract
 
@@ -50,7 +54,10 @@ function _createDepositManager(
       let deposit = (await entryPointContract.balanceOf(paymaster)) as bigint
       deposit = deposit - getUserOpMaxCost(userOp)
 
-      const { standardPool } = await state.getState(StateKey.StandardPool)
+      const { standardPool } = await state.getState(
+        stateCapability,
+        StateKey.StandardPool,
+      )
       Object.values(standardPool).forEach((entry) => {
         if (entry.userOp.paymaster === paymaster) {
           deposit = deposit - BigInt(getUserOpMaxCost(userOp))

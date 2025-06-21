@@ -1,14 +1,19 @@
 import { Mutex } from 'async-mutex'
+
 import {
   State,
   StateKey,
   StateService,
   TranseptorLogger,
+  CapabilityVerifier,
+  Capability,
+  CapabilityTypes,
 } from '../types/index.js'
 import { withReadonly } from '../utils/index.js'
 
 export type StateConfig = {
   logger: TranseptorLogger
+  capabilityVerifier: CapabilityVerifier
 }
 
 /**
@@ -19,7 +24,7 @@ export type StateConfig = {
  */
 function _createState(config: Readonly<StateConfig>): StateService {
   const mutex = new Mutex()
-  const { logger } = config
+  const { logger, capabilityVerifier } = config
   let state: State = {
     standardPool: {},
     mempoolEntryCount: {},
@@ -32,8 +37,15 @@ function _createState(config: Readonly<StateConfig>): StateService {
 
   return {
     getState: async <K extends keyof State>(
+      stateCapability: Capability<CapabilityTypes.State>,
       keys: StateKey | StateKey[],
     ): Promise<Pick<State, K>> => {
+      if (!capabilityVerifier.verifyStateCapability(stateCapability)) {
+        throw new Error(
+          'Caller does not have access to the requested state keys',
+        )
+      }
+
       const release = await mutex.acquire()
       try {
         if (Array.isArray(keys)) {
@@ -50,9 +62,16 @@ function _createState(config: Readonly<StateConfig>): StateService {
     },
 
     updateState: async <K extends keyof State>(
+      stateCapability: Capability<CapabilityTypes.State>,
       keys: StateKey | StateKey[],
       updateFn: (currentValue: Pick<State, K>) => Partial<State>,
     ): Promise<boolean> => {
+      if (!capabilityVerifier.verifyStateCapability(stateCapability)) {
+        throw new Error(
+          'Caller does not have access to the requested state keys to update',
+        )
+      }
+
       const release = await mutex.acquire()
       try {
         const newState = { ...state }

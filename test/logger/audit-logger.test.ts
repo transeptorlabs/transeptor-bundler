@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
 import { createAuditLogger } from '../../src/logger/audit/audit-logger.js'
 import type { LifecycleStage } from '../../src/types/index.js'
 

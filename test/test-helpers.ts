@@ -1,6 +1,12 @@
 import { BigNumberish } from 'ethers'
 
-import { UserOperation } from '../src/types/index.js'
+import {
+  UserOperation,
+  Capability,
+  CapabilityTypes,
+  StateKey,
+  StateOperations,
+} from '../src/types/index.js'
 import { toJsonString } from '../src/utils/index.js'
 
 export const mockUserOperationFactory = (
@@ -123,3 +129,27 @@ export const MOCK_USER_OPERATION_EVENT = [
     ],
   },
 ]
+
+export const createTestStateCapability = (
+  moduleName: string,
+  keys: StateKey | StateKey[],
+  operations: StateOperations[] = [StateOperations.READ, StateOperations.WRITE],
+): Capability<CapabilityTypes.State> => {
+  const keyArray = Array.isArray(keys) ? keys : [keys]
+
+  return {
+    issuer: '0x1234567890123456789012345678901234567890',
+    clientVersion: 'test-1.0.0',
+    moduleName,
+    caps: keyArray.map((key) => ({
+      type: CapabilityTypes.State,
+      data: {
+        key,
+        operations,
+      },
+    })),
+    salt: 'test-salt',
+    signature:
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+  }
+}

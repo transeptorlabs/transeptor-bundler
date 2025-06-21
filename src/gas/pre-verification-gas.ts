@@ -1,7 +1,7 @@
-import { ethers, hexlify, dataLength, BytesLike } from 'ethers'
-import { UserOperation } from '../types/index.js'
 import { bytesToHex } from '@ethereumjs/util'
+import { ethers, hexlify, dataLength, BytesLike } from 'ethers'
 
+import { UserOperation } from '../types/index.js'
 import { encodeUserOp } from '../utils/index.js'
 
 export type PreVerificationGasCalculator = {

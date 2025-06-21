@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+
 import { TranseptorLogger } from '../../src/types'
 
 export const mockLogger = {

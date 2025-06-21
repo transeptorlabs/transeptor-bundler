@@ -1,13 +1,15 @@
 import { BigNumberish, BytesLike } from 'ethers'
+
+import { Either } from '../monad/either.js'
+
+import { ERC7562Call, ERC7562ValidationResults } from './erc-7562.types.js'
+import { RpcError } from './error.types.js'
+import { UserOperation } from './userop.types.js'
 import {
   ExecutionResult,
   StakeInfo,
   ValidationResult,
 } from './validation.types.js'
-import { Either } from '../monad/either.js'
-import { RpcError } from './error.types.js'
-import { UserOperation } from './userop.types.js'
-import { ERC7562Call, ERC7562ValidationResults } from './erc-7562.types.js'
 
 export type AggregatorStakeInfo = {
   aggregator: string

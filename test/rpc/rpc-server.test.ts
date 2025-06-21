@@ -1,14 +1,16 @@
+import { createServer } from 'http'
+
+import express, { Express, Request, Response, NextFunction } from 'express'
 import { describe, it, vi, expect, beforeEach } from 'vitest'
+
+import { Either } from '../../src/monad/index.js'
 import { createRpcServerWithHandlers } from '../../src/rpc/rpc-server.js'
 import {
   RpcError,
   RpcServer,
   type HandlerRegistry,
 } from '../../src/types/index.js'
-import express, { Express, Request, Response, NextFunction } from 'express'
-import { createServer } from 'http'
 import { MockHandlerRegistry, mockLogger } from '../mocks/index.js'
-import { Either } from '../../src/monad/index.js'
 
 // Mock dependencies
 let rpcHandler: (req: any, res: any) => Promise<void>

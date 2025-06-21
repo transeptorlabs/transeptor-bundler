@@ -14,7 +14,11 @@ import {
   ReputationManager,
   RpcError,
   TranseptorLogger,
+  Capability,
+  CapabilityTypes,
 } from '../types/index.js'
+import { withReadonly } from '../utils/index.js'
+
 import {
   doUpdateMempoolState,
   findBySenderNonce,
@@ -23,13 +27,13 @@ import {
   replaceOrAddUserOpChecks,
   updateSeenStatus,
 } from './mempool-helper.js'
-import { withReadonly } from '../utils/index.js'
 
 export type MempoolManagerCoreConfig = {
   state: StateService
   reputationManager: ReputationManager
   depositManager: DepositManager
   logger: TranseptorLogger
+  stateCapability: Capability<CapabilityTypes.State>
 
   /**
    * maximum # of entities allowed in a bundle
@@ -95,17 +99,29 @@ function _createMempoolManagerBuilder(
 function _createMempoolManagerCore(
   config: Readonly<MempoolManagerCoreConfig>,
 ): MempoolManagerCore {
-  const { state, reputationManager, depositManager, bundleSize, logger } =
-    config
+  const {
+    state,
+    reputationManager,
+    depositManager,
+    bundleSize,
+    logger,
+    stateCapability,
+  } = config
 
   return {
     getKnownSenders: async (): Promise<string[]> => {
-      const standardPool = await state.getState(StateKey.StandardPool)
+      const standardPool = await state.getState(
+        stateCapability,
+        StateKey.StandardPool,
+      )
       return getKnownSenders(standardPool.standardPool)
     },
 
     getKnownEntities: async (): Promise<string[]> => {
-      const standardPool = await state.getState(StateKey.StandardPool)
+      const standardPool = await state.getState(
+        stateCapability,
+        StateKey.StandardPool,
+      )
       return getKnownEntities(standardPool.standardPool)
     },
 
@@ -125,10 +141,10 @@ function _createMempoolManagerCore(
       } = relayUserOpParam
 
       await depositManager.checkPaymasterDeposit(userOp)
-      const { standardPool, mempoolEntryCount } = await state.getState([
-        StateKey.StandardPool,
-        StateKey.MempoolEntryCount,
-      ])
+      const { standardPool, mempoolEntryCount } = await state.getState(
+        stateCapability,
+        [StateKey.StandardPool, StateKey.MempoolEntryCount],
+      )
 
       logger.debug('Old entry found, checking if needs replacement...')
       const res = await replaceOrAddUserOpChecks(
@@ -158,6 +174,7 @@ function _createMempoolManagerCore(
         async (error) => Either.Left(error),
         async ([entry, metadata]) => {
           await state.updateState(
+            stateCapability,
             [StateKey.StandardPool, StateKey.MempoolEntryCount],
             (stateData) =>
               doUpdateMempoolState(
@@ -203,7 +220,10 @@ function _createMempoolManagerCore(
     findByHash: async (
       userOpHash: string,
     ): Promise<MempoolEntry | undefined> => {
-      const { standardPool } = await state.getState(StateKey.StandardPool)
+      const { standardPool } = await state.getState(
+        stateCapability,
+        StateKey.StandardPool,
+      )
       return standardPool[userOpHash]
     },
 
@@ -211,7 +231,10 @@ function _createMempoolManagerCore(
       userOpOrHash: string | UserOperation,
     ): Promise<boolean> => {
       let entry: MempoolEntry | undefined
-      const { standardPool } = await state.getState(StateKey.StandardPool)
+      const { standardPool } = await state.getState(
+        stateCapability,
+        StateKey.StandardPool,
+      )
       if (typeof userOpOrHash === 'string') {
         entry = standardPool[userOpOrHash]
       } else {
@@ -228,6 +251,7 @@ function _createMempoolManagerCore(
 
       const userOpHash = entry.userOpHash
       await state.updateState(
+        stateCapability,
         [StateKey.StandardPool, StateKey.MempoolEntryCount],
         ({ standardPool, mempoolEntryCount }) => {
           delete standardPool[userOpHash]
@@ -248,7 +272,10 @@ function _createMempoolManagerCore(
     },
 
     removeUserOpsForBannedAddr: async (addr: string): Promise<void> => {
-      const { standardPool } = await state.getState(StateKey.StandardPool)
+      const { standardPool } = await state.getState(
+        stateCapability,
+        StateKey.StandardPool,
+      )
       const opsToRemove = Object.values(standardPool).filter((entry) => {
         const userOp = entry.userOp
         if (
@@ -261,6 +288,7 @@ function _createMempoolManagerCore(
       })
 
       await state.updateState(
+        stateCapability,
         [StateKey.StandardPool, StateKey.MempoolEntryCount],
         ({ standardPool, mempoolEntryCount }) => {
           opsToRemove.forEach((entry) => {
@@ -284,7 +312,10 @@ function _createMempoolManagerCore(
     },
 
     getNextPending: async (): Promise<MempoolEntry[]> => {
-      const { standardPool } = await state.getState(StateKey.StandardPool)
+      const { standardPool } = await state.getState(
+        stateCapability,
+        StateKey.StandardPool,
+      )
 
       let count = 0
       const foundPendingEntries: MempoolEntry[] = []
@@ -297,18 +328,25 @@ function _createMempoolManagerCore(
 
       // Update the status of the entries to 'bundling'
       const userOpHashes = foundPendingEntries.map((entry) => entry.userOpHash)
-      await state.updateState(StateKey.StandardPool, ({ standardPool }) => {
-        userOpHashes.forEach((hash) => {
-          standardPool[hash].status = 'bundling'
-        })
-        return { standardPool }
-      })
+      await state.updateState(
+        stateCapability,
+        StateKey.StandardPool,
+        ({ standardPool }) => {
+          userOpHashes.forEach((hash) => {
+            standardPool[hash].status = 'bundling'
+          })
+          return { standardPool }
+        },
+      )
 
       return foundPendingEntries
     },
 
     getAllPending: async (): Promise<MempoolEntry[]> => {
-      const { standardPool } = await state.getState(StateKey.StandardPool)
+      const { standardPool } = await state.getState(
+        stateCapability,
+        StateKey.StandardPool,
+      )
 
       const entries = Object.values(standardPool).filter(
         (entry) => entry.status === 'pending',
@@ -316,12 +354,16 @@ function _createMempoolManagerCore(
 
       // Update the status of the entries to 'bundling'
       const userOpHashes = entries.map((entry) => entry.userOpHash)
-      await state.updateState(StateKey.StandardPool, ({ standardPool }) => {
-        userOpHashes.forEach((hash) => {
-          standardPool[hash].status = 'bundling'
-        })
-        return { standardPool }
-      })
+      await state.updateState(
+        stateCapability,
+        StateKey.StandardPool,
+        ({ standardPool }) => {
+          userOpHashes.forEach((hash) => {
+            standardPool[hash].status = 'bundling'
+          })
+          return { standardPool }
+        },
+      )
 
       return entries
     },
@@ -331,7 +373,10 @@ function _createMempoolManagerCore(
       status: EntryStatus,
     ): Promise<void> => {
       let entry: MempoolEntry | undefined
-      const { standardPool } = await state.getState(StateKey.StandardPool)
+      const { standardPool } = await state.getState(
+        stateCapability,
+        StateKey.StandardPool,
+      )
       if (typeof userOpOrHash === 'string') {
         entry = standardPool[userOpOrHash]
       } else {
@@ -346,32 +391,43 @@ function _createMempoolManagerCore(
         logger.debug(
           `Updating UserOperation status: ${entry.userOpHash} to ${status}`,
         )
-        await state.updateState(StateKey.StandardPool, ({ standardPool }) => {
-          return {
-            standardPool: {
-              ...standardPool,
-              [entry.userOpHash]: {
-                ...entry,
-                status,
+        await state.updateState(
+          stateCapability,
+          StateKey.StandardPool,
+          ({ standardPool }) => {
+            return {
+              standardPool: {
+                ...standardPool,
+                [entry.userOpHash]: {
+                  ...entry,
+                  status,
+                },
               },
-            },
-          }
-        })
+            }
+          },
+        )
       }
     },
 
     isMempoolOverloaded: async (): Promise<boolean> => {
-      const { standardPool } = await state.getState(StateKey.StandardPool)
+      const { standardPool } = await state.getState(
+        stateCapability,
+        StateKey.StandardPool,
+      )
       return Object.keys(standardPool).length >= bundleSize
     },
 
     size: async (): Promise<number> => {
-      const { standardPool } = await state.getState(StateKey.StandardPool)
+      const { standardPool } = await state.getState(
+        stateCapability,
+        StateKey.StandardPool,
+      )
       return Object.keys(standardPool).length
     },
 
     clearState: async (): Promise<boolean> => {
       return state.updateState(
+        stateCapability,
         [StateKey.StandardPool, StateKey.MempoolEntryCount],
         (_) => {
           return {
@@ -383,7 +439,10 @@ function _createMempoolManagerCore(
     },
 
     dump: async (): Promise<UserOperation[]> => {
-      const { standardPool } = await state.getState(StateKey.StandardPool)
+      const { standardPool } = await state.getState(
+        stateCapability,
+        StateKey.StandardPool,
+      )
 
       return Object.values(standardPool).map(
         (mempoolEntry) => mempoolEntry.userOp,

@@ -1,5 +1,6 @@
-import { withReadonly } from '../../utils/index.js'
 import { AuditLogWriter, TranseptorLogger } from '../../types/index.js'
+import { withReadonly } from '../../utils/index.js'
+
 import { createPinoAuditLogWriter } from './pino-audit-log-writer.js'
 
 export type AuditLogConfig = Readonly<{

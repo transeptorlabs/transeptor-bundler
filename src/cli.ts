@@ -1,20 +1,20 @@
 #!/user/bin/env node
 
-import { createLogger, withModuleContext } from './logger/index.js'
 import { Config, createConfig } from './config/index.js'
-import { createProviderService, ProviderService } from './provider/index.js'
-import { createRpcServerWithHandlers } from './rpc/index.js'
-import { Libp2pNode } from './p2p/index.js'
 import { GethNativeTracerName } from './constants/index.js'
-import { createMempoolManageSender } from './mempool/index.js'
-import { AuditLogger, RpcServer, Simulator } from './types/index.js'
-
 import {
   createCoreServices,
   createManagers,
   createInternalAPIs,
   createInfrastructure,
 } from './core/index.js'
+import { createLogger, withModuleContext } from './logger/index.js'
+import { createMempoolManageSender } from './mempool/index.js'
+import { STATE_CAPABILITY_REGISTRY } from './ocaps/index.js'
+import { Libp2pNode } from './p2p/index.js'
+import { createProviderService, ProviderService } from './provider/index.js'
+import { createRpcServerWithHandlers } from './rpc/index.js'
+import { AuditLogger, RpcServer, Simulator } from './types/index.js'
 
 const logger = createLogger()
 let p2pNode: Libp2pNode | undefined = undefined
@@ -161,16 +161,25 @@ async function runNode() {
     signers: config.bundlerSignerWallets,
   })
   const { chainId } = await providerService.getNetwork()
-  const { preVerificationGasCalculator, sim, validationService, stateService } =
-    await createCoreServices({
-      logger,
-      isUnsafeMode: config.isUnsafeMode,
-      entryPointAddress: providerService.getEntryPointContractDetails().address,
-      providerService,
-      chainId: Number(chainId),
-    })
+  const {
+    preVerificationGasCalculator,
+    sim,
+    validationService,
+    stateService,
+    bootstrapStateCapabilities,
+  } = await createCoreServices({
+    logger,
+    isUnsafeMode: config.isUnsafeMode,
+    entryPointAddress: providerService.getEntryPointContractDetails().address,
+    providerService,
+    chainId: Number(chainId),
+    signers: config.bundlerSignerWallets,
+    clientVersion: config.clientVersion,
+    STATE_CAPABILITY_REGISTRY,
+  })
 
   // Create managers
+  const issuedCapabilitiesMapping = await bootstrapStateCapabilities()
   const {
     reputationManager,
     mempoolManagerCore,
@@ -181,6 +190,7 @@ async function runNode() {
     providerService,
     validationService,
     stateService,
+    issuedCapabilitiesMapping,
     minStake: config.minStake,
     minUnstakeDelay: config.minUnstakeDelay,
     whitelist: config.whitelist,

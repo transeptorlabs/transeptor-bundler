@@ -1,12 +1,12 @@
 import { ethers, EventFragment, Log } from 'ethers'
 
+import { Either } from '../monad/index.js'
 import { ProviderService } from '../provider/index.js'
 import {
   MempoolManageUpdater,
   ReputationManager,
   TranseptorLogger,
 } from '../types/index.js'
-import { Either } from '../monad/index.js'
 import { withReadonly } from '../utils/index.js'
 
 export type EventManager = {

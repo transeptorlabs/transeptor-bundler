@@ -6,7 +6,7 @@
  * @param obj - The object to be deeply frozen.
  * @returns A deeply frozen version of the object, ensuring that all nested objects are also frozen.
  */
-function deepFreezeClone<T>(obj: T): Readonly<T> {
+export function deepFreezeClone<T>(obj: T): Readonly<T> {
   if (typeof obj !== 'object' || obj === null) return obj
 
   const proto = Object.getPrototypeOf(obj)

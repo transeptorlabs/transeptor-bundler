@@ -1,6 +1,8 @@
 'use strict'
 import os from 'os'
+
 import { InfluxDB, Point } from '@influxdata/influxdb-client'
+
 import {
   InfluxdbConnection,
   MeasurementName,

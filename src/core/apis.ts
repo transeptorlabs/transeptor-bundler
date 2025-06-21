@@ -1,3 +1,9 @@
+import { createEthAPI, createWeb3API, createDebugAPI } from '../apis/index.js'
+import { BundleManager } from '../bundle/index.js'
+import { EventManager } from '../event/index.js'
+import { PreVerificationGasCalculator } from '../gas/index.js'
+import { ProviderService } from '../provider/index.js'
+import { createBundlerHandlerRegistry } from '../rpc/index.js'
 import {
   AuditLogger,
   HandlerRegistry,
@@ -7,13 +13,7 @@ import {
   Simulator,
   TranseptorLogger,
 } from '../types/index.js'
-import { createEthAPI, createWeb3API, createDebugAPI } from '../apis/index.js'
-import { createBundlerHandlerRegistry } from '../rpc/index.js'
-import { BundleManager } from '../bundle/index.js'
-import { PreVerificationGasCalculator } from '../gas/index.js'
-import { ProviderService } from '../provider/index.js'
 import { ValidationService } from '../validation/index.js'
-import { EventManager } from '../event/index.js'
 
 export type InternalAPIs = {
   handlerRegistry: HandlerRegistry

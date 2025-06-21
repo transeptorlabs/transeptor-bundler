@@ -1,13 +1,16 @@
+import { Mutex } from 'async-mutex'
+
+import { EventManager } from '../event/index.js'
 import {
   BundleBuilder,
   StateKey,
   StateService,
   TranseptorLogger,
+  Capability,
+  CapabilityTypes,
+  SendBundleReturn,
+  BundleProcessor,
 } from '../types/index.js'
-import { SendBundleReturn, BundleProcessor } from '../types/index.js'
-
-import { EventManager } from '../event/index.js'
-import { Mutex } from 'async-mutex'
 import { withReadonly } from '../utils/index.js'
 
 export type BundleManager = {
@@ -30,7 +33,8 @@ export type BundleManagerConfig = {
   bundleProcessor: BundleProcessor
   bundleBuilder: BundleBuilder
   eventsManager: EventManager
-  state: StateService
+  stateService: StateService
+  stateCapability: Capability<CapabilityTypes.State>
   isAutoBundle: boolean
   autoBundleInterval: number
   logger: TranseptorLogger
@@ -49,10 +53,11 @@ function _createBundleManager(
     bundleProcessor,
     bundleBuilder,
     eventsManager,
-    state,
+    stateService: state,
     isAutoBundle,
     autoBundleInterval,
     logger,
+    stateCapability,
   } = config
 
   const mutex = new Mutex()
@@ -86,18 +91,22 @@ function _createBundleManager(
         },
         'Bundle sent successfully',
       )
-      await state.updateState(StateKey.BundleTxs, ({ bundleTxs }) => {
-        return {
-          bundleTxs: {
-            ...bundleTxs,
-            [transactionHash]: {
-              txHash: transactionHash,
-              signerIndex: signerIndex,
-              status: 'pending',
+      await state.updateState(
+        stateCapability,
+        StateKey.BundleTxs,
+        ({ bundleTxs }) => {
+          return {
+            bundleTxs: {
+              ...bundleTxs,
+              [transactionHash]: {
+                txHash: transactionHash,
+                signerIndex: signerIndex,
+                status: 'pending',
+              },
             },
-          },
-        }
-      })
+          }
+        },
+      )
     }
 
     return {

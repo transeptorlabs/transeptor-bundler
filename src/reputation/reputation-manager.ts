@@ -1,3 +1,4 @@
+import { ProviderService } from '../provider/index.js'
 import {
   ReputationEntry,
   ReputationManager,
@@ -11,16 +12,18 @@ import {
   StateService,
   ReputationEntries,
   StateKey,
+  Capability,
+  CapabilityTypes,
 } from '../types/index.js'
 import { requireCond, tostr, withReadonly } from '../utils/index.js'
-import { ProviderService } from '../provider/index.js'
 
 export type ReputationManagerConfig = {
   providerService: ProviderService
-  state: StateService
+  stateService: StateService
   minStake: bigint
   minUnstakeDelay: bigint
   logger: TranseptorLogger
+  stateCapability: Capability<CapabilityTypes.State>
 }
 
 /**
@@ -67,7 +70,14 @@ function _createReputationManager(
     throttlingSlack: 10,
     banSlack: 50,
   }
-  const { providerService, state, minStake, minUnstakeDelay, logger } = config
+  const {
+    providerService,
+    stateService: state,
+    minStake,
+    minUnstakeDelay,
+    logger,
+    stateCapability,
+  } = config
   const stakeManagerContract =
     providerService.getStakeManagerContractDetails().contract
 
@@ -87,6 +97,7 @@ function _createReputationManager(
     )
 
     const { reputationEntries } = await state.getState(
+      stateCapability,
       StateKey.ReputationEntries,
     )
 
@@ -110,6 +121,7 @@ function _createReputationManager(
           const entry = reputationEntries[addr]
 
           await state.updateState(
+            stateCapability,
             StateKey.ReputationEntries,
             ({ reputationEntries }) => {
               if (entry.opsIncluded === 0 && entry.opsSeen === 0) {
@@ -141,11 +153,10 @@ function _createReputationManager(
 
   // https://github.com/eth-infinitism/account-abstraction/blob/develop/eip/EIPS/eip-4337.md#reputation-scoring-and-throttlingbanning-for-paymasters
   const getStatus = async (addr?: string): Promise<ReputationStatus> => {
-    const { whiteList, blackList, reputationEntries } = await state.getState([
-      StateKey.WhiteList,
-      StateKey.BlackList,
-      StateKey.ReputationEntries,
-    ])
+    const { whiteList, blackList, reputationEntries } = await state.getState(
+      stateCapability,
+      [StateKey.WhiteList, StateKey.BlackList, StateKey.ReputationEntries],
+    )
 
     addr = addr?.toLowerCase()
 
@@ -180,6 +191,7 @@ function _createReputationManager(
 
   const dump = async (): Promise<ReputationEntry[]> => {
     const { reputationEntries } = await state.getState(
+      stateCapability,
       StateKey.ReputationEntries,
     )
 
@@ -220,33 +232,45 @@ function _createReputationManager(
     dump,
 
     clearState: async () => {
-      await state.updateState(StateKey.ReputationEntries, (_) => {
-        return {
-          reputationEntries: {},
-        }
-      })
+      await state.updateState(
+        stateCapability,
+        StateKey.ReputationEntries,
+        (_) => {
+          return {
+            reputationEntries: {},
+          }
+        },
+      )
     },
 
     addWhitelist: async (items: string[]): Promise<void> => {
       if (items.length === 0) {
         return
       }
-      await state.updateState(StateKey.WhiteList, ({ whiteList }) => {
-        return {
-          whiteList: [...whiteList, ...items],
-        }
-      })
+      await state.updateState(
+        stateCapability,
+        StateKey.WhiteList,
+        ({ whiteList }) => {
+          return {
+            whiteList: [...whiteList, ...items],
+          }
+        },
+      )
     },
 
     addBlacklist: async (items: string[]): Promise<void> => {
       if (items.length === 0) {
         return
       }
-      await state.updateState(StateKey.BlackList, ({ blackList }) => {
-        return {
-          blackList: [...blackList, ...items],
-        }
-      })
+      await state.updateState(
+        stateCapability,
+        StateKey.BlackList,
+        ({ blackList }) => {
+          return {
+            blackList: [...blackList, ...items],
+          }
+        },
+      )
     },
 
     updateSeenStatus: async (
@@ -260,6 +284,7 @@ function _createReputationManager(
       logger.debug({ addr }, 'Updating seen status with reputation manager')
       addr = addr.toLowerCase()
       await state.updateState(
+        stateCapability,
         StateKey.ReputationEntries,
         ({ reputationEntries }) => {
           const entry = getOrCreate(addr, reputationEntries)
@@ -283,6 +308,7 @@ function _createReputationManager(
       }
 
       await state.updateState(
+        stateCapability,
         StateKey.ReputationEntries,
         ({ reputationEntries }) => {
           const newEntries = addrs.reduce((acc, addr) => {
@@ -308,6 +334,7 @@ function _createReputationManager(
     updateIncludedStatus: async (addr: string): Promise<void> => {
       addr = addr.toLowerCase()
       await state.updateState(
+        stateCapability,
         StateKey.ReputationEntries,
         ({ reputationEntries }) => {
           const entry = getOrCreate(addr, reputationEntries)
@@ -354,6 +381,7 @@ function _createReputationManager(
       addr = addr.toLowerCase()
 
       await state.updateState(
+        stateCapability,
         StateKey.ReputationEntries,
         ({ reputationEntries }) => {
           const entry = reputationEntries[addr]
@@ -389,6 +417,7 @@ function _createReputationManager(
       }, initialReady)
 
       await state.updateState(
+        stateCapability,
         StateKey.ReputationEntries,
         ({ reputationEntries }) => {
           return {
@@ -468,6 +497,7 @@ function _createReputationManager(
       entity: string,
     ): Promise<number> => {
       const { reputationEntries } = await state.getState(
+        stateCapability,
         StateKey.ReputationEntries,
       )
       entity = entity.toLowerCase()

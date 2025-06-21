@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
-import { withReadonly } from '../../src/utils/index.js'
+
 import { createLogger } from '../../src/logger/index.js'
+import { withReadonly } from '../../src/utils/index.js'
 
 describe('withReadonly', () => {
   test('should make a simple object readonly', () => {

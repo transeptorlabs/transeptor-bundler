@@ -1,11 +1,12 @@
 import { Mutex, Semaphore } from 'async-mutex'
-import { withReadonly } from '../../utils/index.js'
+
 import {
   AuditLogWriter,
   UserOpAuditEvent,
   AuditLogQueue,
   TranseptorLogger,
 } from '../../types/index.js'
+import { withReadonly } from '../../utils/index.js'
 
 /**
  * Configuration options for the audit log queue.

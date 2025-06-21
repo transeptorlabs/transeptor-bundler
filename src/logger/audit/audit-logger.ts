@@ -1,4 +1,3 @@
-import { withReadonly } from '../../utils/index.js'
 import {
   AuditLogQueue,
   UserOpAuditEvent,
@@ -6,6 +5,7 @@ import {
   UserOperation,
   AuditLogger,
 } from '../../types/index.js'
+import { withReadonly } from '../../utils/index.js'
 
 export type AuditLoggerDeps = {
   auditLogQueue: AuditLogQueue

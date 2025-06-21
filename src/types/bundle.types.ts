@@ -1,7 +1,8 @@
-import { UserOperation } from './userop.types.js'
 import { Wallet } from 'ethers'
-import { StorageMap } from './validation.types.js'
+
 import { EIP7702Authorization } from './eip-7702.types.js'
+import { UserOperation } from './userop.types.js'
+import { StorageMap } from './validation.types.js'
 
 export type SendBundleReturn = {
   transactionHash: string
@@ -30,7 +31,12 @@ export type PendingTxDetails = {
  */
 export type BundleTxs = Record<string, PendingTxDetails>
 
-// Signers
+/**
+ * A record of signer wallets
+ *
+ * - Signer [0] will sign transactions
+ * - Signer [1] will sign capabilities
+ */
 export type BundlerSignerWallets = Record<number, Wallet>
 
 // Bundle processor
