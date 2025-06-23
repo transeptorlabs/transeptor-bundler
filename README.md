@@ -1,11 +1,7 @@
 <p align="center">
-  <a href="https://transeptor.transeptorlabs.io/docs">
-    <img width="500" title="Transeptor" src='https://transeptor.transeptorlabs.io/img/brand/transeptor.png' />
+  <a href="https://docs.transeptor.io/bundler">
+    <img width="500" title="Transeptor" src='https://docs.transeptor.io/img/brand/transeptor.png' />
   </a>
-</p>
-
-<p align="center">
-  Built by <a href="https://github.com/transeptorlabs">Transeptor Labs</a>, we champion bundler diversity, mempool compatibility, and open experimentation—because a decentralized Ethereum depends on resilient public-good infrastructure.
 </p>
 
 <p align="center">
@@ -30,7 +26,7 @@
 
 <!--TOC-->
 
-- [What is Transeptor?](#what-is-transeptor)
+- [What is Transeptor bundler?](#what-is-transeptor-bundler)
 - [Quick Start](#quick-start)
 - [Development](#development)
   - [Prerequisites](#prerequisites)
@@ -47,13 +43,13 @@
 
 <!--TOC-->
 
-## What is Transeptor?
+## What is Transeptor bundler?
 
 > Run a node. Join the ecosystem. Help shape the future of account abstraction.
 
-**Transeptor is a high-performance, modular ERC-4337 bundler designed to make smart accounts scalable and usable on Ethereum.** Built in TypeScript with a functional programming foundation, it prioritizes security and developer experience. Transeptor helps abstract complexity so teams can build intuitive applications on top of Account Abstraction.
+**Transeptor bundler is a high-performance, modular ERC-4337 bundler designed to make smart accounts scalable and usable on Ethereum.** Built in TypeScript with a functional programming foundation, it prioritizes security and developer experience. Transeptor helps abstract complexity so teams can build intuitive applications on top of Account Abstraction.
 
-This project is maintained by **[Transeptor Labs](https://github.com/transeptorlabs)**, an open-source collective building public-good infrastructure to support Ethereum’s evolution toward a user-centric experience.
+This project is maintained by **[Transeptor Labs](https://transeptorlabs.io/)**, an open-source collective building public-good infrastructure to support Ethereum's ERC-4337 ecosystem.
 
 Our long-term vision is to:
 
@@ -62,11 +58,11 @@ Our long-term vision is to:
 - **Bundler compatibility** - Maintain strict compatibility with [erc-4337/bundler-spec-test](https://www.erc4337.io/bundlers) to preserve the vision of a [Unified ERC-4337 mempool](https://notes.ethereum.org/@yoav/unified-erc-4337-mempool).
 - **Embrace the Future** - Experiment safely with advanced features to push bundler UX and performance forward. Any system that can be written down can be realized.
 
-By contributing to Transeptor, you're helping build an open, composable infrastructure layer that strengthens Ethereum’s decentralization and usability without requiring any changes to the protocol.
+By contributing to Transeptor bundler, you're helping build an open, composable infrastructure layer that strengthens Ethereum’s decentralization and usability without requiring any changes to the protocol.
 
 ## Quick Start
 
-To quickly start using Transeptor, follow the instructions in our [Quick Start guide](https://transeptor.transeptorlabs.io/docs/get-started#quick-start).
+To quickly start using Transeptor, follow the instructions in our [Quick Start guide](https://docs.transeptor.io/bundler/get-started#quick-start).
 
 ## Development
 
