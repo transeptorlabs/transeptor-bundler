@@ -54,6 +54,20 @@ export const toJsonString = (obj: any): string => {
   )
 }
 
+/**
+ * Concatenate multiple byte arrays.
+ *
+ * @param items - array of bytes
+ * @returns concatenated bytes
+ */
+export function hexConcat(items: ReadonlyArray<BytesLike>): string {
+  let result = '0x'
+  items.forEach((item) => {
+    result += hexlify(item).substring(2)
+  })
+  return result
+}
+
 type Compose = <A, B, C>(f: (x: B) => C, g: (x: A) => B) => (x: A) => C
 
 /**
@@ -73,4 +87,37 @@ export const compose: Compose = (f, g) => (x) => f(g(x))
  */
 export const sum = (...args: Array<BigNumberish | undefined>): bigint => {
   return args.reduce((acc: bigint, cur) => acc + BigInt(cur ?? 0), BigInt(0))
+}
+
+export type PostValidationFn<T> = (envVar: T) => boolean
+
+export type AssertEnvVarArgs<T> = {
+  envVar: T
+  errorMessage: string
+  postValidationFunctions?: {
+    fn: PostValidationFn<T>
+    errorMessage: string
+  }[]
+}
+
+/**
+ * Asserts that an environment variable is set and returns it.
+ *
+ * @param assertEnvVarArgs - The environment variable to assert and the error message to throw if the environment variable is not set.
+ * @returns The environment variable.
+ */
+export const assertEnvVar = <T>(assertEnvVarArgs: AssertEnvVarArgs<T>): T => {
+  const { envVar, errorMessage, postValidationFunctions } = assertEnvVarArgs
+  if (!envVar) {
+    throw new Error(errorMessage)
+  } else {
+    if (postValidationFunctions) {
+      for (const postValidationFunction of postValidationFunctions) {
+        if (!postValidationFunction.fn(envVar)) {
+          throw new Error(postValidationFunction.errorMessage)
+        }
+      }
+    }
+    return envVar
+  }
 }

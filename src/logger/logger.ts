@@ -1,11 +1,8 @@
 import { AsyncLocalStorage } from 'async_hooks'
 
-import dotenv from 'dotenv'
 import { pino, LoggerOptions } from 'pino'
 
 import { TranseptorLogger } from '../types/index.js'
-
-dotenv.config()
 
 export type RequestContext = {
   requestId: string
@@ -53,14 +50,10 @@ export function setBaseLoggerRequestContext(context: RequestContext) {
 /**
  * Create a logger instance.
  *
+ * @param logLevel - The log level to use.
  * @returns A Pino logger instance.
  */
-export function createLogger(): TranseptorLogger {
-  let logLevel = process.env.TRANSEPTOR_LOG_LEVEL
-  if (!logLevel) {
-    logLevel = process.env.NODE_ENV === 'production' ? 'info' : 'debug'
-  }
-
+export function createLogger(logLevel: string): TranseptorLogger {
   const options: LoggerOptions = {
     level: logLevel,
     formatters: {

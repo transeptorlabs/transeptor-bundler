@@ -20,7 +20,6 @@ type-docs
 .env.test.local
 .env.production.local
 .vscode
-.cursor
 
 npm-debug.log*
 yarn-debug.log*

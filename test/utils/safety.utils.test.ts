@@ -1,10 +1,10 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { createLogger } from '../../src/logger/index.js'
 import { withReadonly } from '../../src/utils/index.js'
 
 describe('withReadonly', () => {
-  test('should make a simple object readonly', () => {
+  it('should make a simple object readonly', () => {
     const deps = { name: 'test', value: 42 }
     const createModule = (deps: Readonly<{ name: string; value: number }>) =>
       deps
@@ -15,7 +15,7 @@ describe('withReadonly', () => {
     }).toThrow()
   })
 
-  test('should make nested objects readonly', () => {
+  it('should make nested objects readonly', () => {
     const deps = {
       config: {
         settings: {
@@ -40,7 +40,7 @@ describe('withReadonly', () => {
     }).toThrow()
   })
 
-  test('should handle arrays correctly', () => {
+  it('should handle arrays correctly', () => {
     const deps = {
       items: [1, 2, 3],
       nested: [{ id: 1 }, { id: 2 }],
@@ -59,7 +59,7 @@ describe('withReadonly', () => {
     }).toThrow()
   })
 
-  test('should preserve original values', () => {
+  it('should preserve original values', () => {
     const deps = {
       name: 'test',
       numbers: [1, 2, 3],
@@ -79,7 +79,7 @@ describe('withReadonly', () => {
     expect(wrapped.nested.value).toBe(42)
   })
 
-  test('should handle primitive values', () => {
+  it('should handle primitive values', () => {
     const deps = {
       str: 'test',
       num: 42,
@@ -105,7 +105,7 @@ describe('withReadonly', () => {
     expect(wrapped.undefined).toBe(undefined)
   })
 
-  test('should throw error for class instances', () => {
+  it('should throw error for class instances', () => {
     class TestClass {
       value = 42
     }
@@ -120,7 +120,7 @@ describe('withReadonly', () => {
     }).toThrow('deepFreezeClone only supports plain objects and arrays')
   })
 
-  test('should handle empty objects and arrays', () => {
+  it('should handle empty objects and arrays', () => {
     const deps = {
       emptyObj: {},
       emptyArr: [],
@@ -134,8 +134,8 @@ describe('withReadonly', () => {
     expect(wrapped.emptyArr).toEqual([])
   })
 
-  test('should skip freezing Pino logger instances', () => {
-    const mockPinoLogger = createLogger()
+  it('should skip freezing Pino logger instances', () => {
+    const mockPinoLogger = createLogger('error')
 
     const deps = {
       logger: mockPinoLogger,

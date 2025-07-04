@@ -1,14 +1,11 @@
-import dotenv from 'dotenv'
 import { ethers, HDNodeWallet, JsonRpcProvider, Mnemonic, Wallet } from 'ethers'
 
-import { DEFAULT_ENTRY_POINT } from '../constants/index.js'
+import { TRANSEPTOR_ENV_VALUES } from '../constants/index.js'
 import { createProvider } from '../provider/index.js'
 import { InfluxdbConnection, BundlerSignerWallets } from '../types/index.js'
-import { isValidAddress, withReadonly } from '../utils/index.js'
+import { assertEnvVar, isValidAddress, withReadonly } from '../utils/index.js'
 
 import { getCmdOptionValues } from './command.js'
-
-dotenv.config()
 
 const DEFAULT_NETWORK = 'http://localhost:8545'
 const SUPPORTED_MODES = ['base', 'searcher']
@@ -24,10 +21,12 @@ export type Config = {
 
   clientVersion: string
   commitHash: string
+  auditTrail: boolean
   auditLogDestinationPath: string
   auditLogFlushIntervalMs: number
   auditLogBufferSize: number
   environment: string
+
   httpApis: string[]
   port: number
 
@@ -56,16 +55,24 @@ export type Config = {
   eip7702Support: boolean
 }
 
+export type ConfigDeps = {
+  /**
+   * The arguments to create the Config instance.
+   */
+  args: Readonly<string[]>
+
+  /**
+   * The environment variables to create the Config instance.
+   */
+  env: Readonly<typeof TRANSEPTOR_ENV_VALUES>
+}
+
 // Helper function to get bundler signer wallets
 const getBundlerSignerWallet = (
   numberOfSigners: number,
   provider: ethers.JsonRpcProvider,
+  mnemonic: string,
 ): BundlerSignerWallets => {
-  const mnemonic = process.env.TRANSEPTOR_MNEMONIC
-  if (!mnemonic) {
-    throw new Error('TRANSEPTOR_MNEMONIC env var not set')
-  }
-
   const initialValue: BundlerSignerWallets = {}
   return Array.from({ length: numberOfSigners }, (_, i) => {
     const hdNodeWallet = HDNodeWallet.fromMnemonic(
@@ -79,32 +86,6 @@ const getBundlerSignerWallet = (
     acc[index] = wallet
     return acc
   }, initialValue)
-}
-
-// Helper function to set up P2P configuration
-const setupP2PConfig = (isP2PMode: boolean) => {
-  const peerMultiaddrs = isP2PMode
-    ? process.env.PEER_MULTIADDRS
-      ? process.env.PEER_MULTIADDRS.split(',')
-      : []
-    : []
-  return { peerMultiaddrs }
-}
-
-// Helper function to set up metrics configuration
-const setupMetricsConfig = (isMetricsEnabled: boolean, programOpts: any) => {
-  if (isMetricsEnabled && !process.env.TRANSEPTOR_INFLUX_TOKEN) {
-    throw new Error('TRANSEPTOR_INFLUX_TOKEN env var not set')
-  }
-  const influxdbConnection: InfluxdbConnection = isMetricsEnabled
-    ? {
-        url: programOpts.influxdbUrl as string,
-        token: process.env.TRANSEPTOR_INFLUX_TOKEN as string,
-        org: programOpts.influxdbOrg as string,
-        bucket: programOpts.influxdbBucket as string,
-      }
-    : { url: '', org: '', bucket: '', token: '' }
-  return { influxdbConnection }
 }
 
 // Helper function to validate HTTP APIs
@@ -122,10 +103,11 @@ const validateHttpApis = (
 /**
  * Creates an instance of the Config module.
  *
- * @param args - The arguments to create the Config instance.
+ * @param configDeps - The dependencies to create the Config instance.
  * @returns An instance of the Config module.
  */
-function _createConfig(args: Readonly<string[]>): Config {
+function _createConfig(configDeps: Readonly<ConfigDeps>): Config {
+  const { args, env } = configDeps
   const SUPPORTED_NAMESPACES = ['web3', 'eth', 'debug']
   const programOpts = getCmdOptionValues({
     args,
@@ -135,73 +117,92 @@ function _createConfig(args: Readonly<string[]>): Config {
 
   const provider = createProvider(programOpts.network as string)
 
-  const supportedEntryPointAddress =
-    process.env.TRANSEPTOR_ENTRYPOINT_ADDRESS || DEFAULT_ENTRY_POINT
-
   // Set up signers
-  const bundlerSignerWallets = getBundlerSignerWallet(2, provider)
-  if (!process.env.TRANSEPTOR_BENEFICIARY) {
-    throw new Error('TRANSEPTOR_BENEFICIARY env var not set')
-  }
-
-  if (!isValidAddress(process.env.TRANSEPTOR_BENEFICIARY as string)) {
-    throw new Error('Beneficiary not a valid address')
-  }
-
+  const mnemonic = assertEnvVar<string>({
+    envVar: env.TRANSEPTOR_MNEMONIC,
+    errorMessage: 'TRANSEPTOR_MNEMONIC env var not set',
+  })
+  const bundlerSignerWallets = getBundlerSignerWallet(2, provider, mnemonic)
+  const beneficiaryAddr = assertEnvVar<string>({
+    envVar: env.TRANSEPTOR_BENEFICIARY,
+    errorMessage: 'TRANSEPTOR_BENEFICIARY env var not set',
+    postValidationFunctions: [
+      {
+        fn: isValidAddress,
+        errorMessage: 'Beneficiary not a valid address',
+      },
+    ],
+  })
   // set p2p config
   const isP2PMode = programOpts.p2p as boolean
-  const { peerMultiaddrs } = setupP2PConfig(isP2PMode)
-
-  // set reputation config
-  const whitelist = process.env.WHITELIST
-    ? process.env.WHITELIST.split(',')
-    : []
-  const blacklist = process.env.BLACKLIST
-    ? process.env.BLACKLIST.split(',')
+  const peerMultiaddrs = isP2PMode
+    ? env.TRANSEPTOR_PEER_MULTIADDRS
+      ? env.TRANSEPTOR_PEER_MULTIADDRS.split(',')
+      : []
     : []
 
   // set transaction mode config
-  if (!SUPPORTED_MODES.includes(programOpts.txMode as string)) {
-    throw new Error('Invalid bundler mode')
-  }
+  const txMode = assertEnvVar<string>({
+    envVar: programOpts.txMode as string,
+    errorMessage: 'Invalid txMode',
+    postValidationFunctions: [
+      {
+        fn: (parsedTxMode) => SUPPORTED_MODES.includes(parsedTxMode),
+        errorMessage: `Invalid txMode: ${programOpts.txMode}`,
+      },
+    ],
+  })
 
   // set metric config
   const isMetricsEnabled = programOpts.metrics as boolean
-  const { influxdbConnection } = setupMetricsConfig(
-    isMetricsEnabled,
-    programOpts,
-  )
+  if (isMetricsEnabled && !env.TRANSEPTOR_INFLUX_TOKEN) {
+    throw new Error('TRANSEPTOR_INFLUX_TOKEN env var not set')
+  }
+  const influxdbConnection: InfluxdbConnection = isMetricsEnabled
+    ? {
+        url: programOpts.influxdbUrl as string,
+        token: env.TRANSEPTOR_INFLUX_TOKEN as string,
+        org: programOpts.influxdbOrg as string,
+        bucket: programOpts.influxdbBucket as string,
+      }
+    : { url: '', org: '', bucket: '', token: '' }
 
   const httpApis = (programOpts.httpApi as string).split(',')
   validateHttpApis(httpApis, SUPPORTED_NAMESPACES)
 
   return {
     provider,
-    supportedEntryPointAddress,
+    supportedEntryPointAddress: env.TRANSEPTOR_ENTRYPOINT_ADDRESS,
 
     bundlerSignerWallets,
-    beneficiaryAddr: process.env.TRANSEPTOR_BENEFICIARY as string,
+    beneficiaryAddr,
     minSignerBalance: ethers.parseEther(programOpts.minBalance as string),
 
     clientVersion: nodeVersion,
     commitHash: 'unknown', // TODO: replace with actual commit hash
-    environment: process.env.NODE_ENV || 'development',
+    environment: env.NODE_ENV,
     auditLogFlushIntervalMs: 100, // every 100ms flush audit log queue
     auditLogBufferSize: 5000, // Maximum buffer size for the audit log queue (5000 events)
     auditLogDestinationPath: AUDIT_LOG_DESTINATION_PATH,
+    auditTrail: programOpts.auditTrail as boolean,
+
     httpApis: httpApis,
     port: parseInt(programOpts.port as string),
 
     minStake: ethers.parseEther(programOpts.minStake as string),
     minUnstakeDelay: BigInt(parseInt(programOpts.minUnstakeDelay as string)),
-    whitelist,
-    blacklist,
+    whitelist: env.TRANSEPTOR_WHITELIST
+      ? env.TRANSEPTOR_WHITELIST.split(',')
+      : [],
+    blacklist: env.TRANSEPTOR_BLACKLIST
+      ? env.TRANSEPTOR_BLACKLIST.split(',')
+      : [],
 
     bundleSize: parseInt(programOpts.bundleSize as string),
     maxBundleGas: parseInt(programOpts.maxBundleGas as string),
     isAutoBundle: programOpts.auto as boolean,
     autoBundleInterval: parseInt(programOpts.autoBundleInterval as string),
-    txMode: programOpts.txMode as string,
+    txMode,
     isUnsafeMode: programOpts.unsafe as boolean,
 
     isMetricsEnabled,
@@ -214,4 +215,4 @@ function _createConfig(args: Readonly<string[]>): Config {
   }
 }
 
-export const createConfig = withReadonly<string[], Config>(_createConfig)
+export const createConfig = withReadonly<ConfigDeps, Config>(_createConfig)

@@ -5,7 +5,7 @@
   "description": "Transeptor is a high-performance, modular ERC-4337 bundler designed to make smart accounts scalable and usable on Ethereum",
   "author": {
     "name": "Transeptor Labs",
-    "email": "transeptorhq@gmail.com",
+    "email": "info@transeptorlabs.io",
     "url": "https://transeptorlabs.io"
   },
   "license": "GNU",
@@ -24,15 +24,17 @@
   "scripts": {
     "clean": "rm -rf dist",
     "ls:cmd": "tsx ./src/cli.ts --help",
-    "build": "rm -rf dist && pkgroll --target=node22.14.0 --minify",
+    "type-check": "tsc --noEmit",
+    "build": "yarn type-check && rm -rf dist && pkgroll --target=node22.14.0 --minify",
     "build:contracts": "cd contracts && forge build",
     "build:typedocs": "typedoc",
     "dev": "tsx watch ./src/cli.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
     "dev:unsafe": "tsx watch ./src/cli.ts --httpApi web3,eth,debug --txMode base --unsafe | pino-pretty",
     "dev:metrics": "tsx watch ./src/cli.ts --httpApi web3,eth,debug --metrics --txMode base | pino-pretty",
+    "dev:auditTrail": "tsx watch ./src/cli.ts --httpApi web3,eth,debug --txMode base --auditTrail true | pino-pretty",
     "start": "tsx ./src/cli.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
     "start:prod": "yarn build && node dist/cli.mjs --httpApi web3,eth,debug --txMode base | pino-pretty",
-    "test": "vitest run --config ./vitest.config.ts --coverage",
+    "test": "yarn type-check && vitest run --config ./vitest.config.ts --coverage",
     "test:dev": "vitest --config ./vitest.config.ts",
     "lint": "eslint . --ext ts",
     "lint:fix": "yarn lint --fix",

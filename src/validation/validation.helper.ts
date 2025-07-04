@@ -11,6 +11,7 @@ import {
   ValidationErrors,
   RpcError,
 } from '../types/index.js'
+import { requireCond } from '../utils/index.js'
 
 export const checkValidationResult = (
   res: ValidateUserOpResult,
@@ -137,4 +138,46 @@ export const fullValResultSafeParse = async (input: {
         })
       },
     )
+}
+
+/**
+ * Require address and fields.
+ *
+ * @param userOp - The UserOperation to validate.
+ * @param addrField - The address field.
+ * @param mustFields - The fields that must be present.
+ * @param optionalFields - The fields that are optional.
+ */
+export const requireAddressAndFields = (
+  userOp: UserOperation,
+  addrField: string,
+  mustFields: string[],
+  optionalFields: string[] = [],
+): void => {
+  const op = userOp as any
+  const addr = op[addrField]
+  if (addr == null) {
+    const unexpected = Object.entries(op).filter(
+      ([name, value]) =>
+        value != null &&
+        (mustFields.includes(name) || optionalFields.includes(name)),
+    )
+    requireCond(
+      unexpected.length === 0,
+      `no ${addrField} but got ${unexpected.join(',')}`,
+      ValidationErrors.InvalidFields,
+    )
+  } else {
+    requireCond(
+      addr.match(/^0x[a-f0-9]{10,40}$/i),
+      `invalid ${addrField}`,
+      ValidationErrors.InvalidFields,
+    )
+    const missing = mustFields.filter((name) => op[name] == null)
+    requireCond(
+      missing.length === 0,
+      `got ${addrField} but missing ${missing.join(',')}`,
+      ValidationErrors.InvalidFields,
+    )
+  }
 }

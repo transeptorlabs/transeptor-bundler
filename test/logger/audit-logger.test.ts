@@ -14,6 +14,7 @@ describe('AuditLogger', () => {
     clientVersion: '1.0.0',
     nodeCommitHash: 'abc123',
     environment: 'production',
+    auditTrailEnabled: true,
   }
 
   const mockUserOp = {
@@ -85,10 +86,11 @@ describe('AuditLogger', () => {
       expect(event.timestamp).toBeDefined()
     })
 
-    it('should not enqueue audit event in non-production environment', async () => {
+    it('should not enqueue audit event in non-production environment if audit trail is disabled', async () => {
       const logger = createAuditLogger({
         ...defaultDeps,
         environment: 'development',
+        auditTrailEnabled: false,
       })
 
       await logger.logUserOpLifecycleEvent({
@@ -101,6 +103,25 @@ describe('AuditLogger', () => {
       })
 
       expect(mockAuditLogQueue.enqueue).not.toHaveBeenCalled()
+    })
+
+    it('should enqueue audit event in non-production environment if audit trail is enabled', async () => {
+      const logger = createAuditLogger({
+        ...defaultDeps,
+        environment: 'development',
+        auditTrailEnabled: true,
+      })
+
+      await logger.logUserOpLifecycleEvent({
+        lifecycleStage: 'RECEIVED' as LifecycleStage,
+        userOp: mockUserOp,
+        userOpHash: '0xabc',
+        chainId: 1,
+        entryPoint: '0x456',
+        details: { reason: 'test' },
+      })
+
+      expect(mockAuditLogQueue.enqueue).toHaveBeenCalled()
     })
   })
 

@@ -17,6 +17,7 @@ import {
   Simulator,
   NetworkCallError,
   LogUserOpLifecycleEvent,
+  ValidateUserOpResult,
 } from '../../types/index.js'
 import {
   deepHexlify,
@@ -28,10 +29,8 @@ import { ValidationService } from '../../validation/index.js'
 
 import {
   extractCallGasLimit,
-  extractUserOpVerificationResult,
   extractVerificationGasLimit,
   getUserOpHashWithCode,
-  sendUserOpToMempool,
 } from './eth-api.helpers.js'
 
 export type EthAPIConfig = {
@@ -235,35 +234,78 @@ function _createEthAPI(config: Readonly<EthAPIConfig>): EthAPI {
         )
       }
 
-      // Validate the userOp and relay it to the mempool if validation passes
+      // Validate the userOp
       const validationResult = await vs.validateUserOp(userOp, true, undefined)
-      return Either.Right<RpcError, RelayUserOpParam>(undefined)
-        .map((op) => ({
-          ...op,
-          userOp,
+      const userOpHash = parsedUserOpHashRes.userOpHash
+      const relayUserOpParamRes: {
+        relayUserOpParam: RelayUserOpParam
+        error?: RpcError
+      } = validationResult.fold(
+        (error: RpcError) => {
+          return {
+            error,
+            relayUserOpParam: undefined,
+          }
+        },
+        (res: ValidateUserOpResult) => {
+          return {
+            error: undefined,
+            relayUserOpParam: {
+              userOp,
+              userOpHash,
+              prefund: res.returnInfo.prefund,
+              referencedContracts: res.referencedContracts,
+              senderInfo: res.senderInfo,
+              paymasterInfo: res.paymasterInfo,
+              factoryInfo: res.factoryInfo,
+              aggregatorInfo: res.aggregatorInfo,
+            },
+          }
+        },
+      )
+
+      if (relayUserOpParamRes.error) {
+        await logUserOpLifecycleEvent({
+          lifecycleStage: 'userOpRejected',
+          chainId,
           userOpHash: parsedUserOpHashRes.userOpHash,
-        }))
-        .flatMap((op) => extractUserOpVerificationResult(op, validationResult))
-        .foldAsync(
-          async (error: RpcError) => {
-            await logUserOpLifecycleEvent({
-              lifecycleStage: 'userOpRejected',
-              chainId,
-              userOpHash: parsedUserOpHashRes.userOpHash,
-              entryPoint: entryPoint.address,
-              userOp: userOpInput,
-              details: {
-                reason: error.message,
-              },
-            })
-            return Either.Left<RpcError, string>(error)
+          entryPoint: entryPoint.address,
+          userOp: userOpInput,
+          details: {
+            reason: relayUserOpParamRes.error.message,
           },
-          async (relayUserOpParam: RelayUserOpParam) =>
-            sendUserOpToMempool(
-              relayUserOpParam,
-              mempoolManageSender.addUserOp,
-            ),
-        )
+        })
+        return Either.Left(relayUserOpParamRes.error)
+      }
+
+      // Relay userOp to the mempool if validation passes
+      const relayUserOpParam = relayUserOpParamRes.relayUserOpParam
+      const addUserOpRes = await mempoolManageSender.addUserOp(relayUserOpParam)
+      return addUserOpRes.foldAsync(
+        async (error: RpcError) => {
+          await logUserOpLifecycleEvent({
+            lifecycleStage: 'userOpRejected',
+            chainId,
+            userOpHash,
+            entryPoint: entryPoint.address,
+            userOp: userOpInput,
+            details: {
+              reason: error.message,
+            },
+          })
+          return Either.Left<RpcError, string>(error)
+        },
+        async (hash) => {
+          await logUserOpLifecycleEvent({
+            lifecycleStage: 'userOpIncludedInMempool',
+            chainId,
+            userOpHash,
+            entryPoint: entryPoint.address,
+            userOp: userOpInput,
+          })
+          return Either.Right<RpcError, string>(hash)
+        },
+      )
     },
 
     getSupportedEntryPoints: async (): Promise<string[]> => {

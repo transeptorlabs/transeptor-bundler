@@ -17,6 +17,11 @@ export type AuditLoggerDeps = {
    * This is used to control whether events are logged based on the environment.
    */
   environment: string
+
+  /**
+   * Whether audit trail is enabled.
+   */
+  auditTrailEnabled: boolean
 }
 
 /**
@@ -29,7 +34,13 @@ export type AuditLoggerDeps = {
  * @returns An instance of AuditLogger that can log user operation events.
  */
 function _createAuditLogger(deps: Readonly<AuditLoggerDeps>): AuditLogger {
-  const { clientVersion, nodeCommitHash, auditLogQueue, environment } = deps
+  const {
+    clientVersion,
+    nodeCommitHash,
+    auditLogQueue,
+    environment,
+    auditTrailEnabled,
+  } = deps
 
   return {
     logUserOpLifecycleEvent: async (eventInput: {
@@ -48,8 +59,8 @@ function _createAuditLogger(deps: Readonly<AuditLoggerDeps>): AuditLogger {
         entryPoint,
         details,
       } = eventInput
-      if (environment !== 'production') {
-        // only log in production so that we don't clutter the logs in development
+      if (environment !== 'production' && !auditTrailEnabled) {
+        // only log in production or if audit trail is enabled
         return
       }
       const event: UserOpAuditEvent = {

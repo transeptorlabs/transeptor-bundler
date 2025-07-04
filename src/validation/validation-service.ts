@@ -18,7 +18,6 @@ import {
 } from '../types/index.js'
 import {
   requireCond,
-  requireAddressAndFields,
   getAuthorizationList,
   getEip7702AuthorizationSigner,
   withReadonly,
@@ -27,6 +26,7 @@ import {
 import {
   checkValidationResult,
   fullValResultSafeParse,
+  requireAddressAndFields,
 } from './validation.helper.js'
 
 export type ValidationService = {

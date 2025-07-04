@@ -21,7 +21,7 @@ import {
 import { EIP7702_MAGIC } from '../constants/index.js'
 import { EIP7702Authorization, UserOperation } from '../types/index.js'
 
-import { hexConcat } from './bundle.utils.js'
+import { hexConcat } from './common.utils.js'
 
 // from: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-7702.md
 // authority = ecrecover(keccak(MAGIC || rlp([chain_id, address, nonce])), y_parity, r, s)

@@ -30,6 +30,7 @@ export type InfrastructureConfig = {
   environment: string
   isMetricsEnabled: boolean
   influxdbConnection: InfluxdbConnection
+  auditTrailEnabled: boolean
 }
 
 export const createInfrastructure = (
@@ -45,6 +46,7 @@ export const createInfrastructure = (
     nodeCommitHash,
     environment,
     isMetricsEnabled,
+    auditTrailEnabled,
   } = config
   logger.info('Initializing infrastructure')
 
@@ -62,6 +64,7 @@ export const createInfrastructure = (
     clientVersion,
     nodeCommitHash,
     environment,
+    auditTrailEnabled,
   })
 
   const metricsTracker = isMetricsEnabled
