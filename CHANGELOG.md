@@ -5,33 +5,55 @@ All notable changes to this project will be manually documented in this file by 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - XXX-XX-XX
+## [Unreleased]
+
+## [v0.13.0-alpha.0] - 2025-07-04
+
+### Added
+
+- Add check prerequisites script to improve developer experience ([#146](https://github.com/transeptorlabs/transeptor-bundler/pull/146))
+- Introduce the Safe Module Pattern ([#147](https://github.com/transeptorlabs/transeptor-bundler/pull/147))
+- Add userOp lifecycle audit trail logs ([#149](https://github.com/transeptorlabs/transeptor-bundler/pull/149))
+  - Only runs audit trail in production
+  - Redacts the userOp `signature` , `callData` , `factoryData` and `eip7702Aut` from logs to avoid logging sensitive data about the userOp intent.
+- Added `AuditLogQueue` module - Bounded Buffer with Strict Backpressure ([#149](https://github.com/transeptorlabs/transeptor-bundler/pull/149))
+- Added `AuditLogWriter` factory to allow for different logger writers. Default to `pino` write to a .log file but can be extended in the future to allow other writers types(e.g Postgress, AWS S3, etc) ([#149](https://github.com/transeptorlabs/transeptor-bundler/pull/149))
+- Introduce OCAPS module to: Enforce Capability-Based Access Control on StateService calls ([#150](https://github.com/transeptorlabs/transeptor-bundler/pull/150))
+
+### Changes
+
+- Move to a dependency-injected logger instead of a global logger model ([#149](https://github.com/transeptorlabs/transeptor-bundler/pull/149))
 
 ## [v0.12.0-alpha.0] - 2025-06-01
 
-## Added
-- Support for EntryPoint release`v0.8` #136 
-- Support for [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702) #140 
-- Add `Erc7562Parser` to enforce [ERC-7562](https://eips.ethereum.org/EIPS/eip-7562) rules #140 
-- CLI flag `--eip7702Support`: enables eip7702Auth parameter for eth_sendUserOperation on networks with EIP-7702 enabled #140 
-- Support for sending EIP-7702 Auth Type 4 transactions #140
-- `Docs contribution` section added to project documentation  #144
+### Added
 
-## Changes
-- Updated `eth-node` script to use the[accountabstraction/geth-with-erc7562-tracer](https://hub.docker.com/r/accountabstraction/geth-with-erc7562-tracer) Docker image #140 
-- Added [@ethereumjs](https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/tx#eoa-code-transaction-eip-7702) dependency to prepare EIP-7702 transactions  #140 
-- Update PreVerificationGasCalculator calculations  #140 
+- Support for EntryPoint release`v0.8` ([#136](https://github.com/transeptorlabs/transeptor-bundler/pull/136))
+- Support for [EIP-7702](https://eips.ethereum.org/EIPS/eip-7702) ([#140](https://github.com/transeptorlabs/transeptor-bundler/pull/140))
+- Add `Erc7562Parser` to enforce [ERC-7562](https://eips.ethereum.org/EIPS/eip-7562) rules ([#140](https://github.com/transeptorlabs/transeptor-bundler/pull/140))
+- CLI flag `--eip7702Support`: enables eip7702Auth parameter for eth_sendUserOperation on networks with EIP-7702 enabled ([#140](https://github.com/transeptorlabs/transeptor-bundler/pull/140))
+- Support for sending EIP-7702 Auth Type 4 transactions ([#140](https://github.com/transeptorlabs/transeptor-bundler/pull/140))
+- `Docs contribution` section added to project documentation ([#144](https://github.com/transeptorlabs/transeptor-bundler/pull/144))
 
-##  Removed
-- Drops CLI flags `--tracerRpcUrl` #140 
-- Drops support for legacy JS tracer/parser  #140 
+### Changes
 
-## Fixes
-- Fixed multiple failing EntryPoint v0.8 spec tests #137
+- Updated `eth-node` script to use the[accountabstraction/geth-with-erc7562-tracer](https://hub.docker.com/r/accountabstraction/geth-with-erc7562-tracer) Docker image ([#140](https://github.com/transeptorlabs/transeptor-bundler/pull/140))
+- Added [@ethereumjs](https://github.com/ethereumjs/ethereumjs-monorepo/tree/master/packages/tx#eoa-code-transaction-eip-7702) dependency to prepare EIP-7702 transactions ([#140](https://github.com/transeptorlabs/transeptor-bundler/pull/140))
+- Update PreVerificationGasCalculator calculations ([#140](https://github.com/transeptorlabs/transeptor-bundler/pull/140))
+
+### Removed
+
+- Drops CLI flags `--tracerRpcUrl` ([#140](https://github.com/transeptorlabs/transeptor-bundler/pull/140))
+- Drops support for legacy JS tracer/parser ([#140](https://github.com/transeptorlabs/transeptor-bundler/pull/140))
+
+### Fixes
+
+- Fixed multiple failing EntryPoint v0.8 spec tests ([#137](https://github.com/transeptorlabs/transeptor-bundler/pull/137))
 
 ## [v0.11.0-alpha.0] - 2025-05-02
 
 ### Changed
+
 - Update to use node version to 22.14.0 LTS, drop [esbuild](https://esbuild.github.io/) dependency and [pkgroll](https://github.com/privatenumber/pkgroll) as the the recommended bundler for projects using tsx.([#126](https://github.com/transeptorlabs/transeptor-bundler/pull/126))
 - Move cli binary and gracefully shutting down rpc server.([#127](https://github.com/transeptorlabs/transeptor-bundler/pull/127))
 - Improve test coverage in rpc module([#130](https://github.com/transeptorlabs/transeptor-bundler/pull/130))
@@ -40,11 +62,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.10.0-alpha.0] - 2025-03-29
 
 ### Added
+
 - A docs for Release process and Vision([#109](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
 - Use [esbuild](https://esbuild.github.io/) to create build for transeptor([#117](https://github.com/transeptorlabs/transeptor-bundler/pull/110))
 - Add typedocs([#118](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
 
 ### Changed
+
 - Refactor modules to improve error handling with Either monad([#115](https://github.com/transeptorlabs/transeptor-bundler/pull/115)):
   - sim
   - validation
@@ -62,9 +86,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [v0.9.0-alpha.0] - 2025-01-02
 
 ### Added
+
 - Add Either monad type for better error handling([#104](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
-  
+
 ### Changed
+
 - Refactor modules to use Either monad:
   - validation([#104](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
   - sim([#104](https://github.com/transeptorlabs/transeptor-bundler/pull/104))
@@ -116,7 +142,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Define a subset of types that only exposes the necessary methods for more granular `MempoolManager` interfaces ([#80](https://github.com/transeptorlabs/transeptor-bundler/pull/80))
 - Introduces functional programming paradigm mempool state management to the bundler.
-  
+
 ## [v0.6.2-alpha.0] - 2024-06-23
 
 ### Changed
@@ -135,7 +161,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Add support entrypoint v07 
+- Add support entrypoint v07
 
 ### Changed
 
@@ -148,14 +174,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-A bug found in entrypoint v0.6 requires bundlers' attention, and a new test, `test_enough_verification_gas` has been added to the "bundler-spec-test" repo on branch [releases/v0.6](https://github.com/eth-infinitism/bundler-spec-tests/tree/releases/v0.6), PR [here](https://github.com/eth-infinitism/bundler-spec-tests/pull/57) to address the bug. 
+A bug found in entrypoint v0.6 requires bundlers' attention, and a new test, `test_enough_verification_gas` has been added to the "bundler-spec-test" repo on branch [releases/v0.6](https://github.com/eth-infinitism/bundler-spec-tests/tree/releases/v0.6), PR [here](https://github.com/eth-infinitism/bundler-spec-tests/pull/57) to address the bug.
 
 ## [v0.5.2-alpha.0] - 2023-12-16
 
 ### Added
 
 Support `Linux/amd64` and `Linux/arm64` OS architectures for transeptor Docker image
-
 
 ## [v0.5.1-alpha.0] - 2023-12-16
 
@@ -172,16 +197,15 @@ Add support for metrics and monitoring. Metrics give insight into the bundler no
 **New ENV:**
 `INFLUX_TOKEN=<YOUR_INFLUX_DB_TOKEN>`
 
-
 **New command line flags:**
 
-|      **Options** | **Type** | **Description** | **Default Value** |
-| -------------------- | ------- | ------------------------------------------------------------------- | ----------------------- |
-|       `--metrics` | `boolean` | bundler metrics enabled              | `false` |
-|       `--metricsPort` | `number` | metrics server listening port              | `4001` |
-|       `--influxdbUrl` | `string` | url influxdb is running on            | `http://localhost:8086` |
-|       `--influxdbOrg` | `string` | influxdb org              | `transeptor-labs` |
-|       `--influxdbBucket` | `string` | influxdb bucket              | `transeptor_metrics` |
+| **Options**        | **Type**  | **Description**               | **Default Value**       |
+| ------------------ | --------- | ----------------------------- | ----------------------- |
+| `--metrics`        | `boolean` | bundler metrics enabled       | `false`                 |
+| `--metricsPort`    | `number`  | metrics server listening port | `4001`                  |
+| `--influxdbUrl`    | `string`  | url influxdb is running on    | `http://localhost:8086` |
+| `--influxdbOrg`    | `string`  | influxdb org                  | `transeptor-labs`       |
+| `--influxdbBucket` | `string`  | influxdb bucket               | `transeptor_metrics`    |
 
 **New endpoint:**
 Create a new endpoint running on a separate port to expose collected metrics—`/metrics`. In the future, these metrics will be used to pull metrics with the Prometheus metrics system.
@@ -203,10 +227,28 @@ Create a new endpoint running on a separate port to expose collected metrics—`
 ### Changed
 
 - Changed `autoBundleInterval` to 12000ms
-- Update JS tracer to pass all opcode banning  for [bundler-spec-test](https://github.com/eth-infinitism/bundler-spec-tests/)
-
+- Update JS tracer to pass all opcode banning for [bundler-spec-test](https://github.com/eth-infinitism/bundler-spec-tests/)
 
 ## [v0.1.0-alpha.0] - 2023-06-14
 
 - Initial release of Transeptor bundler.
-  
+
+[Unreleased]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.13.0-alpha.0...HEAD
+[v0.13.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.12.0-alpha.0...release/v0.13.0-alpha.0
+[v0.12.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.11.0-alpha.0...release/v0.12.0-alpha.0
+[v0.11.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.10.0-alpha.0...release/v0.11.0-alpha.0
+[v0.10.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.9.0-alpha.0...release/v0.10.0-alpha.0
+[v0.9.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.8.0-alpha.0...release/v0.9.0-alpha.0
+[v0.8.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.7.0-alpha.0...release/v0.8.0-alpha.0
+[v0.7.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.6.2-alpha.0...release/v0.7.0-alpha.0
+[v0.6.2-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.6.1-alpha.0...release/v0.6.2-alpha.0
+[v0.6.1-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.6.0-alpha.0...release/v0.6.1-alpha.0
+[v0.6.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.5.3-alpha.0...release/v0.6.0-alpha.0
+[v0.5.3-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.5.2-alpha.0...release/v0.5.3-alpha.0
+[v0.5.2-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.5.1-alpha.0...release/v0.5.2-alpha.0
+[v0.5.1-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.5.0-alpha.0...release/v0.5.1-alpha.0
+[v0.5.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.4.0-alpha.0...release/v0.5.0-alpha.0
+[v0.4.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.3.0-alpha.0...release/v0.4.0-alpha.0
+[v0.3.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.2.0-alpha.0...release/v0.3.0-alpha.0
+[v0.2.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.1.0-alpha.0...release/v0.2.0-alpha.0
+[v0.1.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/releases/tag/release/v0.1.0-alpha.0
