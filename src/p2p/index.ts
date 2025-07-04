@@ -1,1 +1,1 @@
-export { Libp2pNode } from './Libp2p-node.js'
+export * from './Libp2p-node.js'

@@ -9,13 +9,9 @@ export type TranseptorLogger = Logger
 
 export type LifecycleStage =
   | 'userOpReceived'
-  | 'userOpValidationStarted'
-  | 'userOpValidated'
-  | 'userOpValidationFailed'
-  | 'userOpIncluded'
-  | 'userOpSubmittedOnChain'
-  | 'userOpOnChainReceipt'
   | 'userOpRejected'
+  | 'userOpIncludedInMempool'
+  | 'userOpSubmittedOnChain'
 
 export type UserOpAuditEvent = Readonly<{
   kind: string

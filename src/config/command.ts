@@ -88,6 +88,7 @@ export const getCmdOptionValues = (ops: CommandOptions): OptionValues => {
       'On networks with EIP-7702 enabled, the eth_sendUserOperation method accepts an extra eip7702Auth parameter.',
       true,
     )
+    .option('--auditTrail <boolean>', 'Enable audit trail.', false)
 
   const programOpts: OptionValues = program.parse(args).opts()
   return programOpts

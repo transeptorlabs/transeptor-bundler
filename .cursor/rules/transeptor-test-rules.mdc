@@ -1,0 +1,55 @@
+---
+description: 
+globs: test/*
+alwaysApply: false
+---
+# Cursor Rules for Increasing Unit Test Coverage to 80%
+
+## General Guidelines
+- Maintain functional programming principles: avoid side effects, use pure functions where possible.
+- Follow existing test patterns in the `/test` directory.
+- Aim for unit tests over integration tests where applicable.
+- Ensure each test is deterministic and runs independently.
+- Use `yarn test` to run tests and validate changes.
+
+## Test Coverage Expectations
+- Target at least **90%** unit test coverage.
+- Prioritize testing core logic, especially areas prone to edge cases.
+- Cover all branches in conditionals and different execution paths.
+
+## Test Structure
+- Follow **Given-When-Then** structure where applicable.
+- Group related tests using `describe()`.
+- Use `it()` for clear, focused test cases.
+- Prefer `expect().toEqual()` over deep object comparisons.
+- Mock external dependencies but avoid over-mocking.
+
+## Functional Programming Best Practices
+- Test functions in isolation without relying on mutable state.
+- Prefer **pure functions** for testability.
+- Use property-based testing where applicable to cover a range of inputs.
+
+## Mocking & Stubbing
+- Use built-in Vitest mocks when possible.
+- Stub contract interactions instead of mocking `ethers.Contract` globally.
+- Mock RPC calls to avoid real network dependencies.
+- Centralize all mocks in `/test/mocks` for reusability.
+- Regularly look for common mock patterns and refactor them into `/test/mocks`.
+- Use mocks exported from `/test/mocks` always
+
+## Test helpers
+- Use test helper functions in `/test/test-helpers.ts`
+
+## Performance & Maintainability
+- Ensure tests run efficiently, avoiding unnecessary setup.
+- Keep test files modular and focused on single components.
+- Refactor repetitive setup into reusable utility functions.
+
+## Running Tests & Coverage Reporting
+- The coverage report is automatically generated when running `yarn test`.
+- Regularly check reports to identify miso reachs the specifications of:
+- [ERC-7562: Account Abstraction Validation Scope Rules](https://eips.ethereum.org/EIPS/eip-7562)
+- [ERC-4337: Account Abstraction Using Alt Mempool](https://eips.ethereum.org/EIPS/eip-4337)
+
+Refer to these specifications for a deeper understanding of the bundler’s role in Ethereum’s account abstraction ecosystem.
+

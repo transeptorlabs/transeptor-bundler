@@ -6,9 +6,7 @@ import { Either } from '../../monad/index.js'
 import { ProviderService } from '../../provider/index.js'
 import {
   EstimateUserOpGasResult,
-  RelayUserOpParam,
   ExecutionResult,
-  ValidateUserOpResult,
   RpcError,
   UserOperation,
   NetworkCallError,
@@ -48,40 +46,6 @@ export const extractCallGasLimit = (
         callGasLimit: adjustedCallGas,
       })
     },
-  )
-}
-
-export const extractUserOpVerificationResult = (
-  relayUserOpParam: RelayUserOpParam,
-  validationResult: Either<RpcError, ValidateUserOpResult>,
-): Either<RpcError, RelayUserOpParam> => {
-  return validationResult.fold(
-    (error: RpcError) => Either.Left(error),
-    (res: ValidateUserOpResult) => {
-      return Either.Right<RpcError, RelayUserOpParam>({
-        ...relayUserOpParam,
-        prefund: res.returnInfo.prefund,
-        referencedContracts: res.referencedContracts,
-        senderInfo: res.senderInfo,
-        paymasterInfo: res.paymasterInfo,
-        factoryInfo: res.factoryInfo,
-        aggregatorInfo: res.aggregatorInfo,
-      })
-    },
-  )
-}
-
-export const sendUserOpToMempool = async (
-  relayUserOpParam: RelayUserOpParam,
-  addUserOp: (
-    relayUserOpParam: RelayUserOpParam,
-  ) => Promise<Either<RpcError, string>>,
-): Promise<Either<RpcError, string>> => {
-  const res = await addUserOp(relayUserOpParam)
-
-  return res.fold(
-    (error: RpcError) => Either.Left<RpcError, string>(error),
-    (hash) => Either.Right<RpcError, string>(hash),
   )
 }
 

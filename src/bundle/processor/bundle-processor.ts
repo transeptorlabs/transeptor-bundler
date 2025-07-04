@@ -12,6 +12,8 @@ import {
   EIP7702Authorization,
   NonFatalSendBundleFailDetails,
   TranseptorLogger,
+  LogUserOpLifecycleEvent,
+  LifecycleStage,
 } from '../../types/index.js'
 import {
   packUserOps,
@@ -24,6 +26,7 @@ import { findEntityToBlame, checkFatal } from '../bundle.helper.js'
 import { getUserOpHashes, selectBeneficiary } from './processor.helpers.js'
 
 export type BundleProcessorConfig = {
+  logUserOpLifecycleEvent: LogUserOpLifecycleEvent
   providerService: ProviderService
   reputationManager: ReputationManager
   mempoolManagerBuilder: MempoolManagerBuilder
@@ -31,6 +34,7 @@ export type BundleProcessorConfig = {
   beneficiary: string
   minSignerBalance: bigint
   logger: TranseptorLogger
+  chainId: number
 }
 
 /**
@@ -52,6 +56,8 @@ function _createBundleProcessor(
     beneficiary,
     minSignerBalance,
     logger,
+    logUserOpLifecycleEvent,
+    chainId,
   } = config
   const entryPoint = providerService.getEntryPointContractDetails()
   const signers = providerService.getBundlerSignerWallets()
@@ -100,6 +106,33 @@ function _createBundleProcessor(
       )
       for (const userOp of nonFatalSendBundleFailDetails.userOps) {
         await mempoolManagerBuilder.updateEntryStatus(userOp, 'pending')
+      }
+    }
+  }
+
+  const handleAuditTrail = async (
+    userOpsInBundler: {
+      userOp: UserOperation
+      userOpHash: string
+      lifecycleStage: LifecycleStage
+    }[],
+  ) => {
+    for (const userOpDetails of userOpsInBundler) {
+      const { userOp, userOpHash, lifecycleStage } = userOpDetails
+      switch (lifecycleStage) {
+        case 'userOpSubmittedOnChain': {
+          await logUserOpLifecycleEvent({
+            lifecycleStage,
+            chainId,
+            userOpHash,
+            entryPoint: entryPoint.address,
+            userOp,
+          })
+          break
+        }
+        default: {
+          break
+        }
       }
     }
   }
@@ -227,6 +260,14 @@ function _createBundleProcessor(
           userOps,
           providerService,
           entryPoint.address,
+        )
+
+        await handleAuditTrail(
+          userOps.map((userOp, index) => ({
+            userOp,
+            userOpHash: hashes[index],
+            lifecycleStage: 'userOpSubmittedOnChain',
+          })),
         )
 
         return {

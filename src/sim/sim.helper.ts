@@ -7,6 +7,9 @@ import {
   toUtf8Bytes,
   TransactionRequest,
   BigNumberish,
+  zeroPadValue,
+  dataSlice,
+  toBeHex,
 } from 'ethers'
 
 import {
@@ -19,6 +22,7 @@ import {
 import {
   EIP_7702_MARKER_INIT_CODE,
   GethNativeTracerName,
+  MAX_UNIT_48,
 } from '../constants/index.js'
 import { Either } from '../monad/index.js'
 import { ProviderService } from '../provider/index.js'
@@ -38,11 +42,75 @@ import {
   PaymasterValidationInfo,
   FullValidationResult,
 } from '../types/index.js'
-import {
-  maxUint48,
-  mergeValidationDataValues,
-  parseValidationData,
-} from '../utils/index.js'
+
+/**
+ * Merge validation data.
+ *
+ * @param accountValidationData  - Account validation data.
+ * @param paymasterValidationData - Paymaster validation data.
+ * @returns Aggregator, validAfter, validUntil.
+ */
+export const mergeValidationData = (
+  accountValidationData: ValidationData,
+  paymasterValidationData: ValidationData,
+): ValidationData => {
+  const SIG_VALIDATION_FAILED = zeroPadValue('0x01', 20)
+  return {
+    aggregator:
+      paymasterValidationData.aggregator !== ethers.ZeroAddress
+        ? SIG_VALIDATION_FAILED
+        : accountValidationData.aggregator,
+    validAfter: Math.max(
+      accountValidationData.validAfter,
+      paymasterValidationData.validAfter,
+    ),
+    validUntil: Math.min(
+      accountValidationData.validUntil,
+      paymasterValidationData.validUntil,
+    ),
+  }
+}
+
+/**
+ * Parse validation data.
+ *
+ * @param validationData - Validation data.
+ * @returns Aggregator, validAfter, validUntil.
+ */
+export const parseValidationData = (
+  validationData: BigNumberish,
+): ValidationData => {
+  const data = zeroPadValue(toBeHex(BigInt(validationData)), 32)
+
+  // string offsets start from left (msb)
+  const aggregator = dataSlice(data, 32 - 20)
+  let validUntil = parseInt(dataSlice(data, 32 - 26, 32 - 20))
+  if (validUntil === 0) validUntil = MAX_UNIT_48
+  const validAfter = parseInt(dataSlice(data, 0, 6))
+
+  return {
+    aggregator,
+    validAfter,
+    validUntil,
+  }
+}
+
+/**
+ * Merge validation data values from account and paymaster.
+ *
+ * @param accountValidationData - Account validation data.
+ * @param paymasterValidationData - Paymaster validation data.
+ * @returns Aggregator, validAfter, validUntil.
+ */
+export const mergeValidationDataValues = (
+  accountValidationData: BigNumberish,
+  paymasterValidationData: BigNumberish,
+): ValidationData => {
+  return mergeValidationData(
+    parseValidationData(accountValidationData),
+    parseValidationData(paymasterValidationData),
+  )
+}
 
 export const parseExecutionResult = (
   res: ExecutionResultStruct,
@@ -438,7 +506,7 @@ export const generateValidationResult = (
 
     let paymasterValidationData: ValidationData = {
       validAfter: 0,
-      validUntil: maxUint48,
+      validUntil: MAX_UNIT_48,
       aggregator: ethers.ZeroAddress,
     }
     let paymasterContext: string | undefined

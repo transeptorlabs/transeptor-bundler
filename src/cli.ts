@@ -1,7 +1,10 @@
 #!/user/bin/env node
 
 import { Config, createConfig } from './config/index.js'
-import { GethNativeTracerName } from './constants/index.js'
+import {
+  GethNativeTracerName,
+  TRANSEPTOR_ENV_VALUES,
+} from './constants/index.js'
 import {
   createCoreServices,
   createManagers,
@@ -11,20 +14,20 @@ import {
 import { createLogger, withModuleContext } from './logger/index.js'
 import { createMempoolManageSender } from './mempool/index.js'
 import { STATE_CAPABILITY_REGISTRY } from './ocaps/index.js'
-import { Libp2pNode } from './p2p/index.js'
+import { Libp2pNodeManager } from './p2p/index.js'
 import { createProviderService, ProviderService } from './provider/index.js'
 import { createRpcServerWithHandlers } from './rpc/index.js'
 import { AuditLogger, RpcServer, Simulator } from './types/index.js'
 
-const logger = createLogger()
-let p2pNode: Libp2pNode | undefined = undefined
+const logger = createLogger(TRANSEPTOR_ENV_VALUES.TRANSEPTOR_LOG_LEVEL)
+let p2pNodeManager: Libp2pNodeManager | undefined = undefined
 let bundlerServer: RpcServer | undefined = undefined
 let auditLogger: AuditLogger | undefined = undefined
 
 const stopLibp2p = async () => {
-  if (p2pNode) {
-    await p2pNode.stop()
-    p2pNode = undefined
+  if (p2pNodeManager) {
+    await p2pNodeManager.stop()
+    p2pNodeManager = undefined
     logger.info('P2P node stopped gracefully.')
   }
 }
@@ -108,6 +111,7 @@ const runPreflightChecks = async (
   logger.info(
     {
       environment: config.environment,
+      auditTrailEnabled: config.auditTrail,
       signerDetails,
       bundleConfig: {
         mode: config.isUnsafeMode ? 'UNSAFE' : 'SAFE',
@@ -133,7 +137,10 @@ const runPreflightChecks = async (
  */
 async function runNode() {
   const args = process.argv
-  const config = createConfig(args)
+  const config = createConfig({
+    args,
+    env: TRANSEPTOR_ENV_VALUES,
+  })
 
   if (config.isP2PMode) {
     throw new Error('P2P mode is not supported yet')
@@ -150,6 +157,7 @@ async function runNode() {
     environment: config.environment,
     isMetricsEnabled: config.isMetricsEnabled,
     influxdbConnection: config.influxdbConnection,
+    auditTrailEnabled: config.auditTrail,
   })
   auditLogger = newAuditLogger
 
@@ -187,6 +195,7 @@ async function runNode() {
     bundleManager,
   } = await createManagers({
     logger,
+    auditLogger,
     providerService,
     validationService,
     stateService,
@@ -202,6 +211,7 @@ async function runNode() {
     maxBundleGas: config.maxBundleGas,
     isAutoBundle: config.isAutoBundle,
     autoBundleInterval: config.autoBundleInterval,
+    chainId: Number(chainId),
   })
 
   // Create internal APIs

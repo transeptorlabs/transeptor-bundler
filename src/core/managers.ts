@@ -22,6 +22,7 @@ import {
   TranseptorLogger,
   Capability,
   CapabilityTypes,
+  AuditLogger,
 } from '../types/index.js'
 import { ValidationService } from '../validation/index.js'
 
@@ -34,6 +35,7 @@ export type Managers = {
 
 export type ManagersConfig = {
   logger: TranseptorLogger
+  auditLogger: AuditLogger
   providerService: ProviderService
   validationService: ValidationService
   stateService: StateService
@@ -49,11 +51,13 @@ export type ManagersConfig = {
   isAutoBundle: boolean
   autoBundleInterval: number
   issuedCapabilitiesMapping: IssuedStateCapabilitiesMapping
+  chainId: number
 }
 
 export const createManagers = async (config: ManagersConfig) => {
   const {
     logger,
+    auditLogger,
     providerService,
     validationService,
     stateService,
@@ -69,6 +73,7 @@ export const createManagers = async (config: ManagersConfig) => {
     isAutoBundle,
     autoBundleInterval,
     issuedCapabilitiesMapping,
+    chainId,
   } = config
   const extractStateCapability = (
     moduleName: string,
@@ -124,6 +129,8 @@ export const createManagers = async (config: ManagersConfig) => {
     isAutoBundle,
     autoBundleInterval,
     bundleProcessor: createBundleProcessor({
+      logUserOpLifecycleEvent:
+        auditLogger.logUserOpLifecycleEvent.bind(auditLogger),
       logger: withModuleContext('bundle-processor', logger),
       providerService,
       reputationManager,
@@ -131,6 +138,7 @@ export const createManagers = async (config: ManagersConfig) => {
       txMode,
       beneficiary,
       minSignerBalance,
+      chainId,
     }),
     bundleBuilder: createBundleBuilder({
       logger: withModuleContext('bundle-builder', logger),
