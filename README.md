@@ -55,7 +55,7 @@ Our long-term vision is to:
 
 - **Run it yourself** - Make it easy for anyone to run their own bundler node.
 - **Promote bundler diversity and reduce centralization risks** — We are committed to decentralization by offering public bundlers anyone can use, and empowering developers to run and customize their own.
-- **Bundler compatibility** - Maintain strict compatibility with [erc-4337/bundler-spec-test](https://www.erc4337.io/bundlers) to preserve the vision of a [Unified ERC-4337 mempool](https://notes.ethereum.org/@yoav/unified-erc-4337-mempool).
+- **Bundler compatibility** - Maintain strict compatibility with [erc-4337/bundler-spec-test](https://bundlers.erc4337.io/) to preserve the vision of a [Unified ERC-4337 mempool](https://notes.ethereum.org/@yoav/unified-erc-4337-mempool).
 - **Embrace the Future** - Experiment safely with advanced features to push bundler UX and performance forward. Any system that can be written down can be realized.
 
 By contributing to Transeptor bundler, you're helping build an open, composable infrastructure layer that strengthens Ethereum’s decentralization and usability without requiring any changes to the protocol.

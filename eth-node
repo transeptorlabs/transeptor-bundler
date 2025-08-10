@@ -32,10 +32,9 @@ start_geth_with_erc7562_native_tracer() {
     --dev \
     --dev.period 0 \
     --maxpeers 0 \
-    --nodiscover \
     --allow-insecure-unlock \
     --rpc.allow-unprotected-txs \
-    --dev.gaslimit  12000000 )
+    --dev.gaslimit  20000000 )
 
   sleep 4
 
