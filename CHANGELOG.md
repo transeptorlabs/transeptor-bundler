@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [v0.13.1-alpha.0] - 2025-08-10
+## [v0.14.0-alpha.0] - 2025-08-10
 
 ### Fixed
 
@@ -239,8 +239,8 @@ Create a new endpoint running on a separate port to expose collected metrics—`
 
 - Initial release of Transeptor bundler.
 
-[unreleased]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.13.1-alpha.0...HEAD
-[v0.13.1-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.13.0-alpha.0...release/v0.13.1-alpha.0
+[unreleased]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.14.0-alpha.0...HEAD
+[v0.14.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.13.0-alpha.0...release/v0.14.0-alpha.0
 [v0.13.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.12.0-alpha.0...release/v0.13.0-alpha.0
 [v0.12.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.11.0-alpha.0...release/v0.12.0-alpha.0
 [v0.11.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.10.0-alpha.0...release/v0.11.0-alpha.0

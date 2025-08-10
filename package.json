@@ -1,7 +1,7 @@
 {
   "name": "transeptor-bundler",
   "private": true,
-  "version": "0.13.1-alpha.0",
+  "version": "0.14.0-alpha.0",
   "description": "Transeptor is a high-performance, modular ERC-4337 bundler designed to make smart accounts scalable and usable on Ethereum",
   "author": {
     "name": "Transeptor Labs",
