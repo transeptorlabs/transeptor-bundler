@@ -9,7 +9,7 @@ import { getCmdOptionValues } from './command.js'
 
 const DEFAULT_NETWORK = 'http://localhost:8545'
 const SUPPORTED_MODES = ['base', 'searcher']
-const nodeVersion = '0.13.0-alpha.0' // manual update on each release
+const nodeVersion = '0.13.1-alpha.0' // manual update on each release
 const AUDIT_LOG_DESTINATION_PATH = './logs/audit.log'
 
 export type Config = {
