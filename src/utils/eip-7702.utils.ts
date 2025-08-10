@@ -93,7 +93,7 @@ export const prepareEip7702Transaction = async (
     chainId: 1337,
   }
 
-  const common = new Common({ chain, hardfork: Hardfork.Cancun, eips: [7702] })
+  const common = new Common({ chain, eips: [2718, 2929, 2930, 7702] })
   const authorizationList = eip7702Tuples.map((it) => {
     return {
       chainId: toRlpHex(it.chainId) as PrefixedHexString,
@@ -121,11 +121,11 @@ export const prepareEip7702Transaction = async (
       tx.maxPriorityFeePerGas!,
     ) as PrefixedHexString,
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    maxFeePerGas: toBeHex(tx.maxPriorityFeePerGas!) as PrefixedHexString,
+    maxFeePerGas: toBeHex(tx.maxFeePerGas!) as PrefixedHexString,
+    gasLimit: toBeHex(10_000_000) as PrefixedHexString,
     accessList: [],
     authorizationList,
   }
-  txData.gasLimit = 10_000_000
 
   const objectTx = createEOACode7702Tx(txData, { common })
   const privateKeyBytes: Uint8Array = getBytes(signer.privateKey)
