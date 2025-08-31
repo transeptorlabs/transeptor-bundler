@@ -79,22 +79,14 @@ const runPreflightChecks = async (
     )
   }
 
-  // Check if the signer accounts have enough balance
-  const signerDetails = await Promise.all(
-    Object.values(config.bundlerSignerWallets).map(async (signer) => {
-      const bal = await providerService.getBalance(signer.address)
-      if (!(bal >= config.minSignerBalance)) {
-        throw new Error(
-          `Bundler signer account(${signer.address}) is not funded: Min balance required: ${config.minSignerBalance}`,
-        )
-      }
-
-      return {
-        signerAddresses: signer.address,
-        signerBalanceWei: bal.toString(),
-      }
-    }),
-  )
+  // Check if the signer[0] account has enough balance(default signer)
+  const mainSigner = providerService.getBundlerSignerWallets()[0]
+  const mainSignerBalance = await providerService.getBalance(mainSigner.address)
+  if (mainSignerBalance < config.minSignerBalance) {
+    throw new Error(
+      `Bundler signer account(${mainSigner.address}) is not funded: Min balance required: ${config.minSignerBalance}`,
+    )
+  }
 
   // Ensure provider supports required debug_traceCall methods with erc7562Tracer to run full validation
   if (!config.isUnsafeMode) {
@@ -112,7 +104,10 @@ const runPreflightChecks = async (
     {
       environment: config.environment,
       auditTrailEnabled: config.auditTrail,
-      signerDetails,
+      signerDetails: {
+        signerAddresses: mainSigner.address,
+        signerBalanceWei: mainSignerBalance.toString(),
+      },
       bundleConfig: {
         mode: config.isUnsafeMode ? 'UNSAFE' : 'SAFE',
         txMode: config.txMode,
