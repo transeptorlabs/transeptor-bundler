@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.15.0-alpha.0] - 2025-09-01
+
+### Security
+
+- Patched critical security vulnerability: sha.js is missing type checks leading to hash rewind and passing on crafted data ([#160](https://github.com/transeptorlabs/transeptor-bundler/pull/160))
+
+### Fixed
+
+- Only check default signer balance pre-flight ([#161](https://github.com/transeptorlabs/transeptor-bundler/pull/161))
+
 ## [v0.14.0-alpha.0] - 2025-08-10
 
 ### Fixed
@@ -239,7 +249,8 @@ Create a new endpoint running on a separate port to expose collected metrics—`
 
 - Initial release of Transeptor bundler.
 
-[unreleased]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.14.0-alpha.0...HEAD
+[unreleased]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.15.0-alpha.0...HEAD
+[v0.15.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.14.0-alpha.0...release/v0.15.0-alpha.0
 [v0.14.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.13.0-alpha.0...release/v0.14.0-alpha.0
 [v0.13.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.12.0-alpha.0...release/v0.13.0-alpha.0
 [v0.12.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.11.0-alpha.0...release/v0.12.0-alpha.0
