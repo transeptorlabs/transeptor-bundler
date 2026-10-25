@@ -25,7 +25,7 @@
     "clean": "rm -rf dist",
     "ls:cmd": "tsx ./src/cli.ts --help",
     "type-check": "tsc --noEmit",
-    "build": "yarn type-check && rm -rf dist && pkgroll --target=node22.14.0 --minify",
+    "build": "yarn type-check && rm -rf dist && pkgroll --target=node22.23.4 --minify",
     "build:contracts": "cd contracts && forge build",
     "build:typedocs": "typedoc",
     "dev": "tsx watch ./src/cli.ts --httpApi web3,eth,debug --txMode base | pino-pretty",
@@ -95,6 +95,6 @@
   },
   "packageManager": "yarn@4.7.0",
   "engines": {
-    "node": ">=22.14.0"
+    "node": ">=22.23.4"
   }
 }

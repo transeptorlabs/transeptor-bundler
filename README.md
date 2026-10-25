@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/node-22.14.0-green" alt="Node Version">
+  <img src="https://img.shields.io/badge/node-22.23.4-green" alt="Node Version">
   <img src="https://badgen.net/badge/-/TypeScript?icon=typescript&label&labelColor=blue&color=555555" alt="TypeScript">
   <img src="https://github.com/transeptorlabs/transeptor-bundler/actions/workflows/main.yml/badge.svg?branch=main">
   <a href="https://app.codecov.io/gh/transeptorlabs/transeptor-bundler">
@@ -70,7 +70,7 @@ To quickly start using Transeptor, follow the instructions in our [Quick Start g
 
 Before getting started, make sure you have the following tools installed on your machine:
 
-- [Node.js](https://nodejs.org/) (>= **v22.14.0**)
+- [Node.js](https://nodejs.org/) (>= **v22.23.4**)
 - [nvm](https://github.com/nvm-sh/nvm) – Node version manager
 - [Yarn](https://classic.yarnpkg.com/lang/en/) (**v4.7.0**)
 - [Docker](https://docs.docker.com/compose/install/) – with Docker Compose **v2**

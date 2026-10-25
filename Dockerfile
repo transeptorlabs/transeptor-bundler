@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:22.23.4-alpine AS builder
 
 WORKDIR /app
 
@@ -8,14 +8,14 @@ ENV NODE_ENV=production
 RUN corepack enable && corepack prepare yarn@4.7.0 --activate
 RUN yarn install --frozen-lockfile --immutable && yarn build
 
-FROM node:22-alpine AS deps
+FROM node:22.23.4-alpine AS deps
 WORKDIR /app
 COPY . .
 
 RUN corepack enable && corepack prepare yarn@4.7.0 --activate
 RUN yarn workspaces focus --production --all
 
-FROM node:22-alpine AS runner
+FROM node:22.23.4-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
