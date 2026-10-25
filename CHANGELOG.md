@@ -7,9 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.16.0] - 2026-10-25
+
 ### Security
 
-- Require Node.js 22.23.4 and pin Docker images to `node:22.23.4-alpine` to fix CVE-2026-111497 (Brotli decoder out-of-bounds write).
+- chore(deps-dev): bump vite in the npm_and_yarn group across 1 directory ([#163](https://github.com/transeptorlabs/transeptor-bundler/pull/163))
+- chore(deps): bump the npm_and_yarn group across 1 directory with 4 updates ([#164](https://github.com/transeptorlabs/transeptor-bundler/pull/164))
+- chore(deps): bump esbuild from 0.21.5 to 0.24.2 in the npm_and_yarn group across 0 directory ([#165](https://github.com/transeptorlabs/transeptor-bundler/pull/165))
+- chore(deps): bump tar from 7.4.3 to 7.5.3 in the npm_and_yarn group across 1 directory ([#166](https://github.com/transeptorlabs/transeptor-bundler/pull/166), [#167](https://github.com/transeptorlabs/transeptor-bundler/pull/167))
+- chore(deps): bump lodash from 4.17.21 to 4.17.23 in the npm_and_yarn group across 1 directory ([#168](https://github.com/transeptorlabs/transeptor-bundler/pull/168))
+- chore(deps): bump tar from 7.5.6 to 7.5.7 in the npm_and_yarn group across 1 directory ([#169](https://github.com/transeptorlabs/transeptor-bundler/pull/169))
+- chore(deps): bump bn.js from 4.12.2 to 4.12.3 in the npm_and_yarn group across 1 directory ([#171](https://github.com/transeptorlabs/transeptor-bundler/pull/171))
+- chore(deps): bump the npm_and_yarn group across 1 directory with 3 updates ([#172](https://github.com/transeptorlabs/transeptor-bundler/pull/172))
+- chore(deps): bump flatted from 3.3.2 to 3.4.2 in the npm_and_yarn group across 1 directory ([#173](https://github.com/transeptorlabs/transeptor-bundler/pull/173))
+- chore(deps): bump picomatch from 2.3.1 to 2.3.2 in the npm_and_yarn group across 1 directory ([#174](https://github.com/transeptorlabs/transeptor-bundler/pull/174))
+- chore(deps): bump node-forge from 1.3.3 to 1.4.0 in the npm_and_yarn group across 1 directory ([#175](https://github.com/transeptorlabs/transeptor-bundler/pull/175))
+- chore(deps-dev): bump vite from 8.0.2 to 8.0.5 in the npm_and_yarn group across 1 directory ([#176](https://github.com/transeptorlabs/transeptor-bundler/pull/176))
+- chore(deps): bump lodash from 4.17.23 to 4.18.1 in the npm_and_yarn group across 1 directory ([#177](https://github.com/transeptorlabs/transeptor-bundler/pull/177))
+- fix: Require Node.js 22.23.4 and pin Docker images to `node:22.23.4-alpine` to fix [CVE-2026-111497](http://nvd.nist.gov/vuln/detail/cve-2026-111497) (Brotli decoder out-of-bounds write). ([#179](https://github.com/transeptorlabs/transeptor-bundler/pull/179))
 
 ## [v0.15.0-alpha.0] - 2025-09-01
 
@@ -253,7 +268,8 @@ Create a new endpoint running on a separate port to expose collected metrics—`
 
 - Initial release of Transeptor bundler.
 
-[unreleased]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.15.0-alpha.0...HEAD
+[unreleased]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.16.0...HEAD
+[v0.16.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.15.0-alpha.0...release/v0.16.0
 [v0.15.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.14.0-alpha.0...release/v0.15.0-alpha.0
 [v0.14.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.13.0-alpha.0...release/v0.14.0-alpha.0
 [v0.13.0-alpha.0]: https://github.com/transeptorlabs/transeptor-bundler/compare/release/v0.12.0-alpha.0...release/v0.13.0-alpha.0
