@@ -91,7 +91,7 @@
     "typedoc": "^0.26.11",
     "typescript": "5.0.4",
     "vite": "^8.0.6",
-    "vitest": "^3.0.5"
+    "vitest": "^4.1.11"
   },
   "packageManager": "yarn@4.7.0",
   "engines": {
