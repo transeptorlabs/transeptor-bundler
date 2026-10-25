@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Require Node.js 22.23.4 and pin Docker images to `node:22.23.4-alpine` to fix CVE-2026-111497 (Brotli decoder out-of-bounds write).
+
 ## [v0.15.0-alpha.0] - 2025-09-01
 
 ### Security
