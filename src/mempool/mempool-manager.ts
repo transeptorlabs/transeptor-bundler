@@ -257,9 +257,11 @@ function _createMempoolManagerCore(
           delete standardPool[userOpHash]
 
           const count = (mempoolEntryCount[entry.userOp.sender] ?? 0) - 1
-          count <= 0
-            ? delete mempoolEntryCount[entry.userOp.sender]
-            : (mempoolEntryCount[entry.userOp.sender] = count)
+          if (count <= 0) {
+            delete mempoolEntryCount[entry.userOp.sender]
+          } else {
+            mempoolEntryCount[entry.userOp.sender] = count
+          }
 
           return {
             standardPool,

@@ -2,18 +2,13 @@ import { ChainConfig, Common, Hardfork, Mainnet } from '@ethereumjs/common'
 import { createEOACode7702Tx, EOACode7702TxData } from '@ethereumjs/tx'
 import { PrefixedHexString } from '@ethereumjs/util'
 import {
-  ecrecover,
-  pubToAddress,
-  toBuffer,
-  toChecksumAddress,
-} from 'ethereumjs-util'
-import {
   BigNumberish,
   keccak256,
   encodeRlp,
   ethers,
   getBytes,
   hexlify,
+  recoverAddress,
   toBeHex,
   Wallet,
 } from 'ethers'
@@ -67,12 +62,13 @@ export const eip7702DataToSign = (
 export const getEip7702AuthorizationSigner = (
   authorization: EIP7702Authorization,
 ): string => {
-  const yParity = toBeHex(authorization.yParity)
-  const r = toBuffer(toBeHex(authorization.r))
-  const s = toBuffer(toBeHex(authorization.s))
-  const dataToSign = toBuffer(eip7702DataToSign(authorization))
-  const retRecover = pubToAddress(ecrecover(dataToSign, yParity, r, s))
-  return toChecksumAddress(hexlify(new Uint8Array(retRecover)))
+  const rawYParity = Number(authorization.yParity)
+  const yParity = (rawYParity >= 27 ? rawYParity - 27 : rawYParity) as 0 | 1
+  return recoverAddress(eip7702DataToSign(authorization), {
+    r: toBeHex(authorization.r, 32),
+    s: toBeHex(authorization.s, 32),
+    yParity,
+  })
 }
 
 // TODO: Replace @ethereumjs with ethers.js when it supports EIP-7702
@@ -106,21 +102,14 @@ export const prepareEip7702Transaction = async (
   })
 
   const txData: EOACode7702TxData = {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     nonce: toBeHex(tx.nonce!) as PrefixedHexString,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     to: tx.to! as PrefixedHexString,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     value: '0x0',
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     data: hexlify(tx.data!) as PrefixedHexString,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     chainId: toBeHex(tx.chainId!) as PrefixedHexString,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     maxPriorityFeePerGas: toBeHex(
       tx.maxPriorityFeePerGas!,
     ) as PrefixedHexString,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     maxFeePerGas: toBeHex(tx.maxFeePerGas!) as PrefixedHexString,
     gasLimit: toBeHex(10_000_000) as PrefixedHexString,
     accessList: [],

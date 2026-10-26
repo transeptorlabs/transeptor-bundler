@@ -113,9 +113,11 @@ function _createEventManager(
     const userOpHash = ev.args.userOpHash
     const success = ev.args.success
 
-    success
-      ? await mempoolManageUpdater.removeUserOp(userOpHash)
-      : await mempoolManageUpdater.updateEntryStatus(userOpHash, 'failed')
+    if (success) {
+      await mempoolManageUpdater.removeUserOp(userOpHash)
+    } else {
+      await mempoolManageUpdater.updateEntryStatus(userOpHash, 'failed')
+    }
 
     // TODO: Make this a batch operation
     await includedAddress(ev.args.sender)

@@ -28,9 +28,8 @@ describe('Audit Factory', () => {
     } as unknown as AuditLogWriter
 
     // Set up the mock implementation
-    const { createPinoAuditLogWriter } = await import(
-      '../../src/logger/audit/pino-audit-log-writer.js'
-    )
+    const { createPinoAuditLogWriter } =
+      await import('../../src/logger/audit/pino-audit-log-writer.js')
     vi.mocked(createPinoAuditLogWriter).mockReturnValue(mockPinoAuditLogWriter)
   })
 

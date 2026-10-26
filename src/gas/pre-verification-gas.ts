@@ -157,6 +157,11 @@ export const createPreVerificationGasCalculator = (
     throw new Error(`Unsupported chainId: ${chainId}`)
   }
 
+  /**
+   *
+   * @param bytes - Calldata to tokenize.
+   * @returns The token count used by the pre-verification gas formula.
+   */
   function countTokens(bytes: BytesLike): number {
     return ethers
       .getBytes(bytes)
@@ -164,6 +169,12 @@ export const createPreVerificationGasCalculator = (
       .reduce((sum, x) => sum + x)
   }
 
+  /**
+   *
+   * @param userOp - User operation whose gas limits are counted.
+   * @param gasOptions - Optional measured gas values.
+   * @returns Gas used by the user operation.
+   */
   function getUserOpGasUsed(
     userOp: UserOperation,
     gasOptions: GasOptions,
@@ -189,6 +200,13 @@ export const createPreVerificationGasCalculator = (
   }
 
   // Based on the formula in https://eips.ethereum.org/EIPS/eip-7623#specification
+  /**
+   *
+   * @param stipendGasCost - Fixed stipend included in the transaction cost.
+   * @param tokenGasCount - Calldata token count.
+   * @param executionGasCost - Execution gas included in the cost.
+   * @returns The EIP-7623 transaction gas cost.
+   */
   function eip7623transactionGasCost(
     stipendGasCost: number,
     tokenGasCount: number,
@@ -203,6 +221,12 @@ export const createPreVerificationGasCalculator = (
     )
   }
 
+  /**
+   *
+   * @param userOp - Partial user operation to fill.
+   * @param gasConfig - Chain gas configuration used for dummy field sizes.
+   * @returns A user operation with estimation placeholders filled in.
+   */
   function fillUserOpWithDummyData(
     userOp: Partial<UserOperation>,
     gasConfig: PreVerificationGasConfig,
@@ -226,6 +250,12 @@ export const createPreVerificationGasCalculator = (
     return filledUserOp
   }
 
+  /**
+   *
+   * @param userOp - User operation to price.
+   * @param gasOptions - Optional measured gas values.
+   * @returns The calculated pre-verification gas.
+   */
   function calculate(userOp: UserOperation, gasOptions: GasOptions): number {
     const packedUserOp = ethers.getBytes(encodeUserOp(userOp, false))
     const userOpWordsLength = (packedUserOp.length + 31) / 32

@@ -58,7 +58,7 @@ export const getUserOpHashes = async (
     )
 
     return userOpHashes
-  } catch (e) {
+  } catch {
     return []
   }
 }

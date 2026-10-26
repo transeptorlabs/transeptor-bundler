@@ -43,7 +43,6 @@ export function withModuleContext(
  * @param context - The request context containing a unique requestId.
  */
 export function setBaseLoggerRequestContext(context: RequestContext) {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   asyncLocalStorage.run(context, () => {})
 }
 

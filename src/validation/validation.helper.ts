@@ -38,20 +38,18 @@ export const checkValidationResult = (
     )
   }
 
-  if (
-    !(res.returnInfo.validUntil === null || res.returnInfo.validUntil >= now)
-  ) {
+  if (!(
+    res.returnInfo.validUntil === null || res.returnInfo.validUntil >= now
+  )) {
     return Either.Left(
       new RpcError('already expired', ValidationErrors.NotInTimeRange),
     )
   }
 
-  if (
-    !(
-      res.returnInfo.validUntil == null ||
-      res.returnInfo.validUntil > now + VALID_UNTIL_FUTURE_SECONDS
-    )
-  ) {
+  if (!(
+    res.returnInfo.validUntil == null ||
+    res.returnInfo.validUntil > now + VALID_UNTIL_FUTURE_SECONDS
+  )) {
     Either.Left(
       new RpcError('expires too soon', ValidationErrors.NotInTimeRange),
     )

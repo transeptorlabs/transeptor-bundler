@@ -25,10 +25,12 @@ import {
   decodeRevertReason,
   generateValidationResult,
   getStakes,
+  executionCallGasLimit,
   parseExecutionResult,
   parseTracerResultCallsForRevert,
   parseSimulateValidationResult,
   runErc7562NativeTracer,
+  type CallTracerFrame,
 } from './sim.helper.js'
 
 export type SimulatorConfig = {
@@ -221,6 +223,33 @@ function _createSimulator(config: Readonly<SimulatorConfig>): Simulator {
           )
           return Either.Right(parseExecutionResult(res))
         },
+      )
+    },
+
+    estimateUndeployedCallGas: async (
+      userOp: UserOperation,
+    ): Promise<Either<RpcError, number>> => {
+      const traced = await ps.debug_traceCall<CallTracerFrame>(
+        {
+          from: ethers.ZeroAddress,
+          to: entryPointContract.address,
+          data: epSimsInterface.encodeFunctionData('simulateHandleOp', [
+            packUserOp(userOp),
+            ethers.ZeroAddress,
+            '0x',
+          ]),
+        },
+        {
+          tracer: 'callTracer',
+          stateOverrides: defaultStateOverrides,
+        },
+      )
+      return traced.flatMap((trace) =>
+        executionCallGasLimit(
+          trace,
+          userOp.sender,
+          ethers.hexlify(userOp.callData),
+        ),
       )
     },
 

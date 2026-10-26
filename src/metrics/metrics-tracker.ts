@@ -27,7 +27,7 @@ function _createMetricsTracker(
   const intervalTime = 1000 // Run every second
   const startUsage: NodeJS.CpuUsage = process.cpuUsage()
   const { logger, influxdbClient } = config
-  let interval: NodeJS.Timer | null = null
+  let interval: NodeJS.Timeout | null = null
 
   const getCpuUsage = async (): Promise<number> => {
     return new Promise<number>((resolve, reject) => {

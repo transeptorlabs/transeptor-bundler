@@ -101,7 +101,7 @@ function _createAuditLogQueue(config: AuditLogQueueConfig): AuditLogQueue {
    */
   const drain = async (): Promise<void> => {
     while (emptySlots.getValue() < bufferCapacity) {
-      let event: UserOpAuditEvent | null = null
+      let event: UserOpAuditEvent | null
       const release = await bufferLock.acquire()
       try {
         event = eventBuffer[eventBufferHead]

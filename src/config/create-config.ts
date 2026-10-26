@@ -1,5 +1,6 @@
 import { ethers, HDNodeWallet, JsonRpcProvider, Mnemonic, Wallet } from 'ethers'
 
+import packageJson from '../../package.json' with { type: 'json' }
 import { TRANSEPTOR_ENV_VALUES } from '../constants/index.js'
 import { createProvider } from '../provider/index.js'
 import { InfluxdbConnection, BundlerSignerWallets } from '../types/index.js'
@@ -9,7 +10,7 @@ import { getCmdOptionValues } from './command.js'
 
 const DEFAULT_NETWORK = 'http://localhost:8545'
 const SUPPORTED_MODES = ['base', 'searcher']
-const nodeVersion = '0.16.0' // manual update on each release
+const nodeVersion = packageJson.version
 const AUDIT_LOG_DESTINATION_PATH = './logs/audit.log'
 
 export type Config = {

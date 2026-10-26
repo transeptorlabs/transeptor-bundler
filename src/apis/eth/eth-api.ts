@@ -103,16 +103,20 @@ function _createEthAPI(config: Readonly<EthAPIConfig>): EthAPI {
         async (error: RpcError) => Either.Left(error),
         async (userOp: UserOperation) => {
           const authorizationList = getAuthorizationList(userOp)
+          const senderDeployed = await ps.checkContractDeployment(userOp.sender)
 
-          // Estimate verification gas and call gas
+          // Estimate verification gas and call gas.
+          // An undeployed sender has no code, so eth_estimateGas never runs execute.
           const [executionResult, callGasLimit] = await Promise.all([
             sim.simulateHandleOp(userOp as UserOperation, stateOverride),
-            ps.estimateGas(
-              entryPoint.address,
-              userOp.sender,
-              userOp.callData,
-              authorizationList,
-            ),
+            senderDeployed
+              ? ps.estimateGas(
+                  entryPoint.address,
+                  userOp.sender,
+                  userOp.callData,
+                  authorizationList,
+                )
+              : sim.estimateUndeployedCallGas(userOp),
           ])
 
           return Either.Right<RpcError, EstimateUserOpGasResult>({
@@ -130,7 +134,9 @@ function _createEthAPI(config: Readonly<EthAPIConfig>): EthAPI {
                 {},
               ),
             }))
-            .flatMap((estimate) => extractCallGasLimit(estimate, callGasLimit))
+            .flatMap((estimate) =>
+              extractCallGasLimit(estimate, callGasLimit, senderDeployed),
+            )
             .flatMap((estimate) =>
               extractVerificationGasLimit(estimate, executionResult),
             )

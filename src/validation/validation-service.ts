@@ -108,7 +108,7 @@ function _createValidationService(
       previousCodeHashes?: ReferencedCodeHashes,
     ): Promise<Either<RpcError, ValidateUserOpResult>> => {
       logger.debug('Validating UserOperation')
-      let res = Either.Right<RpcError, ValidateUserOpResult>(undefined)
+      let res: Either<RpcError, ValidateUserOpResult>
 
       // [COD-010]
       if (

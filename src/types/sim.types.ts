@@ -77,6 +77,13 @@ export type Simulator = {
     userOp: UserOperation,
     stateOverride?: StateOverride,
   ): Promise<Either<RpcError, ExecutionResult>>
+  /**
+   * callGasLimit for a sender that has no code yet.
+   * eth_estimateGas against that address does not run the account.
+   */
+  estimateUndeployedCallGas(
+    userOp: UserOperation,
+  ): Promise<Either<RpcError, number>>
   supportsDebugTraceCallWithNativeTracer(nativeTracer: string): Promise<boolean>
 }
 

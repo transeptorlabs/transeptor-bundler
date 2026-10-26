@@ -1,9 +1,9 @@
 import { noise } from '@chainsafe/libp2p-noise'
-import { mplex } from '@libp2p/mplex'
+import { yamux } from '@chainsafe/libp2p-yamux'
+import { ping, Ping } from '@libp2p/ping'
 import { tcp } from '@libp2p/tcp'
 import { Multiaddr, isMultiaddr, multiaddr } from '@multiformats/multiaddr'
 import { createLibp2p, Libp2p } from 'libp2p'
-import { PingService, pingService } from 'libp2p/ping'
 
 import { TranseptorLogger } from '../types/index.js'
 import { withReadonly } from '../utils/index.js'
@@ -19,7 +19,6 @@ export type Libp2pNodeManager = {
   stop: () => Promise<void>
 }
 
-const GOSSIP_MAX_SIZE = 1048576 // (= 1048576, 1 MiB) The maximum allowed size of uncompressed gossip messages.
 // const MAX_OPS_PER_REQUEST = 4096 // Maximum number of UserOps in a single request.
 // const RESP_TIMEOUT = 10 // (seconds) The maximum time for complete response transfer.
 // const TTFB_TIMEOUT = 5 // (seconds) The maximum time to wait for first byte of request response (time-to-first-byte).
@@ -35,7 +34,7 @@ function _createLibp2pNodeManager(
 ): Libp2pNodeManager {
   let node:
     | Libp2p<{
-        ping: PingService
+        ping: Ping
       }>
     | undefined = undefined
   const { peerMultiaddrs, connectToPeers, logger } = config
@@ -56,14 +55,10 @@ function _createLibp2pNodeManager(
         listen: ['/ip4/127.0.0.1/tcp/0'],
       },
       transports: [tcp()],
-      connectionEncryption: [noise()],
-      streamMuxers: [
-        mplex({
-          maxUnprocessedMessageQueueSize: GOSSIP_MAX_SIZE,
-        }),
-      ],
+      connectionEncrypters: [noise()],
+      streamMuxers: [yamux()],
       services: {
-        ping: pingService({
+        ping: ping({
           protocolPrefix: 'ipfs', // default
         }),
       },
@@ -82,7 +77,7 @@ function _createLibp2pNodeManager(
 
   const doPing = async () => {
     logger.info('Starting pinging remote peer to check connectivity')
-    const pingService = node.services.ping as PingService
+    const pingService = node.services.ping
     if (peerMultiaddrs.length > 0 && connectToPeers) {
       const ma: Multiaddr = multiaddr(peerMultiaddrs[0])
       const latency = await pingService.ping(ma)

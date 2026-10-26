@@ -1,4 +1,3 @@
-/* eslint-disable complexity */
 import { ProviderService } from '../../provider/index.js'
 import {
   ReputationManager,
@@ -198,13 +197,15 @@ function _createBundleBuilder(
 
       if (!include) {
         logger.debug({ userOp, reason }, 'skipping user operation')
-        reason === 'banned'
-          ? acc.markedToRemoveUserOpsHashes.push({
-              userOpHash: userOpHash,
-              userOp,
-              reason,
-            })
-          : acc.notIncludedUserOpsHashes.push(userOpHash)
+        if (reason === 'banned') {
+          acc.markedToRemoveUserOpsHashes.push({
+            userOpHash: userOpHash,
+            userOp,
+            reason,
+          })
+        } else {
+          acc.notIncludedUserOpsHashes.push(userOpHash)
+        }
 
         return acc
       }

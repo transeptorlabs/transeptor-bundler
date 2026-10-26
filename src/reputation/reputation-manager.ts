@@ -64,7 +64,7 @@ function _createReputationManagerReader(
 function _createReputationManager(
   config: Readonly<ReputationManagerConfig>,
 ): ReputationManager {
-  let interval: NodeJS.Timer | null = null
+  let interval: NodeJS.Timeout | null = null
   const bundlerReputationParams: ReputationParams = {
     minInclusionDenominator: 10,
     throttlingSlack: 10,
