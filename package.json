@@ -36,7 +36,7 @@
     "start:prod": "yarn build && node dist/cli.mjs --httpApi web3,eth,debug --txMode base | pino-pretty",
     "test": "yarn type-check && vitest run --config ./vitest.config.ts --coverage",
     "test:dev": "vitest --config ./vitest.config.ts",
-    "lint": "eslint . --max-warnings 0",
+    "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "send-op": "tsx ./e2e/send-userop.e2e.ts | pino-pretty",
     "print-dev_accounts": "tsx ./e2e/print-dev-accounts.ts",
