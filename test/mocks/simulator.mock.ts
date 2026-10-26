@@ -6,5 +6,6 @@ export const mockSimulator: MockedObject<Simulator> = {
   partialSimulateValidation: vi.fn(),
   fullSimulateValidation: vi.fn(),
   simulateHandleOp: vi.fn(),
+  estimateUndeployedCallGas: vi.fn(),
   supportsDebugTraceCallWithNativeTracer: vi.fn(),
 }

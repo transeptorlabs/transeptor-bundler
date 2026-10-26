@@ -1,12 +1,7 @@
 import { StorageMap, ValidationErrors } from './validation.types.js'
 
 export type CallFrameType =
-  | 'CALL'
-  | 'DELEGATECALL'
-  | 'CALLCODE'
-  | 'STATICCALL'
-  | 'CREATE'
-  | 'CREATE2'
+  'CALL' | 'DELEGATECALL' | 'CALLCODE' | 'STATICCALL' | 'CREATE' | 'CREATE2'
 
 export type ContractSize = {
   contractSize: number

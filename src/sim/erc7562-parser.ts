@@ -309,7 +309,7 @@ function _createErc7562Parser(
       // base64 encoded input
       input = '0x' + Buffer.from(input, 'base64').toString('hex')
     }
-    const methodSig = get4bytes(erc7562Call.input)
+    const methodSig = get4bytes(input)
     const AbiInterfaces = new Interface(
       uniqueNames([
         ...SENDER_CREATOR_ABI,
@@ -321,8 +321,8 @@ function _createErc7562Parser(
     try {
       const abiFunction: FunctionFragment = AbiInterfaces.getFunction(methodSig)
       return abiFunction.name
-    } catch (_) {
-      //
+    } catch {
+      // Unknown method selector.
     }
     return methodSig
   }
@@ -537,13 +537,11 @@ function _createErc7562Parser(
       runnerState.currentEntity === AccountAbstractionEntity.factory &&
       runnerState.erc7562Call.to.toLowerCase() ===
         runnerState.userOp.sender.toLowerCase()
-    if (
-      !(
-        isAllowedCreateByOP032 ||
-        isAllowedCreateByEREP060 ||
-        isAllowedCreateSenderByFactory
-      )
-    ) {
+    if (!(
+      isAllowedCreateByOP032 ||
+      isAllowedCreateByEREP060 ||
+      isAllowedCreateSenderByFactory
+    )) {
       return violationDetected({
         rule: ERC7562Rule.op011,
         depth: runnerState.recursionDepth,
@@ -833,7 +831,12 @@ function _createErc7562Parser(
       ...Object.keys(erc7562Call.accessedSlots.transientWrites ?? {}),
       ...Object.keys(erc7562Call.accessedSlots.transientReads ?? {}),
     ]
-    const address: string = erc7562Call.to
+    // DELEGATECALL executes the callee's code against the caller's storage.
+    // Proxy accounts (ERC-1967) therefore access the sender, not the implementation.
+    const address: string =
+      erc7562Call.type === 'DELEGATECALL'
+        ? runnerState.delegatecallStorageAddress
+        : erc7562Call.to
     const entitySlots = parseEntitySlots(userOp, runnerState.keccak)
     const addressName = tryGetAddressName(userOp, address)
     const isEntityStakedRes = isEntityStaked(

@@ -338,7 +338,7 @@ export const parseFailedOpRevert = (
     }
 
     parsedError = entryPointContract.interface.parseError(data)
-  } catch (e1) {
+  } catch {
     return { opIndex: undefined, reasonStr: undefined }
   }
   const { opIndex, reason } = parsedError.args

@@ -62,7 +62,7 @@ function _createBundleManager(
 
   const mutex = new Mutex()
   let bundleMode: 'auto' | 'manual' = isAutoBundle ? 'auto' : 'manual'
-  let interval: NodeJS.Timer | null = null
+  let interval: NodeJS.Timeout | null = null
 
   const doAttemptBundle = async (
     force?: boolean,

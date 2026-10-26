@@ -34,13 +34,16 @@ export const extractVerificationGasLimit = (
 export const extractCallGasLimit = (
   estimate: EstimateUserOpGasResult,
   callGasResult: Either<RpcError, number>,
+  standaloneTransactionEstimate = true,
 ): Either<RpcError, EstimateUserOpGasResult> => {
   return callGasResult.fold(
     (error: RpcError) => Either.Left(error),
     (callGasLimit: number) => {
-      // Results from 'estimateGas' assume making a standalone transaction and paying 21'000 gas extra for it
-      const adjustedCallGas =
-        callGasLimit - MAINNET_CONFIG.transactionGasStipend
+      // eth_estimateGas prices a standalone transaction, including the 21_000
+      // stipend. A traced EntryPoint execution call is already that stipend.
+      const adjustedCallGas = standaloneTransactionEstimate
+        ? callGasLimit - MAINNET_CONFIG.transactionGasStipend
+        : callGasLimit
       return Either.Right<RpcError, EstimateUserOpGasResult>({
         ...estimate,
         callGasLimit: adjustedCallGas,

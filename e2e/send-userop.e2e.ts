@@ -26,7 +26,7 @@ import {
 
 dotenv.config()
 
-const logger = createLogger()
+const logger = createLogger('debug')
 
 const network: ethers.Network = new ethers.Network(
   'localhost',
@@ -203,17 +203,38 @@ const decodeSCAccountRevertReason = (error: string): any => {
   }
 }
 
+type RpcFailure = {
+  body?: unknown
+  error?: Record<string, unknown>
+  info?: { error?: Record<string, unknown> }
+  message?: string
+}
+
+const rpcErrorPayload = (error: RpcFailure): Record<string, unknown> => {
+  if (typeof error?.body === 'string') {
+    try {
+      return JSON.parse(error.body) as Record<string, unknown>
+    } catch {
+      return { message: error.body }
+    }
+  }
+  return error?.error ?? error?.info?.error ?? { message: error?.message }
+}
+
 const estimateUserOpGas = async (
   userOp: UserOperation,
 ): Promise<UserOperation> => {
   const gasEstimate = await bundlerNode
     .send('eth_estimateUserOperationGas', [deepHexlify(userOp), epAddress])
-    .catch((error: any) => {
-      const parseJson = JSON.parse(error.body)
+    .catch((error: RpcFailure) => {
+      const parseJson = rpcErrorPayload(error)
+      const nested = parseJson.error as { data?: string } | undefined
       logger.error(
         {
           ...parseJson,
-          parsedErrorData: decodeSCAccountRevertReason(parseJson.error.data),
+          parsedErrorData: decodeSCAccountRevertReason(
+            nested?.data ?? (parseJson.data as string) ?? '',
+          ),
         },
         'Failed to Estimate gas',
       )
@@ -230,10 +251,10 @@ const estimateUserOpGas = async (
 }
 
 const signUserOp = async (userOp: UserOperation): Promise<UserOperation> => {
-  const userOpHashToSign = ethers.getBytes(
-    await epContract.getUserOpHash(packUserOp(userOp)),
-  )
-  const signature = await secondWallet.signMessage(userOpHashToSign)
+  // SimpleAccount recovers the raw userOpHash (same digest as eth_signTypedData_v4).
+  // signMessage would prefix "\x19Ethereum Signed Message:\n32" and fail AA24.
+  const userOpHash = await epContract.getUserOpHash(packUserOp(userOp))
+  const signature = secondWallet.signingKey.sign(userOpHash).serialized
   return {
     ...userOp,
     signature,
@@ -250,9 +271,11 @@ const waitForReceipt = async (
     logger.info('Polling bundler...')
     result = await bundlerNode
       .send('eth_getUserOperationReceipt', [userOpHash])
-      .catch((error: any) => {
-        const parseJson = JSON.parse(error.body)
-        logger.error(parseJson, 'Failed to get user operation receipt')
+      .catch((error: RpcFailure) => {
+        logger.error(
+          rpcErrorPayload(error),
+          'Failed to get user operation receipt',
+        )
         throw new Error('Failed to get user operation receipt.')
       })
 
@@ -366,18 +389,16 @@ async function main() {
   logger.info({ signedUserOp }, 'Sending UserOp to increment Global Counter...')
   const userOpHash = await bundlerNode
     .send('eth_sendUserOperation', [deepHexlify(signedUserOp), epAddress])
-    .catch((error: any) => {
-      const parseJson = JSON.parse(error.body)
-      logger.error(parseJson, 'Failed to send user operation.')
+    .catch((error: RpcFailure) => {
+      logger.error(rpcErrorPayload(error), 'Failed to send user operation.')
       throw new Error('Failed to send user operation.')
     })
   logger.info({ userOpHash }, 'UserOp hash:')
 
   const res = await bundlerNode
     .send('debug_bundler_sendBundleNow', [])
-    .catch((error: any) => {
-      const parseJson = JSON.parse(error.body)
-      logger.error(parseJson, 'Failed to send bundle now.')
+    .catch((error: RpcFailure) => {
+      logger.error(rpcErrorPayload(error), 'Failed to send bundle now.')
       throw new Error('Failed to send bundle now.')
     })
   logger.info({ res }, 'Sending bundle now...')

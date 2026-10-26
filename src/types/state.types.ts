@@ -91,7 +91,7 @@ export type StateService = {
    * Allows atomic updates of any part of the state. A functional version to express general state transitions.
    *
    * @param stateCapability - The capability assigned to to caller to mutate the specific state keys.
-   * @param keys - Specifies which parts of the state need to be updated
+   * @param key - Specifies which parts of the state need to be updated
    * @param updateFn - A state transition function used by caller to make atomic updates to current state to produce the new state
    * @returns A promise that resolves to true if the update was successful and false otherwise.
    *

@@ -157,8 +157,7 @@ function _createBundleProcessor(
       )
       let crashedHandleOps: CrashedHandleOps | undefined
       let nonFatalSendBundleFailDetails:
-        | NonFatalSendBundleFailDetails
-        | undefined
+        NonFatalSendBundleFailDetails | undefined
 
       try {
         // populate the transaction (e.g to, data, and value)

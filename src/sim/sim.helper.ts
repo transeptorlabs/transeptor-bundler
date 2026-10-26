@@ -209,7 +209,6 @@ export const decodeRevertReason = (
     // can't add Error(string) to xface...
     if (methodSig === '0x08c379a0') {
       const [err] = AbiCoder.defaultAbiCoder().decode(['string'], dataParams)
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       return `Error(${err})`
     } else if (methodSig === '0x4e487b71') {
       const [code] = AbiCoder.defaultAbiCoder().decode(['uint256'], dataParams)
@@ -229,7 +228,7 @@ export const decodeRevertReason = (
       }
     })
     return `${err.name}(${args.join(',')})`
-  } catch (e) {
+  } catch {
     if (!nullIfNoMatch) {
       return data
     }
@@ -557,4 +556,100 @@ export const generateValidationResult = (
       new RpcError(err != null ? err.reason : 'unknown reason', -32000),
     )
   }
+}
+
+export type CallTracerFrame = {
+  type?: string
+  to?: string
+  input?: string
+  gasUsed?: string | number
+  error?: string
+  calls?: CallTracerFrame[]
+}
+
+/**
+ * Turn callTracer gas into a callGasLimit.
+ *
+ * callTracer reports gas consumed when the call is given a large stipend.
+ * Each nested call keeps 1/64 of the remaining gas (EIP-150), so that
+ * consumed value is too low to use as callGasLimit.
+ *
+ * @param gasUsed - Gas consumed by the execution call in the trace.
+ * @param nestedCallDepth - Longest chain of calls under that execution call.
+ * @returns A callGasLimit high enough to replay the traced call.
+ */
+export const callGasLimitFromTrace = (
+  gasUsed: number,
+  nestedCallDepth: number,
+): number => {
+  const withEip150 = gasUsed * Math.pow(64 / 63, nestedCallDepth)
+  return Math.ceil(withEip150) + 1000
+}
+
+const forwardedCallDepth = (frame: CallTracerFrame): number => {
+  const children = frame.calls ?? []
+  if (children.length === 0) return 0
+  return 1 + Math.max(...children.map(forwardedCallDepth))
+}
+
+const findFrame = (
+  frame: CallTracerFrame,
+  predicate: (frame: CallTracerFrame) => boolean,
+): CallTracerFrame | undefined => {
+  if (predicate(frame)) return frame
+  for (const child of frame.calls ?? []) {
+    const found = findFrame(child, predicate)
+    if (found != null) return found
+  }
+  return undefined
+}
+
+/**
+ * Gas for the EntryPoint's execution call to the sender.
+ *
+ * Used when the sender is not deployed yet, so eth_estimateGas only
+ * prices a call to an empty address.
+ *
+ * @param trace - callTracer result of simulateHandleOp.
+ * @param sender - Account the execution call is sent to.
+ * @param callData - UserOperation callData, matched against the trace.
+ * @returns callGasLimit for that execution call, or a simulation error.
+ */
+export const executionCallGasLimit = (
+  trace: CallTracerFrame,
+  sender: string,
+  callData: string,
+): Either<RpcError, number> => {
+  const execution = findFrame(trace, (frame) => {
+    return (
+      frame.type === 'CALL' &&
+      frame.to?.toLowerCase() === sender.toLowerCase() &&
+      (frame.input ?? '').toLowerCase() === callData.toLowerCase()
+    )
+  })
+  if (execution == null) {
+    return Either.Left(
+      new RpcError(
+        trace.error ?? 'execution call not found in simulation trace',
+        ValidationErrors.SimulateValidation,
+      ),
+    )
+  }
+  if (execution.error != null && execution.error !== '') {
+    return Either.Left(
+      new RpcError(execution.error, ValidationErrors.UserOperationReverted),
+    )
+  }
+  const gasUsed = Number(execution.gasUsed ?? 0)
+  if (!Number.isFinite(gasUsed) || gasUsed <= 0) {
+    return Either.Left(
+      new RpcError(
+        'simulation trace did not report execution gas',
+        ValidationErrors.SimulateValidation,
+      ),
+    )
+  }
+  return Either.Right(
+    callGasLimitFromTrace(gasUsed, forwardedCallDepth(execution)),
+  )
 }
